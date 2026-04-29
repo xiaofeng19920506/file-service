@@ -1,0 +1,25 @@
+FROM node:22-bookworm-slim AS build
+WORKDIR /app
+COPY package.json ./
+COPY packages/shared/package.json packages/shared/
+COPY apps/api/package.json apps/api/
+COPY apps/worker/package.json apps/worker/
+RUN npm install
+COPY tsconfig.base.json ./
+COPY packages/shared packages/shared
+COPY apps/api apps/api
+RUN npm run build -w @file-service/shared && npm run build -w @file-service/api
+
+FROM node:22-bookworm-slim
+WORKDIR /app
+ENV NODE_ENV=production
+COPY package.json ./
+COPY packages/shared/package.json packages/shared/
+COPY apps/api/package.json apps/api/
+COPY apps/worker/package.json apps/worker/
+RUN npm install --omit=dev
+COPY --from=build /app/packages/shared/dist packages/shared/dist
+COPY --from=build /app/packages/shared/package.json packages/shared/
+COPY --from=build /app/apps/api/dist apps/api/dist
+COPY --from=build /app/apps/api/package.json apps/api/
+CMD ["node", "apps/api/dist/index.js"]

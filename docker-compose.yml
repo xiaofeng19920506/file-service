@@ -1,0 +1,57 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: fileservice
+      POSTGRES_PASSWORD: fileservice
+      POSTGRES_DB: fileservice
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      STORAGE_BACKEND: fs
+      LOCAL_STORAGE_DIR: /data/storage
+      DATABASE_URL: postgresql://fileservice:fileservice@postgres:5432/fileservice
+      REDIS_URL: redis://redis:6379
+      DOWNLOAD_HMAC_SECRET: change-this-to-a-long-random-string
+      PUBLIC_BASE_URL: http://localhost:3000
+      PORT: '3000'
+    ports:
+      - '3000:3000'
+    volumes:
+      - file_storage:/data/storage
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      STORAGE_BACKEND: fs
+      LOCAL_STORAGE_DIR: /data/storage
+      DATABASE_URL: postgresql://fileservice:fileservice@postgres:5432/fileservice
+      REDIS_URL: redis://redis:6379
+      SOFFICE_PATH: soffice
+    volumes:
+      - file_storage:/data/storage
+
+volumes:
+  postgres_data:
+  file_storage:
