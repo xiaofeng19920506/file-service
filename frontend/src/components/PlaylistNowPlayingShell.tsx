@@ -110,14 +110,6 @@ export default function PlaylistNowPlayingShell({
               {t('playlists.playbackVideo')}
             </button>
           </div>
-          <button
-            type="button"
-            className="playlist-np-queue-btn mobile-only"
-            onClick={onToggleQueue}
-            aria-label={t('playlists.queueTitle')}
-          >
-            <QueueIcon />
-          </button>
         </div>
       </header>
 

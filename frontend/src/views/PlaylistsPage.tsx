@@ -667,6 +667,8 @@ export default function PlaylistsPage({
         onCycleRepeat={cycleRepeat}
         shuffleEnabled={shuffleEnabled}
         onToggleShuffle={toggleShuffle}
+        onToggleQueue={() => setQueueOpen((open) => !open)}
+        queueOpen={queueOpen}
       />
     ) : null;
 
