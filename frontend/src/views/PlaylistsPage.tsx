@@ -831,7 +831,7 @@ export default function PlaylistsPage({
                     <p className="playlists-muted">{t('playlists.noTracksHint')}</p>
                   </div>
                 ) : (
-                  <div className="playlists-player-stage">
+                  <div className="playlists-player-stage" data-playback-mode={playbackMode}>
                     <div className="playlists-player-col">
                       {!showPlayer && currentItem && (
                         <button

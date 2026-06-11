@@ -4819,6 +4819,10 @@
   background: #111;
 }
 
+.playlist-audio-lyrics-panel {
+  display: none;
+}
+
 .playlist-audio-artwork {
   width: 100%;
   height: 100%;

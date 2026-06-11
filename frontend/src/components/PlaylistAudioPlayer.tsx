@@ -308,9 +308,17 @@ export default function PlaylistAudioPlayer({
           loading="lazy"
         />
         {activeCaption && (
-          <div className="playlist-audio-subtitles" aria-live="polite">
+          <div className="playlist-audio-subtitles playlist-audio-subtitles-overlay" aria-live="polite">
             <p>{activeCaption}</p>
           </div>
+        )}
+      </div>
+
+      <div className="playlist-audio-lyrics-panel mobile-only" aria-live="polite">
+        {activeCaption ? (
+          <p className="playlist-audio-lyrics-text">{activeCaption}</p>
+        ) : (
+          <p className="playlist-audio-lyrics-empty">{t('playlists.noLyricsYet')}</p>
         )}
       </div>
 

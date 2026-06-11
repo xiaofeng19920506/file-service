@@ -295,6 +295,143 @@
     grid-column: 1 / -1;
   }
 
+  /* ── 敬拜列表 · MP3 模式：歌词为主，无缩略图 ── */
+  .playlists-player-stage[data-playback-mode='audio'] .playlists-track-thumb-wrap {
+    display: none;
+  }
+
+  .playlists-player-stage[data-playback-mode='audio'] .playlists-track-main {
+    padding-left: 0.55rem;
+  }
+
+  .playlists-player-stage[data-playback-mode='audio'] .playlists-hero-thumb {
+    display: none;
+  }
+
+  .playlists-player-stage[data-playback-mode='audio'] .playlists-hero {
+    aspect-ratio: auto;
+    min-height: 3.25rem;
+    max-height: none;
+    background: var(--surface-secondary);
+    border: 1px solid var(--border-light);
+  }
+
+  .playlists-player-stage[data-playback-mode='audio'] .playlists-hero-overlay {
+    position: static;
+    flex-direction: row;
+    gap: 0.65rem;
+    background: transparent;
+    color: var(--text);
+    padding: 0.85rem 1rem;
+  }
+
+  .playlists-player-stage[data-playback-mode='audio'] .playlists-hero-play-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 0.85rem;
+    background: var(--blue);
+    color: #fff;
+    box-shadow: none;
+  }
+
+  .playlists-player-stage[data-playback-mode='audio'] .playlists-hero-play-label {
+    color: var(--text);
+    text-shadow: none;
+    font-size: 0.9375rem;
+  }
+
+  .playlist-audio-artwork-wrap {
+    display: none;
+  }
+
+  .playlist-audio-lyrics-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: min(30vh, 240px);
+    max-height: min(40vh, 320px);
+    padding: 1rem 1.1rem;
+    border-radius: 14px;
+    background: var(--surface-secondary);
+    border: 1px solid var(--border-light);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .playlist-audio-lyrics-text {
+    margin: 0;
+    font-size: clamp(1.0625rem, 4.5vw, 1.35rem);
+    font-weight: 600;
+    line-height: 1.55;
+    letter-spacing: -0.02em;
+    text-align: center;
+    color: var(--text);
+    white-space: pre-wrap;
+  }
+
+  .playlist-audio-lyrics-empty {
+    margin: 0;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    text-align: center;
+    color: var(--text-tertiary);
+  }
+
+  .playlist-audio-player {
+    gap: 0.65rem;
+  }
+
+  .playlist-audio-meta {
+    text-align: center;
+    align-items: center;
+  }
+
+  .playlist-audio-title {
+    font-size: 0.9375rem;
+  }
+
+  .playlist-audio-controls {
+    padding: 0.65rem 0.75rem;
+    border-radius: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border-light);
+  }
+
+  .playlist-audio-bar .youtube-player-icon-btn {
+    background: var(--surface-secondary);
+    color: var(--text);
+    border: 1px solid var(--border-light);
+  }
+
+  .playlist-audio-bar .youtube-player-icon-btn-primary {
+    background: var(--blue);
+    color: #fff;
+    border-color: transparent;
+  }
+
+  .playlist-audio-bar .youtube-player-progress-track {
+    background: var(--border-light);
+  }
+
+  .playlist-audio-bar .youtube-player-progress-fill {
+    background: var(--blue);
+  }
+
+  .playlist-audio-bar .youtube-player-time {
+    color: var(--text-secondary);
+    align-self: center;
+  }
+
+  .playlist-audio-bar .youtube-player-subtitle-toggle-btn {
+    color: var(--text-secondary);
+    background: var(--surface-secondary);
+  }
+
+  .playlist-audio-bar .youtube-player-subtitle-toggle-btn.active {
+    color: var(--blue);
+    background: var(--blue-muted);
+  }
+
   /* ── 管理：表格 → 卡片 ── */
   .admin-page {
     padding: 0.75rem var(--page-gutter) 1.5rem;
