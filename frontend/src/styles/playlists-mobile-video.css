@@ -360,6 +360,61 @@
     bottom: 1rem;
   }
 
+  /* 手机 native：叠在 YouTube 控制条左上方，与原生控件同步 idle 隐藏 */
+  .youtube-player-section--native.youtube-player-section--mobile-inline .youtube-player-native-transport {
+    position: absolute;
+    left: 0.35rem;
+    bottom: 2.85rem;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    pointer-events: auto;
+    opacity: 1;
+    transition: opacity 0.22s ease;
+  }
+
+  .youtube-player-section--native.youtube-player-section--mobile-inline
+    .youtube-player-frame-wrap.controls-idle
+    .youtube-player-native-transport {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .youtube-player-native-transport-btn {
+    width: 2.15rem;
+    height: 2.15rem;
+    padding: 0;
+    border: none;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.58);
+    color: #fff;
+    font-size: 1.15rem;
+    line-height: 1;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+
+  .youtube-player-native-transport-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  .youtube-player-native-transport-btn:not(:disabled):active {
+    background: rgba(0, 0, 0, 0.78);
+  }
+
+  .youtube-player-section--native.youtube-player-section--mobile-inline .youtube-player-subtitles {
+    bottom: 4.5rem;
+  }
+
+  .youtube-player-section--native.youtube-player-section--mobile-inline
+    .youtube-player-frame-wrap.controls-idle
+    .youtube-player-subtitles {
+    bottom: 1rem;
+  }
+
   .youtube-player-overlay-mode {
     position: absolute;
     top: max(0.5rem, var(--safe-top));

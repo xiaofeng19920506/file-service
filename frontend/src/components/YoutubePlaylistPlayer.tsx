@@ -202,6 +202,9 @@ export default function YoutubePlaylistPlayer({
   const [muted, setMuted] = useState(false);
   const volumeBeforeMuteRef = useRef(volume);
   const idleTimerRef = useRef<number | null>(null);
+  const bumpPlayerActivityRef = useRef<() => void>(() => {});
+  const nativeMobileChromeRef = useRef(false);
+  nativeMobileChromeRef.current = nativeControls && mobileInline;
 
   activeIndexRef.current = activeIndex;
   itemsRef.current = items;
@@ -462,6 +465,10 @@ export default function YoutubePlaylistPlayer({
               }
             },
             onStateChange: (event) => {
+              if (nativeMobileChromeRef.current) {
+                bumpPlayerActivityRef.current();
+              }
+
               const YTState = window.YT?.PlayerState;
               const ended = YTState?.ENDED ?? 0;
               const playingState = YTState?.PLAYING ?? 1;
@@ -679,6 +686,8 @@ export default function YoutubePlaylistPlayer({
     scheduleOverlayHide();
   }, [scheduleOverlayHide]);
 
+  bumpPlayerActivityRef.current = bumpPlayerActivity;
+
   useEffect(() => {
     if (!playing) {
       clearIdleTimer();
@@ -894,17 +903,60 @@ export default function YoutubePlaylistPlayer({
   if (!items.length || !current) return null;
 
   if (nativeControls) {
+    const showNativeTransport = mobileInline;
+
     return (
       <section
         className={`youtube-player-section youtube-player-section--native${mobileInline ? ' youtube-player-section--mobile-inline' : ' youtube-player-section--desktop-watch'}`}
         aria-label={t('playlists.playerSection')}
       >
-        <div className="youtube-player-frame-wrap" ref={frameWrapRef}>
+        <div
+          className={`youtube-player-frame-wrap${
+            showNativeTransport && !overlayVisible ? ' controls-idle' : ''
+          }`}
+          ref={frameWrapRef}
+          onTouchStart={showNativeTransport ? bumpPlayerActivity : undefined}
+          onMouseEnter={showNativeTransport ? bumpPlayerActivity : undefined}
+        >
           <div className="youtube-player-video-shell">
             <div id={elementId} className="youtube-player-frame" />
             {activeCaption && (
               <div className="youtube-player-subtitles" aria-live="polite">
                 <p className="youtube-player-subtitle-text">{activeCaption}</p>
+              </div>
+            )}
+            {showNativeTransport && (
+              <div
+                className="youtube-player-native-transport"
+                aria-hidden={!overlayVisible}
+                onTouchStart={(e) => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  className="youtube-player-native-transport-btn"
+                  disabled={prevDisabled}
+                  aria-label={t('playlists.prevTrack')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    bumpPlayerActivity();
+                    goPrev();
+                  }}
+                >
+                  ‹
+                </button>
+                <button
+                  type="button"
+                  className="youtube-player-native-transport-btn"
+                  disabled={nextDisabled}
+                  aria-label={t('playlists.nextTrack')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    bumpPlayerActivity();
+                    goNext();
+                  }}
+                >
+                  ›
+                </button>
               </div>
             )}
           </div>
