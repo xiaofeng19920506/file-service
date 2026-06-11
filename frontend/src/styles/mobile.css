@@ -354,6 +354,19 @@
     overflow: hidden;
   }
 
+  /* 手机详情：管理按钮只在汉堡菜单，页面内只保留返回 + 模式切换 */
+  .playlists-main-toolbar,
+  .playlists-toolbar-mobile,
+  .playlists-toolbar-more,
+  .playlists-toolbar-row,
+  .playlists-hero {
+    display: none !important;
+  }
+
+  .playlists-mobile-watch-toolbar {
+    display: flex;
+  }
+
   .playlists-main-inner {
     flex: 1;
     display: flex;

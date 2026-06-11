@@ -4,7 +4,7 @@ import AddPlaylistItemsModal from '../components/AddPlaylistItemsModal';
 import ConfirmModal from '../components/ConfirmModal';
 import SharePlaylistModal from '../components/SharePlaylistModal';
 import { DragHandleIcon, PencilIcon } from '../components/icons';
-import { useMediaQuery } from '../hooks/useMediaQuery';
+import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 import PlaylistAudioPlayer from '../components/PlaylistAudioPlayer';
 import YoutubePlaylistPlayer from '../components/YoutubePlaylistPlayer';
 import { prioritizeYoutubeAudioCache, type YoutubeAudioStatus } from '../api/youtube-audio';
@@ -99,10 +99,10 @@ export default function PlaylistsPage({
   const [playerEngaged, setPlayerEngaged] = useState(false);
   const [repeatMode, setRepeatMode] = useState<PlaylistRepeatMode>(readPlaylistRepeatMode);
   const [tracksEditMode, setTracksEditMode] = useState(false);
-  const mobileAutoPlayRef = useRef<string | null>(null);
+  const autoPlayOnLoadRef = useRef<string | null>(null);
   const homeResumeDoneRef = useRef(false);
   const userDismissedHomeResumeRef = useRef(false);
-  const isMobileViewport = useMediaQuery('(max-width: 900px)');
+  const isMobileViewport = useMediaQuery(MOBILE_MEDIA_QUERY);
   const { setMenuContent, closeMenu } = usePlaylistsMobileMenu();
 
   useEffect(() => {
@@ -170,7 +170,7 @@ export default function PlaylistsPage({
       setPlaying(false);
       setPlayerEngaged(false);
       setActiveIndex(0);
-      mobileAutoPlayRef.current = null;
+      autoPlayOnLoadRef.current = null;
     }
     setShuffleOrder([]);
     setShuffleCursor(0);
@@ -190,7 +190,7 @@ export default function PlaylistsPage({
 
     homeResumeDoneRef.current = true;
     if (target.itemCount > 0) {
-      mobileAutoPlayRef.current = target.id;
+      autoPlayOnLoadRef.current = target.id;
     }
     onSelectId(target.id);
   }, [selectedId, shareToken, loadingList, playlists, onSelectId]);
@@ -213,7 +213,7 @@ export default function PlaylistsPage({
       setImportUrl('');
       await loadList();
       if (data.items.length > 0) {
-        mobileAutoPlayRef.current = data.playlist.id;
+        autoPlayOnLoadRef.current = data.playlist.id;
       }
       onSelectId(data.playlist.id);
       setDetail(data);
@@ -448,11 +448,18 @@ export default function PlaylistsPage({
 
   useEffect(() => {
     if (loadingDetail || !selectedId || !detail) return;
-    if (mobileAutoPlayRef.current !== selectedId) return;
-    mobileAutoPlayRef.current = null;
     if (detail.items.length === 0) return;
+    if (playerEngaged) return;
+
+    const shouldAutoPlay =
+      autoPlayOnLoadRef.current === selectedId
+      || (isMobileViewport && !userDismissedHomeResumeRef.current);
+
+    if (!shouldAutoPlay) return;
+
+    autoPlayOnLoadRef.current = null;
     startPlayback();
-  }, [loadingDetail, selectedId, detail, shuffleEnabled, detail?.items.length]);
+  }, [loadingDetail, selectedId, detail, playerEngaged, isMobileViewport, shuffleEnabled, detail?.items.length]);
 
   const toggleShuffle = () => {
     const next = !shuffleEnabled;
@@ -746,117 +753,125 @@ export default function PlaylistsPage({
   );
 
   useEffect(() => {
-    if (!isMobileViewport || !selectedId || !detail) {
-      setMenuContent(null);
-      return;
-    }
+    const media = window.matchMedia(MOBILE_MEDIA_QUERY);
 
-    const playlist = detail.playlist;
-    const hasTracks = detail.items.length > 0;
+    const syncMenu = () => {
+      if (!media.matches || !selectedId || !detail) {
+        setMenuContent(null);
+        return;
+      }
 
-    setMenuContent(
-      <div className="nav-mobile-menu-playlists-inner">
-        {hasTracks && (
-          <button
-            type="button"
-            className="nav-mobile-menu-item btn-primary"
-            onClick={() => {
-              startPlayback();
-              closeMenu();
-            }}
-          >
-            {t('playlists.playAll')}
-          </button>
-        )}
-        <button
-          type="button"
-          className="nav-mobile-menu-item btn-secondary"
-          onClick={() => {
-            setShowAddModal(true);
-            closeMenu();
-          }}
-        >
-          {t('playlists.addTitle')}
-        </button>
-        {hasTracks && (
-          <>
+      const playlist = detail.playlist;
+      const hasTracks = detail.items.length > 0;
+
+      setMenuContent(
+        <div className="nav-mobile-menu-playlists-inner">
+          {hasTracks && (
             <button
               type="button"
-              className={`nav-mobile-menu-item btn-secondary playlists-tracks-edit-btn${tracksEditMode ? ' active' : ''}`}
-              aria-pressed={tracksEditMode}
+              className="nav-mobile-menu-item btn-primary"
               onClick={() => {
-                toggleTracksEditMode();
+                startPlayback();
                 closeMenu();
               }}
             >
-              {tracksEditMode ? t('playlists.doneEditTracks') : t('playlists.editTracks')}
+              {t('playlists.playAll')}
             </button>
-            <button
-              type="button"
-              className={`nav-mobile-menu-item btn-secondary playlists-shuffle-btn${shuffleEnabled ? ' active' : ''}`}
-              aria-pressed={shuffleEnabled}
-              onClick={() => {
-                toggleShuffle();
-                closeMenu();
-              }}
-            >
-              {t('playlists.shuffle')}
-            </button>
-            <button
-              type="button"
-              className={`nav-mobile-menu-item btn-secondary playlists-repeat-btn${repeatMode !== 'off' ? ' active' : ''}`}
-              onClick={() => {
-                cycleRepeat();
-                closeMenu();
-              }}
-            >
-              {repeatMode === 'one'
-                ? t('playlists.repeatOne')
-                : repeatMode === 'all'
-                  ? t('playlists.repeatAll')
-                  : t('playlists.repeatOff')}
-            </button>
-          </>
-        )}
-        <button
-          type="button"
-          className="nav-mobile-menu-item btn-secondary"
-          onClick={() => {
-            setShareTarget({ id: playlist.id, title: playlist.title });
-            closeMenu();
-          }}
-        >
-          {t('playlists.share')}
-        </button>
-        {permissions.canMerge && playlist.matchedCount > 0 && (
+          )}
           <button
             type="button"
             className="nav-mobile-menu-item btn-secondary"
             onClick={() => {
-              onLoadToMerge(playlist.id);
+              setShowAddModal(true);
               closeMenu();
             }}
           >
-            {t('playlists.loadToMerge')}
+            {t('playlists.addTitle')}
           </button>
-        )}
-        <button
-          type="button"
-          className="nav-mobile-menu-item btn-secondary btn-danger-outline"
-          disabled={deletingId === playlist.id}
-          onClick={() => {
-            setDeleteTarget({ id: playlist.id, title: playlist.title });
-            closeMenu();
-          }}
-        >
-          {deletingId === playlist.id ? t('playlists.deleting') : t('playlists.delete')}
-        </button>
-      </div>,
-    );
+          {hasTracks && (
+            <>
+              <button
+                type="button"
+                className={`nav-mobile-menu-item btn-secondary playlists-tracks-edit-btn${tracksEditMode ? ' active' : ''}`}
+                aria-pressed={tracksEditMode}
+                onClick={() => {
+                  toggleTracksEditMode();
+                  closeMenu();
+                }}
+              >
+                {tracksEditMode ? t('playlists.doneEditTracks') : t('playlists.editTracks')}
+              </button>
+              <button
+                type="button"
+                className={`nav-mobile-menu-item btn-secondary playlists-shuffle-btn${shuffleEnabled ? ' active' : ''}`}
+                aria-pressed={shuffleEnabled}
+                onClick={() => {
+                  toggleShuffle();
+                  closeMenu();
+                }}
+              >
+                {t('playlists.shuffle')}
+              </button>
+              <button
+                type="button"
+                className={`nav-mobile-menu-item btn-secondary playlists-repeat-btn${repeatMode !== 'off' ? ' active' : ''}`}
+                onClick={() => {
+                  cycleRepeat();
+                  closeMenu();
+                }}
+              >
+                {repeatMode === 'one'
+                  ? t('playlists.repeatOne')
+                  : repeatMode === 'all'
+                    ? t('playlists.repeatAll')
+                    : t('playlists.repeatOff')}
+              </button>
+            </>
+          )}
+          <button
+            type="button"
+            className="nav-mobile-menu-item btn-secondary"
+            onClick={() => {
+              setShareTarget({ id: playlist.id, title: playlist.title });
+              closeMenu();
+            }}
+          >
+            {t('playlists.share')}
+          </button>
+          {permissions.canMerge && playlist.matchedCount > 0 && (
+            <button
+              type="button"
+              className="nav-mobile-menu-item btn-secondary"
+              onClick={() => {
+                onLoadToMerge(playlist.id);
+                closeMenu();
+              }}
+            >
+              {t('playlists.loadToMerge')}
+            </button>
+          )}
+          <button
+            type="button"
+            className="nav-mobile-menu-item btn-secondary btn-danger-outline"
+            disabled={deletingId === playlist.id}
+            onClick={() => {
+              setDeleteTarget({ id: playlist.id, title: playlist.title });
+              closeMenu();
+            }}
+          >
+            {deletingId === playlist.id ? t('playlists.deleting') : t('playlists.delete')}
+          </button>
+        </div>,
+      );
+    };
 
-    return () => setMenuContent(null);
+    syncMenu();
+    media.addEventListener('change', syncMenu);
+    return () => {
+      media.removeEventListener('change', syncMenu);
+      setMenuContent(null);
+    };
   }, [
-    isMobileViewport,
     selectedId,
     detail,
     tracksEditMode,
@@ -867,6 +882,7 @@ export default function PlaylistsPage({
     closeMenu,
     t,
     onLoadToMerge,
+    permissions.canMerge,
   ]);
 
   return (
@@ -994,8 +1010,9 @@ export default function PlaylistsPage({
                               if (renamingId !== null && renamingId !== row.id) {
                                 cancelRename();
                               }
-                              if (isMobileViewport && row.itemCount > 0) {
-                                mobileAutoPlayRef.current = row.id;
+                              userDismissedHomeResumeRef.current = false;
+                              if (row.itemCount > 0) {
+                                autoPlayOnLoadRef.current = row.id;
                               }
                               onSelectId(row.id);
                             }}
@@ -1035,20 +1052,18 @@ export default function PlaylistsPage({
               <div
                 className={`playlists-main-inner${youtubeWatchActive ? ' playlists-main-inner--youtube-watch' : ''}${youtubeWatchMobile ? ' playlists-main-inner--mobile-video' : ''}`}
               >
-                {!isMobileViewport && renderMainToolbar(detail.playlist, detail.items.length > 0)}
+                {renderMainToolbar(detail.playlist, detail.items.length > 0)}
 
-                {isMobileViewport && (
-                  <div className="playlists-mobile-watch-toolbar mobile-only">
-                    <button
-                      type="button"
-                      className="btn-secondary playlists-mobile-back"
-                      onClick={backToList}
-                    >
-                      {t('playlists.backToList')}
-                    </button>
-                    {detail.items.length > 0 && renderPlaybackModeToggle('playlists-mobile-watch-mode')}
-                  </div>
-                )}
+                <div className="playlists-mobile-watch-toolbar mobile-only">
+                  <button
+                    type="button"
+                    className="btn-secondary playlists-mobile-back"
+                    onClick={backToList}
+                  >
+                    {t('playlists.backToList')}
+                  </button>
+                  {detail.items.length > 0 && renderPlaybackModeToggle('playlists-mobile-watch-mode')}
+                </div>
 
                 {detail.items.length === 0 ? (
                   <div className="playlists-empty-card playlists-empty-tracks">
@@ -1066,10 +1081,10 @@ export default function PlaylistsPage({
                     data-tracks-edit={tracksEditMode ? 'true' : 'false'}
                   >
                     <div className="playlists-player-col">
-                      {!showPlayer && currentItem && !isMobileViewport && (
+                      {!showPlayer && currentItem && (
                         <button
                           type="button"
-                          className="playlists-hero"
+                          className="playlists-hero desktop-only"
                           onClick={startPlayback}
                           aria-label={t('playlists.playAll')}
                         >
@@ -1263,7 +1278,7 @@ export default function PlaylistsPage({
           onAccepted={(data) => {
             void loadList();
             if (isMobileViewport && data.items.length > 0) {
-              mobileAutoPlayRef.current = data.playlist.id;
+              autoPlayOnLoadRef.current = data.playlist.id;
             }
             onSelectId(data.playlist.id);
             setDetail(data);
