@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { getYoutubeAudioStatus, getYoutubeAudioStreamUrl } from '../api/youtube-audio';
 import type { YoutubeAudioStatus } from '../api/youtube-audio';
 import {
@@ -17,6 +17,8 @@ import {
   readStoredPlayerVolume,
   writeStoredPlayerVolume,
 } from '../lib/player-volume';
+import { useMediaSession } from '../hooks/useMediaSession';
+import AudioSeekBar from './AudioSeekBar';
 import '../styles/playlist-audio.css';
 
 export type PlaylistAudioItem = {
@@ -36,19 +38,33 @@ type PlaylistAudioPlayerProps = {
   onPrevTrack?: () => void;
   canGoNext?: boolean;
   canGoPrev?: boolean;
+  onProgressUpdate?: (progress: PlaylistAudioProgressState) => void;
+  progressHandleRef?: RefObject<PlaylistAudioProgressHandle | null>;
+  /** 用于车载 / 锁屏 Media Session 显示的列表名 */
+  playlistTitle?: string;
 };
 
 function youtubeThumb(videoId: string): string {
   return `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
 }
 
-function formatTime(seconds: number): string {
+export function formatPlaybackTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
   const total = Math.floor(seconds);
   const m = Math.floor(total / 60);
   const s = total % 60;
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
+
+export type PlaylistAudioProgressState = {
+  currentTime: number;
+  duration: number;
+  canSeek: boolean;
+};
+
+export type PlaylistAudioProgressHandle = {
+  seekToRatio: (ratio: number) => void;
+};
 
 function resolveStreamSrc(url: string): string {
   if (url.startsWith('/')) return url;
@@ -107,12 +123,17 @@ export default function PlaylistAudioPlayer({
   onPrevTrack,
   canGoNext,
   canGoPrev,
+  onProgressUpdate,
+  progressHandleRef,
+  playlistTitle,
 }: PlaylistAudioPlayerProps) {
   const { t } = useI18n();
   const audioRef = useRef<HTMLAudioElement>(null);
   const volumeProgressRef = useRef<HTMLDivElement>(null);
   const wantPlayRef = useRef(playing);
   const skipPauseSyncRef = useRef(false);
+  const endedHandledRef = useRef(false);
+  const playbackTrackKeyRef = useRef('');
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [usingPreview, setUsingPreview] = useState(false);
   const [loadingStream, setLoadingStream] = useState(false);
@@ -130,7 +151,7 @@ export default function PlaylistAudioPlayer({
   const isReady = audioStatus?.status === 'ready';
   const isProcessing =
     audioStatus?.status === 'pending' || audioStatus?.status === 'processing';
-  const progressPct = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
+  const canSeek = !usingPreview && Number.isFinite(duration) && duration > 0;
   const volumePct = muted ? 0 : volume;
   const activeCaption = useMemo(
     () => findActiveCaption(captionCues, currentTime),
@@ -324,6 +345,26 @@ export default function PlaylistAudioPlayer({
         const el = audioRef.current;
         const savedTime = el?.currentTime ?? 0;
         const wasPlaying = wantPlayRef.current;
+        const trackDuration = el?.duration;
+        const trackFinished =
+          el?.ended === true ||
+          (typeof trackDuration === 'number' &&
+            Number.isFinite(trackDuration) &&
+            trackDuration > 0 &&
+            savedTime >= trackDuration - 0.5);
+
+        if (trackFinished) {
+          if (wasPlaying) {
+            if (onNextTrack) onNextTrack();
+            else if (activeIndex < items.length - 1) {
+              onActiveIndexChange(activeIndex + 1);
+              onPlayingChange(true);
+            } else {
+              onPlayingChange(false);
+            }
+          }
+          return;
+        }
 
         if (!cancelled) applyStreamUrl(picked.url, false);
 
@@ -351,6 +392,11 @@ export default function PlaylistAudioPlayer({
     pickStreamFromStatus,
     refreshAudioStatus,
     applyStreamUrl,
+    onNextTrack,
+    onActiveIndexChange,
+    onPlayingChange,
+    activeIndex,
+    items.length,
   ]);
 
   const attemptPlay = useCallback(() => {
@@ -388,10 +434,22 @@ export default function PlaylistAudioPlayer({
       return;
     }
     if (!streamUrl) return;
+
+    const trackKey = `${activeIndex}:${current?.youtubeVideoId ?? ''}`;
+    const isNewTrack = trackKey !== playbackTrackKeyRef.current;
+    playbackTrackKeyRef.current = trackKey;
+
     skipPauseSyncRef.current = true;
-    el.load();
+    if (isNewTrack) {
+      el.load();
+    }
     attemptPlay();
-  }, [streamUrl, playing, attemptPlay]);
+  }, [streamUrl, playing, attemptPlay, activeIndex, current?.youtubeVideoId]);
+
+  useEffect(() => {
+    endedHandledRef.current = false;
+    playbackTrackKeyRef.current = '';
+  }, [activeIndex, current?.youtubeVideoId]);
 
   useEffect(() => {
     const el = audioRef.current;
@@ -434,18 +492,31 @@ export default function PlaylistAudioPlayer({
     [setVolumeLevel],
   );
 
-  const seekFromClientX = useCallback(
-    (clientX: number, bar: HTMLElement) => {
-      const el = audioRef.current;
-      if (!el || duration <= 0) return;
-      const rect = bar.getBoundingClientRect();
-      const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
-      el.currentTime = ratio * duration;
-    },
-    [duration],
-  );
+  const seekToRatio = useCallback((ratio: number) => {
+    const el = audioRef.current;
+    if (!el) return;
+    const trackDuration = el.duration;
+    if (!Number.isFinite(trackDuration) || trackDuration <= 0) return;
+    const clamped = Math.min(1, Math.max(0, ratio));
+    el.currentTime = clamped * trackDuration;
+    setCurrentTime(el.currentTime);
+  }, []);
 
-  const handleEnded = useCallback(() => {
+  useEffect(() => {
+    if (!progressHandleRef) return;
+    progressHandleRef.current = { seekToRatio };
+    return () => {
+      progressHandleRef.current = null;
+    };
+  }, [progressHandleRef, seekToRatio]);
+
+  useEffect(() => {
+    onProgressUpdate?.({ currentTime, duration, canSeek });
+  }, [currentTime, duration, canSeek, onProgressUpdate]);
+
+  const advanceToNextTrack = useCallback(() => {
+    if (endedHandledRef.current) return;
+    endedHandledRef.current = true;
     skipPauseSyncRef.current = true;
     if (onNextTrack) {
       onNextTrack();
@@ -458,13 +529,37 @@ export default function PlaylistAudioPlayer({
     }
   }, [activeIndex, items.length, onActiveIndexChange, onPlayingChange, onNextTrack]);
 
+  const handleTimeUpdate = useCallback(
+    (e: React.SyntheticEvent<HTMLAudioElement>) => {
+      const el = e.currentTarget;
+      setCurrentTime(el.currentTime);
+
+      if (usingPreview || endedHandledRef.current) return;
+
+      const trackDuration = el.duration;
+      if (!Number.isFinite(trackDuration) || trackDuration <= 0) return;
+      if (el.paused || el.seeking) return;
+      if (el.currentTime < trackDuration - 0.35) return;
+
+      advanceToNextTrack();
+    },
+    [advanceToNextTrack, usingPreview],
+  );
+
+  const handleEnded = useCallback(() => {
+    advanceToNextTrack();
+  }, [advanceToNextTrack]);
+
   const handlePause = useCallback(
     (e: React.SyntheticEvent<HTMLAudioElement>) => {
       if (skipPauseSyncRef.current) return;
-      if (e.currentTarget.ended) return;
+      if (e.currentTarget.ended) {
+        advanceToNextTrack();
+        return;
+      }
       onPlayingChange(false);
     },
-    [onPlayingChange],
+    [advanceToNextTrack, onPlayingChange],
   );
 
   const goNext = useCallback(() => {
@@ -495,6 +590,47 @@ export default function PlaylistAudioPlayer({
   const nextDisabled =
     canGoNext !== undefined ? !canGoNext : activeIndex >= items.length - 1 && !onNextTrack;
   const prevDisabled = canGoPrev !== undefined ? !canGoPrev : activeIndex <= 0;
+
+  const handleMediaPlay = useCallback(() => {
+    if (!streamUrl && loadingStream) return;
+    if (!streamUrl) {
+      wantPlayRef.current = true;
+      onPlayingChange(true);
+      return;
+    }
+    wantPlayRef.current = true;
+    skipPauseSyncRef.current = true;
+    onPlayingChange(true);
+    attemptPlay();
+  }, [streamUrl, loadingStream, onPlayingChange, attemptPlay]);
+
+  const handleMediaPause = useCallback(() => {
+    wantPlayRef.current = false;
+    onPlayingChange(false);
+  }, [onPlayingChange]);
+
+  useMediaSession(
+    Boolean(current && streamUrl),
+    playing,
+    current
+      ? {
+          title: current.title,
+          artist: t('app.name'),
+          album: playlistTitle,
+          videoId: current.youtubeVideoId,
+        }
+      : null,
+    currentTime,
+    duration,
+    {
+      onPlay: handleMediaPlay,
+      onPause: handleMediaPause,
+      onPreviousTrack: goPrev,
+      onNextTrack: goNext,
+      canGoPrev: !prevDisabled,
+      canGoNext: !nextDisabled,
+    },
+  );
 
   if (!current) return null;
 
@@ -543,7 +679,9 @@ export default function PlaylistAudioPlayer({
         className="playlist-audio-element"
         src={streamUrl ?? undefined}
         preload="auto"
-        onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+        playsInline
+        loop={false}
+        onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
         onEnded={handleEnded}
         onPlay={() => {
@@ -561,87 +699,75 @@ export default function PlaylistAudioPlayer({
           </span>
         </header>
 
-        <div className="audio-transport" role="group" aria-label={t('playlists.playerSectionAudio')}>
-          <button
-            type="button"
-            className="audio-transport-btn"
-            onClick={goPrev}
-            disabled={prevDisabled}
-            aria-label={t('playlists.prevTrack')}
-          >
-            <svg className="audio-transport-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-              <path d="M14 6l-6 6 6 6V6z" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            className="audio-transport-btn audio-transport-btn--primary"
-            onClick={() => {
-              if (!streamUrl && loadingStream) return;
-              if (!streamUrl) {
-                wantPlayRef.current = true;
-                onPlayingChange(true);
-                return;
-              }
-              onPlayingChange(!playing);
-            }}
-            disabled={loadingStream && !streamUrl}
-            aria-label={playing ? t('playlists.pause') : t('playlists.play')}
-          >
-            {playing ? (
+        <div className="audio-player-bar">
+          <div className="audio-transport" role="group" aria-label={t('playlists.playerSectionAudio')}>
+            <button
+              type="button"
+              className="audio-transport-btn"
+              onClick={goPrev}
+              disabled={prevDisabled}
+              aria-label={t('playlists.prevTrack')}
+            >
               <svg className="audio-transport-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                <path d="M7 6h3v12H7V6zm7 0h3v12h-3V6z" />
+                <path d="M14 6l-6 6 6 6V6z" />
               </svg>
-            ) : (
-              <svg
-                className="audio-transport-icon audio-transport-icon--play"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                aria-hidden
-              >
-                <path d="M8 5v14l11-7L8 5z" />
+            </button>
+            <button
+              type="button"
+              className="audio-transport-btn audio-transport-btn--primary"
+              onClick={() => {
+                if (!streamUrl && loadingStream) return;
+                if (!streamUrl) {
+                  wantPlayRef.current = true;
+                  onPlayingChange(true);
+                  return;
+                }
+                onPlayingChange(!playing);
+              }}
+              disabled={loadingStream && !streamUrl}
+              aria-label={playing ? t('playlists.pause') : t('playlists.play')}
+            >
+              {playing ? (
+                <svg className="audio-transport-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                  <path d="M7 6h3v12H7V6zm7 0h3v12h-3V6z" />
+                </svg>
+              ) : (
+                <svg
+                  className="audio-transport-icon audio-transport-icon--play"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden
+                >
+                  <path d="M8 5v14l11-7L8 5z" />
+                </svg>
+              )}
+            </button>
+            <button
+              type="button"
+              className="audio-transport-btn"
+              onClick={goNext}
+              disabled={nextDisabled}
+              aria-label={t('playlists.nextTrack')}
+            >
+              <svg className="audio-transport-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                <path d="M10 6l6 6-6 6V6z" />
               </svg>
-            )}
-          </button>
-          <button
-            type="button"
-            className="audio-transport-btn"
-            onClick={goNext}
-            disabled={nextDisabled}
-            aria-label={t('playlists.nextTrack')}
-          >
-            <svg className="audio-transport-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-              <path d="M10 6l6 6-6 6V6z" />
-            </svg>
-          </button>
-        </div>
-
-        <div
-          className="audio-progress"
-          role="slider"
-          tabIndex={0}
-          aria-label={t('playlists.seek')}
-          aria-valuemin={0}
-          aria-valuemax={duration}
-          aria-valuenow={currentTime}
-          onClick={(e) => seekFromClientX(e.clientX, e.currentTarget)}
-          onKeyDown={(e) => {
-            const el = audioRef.current;
-            if (!el || duration <= 0) return;
-            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-              e.preventDefault();
-              const step = e.key === 'ArrowRight' ? 5 : -5;
-              el.currentTime = Math.min(duration, Math.max(0, el.currentTime + step));
-            }
-          }}
-        >
-          <div className="audio-progress-track">
-            <div className="audio-progress-fill" style={{ width: `${progressPct}%` }} />
+            </button>
           </div>
-        </div>
 
-        <div className="audio-time">
-          {formatTime(currentTime)} / {formatTime(duration)}
+          <AudioSeekBar
+            currentTime={currentTime}
+            duration={duration}
+            canSeek={canSeek}
+            usingPreview={usingPreview}
+            onSeekRatio={seekToRatio}
+            className="audio-player-bar-progress"
+          />
+
+          <div className="audio-time">
+            {formatPlaybackTime(currentTime)}
+            {canSeek ? ` / ${formatPlaybackTime(duration)}` : usingPreview ? ' · …' : ''}
+          </div>
         </div>
 
         <div className="audio-options">

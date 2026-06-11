@@ -1,10 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AcceptSharedPlaylistModal from '../components/AcceptSharedPlaylistModal';
 import AddPlaylistItemsModal from '../components/AddPlaylistItemsModal';
 import ConfirmModal from '../components/ConfirmModal';
 import SharePlaylistModal from '../components/SharePlaylistModal';
 import { DragHandleIcon, PencilIcon } from '../components/icons';
-import PlaylistAudioPlayer from '../components/PlaylistAudioPlayer';
+import AudioSeekBar from '../components/AudioSeekBar';
+import PlaylistAudioPlayer, {
+  formatPlaybackTime,
+  type PlaylistAudioProgressHandle,
+  type PlaylistAudioProgressState,
+} from '../components/PlaylistAudioPlayer';
 import YoutubePlaylistPlayer from '../components/YoutubePlaylistPlayer';
 import { prioritizeYoutubeAudioCache, type YoutubeAudioStatus } from '../api/youtube-audio';
 import {
@@ -85,6 +90,12 @@ export default function PlaylistsPage({
   const [notice, setNotice] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const audioProgressHandleRef = useRef<PlaylistAudioProgressHandle | null>(null);
+  const [audioProgress, setAudioProgress] = useState<PlaylistAudioProgressState>({
+    currentTime: 0,
+    duration: 0,
+    canSeek: false,
+  });
   const [playerEngaged, setPlayerEngaged] = useState(false);
   const [toolbarExpanded, setToolbarExpanded] = useState(false);
 
@@ -592,7 +603,11 @@ export default function PlaylistsPage({
   const mobileCanGoNext =
     playerEngaged ? canGoNext : itemCount > 1 || shuffleEnabled;
 
-  const renderMobileTransport = (variant: 'toolbar' | 'dock' = 'toolbar') => (
+  const seekDockRatio = useCallback((ratio: number) => {
+    audioProgressHandleRef.current?.seekToRatio(ratio);
+  }, []);
+
+  const renderDockTransport = (variant: 'toolbar' | 'dock' = 'toolbar') => (
     <div
       className={`playlists-mobile-transport playlists-mobile-transport--${variant} mobile-only`}
       role="group"
@@ -638,6 +653,46 @@ export default function PlaylistsPage({
       </button>
     </div>
   );
+
+  const renderPlaybackDock = (variant: 'mobile' | 'desktop') => {
+    if (!selectedId || !detail || detail.items.length === 0 || !currentItem) return null;
+
+    const showAudioProgress = playbackMode === 'audio';
+
+    return (
+      <div
+        className={`playlists-playback-dock playlists-playback-dock--${variant}${showAudioProgress ? ' playlists-playback-dock--audio' : ''}${variant === 'mobile' ? ' mobile-only' : ' desktop-only'}`}
+      >
+        <div className="playlists-playback-dock-meta">
+          <span className="playlists-playback-dock-title">{currentItem.title}</span>
+          <span className="playlists-playback-dock-index">
+            {t('playlists.trackCounter', {
+              current: activeIndex + 1,
+              total: detail.items.length,
+            })}
+          </span>
+        </div>
+        {showAudioProgress && (
+          <div className="playlists-playback-dock-progress-wrap">
+            <AudioSeekBar
+              currentTime={audioProgress.currentTime}
+              duration={audioProgress.duration}
+              canSeek={audioProgress.canSeek}
+              onSeekRatio={seekDockRatio}
+              className="playlists-playback-dock-progress"
+            />
+            <div className="playlists-playback-dock-time">
+              {formatPlaybackTime(audioProgress.currentTime)}
+              {audioProgress.canSeek
+                ? ` / ${formatPlaybackTime(audioProgress.duration)}`
+                : ''}
+            </div>
+          </div>
+        )}
+        {renderDockTransport('dock')}
+      </div>
+    );
+  };
 
   const renderMainToolbar = (playlist: PlaylistDetail['playlist'], hasTracks: boolean) => (
     <div
@@ -982,6 +1037,9 @@ export default function PlaylistsPage({
                           onPrevTrack={goToPrevTrack}
                           canGoNext={canGoNext}
                           canGoPrev={canGoPrev}
+                          onProgressUpdate={setAudioProgress}
+                          progressHandleRef={audioProgressHandleRef}
+                          playlistTitle={detail.playlist.title}
                         />
                       )}
 
@@ -1154,20 +1212,8 @@ export default function PlaylistsPage({
         />
       )}
 
-      {showPlayer && selectedId && detail && detail.items.length > 0 && currentItem && (
-        <div className="playlists-mobile-dock mobile-only">
-          <div className="playlists-mobile-dock-meta">
-            <span className="playlists-mobile-dock-title">{currentItem.title}</span>
-            <span className="playlists-mobile-dock-index">
-              {t('playlists.trackCounter', {
-                current: activeIndex + 1,
-                total: detail.items.length,
-              })}
-            </span>
-          </div>
-          {renderMobileTransport('dock')}
-        </div>
-      )}
+      {showPlayer && renderPlaybackDock('mobile')}
+      {showPlayer && renderPlaybackDock('desktop')}
     </div>
   );
 }

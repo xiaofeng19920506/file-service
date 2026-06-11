@@ -88,6 +88,50 @@
   font-size: 0.8125rem;
 }
 
+/* 播放条：桌面横向 / 移动纵向 */
+.audio-player-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+@media (min-width: 901px) {
+  .audio-player-bar {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.85rem;
+  }
+
+  .audio-player-bar .audio-transport {
+    flex-shrink: 0;
+    gap: 0.65rem;
+  }
+
+  .audio-player-bar-progress,
+  .audio-player-bar .audio-progress {
+    flex: 1;
+    min-width: 0;
+    padding: 0.55rem 0;
+  }
+
+  .audio-player-bar .audio-time {
+    flex-shrink: 0;
+    min-width: 5.75rem;
+    text-align: right;
+  }
+
+  .audio-player-bar .audio-progress-track {
+    height: 7px;
+  }
+
+  .audio-player-bar .audio-progress-thumb {
+    width: 15px;
+    height: 15px;
+    margin-left: -7.5px;
+  }
+}
+
 /* 传输控制：对称圆形按钮 */
 .audio-transport {
   display: flex;
@@ -158,8 +202,14 @@
 /* 进度条 */
 .audio-progress {
   width: 100%;
-  padding: 0.35rem 0;
+  padding: 0.65rem 0;
   cursor: pointer;
+  touch-action: none;
+}
+
+.audio-progress--disabled {
+  cursor: default;
+  opacity: 0.65;
 }
 
 .audio-progress:focus-visible {
@@ -170,7 +220,7 @@
 
 .audio-progress-track {
   position: relative;
-  height: 5px;
+  height: 6px;
   border-radius: 999px;
   background: var(--border-light);
 }
@@ -179,6 +229,34 @@
   height: 100%;
   border-radius: inherit;
   background: var(--blue);
+  pointer-events: none;
+}
+
+.audio-progress-fill--indeterminate {
+  width: 35% !important;
+  animation: audio-progress-indeterminate 1.4s ease-in-out infinite;
+}
+
+@keyframes audio-progress-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+.audio-progress-thumb {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  border-radius: 50%;
+  background: var(--blue);
+  border: 2px solid var(--surface);
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--shadow-sm) 70%, transparent);
+  transform: translateY(-50%);
   pointer-events: none;
 }
 
@@ -272,4 +350,78 @@
   width: 1rem;
   height: 1rem;
   display: block;
+}
+
+/* 桌面端底部播放条（MP3 模式含可拖动进度） */
+@media (min-width: 901px) {
+  .playlists-playback-dock--desktop {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: var(--z-dock, 15);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.7rem var(--page-gutter);
+    background: color-mix(in srgb, var(--surface) 94%, transparent);
+    backdrop-filter: saturate(180%) blur(16px);
+    -webkit-backdrop-filter: saturate(180%) blur(16px);
+    border-top: 1px solid var(--border-light);
+    box-shadow: 0 -4px 20px color-mix(in srgb, var(--shadow-sm) 70%, transparent);
+    pointer-events: auto;
+  }
+
+  .playlists-playback-dock--desktop .playlists-playback-dock-meta {
+    flex: 0 0 min(16rem, 24%);
+    min-width: 0;
+    padding: 0;
+  }
+
+  .playlists-playback-dock--desktop .playlists-playback-dock-title {
+    font-size: 0.875rem;
+  }
+
+  .playlists-playback-dock--desktop .playlists-playback-dock-index {
+    font-size: 0.75rem;
+  }
+
+  .playlists-playback-dock--desktop .playlists-mobile-transport--dock {
+    flex-shrink: 0;
+    width: auto;
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
+
+  .playlists-playback-dock--desktop .playlists-playback-dock-progress-wrap {
+    flex: 1;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+    padding: 0;
+  }
+
+  .playlists-playback-dock--desktop .playlists-playback-dock-progress {
+    flex: 1;
+    min-width: 0;
+    padding: 0.5rem 0;
+  }
+
+  .playlists-playback-dock--desktop .playlists-playback-dock-progress .audio-progress-track {
+    height: 7px;
+  }
+
+  .playlists-playback-dock--desktop .playlists-playback-dock-time {
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .page-body-playlists .playlists-workspace[data-player-active='true'] {
+    padding-bottom: calc(var(--playlists-desktop-dock-height) + 0.75rem);
+  }
 }

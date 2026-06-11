@@ -17,7 +17,8 @@
   --z-overlay: 100;
   --z-modal: 200;
 
-  --playlists-mobile-dock-height: 5.75rem;
+  --playlists-mobile-dock-height: 7.75rem;
+  --playlists-desktop-dock-height: 5.5rem;
   --touch-target: 2.75rem;
 }
 
@@ -153,7 +154,7 @@ body {
   }
 
   /* 敬拜列表：播放条仅在播放时显示，避免挡住内容 */
-  .playlists-mobile-dock {
+  .playlists-playback-dock--mobile {
     z-index: var(--z-dock);
     bottom: calc(var(--bottom-nav-height) + var(--safe-bottom));
     padding-bottom: max(0.65rem, var(--safe-bottom));

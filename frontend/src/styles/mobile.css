@@ -394,7 +394,7 @@
     font-weight: 600;
   }
 
-  .playlists-mobile-dock {
+  .playlists-playback-dock--mobile {
     position: fixed;
     left: 0;
     right: 0;
@@ -412,7 +412,7 @@
     pointer-events: auto;
   }
 
-  .playlists-mobile-dock-meta {
+  .playlists-playback-dock-meta {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
@@ -421,7 +421,7 @@
     padding: 0 0.15rem;
   }
 
-  .playlists-mobile-dock-title {
+  .playlists-playback-dock-title {
     flex: 1;
     min-width: 0;
     font-size: 0.8125rem;
@@ -432,11 +432,43 @@
     white-space: nowrap;
   }
 
-  .playlists-mobile-dock-index {
+  .playlists-playback-dock-index {
     flex-shrink: 0;
     font-size: 0.75rem;
     color: var(--text-tertiary);
     font-variant-numeric: tabular-nums;
+  }
+
+  .playlists-playback-dock--audio {
+    gap: 0.35rem;
+  }
+
+  .playlists-playback-dock-progress-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0 0.1rem;
+  }
+
+  .playlists-playback-dock-progress {
+    padding: 0.45rem 0;
+  }
+
+  .playlists-playback-dock-progress .audio-progress-track {
+    height: 7px;
+  }
+
+  .playlists-playback-dock-progress .audio-progress-thumb {
+    width: 16px;
+    height: 16px;
+    margin-left: -8px;
+  }
+
+  .playlists-playback-dock-time {
+    font-size: 0.6875rem;
+    color: var(--text-tertiary);
+    font-variant-numeric: tabular-nums;
+    text-align: center;
   }
 
   .playlists-mobile-transport {
