@@ -204,6 +204,8 @@ const en: MessageTree = {
     addPartialDuplicate: 'Added {added} tracks, skipped {skipped} duplicates',
     addAllDuplicate: 'These tracks are already in the list',
     removeTrack: 'Remove {title} from list',
+    editTracks: 'Edit',
+    doneEditTracks: 'Done',
     dragToReorder: 'Drag to reorder',
     savedTitle: 'My lists',
     loading: 'Loading…',

@@ -95,10 +95,12 @@ export default function PlaylistsPage({
   const [playerEngaged, setPlayerEngaged] = useState(false);
   const [repeatMode, setRepeatMode] = useState<PlaylistRepeatMode>(readPlaylistRepeatMode);
   const [toolbarExpanded, setToolbarExpanded] = useState(false);
+  const [tracksEditMode, setTracksEditMode] = useState(false);
   const isMobileViewport = useMediaQuery('(max-width: 900px)');
 
   useEffect(() => {
     setToolbarExpanded(false);
+    setTracksEditMode(false);
   }, [selectedId]);
   const [removingItemId, setRemovingItemId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -550,6 +552,27 @@ export default function PlaylistsPage({
     writePlaylistRepeatMode(mode);
   };
 
+  const toggleTracksEditMode = () => {
+    setTracksEditMode((open) => {
+      if (open) {
+        setTrackDragIndex(null);
+        setTrackDragOver(null);
+      }
+      return !open;
+    });
+  };
+
+  const renderTracksEditToggle = (className = 'btn-secondary') => (
+    <button
+      type="button"
+      className={`${className} playlists-tracks-edit-btn${tracksEditMode ? ' active' : ''}`}
+      aria-pressed={tracksEditMode}
+      onClick={toggleTracksEditMode}
+    >
+      {tracksEditMode ? t('playlists.doneEditTracks') : t('playlists.editTracks')}
+    </button>
+  );
+
   const renderShuffleToggle = () => (
     <button
       type="button"
@@ -647,6 +670,7 @@ export default function PlaylistsPage({
             <button type="button" className="btn-secondary" onClick={() => setShowAddModal(true)}>
               {t('playlists.addTitle')}
             </button>
+            {hasTracks && renderTracksEditToggle()}
             <button
               type="button"
               className="btn-secondary"
@@ -709,6 +733,7 @@ export default function PlaylistsPage({
             </button>
             <div className="playlists-toolbar-row">
               {renderShuffleToggle()}
+              {renderTracksEditToggle()}
               <button type="button" className="btn-secondary" onClick={() => setShowAddModal(true)}>
                 {t('playlists.addTitle')}
               </button>
@@ -949,6 +974,7 @@ export default function PlaylistsPage({
                     >
                       {t('playlists.backToList')}
                     </button>
+                    {detail.items.length > 0 && renderTracksEditToggle('btn-secondary playlists-mobile-watch-edit')}
                     {renderPlaybackModeToggle('playlists-mobile-watch-mode')}
                   </div>
                 )}
@@ -970,6 +996,7 @@ export default function PlaylistsPage({
                     data-youtube-watch={youtubeWatchActive ? 'true' : 'false'}
                     data-mobile-video-immersive={youtubeWatchMobile ? 'true' : 'false'}
                     data-mobile-video-tracks-open={youtubeWatchActive ? 'true' : 'false'}
+                    data-tracks-edit={tracksEditMode ? 'true' : 'false'}
                   >
                     <div className="playlists-player-col">
                       {!showPlayer && currentItem && (
@@ -1044,7 +1071,7 @@ export default function PlaylistsPage({
                               key={item.id}
                               className={`playlists-track${isActive ? ' active' : ''}${isPlaying ? ' playing' : ''}${isDragging ? ' dragging' : ''}${isDragOverBefore ? ' drag-over-before' : ''}${isDragOverAfter ? ' drag-over-after' : ''}`}
                               onDragOver={(e) => {
-                                if (trackDragIndex === null || savingOrder) return;
+                                if (!tracksEditMode || trackDragIndex === null || savingOrder) return;
                                 e.preventDefault();
                                 e.dataTransfer.dropEffect = 'move';
                                 const rect = e.currentTarget.getBoundingClientRect();
@@ -1053,9 +1080,8 @@ export default function PlaylistsPage({
                               }}
                               onDrop={(e) => {
                                 e.preventDefault();
-                                if (trackDragIndex !== null && trackDragOver) {
-                                  void applyTrackReorder(trackDragIndex, trackDragOver);
-                                }
+                                if (!tracksEditMode || trackDragIndex === null || !trackDragOver) return;
+                                void applyTrackReorder(trackDragIndex, trackDragOver);
                                 setTrackDragIndex(null);
                                 setTrackDragOver(null);
                               }}
@@ -1067,25 +1093,27 @@ export default function PlaylistsPage({
                                 }
                               }}
                             >
-                              <span
-                                className={`playlists-track-drag-handle${savingOrder ? ' disabled' : ''}`}
-                                title={t('playlists.dragToReorder')}
-                                draggable={!savingOrder}
-                                onDragStart={(e) => {
-                                  if (savingOrder) {
-                                    e.preventDefault();
-                                    return;
-                                  }
-                                  e.dataTransfer.effectAllowed = 'move';
-                                  setTrackDragIndex(index);
-                                }}
-                                onDragEnd={() => {
-                                  setTrackDragIndex(null);
-                                  setTrackDragOver(null);
-                                }}
-                              >
-                                <DragHandleIcon />
-                              </span>
+                              {tracksEditMode && (
+                                <span
+                                  className={`playlists-track-drag-handle${savingOrder ? ' disabled' : ''}`}
+                                  title={t('playlists.dragToReorder')}
+                                  draggable={!savingOrder}
+                                  onDragStart={(e) => {
+                                    if (savingOrder) {
+                                      e.preventDefault();
+                                      return;
+                                    }
+                                    e.dataTransfer.effectAllowed = 'move';
+                                    setTrackDragIndex(index);
+                                  }}
+                                  onDragEnd={() => {
+                                    setTrackDragIndex(null);
+                                    setTrackDragOver(null);
+                                  }}
+                                >
+                                  <DragHandleIcon />
+                                </span>
+                              )}
                               <button
                                 type="button"
                                 className="playlists-track-main"
@@ -1106,18 +1134,20 @@ export default function PlaylistsPage({
                                 </span>
                                 <span className="playlists-track-title">{item.title}</span>
                               </button>
-                              <button
-                                type="button"
-                                className="playlists-track-remove"
-                                disabled={removingItemId === item.id || savingOrder}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  void handleRemoveItem(item.id);
-                                }}
-                                aria-label={t('playlists.removeTrack', { title: item.title })}
-                              >
-                                {removingItemId === item.id ? '…' : '×'}
-                              </button>
+                              {tracksEditMode && (
+                                <button
+                                  type="button"
+                                  className="playlists-track-remove"
+                                  disabled={removingItemId === item.id || savingOrder}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void handleRemoveItem(item.id);
+                                  }}
+                                  aria-label={t('playlists.removeTrack', { title: item.title })}
+                                >
+                                  {removingItemId === item.id ? '…' : '×'}
+                                </button>
+                              )}
                             </li>
                           );
                         })}

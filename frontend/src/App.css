@@ -4602,6 +4602,12 @@
   color: #e5484d;
 }
 
+.playlists-tracks-edit-btn.active {
+  background: var(--blue-muted);
+  border-color: color-mix(in srgb, var(--blue) 35%, var(--border-light));
+  color: var(--blue);
+}
+
 .playlists-empty-tracks {
   margin-bottom: 0.85rem;
 }

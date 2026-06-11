@@ -196,6 +196,8 @@ export default {
     addPartialDuplicate: '已添加 {added} 首，跳过 {skipped} 首重复曲目',
     addAllDuplicate: '这些曲目已在列表中',
     removeTrack: '从列表移除 {title}',
+    editTracks: '编辑',
+    doneEditTracks: '完成',
     dragToReorder: '拖拽调整顺序',
     savedTitle: '我的列表',
     loading: '加载中…',
