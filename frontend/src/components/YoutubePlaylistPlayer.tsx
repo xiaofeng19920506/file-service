@@ -161,6 +161,7 @@ export default function YoutubePlaylistPlayer({
   const [isLandscapeTheater, setIsLandscapeTheater] = useState(false);
   const [overlayVisible, setOverlayVisible] = useState(true);
   const scrubbingRef = useRef(false);
+  const [scrubRatio, setScrubRatio] = useState<number | null>(null);
   const [captionCues, setCaptionCues] = useState<CaptionCue[]>([]);
   const [subtitleLang, setSubtitleLang] = useState<SubtitleLanguage>('en');
   const [volume, setVolume] = useState(readStoredVolume);
@@ -174,7 +175,12 @@ export default function YoutubePlaylistPlayer({
   onNextTrackRef.current = onNextTrack;
 
   const current = items[activeIndex];
-  const progressPct = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
+  const progressPct =
+    scrubRatio !== null
+      ? scrubRatio * 100
+      : duration > 0
+        ? Math.min(100, (currentTime / duration) * 100)
+        : 0;
   const volumePct = muted ? 0 : volume;
   const activeCaption = useMemo(
     () => findActiveCaption(captionCues, currentTime),
@@ -235,6 +241,17 @@ export default function YoutubePlaylistPlayer({
       // player not ready
     }
   }, [muted, volume]);
+
+  const readPlayerDuration = useCallback(() => {
+    const player = playerRef.current;
+    if (!player || !readyRef.current) return 0;
+    try {
+      const nextDuration = player.getDuration();
+      return Number.isFinite(nextDuration) && nextDuration > 0 ? nextDuration : 0;
+    } catch {
+      return 0;
+    }
+  }, []);
 
   const syncProgress = useCallback(() => {
     if (scrubbingRef.current) return;
@@ -310,12 +327,21 @@ export default function YoutubePlaylistPlayer({
   const seekProgressRatio = useCallback(
     (ratio: number) => {
       const player = playerRef.current;
-      if (!player || !readyRef.current || duration <= 0) return;
-      const target = ratio * duration;
-      player.seekTo(target, true);
+      if (!player || !readyRef.current) return;
+
+      const trackDuration = readPlayerDuration() || duration;
+      if (trackDuration <= 0) {
+        setScrubRatio(ratio);
+        return;
+      }
+
+      const clamped = Math.min(1, Math.max(0, ratio));
+      const target = clamped * trackDuration;
+      setScrubRatio(clamped);
       setCurrentTime(target);
+      player.seekTo(target, true);
     },
-    [duration],
+    [duration, readPlayerDuration],
   );
 
   const { handleClick: handleProgressClick } = useSeekBarDrag({
@@ -327,6 +353,7 @@ export default function YoutubePlaylistPlayer({
     },
     onScrubEnd: () => {
       scrubbingRef.current = false;
+      setScrubRatio(null);
       syncProgress();
     },
   });
@@ -503,9 +530,26 @@ export default function YoutubePlaylistPlayer({
 
   useEffect(() => {
     if (!playing) return;
-    const id = window.setInterval(syncProgress, 250);
-    return () => window.clearInterval(id);
+
+    let rafId = 0;
+    const tick = () => {
+      syncProgress();
+      rafId = window.requestAnimationFrame(tick);
+    };
+    rafId = window.requestAnimationFrame(tick);
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+    };
   }, [playing, activeIndex, syncProgress]);
+
+  useEffect(
+    () => () => {
+      scrubbingRef.current = false;
+      setScrubRatio(null);
+    },
+    [],
+  );
 
   useEffect(() => {
     applyVolume();

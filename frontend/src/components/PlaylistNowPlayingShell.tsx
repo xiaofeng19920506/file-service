@@ -116,7 +116,7 @@ export default function PlaylistNowPlayingShell({
       <div className="playlist-now-playing-body">{children}</div>
 
       <PlaylistPlayerBottomChrome
-        className="desktop-only"
+        className="mobile-only"
         onToggleQueue={onToggleQueue}
         repeatMode={repeatMode}
         onCycleRepeat={onCycleRepeat}

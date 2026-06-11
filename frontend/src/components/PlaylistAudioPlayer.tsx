@@ -179,18 +179,24 @@ export default function PlaylistAudioPlayer({
   const isReady = audioStatus?.status === 'ready';
   const isProcessing =
     audioStatus?.status === 'pending' || audioStatus?.status === 'processing';
-  const canSeek = !usingPreview && Number.isFinite(duration) && duration > 0;
+  const playbackDuration = useMemo(() => {
+    if (Number.isFinite(duration) && duration > 0 && duration !== Infinity) {
+      return duration;
+    }
+    const lastCue = captionCues[captionCues.length - 1];
+    if (lastCue && lastCue.end > 0) return lastCue.end;
+    return 0;
+  }, [duration, captionCues]);
+  const canSeek =
+    !usingPreview &&
+    Number.isFinite(duration) &&
+    duration > 0 &&
+    duration !== Infinity;
   const volumePct = muted ? 0 : volume;
   const activeCaption = useMemo(
     () => findActiveCaption(captionCues, currentTime),
     [captionCues, currentTime],
   );
-  const displayedDuration = useMemo(() => {
-    if (Number.isFinite(duration) && duration > 0) return duration;
-    const lastCue = captionCues[captionCues.length - 1];
-    if (lastCue && lastCue.end > 0) return lastCue.end;
-    return 0;
-  }, [duration, captionCues]);
 
   useEffect(() => {
     wantPlayRef.current = playing;
@@ -604,6 +610,28 @@ export default function PlaylistAudioPlayer({
     }
   }, []);
 
+  const syncProgressFromAudio = useCallback(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    setCurrentTime(el.currentTime);
+    syncDurationFromAudio(el);
+  }, [syncDurationFromAudio]);
+
+  useEffect(() => {
+    if (!playing || !streamUrl) return;
+
+    let rafId = 0;
+    const tick = () => {
+      syncProgressFromAudio();
+      rafId = window.requestAnimationFrame(tick);
+    };
+    rafId = window.requestAnimationFrame(tick);
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+    };
+  }, [playing, streamUrl, activeIndex, syncProgressFromAudio]);
+
   const handleTimeUpdate = useCallback(
     (e: React.SyntheticEvent<HTMLAudioElement>) => {
       const el = e.currentTarget;
@@ -718,31 +746,32 @@ export default function PlaylistAudioPlayer({
         ? t('playlists.repeatAll')
         : t('playlists.repeatOff');
 
-  const audioOptions = (
-    <div className={`audio-options${isNowPlaying ? ' playlist-np-audio-options' : ''}`}>
-      <div className="audio-lang-switch" role="group" aria-label={t('playlists.subtitleLanguage')}>
-        <button
-          type="button"
-          className={`audio-lang-btn${subtitleLang === 'en' ? ' active' : ''}`}
-          onClick={() => {
-            setSubtitleLang('en');
-            writeSubtitleLanguageForVideo(current.youtubeVideoId, 'en');
-          }}
-        >
-          {t('playlists.subtitleEnglishShort')}
-        </button>
-        <button
-          type="button"
-          className={`audio-lang-btn${subtitleLang === 'zh' ? ' active' : ''}`}
-          onClick={() => {
-            setSubtitleLang('zh');
-            writeSubtitleLanguageForVideo(current.youtubeVideoId, 'zh');
-          }}
-        >
-          {t('playlists.subtitleChineseShort')}
-        </button>
-      </div>
+  const langSwitch = (
+    <div className="audio-lang-switch" role="group" aria-label={t('playlists.subtitleLanguage')}>
+      <button
+        type="button"
+        className={`audio-lang-btn${subtitleLang === 'en' ? ' active' : ''}`}
+        onClick={() => {
+          setSubtitleLang('en');
+          writeSubtitleLanguageForVideo(current.youtubeVideoId, 'en');
+        }}
+      >
+        {t('playlists.subtitleEnglishShort')}
+      </button>
+      <button
+        type="button"
+        className={`audio-lang-btn${subtitleLang === 'zh' ? ' active' : ''}`}
+        onClick={() => {
+          setSubtitleLang('zh');
+          writeSubtitleLanguageForVideo(current.youtubeVideoId, 'zh');
+        }}
+      >
+        {t('playlists.subtitleChineseShort')}
+      </button>
+    </div>
+  );
 
+  const volumeControls = (
       <div className="audio-volume">
         <div
           ref={volumeProgressRef}
@@ -774,6 +803,12 @@ export default function PlaylistAudioPlayer({
           <VolumeIcon level={volume} muted={muted || volume === 0} />
         </button>
       </div>
+  );
+
+  const audioOptions = (
+    <div className={`audio-options${isNowPlaying ? ' playlist-np-audio-options' : ''}`}>
+      {langSwitch}
+      {volumeControls}
     </div>
   );
 
@@ -835,12 +870,13 @@ export default function PlaylistAudioPlayer({
   );
 
   const totalDurationLabel =
-    displayedDuration > 0 ? formatPlaybackTime(displayedDuration) : '--:--';
+    playbackDuration > 0 ? formatPlaybackTime(playbackDuration) : '--:--';
+  const currentTimeLabel = formatPlaybackTime(currentTime);
 
   const seekBar = (
     <AudioSeekBar
       currentTime={currentTime}
-      duration={displayedDuration > 0 ? displayedDuration : duration}
+      duration={playbackDuration}
       canSeek={canSeek}
       usingPreview={usingPreview}
       onSeekRatio={seekToRatio}
@@ -854,13 +890,21 @@ export default function PlaylistAudioPlayer({
       <div className={`audio-time${isNowPlaying ? ' playlist-np-times' : ''}`}>
         {isNowPlaying ? (
           <>
-            <span className="playlist-np-time-current">{formatPlaybackTime(currentTime)}</span>
+            <span className="playlist-np-time-current">{currentTimeLabel}</span>
             <span className="playlist-np-time-total">{totalDurationLabel}</span>
           </>
         ) : (
-          formatPlaybackTimeRange(currentTime, duration)
+          formatPlaybackTimeRange(currentTime, playbackDuration || duration)
         )}
       </div>
+    </div>
+  );
+
+  const desktopProgressBlock = (
+    <div className="playlist-np-progress playlist-np-progress--desktop-inline">
+      <span className="playlist-np-time-current">{currentTimeLabel}</span>
+      {seekBar}
+      <span className="playlist-np-time-total">{totalDurationLabel}</span>
     </div>
   );
 
@@ -963,13 +1007,20 @@ export default function PlaylistAudioPlayer({
         {playerError && <p className="error-msg playlist-audio-status">{playerError}</p>}
 
         <header className={`playlist-audio-meta${isNowPlaying ? ' desktop-only' : ''}`}>
-          <ScrollingTitle text={current.title} className="playlist-audio-title" />
-          {playlistTitle && isNowPlaying && (
-            <span className="playlist-np-album-label desktop-only">{playlistTitle}</span>
-          )}
-          <span className="playlist-audio-index">
-            {t('playlists.trackCounter', { current: activeIndex + 1, total: items.length })}
-          </span>
+          <div className="playlist-np-meta-head">
+            <ScrollingTitle text={current.title} className="playlist-audio-title" />
+            {isNowPlaying && (
+              <div className="playlist-np-meta-lang desktop-only">{langSwitch}</div>
+            )}
+          </div>
+          <div className="playlist-np-meta-sub">
+            {playlistTitle && isNowPlaying && (
+              <span className="playlist-np-album-label">{playlistTitle}</span>
+            )}
+            <span className="playlist-audio-index">
+              {t('playlists.trackCounter', { current: activeIndex + 1, total: items.length })}
+            </span>
+          </div>
         </header>
 
         {isNowPlaying && (
@@ -1000,10 +1051,6 @@ export default function PlaylistAudioPlayer({
           </div>
         )}
 
-        {isNowPlaying && (
-          <div className="playlist-np-lang-desktop desktop-only">{audioOptions}</div>
-        )}
-
         {!isNowPlaying && (
           <>
             <div className="audio-player-bar">
@@ -1018,11 +1065,11 @@ export default function PlaylistAudioPlayer({
       {isNowPlaying && (
         <div className="playlist-np-dock">
           <div className="playlist-np-desktop-footer desktop-only">
-            {progressBlock}
+            {desktopProgressBlock}
             <div className="playlist-np-footer-row">
               {shuffleRepeatControls}
               <div className="playlist-np-transport-block">{transportControls}</div>
-              <div className="playlist-np-volume-desktop">{audioOptions}</div>
+              <div className="playlist-np-volume-desktop">{volumeControls}</div>
             </div>
           </div>
 

@@ -1,4 +1,4 @@
-import { useRef, type KeyboardEvent } from 'react';
+import { useRef, useState, type KeyboardEvent } from 'react';
 import { useI18n } from '../i18n';
 import { useSeekBarDrag } from '../hooks/useSeekBarDrag';
 
@@ -21,18 +21,36 @@ export default function AudioSeekBar({
 }: AudioSeekBarProps) {
   const { t } = useI18n();
   const barRef = useRef<HTMLDivElement>(null);
+  const [scrubRatio, setScrubRatio] = useState<number | null>(null);
+
+  const hasDuration = Number.isFinite(duration) && duration > 0;
+  const showIndeterminate = usingPreview && !hasDuration;
+  const showProgress = hasDuration || scrubRatio !== null;
 
   const progressPct =
-    canSeek && duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
+    scrubRatio !== null
+      ? scrubRatio * 100
+      : hasDuration
+        ? Math.min(100, Math.max(0, (currentTime / duration) * 100))
+        : 0;
 
   const { handleClick } = useSeekBarDrag({
     barRef,
     enabled: canSeek,
-    onSeekRatio,
+    onSeekRatio: (ratio) => {
+      setScrubRatio(ratio);
+      onSeekRatio(ratio);
+    },
+    onScrubStart: () => {
+      setScrubRatio((prev) => prev ?? (hasDuration ? currentTime / duration : 0));
+    },
+    onScrubEnd: () => {
+      setScrubRatio(null);
+    },
   });
 
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (!canSeek || duration <= 0) return;
+    if (!canSeek || !hasDuration) return;
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault();
       const step = (e.key === 'ArrowRight' ? 5 : -5) / duration;
@@ -49,7 +67,7 @@ export default function AudioSeekBar({
       tabIndex={canSeek ? 0 : -1}
       aria-label={t('playlists.seek')}
       aria-valuemin={0}
-      aria-valuemax={canSeek ? duration : 0}
+      aria-valuemax={hasDuration ? duration : 0}
       aria-valuenow={currentTime}
       aria-disabled={!canSeek}
       onClick={(e) => handleClick(e.clientX)}
@@ -57,10 +75,10 @@ export default function AudioSeekBar({
     >
       <div className="audio-progress-track">
         <div
-          className={`audio-progress-fill${usingPreview ? ' audio-progress-fill--indeterminate' : ''}`}
-          style={canSeek ? { width: `${progressPct}%` } : undefined}
+          className={`audio-progress-fill${showIndeterminate ? ' audio-progress-fill--indeterminate' : ''}`}
+          style={showProgress && !showIndeterminate ? { width: `${progressPct}%` } : undefined}
         />
-        {canSeek && (
+        {showProgress && !showIndeterminate && (
           <div className="audio-progress-thumb" style={{ left: `${progressPct}%` }} aria-hidden />
         )}
       </div>

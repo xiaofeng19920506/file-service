@@ -9,7 +9,7 @@ type UseSeekBarDragOptions = {
 };
 
 /**
- * 进度条点击 / 拖动 seek。Pointer + Touch 双通道，兼容 iOS Safari。
+ * 进度条点击 / 拖动 seek。统一用 Pointer Events + capture，兼容 iOS Safari。
  */
 export function useSeekBarDrag({
   barRef,
@@ -44,6 +44,8 @@ export function useSeekBarDrag({
     const bar = barRef.current;
     if (!bar) return;
 
+    let removeWindowListeners: (() => void) | null = null;
+
     const beginDrag = () => {
       if (!scrubbingRef.current) {
         scrubbingRef.current = true;
@@ -52,59 +54,73 @@ export function useSeekBarDrag({
     };
 
     const finishDrag = () => {
+      removeWindowListeners?.();
+      removeWindowListeners = null;
+
+      const pointerId = activePointerIdRef.current;
       activePointerIdRef.current = null;
+
+      if (pointerId !== null && bar.hasPointerCapture(pointerId)) {
+        try {
+          bar.releasePointerCapture(pointerId);
+        } catch {
+          // ignore
+        }
+      }
+
       if (scrubbingRef.current) {
         scrubbingRef.current = false;
         onScrubEndRef.current?.();
       }
+
       suppressClickRef.current = true;
       window.setTimeout(() => {
         suppressClickRef.current = false;
       }, 400);
     };
 
+    const attachWindowEndListeners = () => {
+      if (removeWindowListeners) return;
+
+      const onWindowPointerEnd = (e: PointerEvent) => {
+        if (activePointerIdRef.current !== e.pointerId) return;
+        finishDrag();
+      };
+
+      window.addEventListener('pointerup', onWindowPointerEnd);
+      window.addEventListener('pointercancel', onWindowPointerEnd);
+      removeWindowListeners = () => {
+        window.removeEventListener('pointerup', onWindowPointerEnd);
+        window.removeEventListener('pointercancel', onWindowPointerEnd);
+      };
+    };
+
     const onPointerDown = (e: PointerEvent) => {
-      // 触摸由 touch 事件处理，避免 iOS 上 pointer + touch 重复触发
-      if (e.pointerType === 'touch') return;
       if (!enabledRef.current || e.button !== 0) return;
       if (activePointerIdRef.current !== null) return;
+
       activePointerIdRef.current = e.pointerId;
       e.preventDefault();
       beginDrag();
-      bar.setPointerCapture(e.pointerId);
+      attachWindowEndListeners();
+
+      try {
+        bar.setPointerCapture(e.pointerId);
+      } catch {
+        // ignore
+      }
+
       seekFromClientX(e.clientX);
     };
 
     const onPointerMove = (e: PointerEvent) => {
-      if (e.pointerType === 'touch') return;
       if (activePointerIdRef.current !== e.pointerId) return;
       e.preventDefault();
       seekFromClientX(e.clientX);
     };
 
     const onPointerUp = (e: PointerEvent) => {
-      if (e.pointerType === 'touch') return;
       if (activePointerIdRef.current !== e.pointerId) return;
-      if (bar.hasPointerCapture(e.pointerId)) {
-        bar.releasePointerCapture(e.pointerId);
-      }
-      finishDrag();
-    };
-
-    const onTouchStart = (e: TouchEvent) => {
-      if (!enabledRef.current || e.touches.length !== 1) return;
-      e.preventDefault();
-      beginDrag();
-      seekFromClientX(e.touches[0]!.clientX);
-    };
-
-    const onTouchMove = (e: TouchEvent) => {
-      if (!enabledRef.current || e.touches.length !== 1) return;
-      e.preventDefault();
-      seekFromClientX(e.touches[0]!.clientX);
-    };
-
-    const onTouchEnd = () => {
       finishDrag();
     };
 
@@ -112,20 +128,17 @@ export function useSeekBarDrag({
     bar.addEventListener('pointermove', onPointerMove);
     bar.addEventListener('pointerup', onPointerUp);
     bar.addEventListener('pointercancel', onPointerUp);
-    bar.addEventListener('touchstart', onTouchStart, { passive: false });
-    bar.addEventListener('touchmove', onTouchMove, { passive: false });
-    bar.addEventListener('touchend', onTouchEnd);
-    bar.addEventListener('touchcancel', onTouchEnd);
 
     return () => {
       bar.removeEventListener('pointerdown', onPointerDown);
       bar.removeEventListener('pointermove', onPointerMove);
       bar.removeEventListener('pointerup', onPointerUp);
       bar.removeEventListener('pointercancel', onPointerUp);
-      bar.removeEventListener('touchstart', onTouchStart);
-      bar.removeEventListener('touchmove', onTouchMove);
-      bar.removeEventListener('touchend', onTouchEnd);
-      bar.removeEventListener('touchcancel', onTouchEnd);
+      if (scrubbingRef.current) {
+        finishDrag();
+      } else {
+        removeWindowListeners?.();
+      }
     };
   }, [barRef, enabled, seekFromClientX]);
 
