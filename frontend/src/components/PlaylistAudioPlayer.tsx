@@ -47,6 +47,7 @@ type PlaylistAudioPlayerProps = {
   variant?: 'default' | 'nowPlaying';
   repeatMode?: PlaylistRepeatMode;
   onCycleRepeat?: () => void;
+  onRepeatModeChange?: (mode: PlaylistRepeatMode) => void;
   shuffleEnabled?: boolean;
   onToggleShuffle?: () => void;
   onToggleQueue?: () => void;
@@ -144,6 +145,7 @@ export default function PlaylistAudioPlayer({
   variant = 'default',
   repeatMode = 'off',
   onCycleRepeat,
+  onRepeatModeChange,
   shuffleEnabled = false,
   onToggleShuffle,
   onToggleQueue,
@@ -1065,26 +1067,42 @@ export default function PlaylistAudioPlayer({
                   <div className="playlist-np-options-menu" role="menu">
                     <button
                       type="button"
-                      role="menuitem"
-                      className={`playlist-np-options-item${shuffleEnabled ? ' active' : ''}`}
+                      role="menuitemradio"
+                      aria-checked={repeatMode === 'all'}
+                      className={`playlist-np-options-item${repeatMode === 'all' ? ' active' : ''}`}
                       onClick={() => {
-                        onToggleShuffle?.();
+                        onRepeatModeChange?.(repeatMode === 'all' ? 'off' : 'all');
+                        setMobileOptionsOpen(false);
                       }}
-                      aria-pressed={shuffleEnabled}
                     >
-                      <ShuffleIcon />
-                      <span>{t('playlists.shuffle')}</span>
+                      <RepeatIcon mode="all" />
+                      <span>{t('playlists.repeatAll')}</span>
                     </button>
                     <button
                       type="button"
-                      role="menuitem"
-                      className={`playlist-np-options-item${repeatMode !== 'off' ? ' active' : ''}`}
+                      role="menuitemradio"
+                      aria-checked={repeatMode === 'one'}
+                      className={`playlist-np-options-item${repeatMode === 'one' ? ' active' : ''}`}
                       onClick={() => {
-                        onCycleRepeat?.();
+                        onRepeatModeChange?.(repeatMode === 'one' ? 'off' : 'one');
+                        setMobileOptionsOpen(false);
                       }}
                     >
-                      <RepeatIcon mode={repeatMode} />
-                      <span>{repeatLabel}</span>
+                      <RepeatIcon mode="one" />
+                      <span>{t('playlists.repeatOne')}</span>
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitemcheckbox"
+                      aria-checked={shuffleEnabled}
+                      className={`playlist-np-options-item${shuffleEnabled ? ' active' : ''}`}
+                      onClick={() => {
+                        onToggleShuffle?.();
+                        setMobileOptionsOpen(false);
+                      }}
+                    >
+                      <ShuffleIcon />
+                      <span>{t('playlists.shuffle')}</span>
                     </button>
                   </div>
                 )}

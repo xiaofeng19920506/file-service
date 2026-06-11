@@ -578,6 +578,11 @@ export default function PlaylistsPage({
     writePlaylistRepeatMode(next);
   };
 
+  const changeRepeatMode = (mode: PlaylistRepeatMode) => {
+    setRepeatMode(mode);
+    writePlaylistRepeatMode(mode);
+  };
+
   const renderShuffleToggle = () => (
     <button
       type="button"
@@ -665,6 +670,7 @@ export default function PlaylistsPage({
         variant={variant}
         repeatMode={repeatMode}
         onCycleRepeat={cycleRepeat}
+        onRepeatModeChange={changeRepeatMode}
         shuffleEnabled={shuffleEnabled}
         onToggleShuffle={toggleShuffle}
         onToggleQueue={() => setQueueOpen((open) => !open)}
