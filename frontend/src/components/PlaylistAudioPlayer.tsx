@@ -1102,6 +1102,16 @@ export default function PlaylistAudioPlayer({
           <div className="playlist-audio-dock-options">
             {shuffleRepeatControls}
             {volumeControls}
+            <button
+              type="button"
+              className={`playlist-np-icon-btn playlist-audio-dock-queue-btn${queueOpen ? ' active' : ''}`}
+              aria-label={t('playlists.queueTitle')}
+              aria-pressed={queueOpen}
+              onClick={onToggleQueue}
+              title={t('playlists.queueTitle')}
+            >
+              <QueueIcon />
+            </button>
           </div>
         </div>
         {statusMessages}

@@ -1412,13 +1412,53 @@
     display: none;
   }
 
-  .playlist-queue-panel {
+  .playlist-queue-panel:not(.playlist-queue-panel--desktop-dock) {
     top: 0;
     right: 0;
     bottom: 0;
     width: min(24rem, 38vw);
     border-left: 1px solid var(--border-light);
     box-shadow: -8px 0 32px color-mix(in srgb, var(--shadow-sm) 60%, transparent);
+  }
+
+  .playlist-queue-backdrop--desktop-dock {
+    background: rgba(0, 0, 0, 0.18);
+  }
+
+  .playlist-queue-panel--desktop-dock {
+    top: auto;
+    right: auto;
+    left: 1.25rem;
+    bottom: 5.85rem;
+    width: min(22rem, 36vw);
+    max-height: min(52vh, 26rem);
+    border: 1px solid var(--border-light);
+    border-radius: 14px;
+    box-shadow:
+      0 -6px 28px color-mix(in srgb, var(--shadow-sm) 70%, transparent),
+      0 12px 40px color-mix(in srgb, var(--shadow-sm) 45%, transparent);
+    animation: playlist-queue-dock-rise 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    transform-origin: left bottom;
+  }
+
+  @keyframes playlist-queue-dock-rise {
+    from {
+      opacity: 0;
+      transform: translateY(1.25rem) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .playlist-queue-panel--desktop-dock .playlist-queue-head {
+    padding: 0.85rem 1rem 0.65rem;
+  }
+
+  .playlist-queue-panel--desktop-dock .playlist-queue-item {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
   }
 
   .playlists-mini-player {

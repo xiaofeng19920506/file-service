@@ -9,6 +9,8 @@ type PlaylistQueuePanelProps = {
   activeIndex: number;
   playing: boolean;
   onSelectTrack: (index: number) => void;
+  /** 桌面底部播放栏：从左下角上拉的紧凑队列 */
+  variant?: 'mobile' | 'desktopDock';
   onRemoveTrack?: (itemId: string) => void;
   removingItemId?: string | null;
   savingOrder?: boolean;
@@ -42,8 +44,10 @@ export default function PlaylistQueuePanel({
   onDragOver,
   onDragLeave,
   onDrop,
+  variant = 'mobile',
 }: PlaylistQueuePanelProps) {
   const { t } = useI18n();
+  const isDesktopDock = variant === 'desktopDock';
 
   if (!open) return null;
 
@@ -51,12 +55,12 @@ export default function PlaylistQueuePanel({
     <>
       <button
         type="button"
-        className="playlist-queue-backdrop"
+        className={`playlist-queue-backdrop${isDesktopDock ? ' playlist-queue-backdrop--desktop-dock' : ''}`}
         aria-label={t('common.cancel')}
         onClick={onClose}
       />
       <aside
-        className="playlist-queue-panel"
+        className={`playlist-queue-panel${isDesktopDock ? ' playlist-queue-panel--desktop-dock' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-label={t('playlists.queueTitle')}

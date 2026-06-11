@@ -5,7 +5,10 @@ import ConfirmModal from '../components/ConfirmModal';
 import SharePlaylistModal from '../components/SharePlaylistModal';
 import { DragHandleIcon, PencilIcon } from '../components/icons';
 import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
-import PlaylistAudioPlayer from '../components/PlaylistAudioPlayer';
+import PlaylistAudioPlayer, {
+  type PlaylistAudioProgressState,
+} from '../components/PlaylistAudioPlayer';
+import PlaylistDesktopAudioCenter from '../components/PlaylistDesktopAudioCenter';
 import PlaylistQueuePanel from '../components/PlaylistQueuePanel';
 import YoutubePlaylistPlayer from '../components/YoutubePlaylistPlayer';
 import { prioritizeYoutubeAudioCache, type YoutubeAudioStatus } from '../api/youtube-audio';
@@ -125,6 +128,11 @@ export default function PlaylistsPage({
   const [shuffleOrder, setShuffleOrder] = useState<number[]>([]);
   const [shuffleCursor, setShuffleCursor] = useState(0);
   const [queueOpen, setQueueOpen] = useState(false);
+  const [audioProgress, setAudioProgress] = useState<PlaylistAudioProgressState>({
+    currentTime: 0,
+    duration: 0,
+    canSeek: false,
+  });
 
   const loadList = useCallback(async () => {
     setLoadingList(true);
@@ -542,6 +550,10 @@ export default function PlaylistsPage({
   const audioWatchMobile = audioWatchActive && isMobileViewport;
 
   useEffect(() => {
+    if (!audioWatchDesktop) setQueueOpen(false);
+  }, [audioWatchDesktop]);
+
+  useEffect(() => {
     if (!youtubeWatchMobile && !audioWatchMobile) return;
     document.body.classList.add(
       youtubeWatchMobile ? 'playlists-mobile-video-active' : 'playlists-mobile-audio-active',
@@ -691,6 +703,7 @@ export default function PlaylistsPage({
         onToggleShuffle={toggleShuffle}
         onToggleQueue={() => setQueueOpen((open) => !open)}
         queueOpen={queueOpen}
+        onProgressUpdate={placement === 'dock' ? setAudioProgress : undefined}
       />
     );
   };
@@ -1155,7 +1168,7 @@ export default function PlaylistsPage({
                     </div>
 
                     <aside
-                      className={`playlists-tracks-col${audioWatchMobile ? ' playlists-tracks-col--hidden-mobile-audio' : ''}`}
+                      className={`playlists-tracks-col${audioWatchMobile || audioWatchDesktop ? ' playlists-tracks-col--hidden-audio-watch' : ''}`}
                       aria-label={t('playlists.tracksTitle')}
                     >
                       <div className="playlists-tracks-head">
@@ -1262,6 +1275,14 @@ export default function PlaylistsPage({
                       </ol>
                     </aside>
 
+                    {audioWatchDesktop && currentItem && (
+                      <PlaylistDesktopAudioCenter
+                        videoId={currentItem.youtubeVideoId}
+                        title={currentItem.title}
+                        currentTime={audioProgress.currentTime}
+                      />
+                    )}
+
                     {youtubeWatchMobile && currentItem && (
                       <div className="playlists-youtube-meta playlists-mobile-video-meta mobile-only">
                         <h2 className="playlists-youtube-meta-title" title={currentItem.title}>{currentItem.title}</h2>
@@ -1271,7 +1292,7 @@ export default function PlaylistsPage({
                   </div>
                 )}
                 {audioWatchDesktop && renderAudioPlayer('dock')}
-                {audioWatchMobile && detail && (
+                {(audioWatchMobile || audioWatchDesktop) && detail && (
                   <PlaylistQueuePanel
                     open={queueOpen}
                     onClose={() => setQueueOpen(false)}
@@ -1279,6 +1300,7 @@ export default function PlaylistsPage({
                     activeIndex={activeIndex}
                     playing={playing}
                     onSelectTrack={(index) => engageAndPlay(index)}
+                    variant={audioWatchDesktop ? 'desktopDock' : 'mobile'}
                   />
                 )}
               </div>
