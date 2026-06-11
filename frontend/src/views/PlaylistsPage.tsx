@@ -3,7 +3,7 @@ import AcceptSharedPlaylistModal from '../components/AcceptSharedPlaylistModal';
 import AddPlaylistItemsModal from '../components/AddPlaylistItemsModal';
 import ConfirmModal from '../components/ConfirmModal';
 import SharePlaylistModal from '../components/SharePlaylistModal';
-import { DragHandleIcon, PencilIcon, QueueIcon } from '../components/icons';
+import { DragHandleIcon, PencilIcon } from '../components/icons';
 import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 import PlaylistAudioPlayer, {
   type PlaylistAudioProgressState,
@@ -551,8 +551,8 @@ export default function PlaylistsPage({
   const audioWatchMobile = audioWatchActive && isMobileViewport;
 
   useEffect(() => {
-    if (!audioWatchDesktop && !youtubeWatchDesktop) setQueueOpen(false);
-  }, [audioWatchDesktop, youtubeWatchDesktop]);
+    if (!audioWatchDesktop) setQueueOpen(false);
+  }, [audioWatchDesktop]);
 
   useEffect(() => {
     if (!youtubeWatchMobile && !audioWatchMobile) return;
@@ -737,18 +737,6 @@ export default function PlaylistsPage({
                 {repeatMode === 'one' ? '1' : repeatMode === 'all' ? '∞' : '↻'}
               </button>
               {renderShuffleToggle()}
-              {youtubeWatchDesktop && (
-                <button
-                  type="button"
-                  className={`playlists-queue-toolbar-btn${queueOpen ? ' active' : ''}`}
-                  aria-pressed={queueOpen}
-                  aria-label={t('playlists.queueTitle')}
-                  title={t('playlists.queueTitle')}
-                  onClick={() => setQueueOpen((open) => !open)}
-                >
-                  <QueueIcon />
-                </button>
-              )}
             </>
           )}
           <button type="button" className="btn-secondary" onClick={() => setShowAddModal(true)}>
@@ -1184,7 +1172,7 @@ export default function PlaylistsPage({
                     </div>
 
                     <aside
-                      className={`playlists-tracks-col${audioWatchMobile || audioWatchDesktop || youtubeWatchDesktop ? ' playlists-tracks-col--hidden-audio-watch' : ''}`}
+                      className={`playlists-tracks-col${audioWatchMobile || audioWatchDesktop ? ' playlists-tracks-col--hidden-audio-watch' : ''}`}
                       aria-label={t('playlists.tracksTitle')}
                     >
                       <div className="playlists-tracks-head">
@@ -1308,7 +1296,7 @@ export default function PlaylistsPage({
                   </div>
                 )}
                 {audioWatchDesktop && renderAudioPlayer('dock')}
-                {(audioWatchMobile || audioWatchDesktop || youtubeWatchDesktop) && detail && (
+                {(audioWatchMobile || audioWatchDesktop) && detail && (
                   <PlaylistQueuePanel
                     open={queueOpen}
                     onClose={() => setQueueOpen(false)}
@@ -1316,7 +1304,7 @@ export default function PlaylistsPage({
                     activeIndex={activeIndex}
                     playing={playing}
                     onSelectTrack={(index) => engageAndPlay(index)}
-                    variant={audioWatchDesktop || youtubeWatchDesktop ? 'desktopDock' : 'mobile'}
+                    variant={audioWatchDesktop ? 'desktopDock' : 'mobile'}
                   />
                 )}
               </div>
