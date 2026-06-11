@@ -173,6 +173,11 @@ body {
     padding-bottom: 0.5rem;
   }
 
+  .page-body-playlists .playlists-main-inner--audio-now-playing {
+    overflow: hidden;
+    padding: 0;
+  }
+
   /* 顶栏移动菜单内导航 */
   .nav-mobile-menu-nav {
     display: flex;

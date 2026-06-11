@@ -183,6 +183,12 @@ export default function PlaylistAudioPlayer({
     () => findActiveCaption(captionCues, currentTime),
     [captionCues, currentTime],
   );
+  const displayedDuration = useMemo(() => {
+    if (Number.isFinite(duration) && duration > 0) return duration;
+    const lastCue = captionCues[captionCues.length - 1];
+    if (lastCue && lastCue.end > 0) return lastCue.end;
+    return 0;
+  }, [duration, captionCues]);
 
   useEffect(() => {
     wantPlayRef.current = playing;
@@ -589,10 +595,18 @@ export default function PlaylistAudioPlayer({
     }
   }, [activeIndex, items.length, onActiveIndexChange, onPlayingChange, onNextTrack, repeatMode]);
 
+  const syncDurationFromAudio = useCallback((el: HTMLAudioElement) => {
+    const trackDuration = el.duration;
+    if (Number.isFinite(trackDuration) && trackDuration > 0 && trackDuration !== Infinity) {
+      setDuration(trackDuration);
+    }
+  }, []);
+
   const handleTimeUpdate = useCallback(
     (e: React.SyntheticEvent<HTMLAudioElement>) => {
       const el = e.currentTarget;
       setCurrentTime(el.currentTime);
+      syncDurationFromAudio(el);
 
       if (usingPreview || endedHandledRef.current) return;
 
@@ -603,7 +617,7 @@ export default function PlaylistAudioPlayer({
 
       advanceToNextTrack();
     },
-    [advanceToNextTrack, usingPreview],
+    [advanceToNextTrack, syncDurationFromAudio, usingPreview],
   );
 
   const handleEnded = useCallback(() => {
@@ -819,12 +833,12 @@ export default function PlaylistAudioPlayer({
   );
 
   const totalDurationLabel =
-    Number.isFinite(duration) && duration > 0 ? formatPlaybackTime(duration) : '--:--';
+    displayedDuration > 0 ? formatPlaybackTime(displayedDuration) : '--:--';
 
   const seekBar = (
     <AudioSeekBar
       currentTime={currentTime}
-      duration={duration}
+      duration={displayedDuration > 0 ? displayedDuration : duration}
       canSeek={canSeek}
       usingPreview={usingPreview}
       onSeekRatio={seekToRatio}
@@ -919,7 +933,8 @@ export default function PlaylistAudioPlayer({
         playsInline
         loop={false}
         onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+        onLoadedMetadata={(e) => syncDurationFromAudio(e.currentTarget)}
+        onDurationChange={(e) => syncDurationFromAudio(e.currentTarget)}
         onEnded={handleEnded}
         onPlay={() => {
           skipPauseSyncRef.current = false;

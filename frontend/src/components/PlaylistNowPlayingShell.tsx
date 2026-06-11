@@ -40,7 +40,7 @@ export default function PlaylistNowPlayingShell({
   const { t } = useI18n();
 
   return (
-    <div className="playlist-now-playing">
+    <div className="playlist-now-playing playlist-now-playing--audio">
       <header className="playlist-now-playing-header">
         <button
           type="button"
