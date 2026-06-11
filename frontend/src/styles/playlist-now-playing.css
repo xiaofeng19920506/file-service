@@ -244,29 +244,28 @@ body.playlists-immersive-active .nav-bottom {
   }
 
   .playlist-now-playing--audio {
-    position: relative;
     flex: 1;
     min-height: 0;
     height: 100%;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
     overflow: hidden;
-    background: #0a0a0a;
+    background: var(--surface);
   }
 
-  .playlist-now-playing-header {
+  .playlist-now-playing--audio .playlist-now-playing-header {
     position: relative;
-    z-index: 4;
+    z-index: 2;
     flex-shrink: 0;
     grid-template-columns: auto 1fr auto;
     padding:
       max(0.5rem, var(--safe-top))
       max(0.75rem, var(--page-gutter))
       0.5rem;
-    border-bottom: none;
-    background-color: color-mix(in srgb, var(--surface) 62%, transparent);
-    backdrop-filter: saturate(180%) blur(20px);
-    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 1px solid var(--border-light);
+    background: var(--surface);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 
   .playlist-np-mobile-playlist {
@@ -325,13 +324,14 @@ body.playlists-immersive-active .nav-bottom {
     cursor: pointer;
   }
 
-  .playlist-now-playing-body {
-    flex: 1;
+  .playlist-now-playing--audio .playlist-now-playing-body {
+    position: relative;
     min-height: 0;
     display: flex;
     flex-direction: column;
     padding: 0;
     overflow: hidden;
+    background: #0a0a0a;
   }
 
   .playlist-audio-player--now-playing {
@@ -342,17 +342,20 @@ body.playlists-immersive-active .nav-bottom {
     margin: 0;
     gap: 0;
     align-items: stretch;
+    display: flex;
+    flex-direction: column;
   }
 
   .playlist-np-stage {
     flex: 1;
     min-height: 0;
-    height: 100%;
     width: 100%;
-    position: static;
+    display: flex;
+    flex-direction: column;
+    position: relative;
   }
 
-  .playlist-now-playing--audio .playlist-audio-artwork-wrap.playlist-np-artwork {
+  .playlist-now-playing-body .playlist-audio-artwork-wrap.playlist-np-artwork {
     position: absolute;
     inset: 0;
     z-index: 0;
@@ -368,22 +371,21 @@ body.playlists-immersive-active .nav-bottom {
     pointer-events: none;
   }
 
-  .playlist-now-playing--audio .playlist-np-artwork .playlist-audio-artwork {
+  .playlist-now-playing-body .playlist-np-artwork .playlist-audio-artwork {
     width: 100%;
     height: 100%;
     object-fit: cover;
   }
 
-  .playlist-now-playing--audio .playlist-np-artwork::after {
+  .playlist-now-playing-body .playlist-np-artwork::after {
     content: '';
     position: absolute;
     inset: 0;
     background: linear-gradient(
       180deg,
-      color-mix(in srgb, #000 42%, transparent) 0%,
-      transparent 22%,
-      transparent 48%,
-      color-mix(in srgb, #000 78%, transparent) 100%
+      transparent 0%,
+      transparent 42%,
+      color-mix(in srgb, #000 76%, transparent) 100%
     );
     pointer-events: none;
   }
@@ -392,7 +394,7 @@ body.playlists-immersive-active .nav-bottom {
     position: absolute;
     left: 0;
     right: 0;
-    top: 38%;
+    top: 32%;
     z-index: 2;
     margin: 0;
     padding: 0 1.5rem;
@@ -427,16 +429,15 @@ body.playlists-immersive-active .nav-bottom {
     -webkit-backdrop-filter: saturate(180%) blur(12px);
   }
 
-  .playlist-now-playing--audio .playlist-np-dock {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
+  .playlist-now-playing-body .playlist-np-dock {
+    position: relative;
     z-index: 5;
+    flex-shrink: 0;
     width: 100%;
+    margin-top: auto;
     padding:
       0.65rem var(--page-gutter)
-      max(1rem, calc(var(--safe-bottom) + 0.65rem));
+      max(0.65rem, var(--safe-bottom));
     background-color: color-mix(in srgb, var(--surface) 76%, transparent);
     backdrop-filter: saturate(180%) blur(24px);
     -webkit-backdrop-filter: saturate(180%) blur(24px);

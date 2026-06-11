@@ -18,6 +18,7 @@
   --z-modal: 200;
 
   --playlists-mobile-dock-height: 7.75rem;
+  --playlist-np-mobile-dock-height: 11.5rem;
   --playlists-desktop-dock-height: 5.5rem;
   --touch-target: 2.75rem;
 }
@@ -176,6 +177,13 @@ body {
   .page-body-playlists .playlists-main-inner--audio-now-playing {
     overflow: hidden;
     padding: 0;
+  }
+
+  body.playlists-immersive-active .page-body-playlists {
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
   }
 
   /* 顶栏移动菜单内导航 */
