@@ -1,0 +1,687 @@
+/**
+ * Apple.com 风格设计层 — 覆盖全站 UI 组件
+ * 参考 apple.com：大留白、SF 字体、胶囊按钮、毛玻璃导航、轻边框卡片
+ */
+
+/* ── 全局排版 ── */
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: var(--text);
+}
+
+a.link-btn,
+button.link-btn {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--blue-link);
+  font-size: 0.941rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity var(--duration) var(--ease);
+}
+
+a.link-btn:hover,
+button.link-btn:hover {
+  text-decoration: underline;
+  opacity: 0.85;
+}
+
+/* ── 导航（Global Nav） ── */
+.nav {
+  border-bottom-color: color-mix(in srgb, var(--border) 65%, transparent);
+}
+
+.nav-inner {
+  box-sizing: border-box;
+  height: var(--nav-height);
+  min-height: var(--nav-height);
+  padding-block: var(--nav-padding-block);
+}
+
+.nav-brand-tagline {
+  display: none;
+}
+
+.nav-brand-name {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+.page-tabs {
+  gap: 0.125rem;
+  padding: 0.1875rem;
+  border-radius: var(--radius-md);
+  background: var(--surface-secondary);
+  border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+}
+
+.page-tab {
+  min-height: 2rem;
+  padding: 0.375rem 1rem;
+  border-radius: calc(var(--radius-md) - 2px);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  transition:
+    background var(--duration) var(--ease),
+    color var(--duration) var(--ease),
+    box-shadow var(--duration) var(--ease);
+}
+
+.page-tab.active {
+  box-shadow: 0 1px 4px var(--shadow-sm);
+}
+
+.lang-toggle {
+  border-radius: var(--radius-sm);
+  border-color: color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+.lang-btn {
+  min-width: 2rem;
+  min-height: 1.75rem;
+  transition: background var(--duration) var(--ease);
+}
+
+.nav-user-badge {
+  border-radius: var(--radius-pill);
+  padding: 0.125rem 0.5rem;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.btn-login {
+  min-height: 2rem;
+  padding: 0.375rem 1rem;
+  font-size: 0.8125rem;
+}
+
+/* ── 主内容区 ── */
+.main,
+.admin-page {
+  animation: fade-up 0.6s var(--ease) both;
+}
+
+.main {
+  max-width: var(--content-max);
+  margin-inline: auto;
+  padding: clamp(1.5rem, 4vw, 2.75rem) var(--page-gutter) 3rem;
+}
+
+.main-library {
+  max-width: var(--shell-max);
+  padding-inline: var(--page-gutter);
+  padding-block: 0.75rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.main-library .app-intro {
+  max-width: none;
+  margin-bottom: clamp(1.25rem, 2vw, 1.75rem);
+}
+
+.app-intro {
+  font-size: 1.0625rem;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  max-width: 42rem;
+}
+
+.admin-page {
+  max-width: min(var(--admin-max), var(--shell-max));
+  margin-inline: auto;
+  padding: clamp(1.25rem, 3vw, 2rem) var(--page-gutter) 1.5rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  width: 100%;
+}
+
+.admin-tabs {
+  margin-bottom: 1rem;
+}
+
+.admin-toolbar h1,
+.auth-brand h1 {
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.admin-intro,
+.admin-muted,
+.auth-brand p {
+  font-size: 1.0625rem;
+  line-height: 1.47059;
+  max-width: 36rem;
+}
+
+/* ── 按钮系统 ── */
+.btn-primary,
+.btn-secondary,
+.btn-danger,
+.btn-sm,
+.btn-primary-sm,
+.btn-secondary-sm {
+  min-height: 2.75rem;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  transition:
+    background var(--duration) var(--ease),
+    border-color var(--duration) var(--ease),
+    opacity var(--duration) var(--ease),
+    transform 0.15s var(--ease);
+}
+
+.btn-primary:active:not(:disabled),
+.btn-secondary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn-primary {
+  background: var(--blue);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-pill);
+  font-size: 1.0625rem;
+  padding: 0.625rem 1.375rem;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--blue-hover);
+}
+
+.btn-secondary {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--blue-link);
+  font-size: 0.941rem;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--surface-secondary);
+}
+
+.btn-danger {
+  border: 1px solid color-mix(in srgb, var(--red) 55%, var(--border));
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--red);
+  font-size: 0.941rem;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--red) 8%, transparent);
+}
+
+.btn-sm,
+.btn-secondary-sm,
+.btn-primary-sm {
+  min-height: 2rem;
+  padding: 0.375rem 0.875rem;
+  font-size: 0.8125rem;
+}
+
+/* ── 表单控件 ── */
+.metadata-field span,
+.admin-user-field span,
+.admin-table th {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-secondary);
+}
+
+.metadata-field input,
+.metadata-field textarea,
+.metadata-field select,
+.admin-table-input,
+.admin-table-select,
+.admin-table-filter-input,
+.search-input,
+.auth-form input {
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: var(--input-bg);
+  color: var(--text);
+  transition:
+    border-color var(--duration) var(--ease),
+    box-shadow var(--duration) var(--ease),
+    background var(--duration) var(--ease);
+}
+
+.metadata-field input,
+.metadata-field textarea,
+.auth-form input {
+  width: 100%;
+  padding: 0.75rem 0.875rem;
+  font-size: 1.0625rem;
+}
+
+.metadata-field input:focus,
+.metadata-field textarea:focus,
+.admin-table-input:focus,
+.admin-table-select:focus,
+.search-input:focus,
+.auth-form input:focus {
+  border-color: var(--blue);
+  background: var(--surface);
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+
+.admin-table-input,
+.admin-table-select {
+  padding: 0.35rem 0.45rem;
+  font-size: 0.8125rem;
+}
+
+.admin-table-role-readonly {
+  display: inline-block;
+  padding: 0.35rem 0.45rem;
+  font-size: 0.8125rem;
+  color: var(--text-secondary, #6e6e73);
+  cursor: help;
+}
+
+/* ── 搜索框 ── */
+.search-box {
+  gap: 0.75rem;
+}
+
+.search-input-wrap,
+.admin-table-filter {
+  border-radius: var(--radius-md);
+  background: var(--input-bg);
+  border: 1px solid transparent;
+  min-height: 2.75rem;
+  transition:
+    border-color var(--duration) var(--ease),
+    box-shadow var(--duration) var(--ease),
+    background var(--duration) var(--ease);
+}
+
+.search-input-wrap:focus-within,
+.admin-table-filter:focus-within {
+  border-color: var(--blue);
+  background: var(--surface);
+  box-shadow: var(--focus-ring);
+}
+
+.search-input {
+  background: transparent;
+  border: none;
+  font-size: 1.0625rem;
+}
+
+.search-input:focus {
+  box-shadow: none;
+}
+
+.btn-search {
+  min-height: 2.75rem;
+  padding-inline: 1.25rem;
+}
+
+/* ── 工作流区块 ── */
+.workflow-section {
+  padding: 1.5rem;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--border-light) 80%, transparent);
+  box-shadow: 0 2px 16px var(--shadow-sm);
+}
+
+.library-workflow-grid .workflow-section {
+  margin-bottom: 0;
+  padding: 1.125rem;
+}
+
+.workflow-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.workflow-step {
+  width: 1.625rem;
+  height: 1.625rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  background: var(--blue);
+  color: #fff;
+}
+
+.section-hint,
+.dedup-hint,
+.section-label {
+  text-transform: none;
+  letter-spacing: -0.01em;
+  font-size: 0.941rem;
+}
+
+.section-label {
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+/* ── 上传区 ── */
+.upload-area {
+  border-radius: var(--radius-lg);
+  border: 1px dashed color-mix(in srgb, var(--border) 90%, transparent);
+  background: var(--surface-secondary);
+  transition:
+    border-color var(--duration) var(--ease),
+    background var(--duration) var(--ease),
+    box-shadow var(--duration) var(--ease);
+}
+
+.upload-area:hover {
+  border-color: var(--blue);
+  background: var(--surface);
+  box-shadow: 0 8px 32px var(--shadow-sm);
+}
+
+.upload-label.dragging .upload-area {
+  border-style: solid;
+  background: color-mix(in srgb, var(--blue-muted) 60%, var(--surface));
+}
+
+.upload-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+/* ── 搜索结果 / 列表 ── */
+.search-results,
+.file-list {
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in srgb, var(--border-light) 80%, transparent);
+  overflow: hidden;
+  box-shadow: 0 2px 12px var(--shadow-sm);
+}
+
+.search-result-item {
+  border-bottom: 1px solid var(--border-light);
+  transition: background var(--duration) var(--ease);
+}
+
+.search-result-item:last-child {
+  border-bottom: none;
+}
+
+.search-result-button:hover,
+.search-result-button:focus-visible {
+  background: var(--surface-secondary);
+}
+
+.meta-tag {
+  border-radius: var(--radius-pill);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.file-item {
+  border-bottom: 1px solid var(--border-light);
+}
+
+.file-item:last-child {
+  border-bottom: none;
+}
+
+/* ── 弹窗 ── */
+.metadata-modal-overlay,
+.image-crop-overlay {
+  background: var(--overlay);
+  backdrop-filter: blur(12px) saturate(120%);
+  -webkit-backdrop-filter: blur(12px) saturate(120%);
+}
+
+.metadata-modal,
+.image-crop-modal,
+.auth-card {
+  border-radius: var(--radius-xl);
+  border: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  box-shadow:
+    0 24px 80px var(--shadow-lg),
+    0 0 0 1px color-mix(in srgb, var(--border-light) 50%, transparent);
+}
+
+.auth-card {
+  width: min(440px, 100%);
+  padding: clamp(1.5rem, 4vw, 2rem);
+  background: var(--surface);
+}
+
+.auth-tabs,
+.admin-tabs {
+  border-radius: var(--radius-md);
+  background: var(--surface-secondary);
+  border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+}
+
+.auth-tab.active {
+  font-weight: 600;
+  box-shadow: 0 1px 4px var(--shadow-sm);
+}
+
+.modal-close-btn {
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--text-secondary);
+  transition: background var(--duration) var(--ease);
+}
+
+.modal-close-btn:hover {
+  background: var(--surface-secondary);
+}
+
+.metadata-modal-header h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* ── 管理表格 ── */
+.admin-table-wrap {
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in srgb, var(--border-light) 80%, transparent);
+  box-shadow: 0 2px 16px var(--shadow-sm);
+}
+
+.admin-table th {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: -0.01em;
+  background: var(--surface-secondary);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding-top: 0.5rem;
+  padding-bottom: 0.4rem;
+}
+
+.admin-table td {
+  font-size: 0.875rem;
+  padding-top: 0.45rem;
+  padding-bottom: 0.45rem;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.admin-table-users th.admin-table-col-role,
+.admin-table-users th.admin-table-col-date,
+.admin-table-users th.admin-table-actions-col,
+.admin-table-library th.admin-table-col-composer,
+.admin-table-library th.admin-table-col-author,
+.admin-table-library th.admin-table-col-size,
+.admin-table-library th.admin-table-col-updated,
+.admin-table-library th.admin-table-actions-col {
+  text-align: center;
+}
+
+.admin-table tbody tr:hover {
+  background: var(--surface-secondary);
+}
+
+.admin-table-count {
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.admin-table-pagination {
+  border-top: 1px solid color-mix(in srgb, var(--border-light) 80%, transparent);
+  background: var(--surface-secondary);
+}
+
+.admin-table-page-size select {
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--border-light) 80%, transparent);
+  background: var(--surface);
+}
+
+/* ── 状态与提示 ── */
+.error-msg {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--red) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--red) 20%, transparent);
+  color: var(--red);
+  font-size: 0.941rem;
+  line-height: 1.45;
+}
+
+.success-msg {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--green) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--green) 20%, transparent);
+  font-size: 0.941rem;
+}
+
+.search-empty,
+.auth-loading {
+  font-size: 1.0625rem;
+  color: var(--text-secondary);
+}
+
+.library-merge-hint {
+  border-radius: var(--radius-lg);
+  border: none;
+  background: var(--surface-secondary);
+  font-size: 0.941rem;
+}
+
+.progress-bar {
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  background: var(--progress-track);
+}
+
+.progress-fill {
+  border-radius: var(--radius-pill);
+  background: var(--blue);
+  transition: width 0.35s var(--ease);
+}
+
+/* ── 预览 / 合并面板 ── */
+.merge-panel {
+  background: var(--bg);
+}
+
+.preview-toolbar,
+.single-slide-nav {
+  backdrop-filter: saturate(180%) blur(16px);
+  -webkit-backdrop-filter: saturate(180%) blur(16px);
+}
+
+.ctrl-btn {
+  transition: background var(--duration) var(--ease), color var(--duration) var(--ease);
+}
+
+.ctrl-btn:hover:not(:disabled) {
+  background: var(--surface-secondary);
+}
+
+/* ── 登录页 ── */
+.auth-page {
+  background: var(--bg);
+  padding: clamp(1.5rem, 5vw, 3rem);
+}
+
+.auth-submit {
+  width: 100%;
+  min-height: 3rem;
+}
+
+.auth-guest-link {
+  margin: 1.25rem 0 0;
+  text-align: center;
+}
+
+/* ── 滚动条（WebKit） ── */
+.admin-table-wrap::-webkit-scrollbar,
+.metadata-modal-body::-webkit-scrollbar,
+.merge-panel::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+.admin-table-wrap::-webkit-scrollbar-thumb,
+.metadata-modal-body::-webkit-scrollbar-thumb,
+.merge-panel::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: var(--radius-pill);
+}
+
+@media (max-width: 768px) {
+  .nav-center {
+    display: none;
+  }
+
+  .page-tabs {
+    flex-wrap: wrap;
+  }
+
+  .workflow-section {
+    padding: 1rem;
+  }
+
+  .search-box {
+    flex-direction: column;
+  }
+
+  .btn-search {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

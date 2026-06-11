@@ -1,0 +1,1 @@
+{"version":3,"file":"libreoffice.d.ts","sourceRoot":"","sources":["../src/libreoffice.ts"],"names":[],"mappings":"AAGA,wBAAgB,0BAA0B,CAAC,GAAG,EAAE,MAAM,GAAG,OAAO,CAG/D;AAED,wBAAsB,aAAa,CAAC,IAAI,EAAE;IACxC,WAAW,EAAE,MAAM,CAAC;IACpB,SAAS,EAAE,MAAM,CAAC;IAClB,MAAM,EAAE,MAAM,CAAC;CAChB,GAAG,OAAO,CAAC,MAAM,CAAC,CAwBlB"}

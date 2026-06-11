@@ -1,0 +1,92 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fileservice
+      POSTGRES_PASSWORD: fileservice
+      POSTGRES_DB: fileservice
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U fileservice -d fileservice']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.prod
+      args:
+        VITE_API_KEY: ${VITE_API_KEY:-}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      STATIC_DIR: /app/public
+      RUN_MIGRATIONS: '1'
+      DATABASE_URL: postgresql://fileservice:fileservice@postgres:5432/fileservice
+      REDIS_URL: redis://redis:6379
+      STORAGE_BACKEND: fs
+      LOCAL_STORAGE_DIR: /data/storage
+    ports:
+      - '${PORT:-3000}:3000'
+    volumes:
+      - file_storage:/data/storage
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'node -e "fetch(''http://127.0.0.1:3000/ready'').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"',
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://fileservice:fileservice@postgres:5432/fileservice
+      REDIS_URL: redis://redis:6379
+      STORAGE_BACKEND: fs
+      LOCAL_STORAGE_DIR: /data/storage
+      SOFFICE_PATH: soffice
+    volumes:
+      - file_storage:/data/storage
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+
+volumes:
+  postgres_data:
+  file_storage:

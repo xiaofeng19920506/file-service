@@ -1,0 +1,1 @@
+ALTER TABLE merge_jobs ADD COLUMN IF NOT EXISTS progress integer NOT NULL DEFAULT 0;

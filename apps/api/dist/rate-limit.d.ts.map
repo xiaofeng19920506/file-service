@@ -1,0 +1,1 @@
+{"version":3,"file":"rate-limit.d.ts","sourceRoot":"","sources":["../src/rate-limit.ts"],"names":[],"mappings":"AAEA,OAAO,EAIL,KAAK,MAAM,EACZ,MAAM,sBAAsB,CAAC;AAC9B,OAAO,KAAK,EAAE,eAAe,EAAE,MAAM,SAAS,CAAC;AAE/C,wBAAsB,oBAAoB,CACxC,GAAG,EAAE,eAAe,EACpB,GAAG,EAAE,MAAM,GACV,OAAO,CAAC,IAAI,CAAC,CAsDf"}
