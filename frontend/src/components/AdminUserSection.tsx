@@ -197,7 +197,7 @@ export default function AdminUserSection() {
 
                 return (
                   <tr key={row.id}>
-                    <td className="admin-table-col-email">
+                    <td className="admin-table-col-email" data-label={t('admin.colEmail')}>
                       <div className="admin-table-email-cell">
                         <strong>{row.email}</strong>
                         {isSelf && (
@@ -208,7 +208,7 @@ export default function AdminUserSection() {
                         )}
                       </div>
                     </td>
-                    <td className="admin-table-col-first-name">
+                    <td className="admin-table-col-first-name" data-label={t('admin.colFirstName')}>
                       <input
                         type="text"
                         className="admin-table-input"
@@ -217,7 +217,7 @@ export default function AdminUserSection() {
                         onChange={(e) => updateDraft(row.id, { firstName: e.target.value })}
                       />
                     </td>
-                    <td className="admin-table-col-last-name">
+                    <td className="admin-table-col-last-name" data-label={t('admin.colLastName')}>
                       <input
                         type="text"
                         className="admin-table-input"
@@ -226,7 +226,7 @@ export default function AdminUserSection() {
                         onChange={(e) => updateDraft(row.id, { lastName: e.target.value })}
                       />
                     </td>
-                    <td className="admin-table-col-role">
+                    <td className="admin-table-col-role" data-label={t('admin.colRole')}>
                       {isSelf ? (
                         <span className="admin-table-role-readonly" title={t('admin.cannotChangeOwnRole')}>
                           {t(roleLabelKey(row.role))}
@@ -247,8 +247,10 @@ export default function AdminUserSection() {
                         </select>
                       )}
                     </td>
-                    <td className="admin-table-col-date">{formatDate(row.createdAt, locale)}</td>
-                    <td className="admin-table-actions-col">
+                    <td className="admin-table-col-date" data-label={t('admin.colRegistered')}>
+                      {formatDate(row.createdAt, locale)}
+                    </td>
+                    <td className="admin-table-actions-col" data-label={t('admin.colActions')}>
                       <button
                         type="button"
                         className="btn-primary btn-sm"

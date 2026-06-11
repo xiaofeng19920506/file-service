@@ -10,6 +10,59 @@
     --nav-height: 3.25rem;
     --nav-padding-block: 0.5rem;
     --bottom-nav-height: calc(3.75rem + env(safe-area-inset-bottom, 0px));
+    --touch-target: 2.75rem;
+  }
+
+  /* ── 全局触控与按钮 ── */
+  .theme-toggle,
+  .nav-menu-btn {
+    width: var(--touch-target);
+    height: var(--touch-target);
+  }
+
+  .lang-btn {
+    min-width: var(--touch-target);
+    min-height: 2rem;
+    padding: 0.4rem 0.65rem;
+  }
+
+  .nav-mobile-menu .btn-logout,
+  .nav-mobile-menu .btn-login {
+    min-height: var(--touch-target);
+  }
+
+  .page-tab-bottom {
+    min-height: 3.25rem;
+    font-size: 0.6875rem;
+  }
+
+  .page-tab-bottom .page-tab-label {
+    line-height: 1.15;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    min-height: var(--touch-target);
+  }
+
+  .btn-sm {
+    min-height: 2.5rem;
+  }
+
+  .ctrl-btn {
+    width: var(--touch-target);
+    height: var(--touch-target);
+  }
+
+  .playlists-list-rename-btn,
+  .playlists-track-remove {
+    width: var(--touch-target);
+    height: var(--touch-target);
+  }
+
+  .single-slide-nav-btn {
+    width: var(--touch-target);
+    height: var(--touch-target);
   }
 
   /* ── 顶栏：当前页标题 + 紧凑操作 ── */
@@ -151,6 +204,26 @@
     font-size: 0.9375rem;
   }
 
+  .search-result-meta {
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .content-fingerprint,
+  .meta-tag {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .library-upload-status {
+    margin-top: 0.85rem;
+  }
+
+  .library-upload-item {
+    padding: 0.85rem 1rem;
+  }
+
   /* ── 合并：分段互斥 ── */
   .page-body-merge {
     display: flex;
@@ -198,6 +271,31 @@
     overflow: visible;
   }
 
+  .page-body-merge[data-mobile-panel] .merge-panel-search,
+  .page-body-merge[data-mobile-panel] .merge-panel-setlist {
+    border-top: none;
+    max-height: none;
+    min-height: 0;
+  }
+
+  .merge-panel-search {
+    padding-inline: var(--page-gutter);
+  }
+
+  .merge-setlist-empty {
+    padding: 2rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .file-item {
+    align-items: flex-start;
+    padding: 0.65rem 0.5rem;
+  }
+
+  .file-name {
+    word-break: break-word;
+  }
+
   /* ── 敬拜列表 ── */
   .playlists-page {
     padding: 0.5rem var(--page-gutter) 0.75rem;
@@ -208,11 +306,17 @@
   }
 
   .playlists-header h1 {
-    font-size: 1.15rem;
+    display: none;
   }
 
   .playlists-intro {
     display: none;
+  }
+
+  .playlists-player-stage[data-playback-mode='video'] .playlists-tracks-col {
+    flex: 1 1 auto;
+    max-height: min(40vh, 320px);
+    min-height: 10rem;
   }
 
   .playlists-workspace[data-mobile-view='list'] .playlists-main {
@@ -549,7 +653,7 @@
   }
 
   .admin-toolbar h1 {
-    font-size: 1.15rem;
+    display: none;
   }
 
   .admin-tabs {
@@ -653,6 +757,315 @@
 
   .admin-table-empty-row td::before {
     display: none;
+  }
+
+  /* 用户管理表 → 卡片 */
+  .admin-table-users thead {
+    display: none;
+  }
+
+  .admin-table-users tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .admin-table-users tr {
+    display: block;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--border-light);
+    border-radius: 14px;
+    background: var(--surface);
+  }
+
+  .admin-table-users td {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.35rem;
+    padding: 0.35rem 0;
+    border: none;
+    font-size: 0.8125rem;
+  }
+
+  .admin-table-users td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--text-tertiary);
+    font-size: 0.75rem;
+  }
+
+  .admin-table-users .admin-table-col-email {
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.35rem;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .admin-table-users .admin-table-col-email::before {
+    display: none;
+  }
+
+  .admin-table-users .admin-table-email-cell strong {
+    word-break: break-all;
+    font-size: 0.9375rem;
+  }
+
+  .admin-table-users .admin-table-input,
+  .admin-table-users .admin-table-select {
+    width: 100%;
+    min-height: 2.5rem;
+    box-sizing: border-box;
+  }
+
+  .admin-table-users .admin-table-actions-col {
+    padding-top: 0.5rem;
+    margin-top: 0.25rem;
+    border-top: 1px solid var(--border-light);
+  }
+
+  .admin-table-users .admin-table-actions-col::before {
+    display: none;
+  }
+
+  .admin-table-users .admin-table-actions-col .btn-sm {
+    width: 100%;
+    min-height: 2.75rem;
+  }
+
+  .admin-table-pagination {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+  }
+
+  .admin-table-pagination-summary {
+    white-space: normal;
+    text-align: center;
+  }
+
+  .admin-table-pagination-controls {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  /* ── 登录 / 注册 ── */
+  .auth-page {
+    padding: 1rem;
+    align-items: flex-start;
+    padding-top: max(1.5rem, env(safe-area-inset-top));
+  }
+
+  .auth-card {
+    width: 100%;
+    max-width: 100%;
+    padding: 1.25rem 1rem;
+  }
+
+  .auth-name-row {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-submit {
+    min-height: 3rem;
+  }
+
+  /* ── 上传确认 ── */
+  .upload-confirm-page {
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .upload-confirm-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+    padding: 0.75rem var(--page-gutter);
+  }
+
+  .upload-confirm-header-main {
+    min-width: 0;
+  }
+
+  .upload-confirm-header h1 {
+    font-size: 1.05rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .upload-confirm-header-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .upload-confirm-header-actions .btn-sm {
+    width: 100%;
+    min-height: 2.75rem;
+  }
+
+  .upload-confirm-workspace {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .upload-confirm-meta-pane,
+  .upload-confirm-preview-pane {
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .upload-confirm-preview-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
+    min-height: 0;
+    height: 100%;
+  }
+
+  .upload-confirm-preview-layout .ppt-slides-pane {
+    grid-row: auto;
+    max-height: 7.5rem;
+    display: flex;
+    flex-direction: row;
+    gap: 0.35rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-right: none;
+    border-bottom: 1px solid #dadce0;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .upload-confirm-canvas {
+    min-height: 0;
+    overflow: auto;
+  }
+
+  /* ── 预览页 ── */
+  .blob-preview-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+    padding: 0.75rem var(--page-gutter);
+  }
+
+  .blob-preview-header-main {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .blob-preview-header h1 {
+    font-size: 1rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .blob-preview-body {
+    padding: 0.75rem var(--page-gutter) 1.25rem;
+  }
+
+  .blob-preview-header .btn-secondary {
+    width: 100%;
+    min-height: 2.75rem;
+  }
+
+  .slide-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  /* ── PPT 编辑器 / 合并编辑 ── */
+  .ppt-titlebar {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.65rem var(--page-gutter);
+  }
+
+  .ppt-title {
+    font-size: 0.875rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .ppt-titlebar-meta {
+    width: 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .ppt-titlebar-meta .btn-sm {
+    min-height: 2.5rem;
+    flex: 1;
+    min-width: calc(50% - 0.25rem);
+  }
+
+  .ppt-ribbon {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 0.35rem;
+    padding: 0.5rem var(--page-gutter);
+  }
+
+  .ppt-ribbon::-webkit-scrollbar {
+    display: none;
+  }
+
+  .ppt-ribbon-btn {
+    flex-shrink: 0;
+    min-height: 2.5rem;
+    padding: 0.45rem 0.75rem;
+  }
+
+  .ppt-workspace {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .ppt-slides-pane {
+    max-height: 7.5rem;
+    display: flex;
+    flex-direction: row;
+    gap: 0.35rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-right: none;
+    border-bottom: 1px solid #dadce0;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .ppt-slides-pane .ppt-slide-thumb {
+    flex: 0 0 auto;
+    width: 5.5rem;
+    margin-bottom: 0;
+  }
+
+  .ppt-slides-pane .ppt-slide-thumb:last-child {
+    margin-bottom: 0;
+  }
+
+  .ppt-canvas-area {
+    padding: 0.75rem;
+    min-height: 0;
+  }
+
+  .ppt-statusbar {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+    text-align: center;
+    padding: 0.45rem var(--page-gutter);
+  }
+
+  .ppt-zoom-control {
+    justify-content: center;
+    width: 100%;
   }
 }
 

@@ -268,6 +268,64 @@ export default function LibraryPage({ libraryUpload }: LibraryPageProps) {
             </span>
           </div>
         </label>
+
+        {(error || uploadSummary || items.length > 0) && (
+          <section className="library-upload-status">
+            {error && <p className="error-msg">{error}</p>}
+
+            {uploadSummary && (
+              <div className="upload-summary" aria-live="polite">
+                <div className="upload-summary-head">
+                  <span className="upload-summary-text">
+                    {t('upload.summary', { count: uploadSummary.active })}
+                    {uploadSummary.queued > 0 &&
+                      t('upload.summaryQueued', { queued: uploadSummary.queued })}
+                  </span>
+                  <span className="upload-summary-percent">{uploadSummary.percent}%</span>
+                </div>
+                <div className="upload-summary-bar progress-bar">
+                  <div className="progress-fill" style={{ width: `${uploadSummary.percent}%` }} />
+                </div>
+              </div>
+            )}
+
+            {items.length > 0 && (
+              <ul className="library-upload-list">
+                {items.map((item) => (
+                  <li key={item.id} className={`library-upload-item status-${item.status}`}>
+                    <div className="library-upload-main">
+                      <strong>{item.title?.trim() || item.file.name}</strong>
+                      <span className="library-upload-detail">
+                        {item.status === 'queued' && t('files.queued')}
+                        {item.status === 'uploading' &&
+                          t('files.uploading', { percent: item.progress })}
+                        {item.status === 'error' && item.error}
+                        {item.status === 'done' && item.sha256 && (
+                          <span className="library-upload-fingerprint">
+                            {t('library.fingerprint', {
+                              hash: formatContentFingerprint(item.sha256),
+                            })}
+                          </span>
+                        )}
+                        {item.status === 'done' &&
+                          t('library.savedNew', { size: formatSize(item.file.size) })}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {(completedUploads.length > 0 || items.some((i) => i.status === 'error')) &&
+              activeUploads.length === 0 && (
+              <div className="library-upload-actions">
+                <button type="button" className="btn-secondary" onClick={clearCompleted}>
+                  {t('library.clearCompleted')}
+                </button>
+              </div>
+            )}
+          </section>
+        )}
       </section>
       )}
       </div>
@@ -282,64 +340,6 @@ export default function LibraryPage({ libraryUpload }: LibraryPageProps) {
           onPreview={handlePreviewBlob}
           onClose={() => setSelectedBlob(null)}
         />
-      )}
-
-      {(permissions.canUpload && (error || uploadSummary || items.length > 0)) && (
-        <section className="library-upload-status">
-          {error && <p className="error-msg">{error}</p>}
-
-          {uploadSummary && (
-            <div className="upload-summary" aria-live="polite">
-              <div className="upload-summary-head">
-                <span className="upload-summary-text">
-                  {t('upload.summary', { count: uploadSummary.active })}
-                  {uploadSummary.queued > 0 &&
-                    t('upload.summaryQueued', { queued: uploadSummary.queued })}
-                </span>
-                <span className="upload-summary-percent">{uploadSummary.percent}%</span>
-              </div>
-              <div className="upload-summary-bar progress-bar">
-                <div className="progress-fill" style={{ width: `${uploadSummary.percent}%` }} />
-              </div>
-            </div>
-          )}
-
-          {items.length > 0 && (
-            <ul className="library-upload-list">
-              {items.map((item) => (
-                <li key={item.id} className={`library-upload-item status-${item.status}`}>
-                  <div className="library-upload-main">
-                    <strong>{item.title?.trim() || item.file.name}</strong>
-                    <span className="library-upload-detail">
-                      {item.status === 'queued' && t('files.queued')}
-                      {item.status === 'uploading' &&
-                        t('files.uploading', { percent: item.progress })}
-                      {item.status === 'error' && item.error}
-                      {item.status === 'done' && item.sha256 && (
-                        <span className="library-upload-fingerprint">
-                          {t('library.fingerprint', {
-                            hash: formatContentFingerprint(item.sha256),
-                          })}
-                        </span>
-                      )}
-                      {item.status === 'done' &&
-                        t('library.savedNew', { size: formatSize(item.file.size) })}
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {(completedUploads.length > 0 || items.some((i) => i.status === 'error')) &&
-            activeUploads.length === 0 && (
-            <div className="library-upload-actions">
-              <button type="button" className="btn-secondary" onClick={clearCompleted}>
-                {t('library.clearCompleted')}
-              </button>
-            </div>
-          )}
-        </section>
       )}
 
     </LibraryLayout>

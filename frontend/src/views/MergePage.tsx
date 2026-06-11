@@ -124,7 +124,9 @@ export default function MergePage({ mergePlaylistId }: MergePageProps) {
       }
       centerColumn={
         <div className="merge-setlist-panel">
-          {items.length === 0 ? null : (
+          {items.length === 0 ? (
+            <p className="merge-setlist-empty">{t('merge.emptyHint')}</p>
+          ) : (
             <>
               <FileListSection workspace={workspace} mode="merge" />
               {error && <p className="error-msg">{error}</p>}
