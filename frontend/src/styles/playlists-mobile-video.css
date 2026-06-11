@@ -206,7 +206,8 @@
     flex-direction: column;
   }
 
-  .youtube-player-section--mobile-inline .youtube-player-video-shell {
+  .youtube-player-section--mobile-inline:not(.youtube-player-section--native):not(.youtube-player-section--audio-watch)
+    .youtube-player-video-shell {
     position: relative;
     flex: 1 1 auto;
     min-height: 0;

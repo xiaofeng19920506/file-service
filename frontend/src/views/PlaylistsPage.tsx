@@ -593,6 +593,7 @@ export default function PlaylistsPage({
         canGoPrev={canGoPrev}
         playlistTitle={detail?.playlist.title}
         variant="youtubeWatch"
+        mobileInline={youtubeWatchMobile}
         repeatMode={repeatMode}
         onCycleRepeat={cycleRepeat}
         onRepeatModeChange={changeRepeatMode}

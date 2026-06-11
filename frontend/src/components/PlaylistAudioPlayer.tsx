@@ -45,6 +45,8 @@ type PlaylistAudioPlayerProps = {
   /** 用于车载 / 锁屏 Media Session 显示的列表名 */
   playlistTitle?: string;
   variant?: 'default' | 'nowPlaying' | 'youtubeWatch';
+  /** 手机 YouTube 式页内布局（与视频播放器一致） */
+  mobileInline?: boolean;
   repeatMode?: PlaylistRepeatMode;
   onCycleRepeat?: () => void;
   onRepeatModeChange?: (mode: PlaylistRepeatMode) => void;
@@ -143,6 +145,7 @@ export default function PlaylistAudioPlayer({
   progressHandleRef,
   playlistTitle,
   variant = 'default',
+  mobileInline = false,
   repeatMode = 'off',
   onCycleRepeat,
   onRepeatModeChange,
@@ -888,7 +891,7 @@ export default function PlaylistAudioPlayer({
 
     return (
       <section
-        className="youtube-player-section youtube-player-section--native youtube-player-section--audio-watch"
+        className={`youtube-player-section youtube-player-section--native youtube-player-section--audio-watch${mobileInline ? ' youtube-player-section--mobile-inline' : ''}`}
         aria-label={t('playlists.playerSectionAudio')}
       >
         <div className="youtube-player-frame-wrap">
@@ -899,6 +902,48 @@ export default function PlaylistAudioPlayer({
                 <p className="youtube-player-subtitle-text">{activeCaption}</p>
               </div>
             )}
+            <div className="yt-native-audio-controls">
+              <div className="yt-native-audio-transport">
+                <button type="button" className="yt-native-btn" onClick={goPrev} disabled={prevDisabled} aria-label={t('playlists.prevTrack')}>‹</button>
+                <button
+                  type="button"
+                  className="yt-native-btn yt-native-btn--primary"
+                  disabled={loadingStream && !streamUrl}
+                  onClick={() => {
+                    if (!streamUrl && loadingStream) return;
+                    if (!streamUrl) {
+                      wantPlayRef.current = true;
+                      onPlayingChange(true);
+                      return;
+                    }
+                    onPlayingChange(!playing);
+                  }}
+                  aria-label={playing ? t('playlists.pause') : t('playlists.play')}
+                >
+                  {playing ? '▮▮' : '▶'}
+                </button>
+                <button type="button" className="yt-native-btn" onClick={goNext} disabled={nextDisabled} aria-label={t('playlists.nextTrack')}>›</button>
+              </div>
+              <input
+                className="yt-native-seek"
+                type="range"
+                min={0}
+                max={playbackDuration > 0 ? playbackDuration : 0}
+                step={0.1}
+                value={Math.min(currentTime, playbackDuration > 0 ? playbackDuration : 0)}
+                disabled={!canSeek}
+                aria-label={t('playlists.seek')}
+                onChange={(e) => {
+                  if (!canSeek || playbackDuration <= 0) return;
+                  seekToRatio(Number(e.target.value) / playbackDuration);
+                }}
+              />
+              <div className="yt-native-time">
+                <span>{currentTimeLabel}</span>
+                <span>{totalDurationLabel}</span>
+              </div>
+              <div className="yt-native-audio-options">{langSwitch}</div>
+            </div>
           </div>
         </div>
 
@@ -930,49 +975,6 @@ export default function PlaylistAudioPlayer({
                   : t('playlists.audioCaching', { title: current.title }))}
           </p>
         )}
-
-        <div className="yt-native-audio-controls">
-          <div className="yt-native-audio-transport">
-            <button type="button" className="yt-native-btn" onClick={goPrev} disabled={prevDisabled} aria-label={t('playlists.prevTrack')}>‹</button>
-            <button
-              type="button"
-              className="yt-native-btn yt-native-btn--primary"
-              disabled={loadingStream && !streamUrl}
-              onClick={() => {
-                if (!streamUrl && loadingStream) return;
-                if (!streamUrl) {
-                  wantPlayRef.current = true;
-                  onPlayingChange(true);
-                  return;
-                }
-                onPlayingChange(!playing);
-              }}
-              aria-label={playing ? t('playlists.pause') : t('playlists.play')}
-            >
-              {playing ? '▮▮' : '▶'}
-            </button>
-            <button type="button" className="yt-native-btn" onClick={goNext} disabled={nextDisabled} aria-label={t('playlists.nextTrack')}>›</button>
-          </div>
-          <input
-            className="yt-native-seek"
-            type="range"
-            min={0}
-            max={playbackDuration > 0 ? playbackDuration : 0}
-            step={0.1}
-            value={Math.min(currentTime, playbackDuration > 0 ? playbackDuration : 0)}
-            disabled={!canSeek}
-            aria-label={t('playlists.seek')}
-            onChange={(e) => {
-              if (!canSeek || playbackDuration <= 0) return;
-              seekToRatio(Number(e.target.value) / playbackDuration);
-            }}
-          />
-          <div className="yt-native-time">
-            <span>{currentTimeLabel}</span>
-            <span>{totalDurationLabel}</span>
-          </div>
-          <div className="yt-native-audio-options">{langSwitch}</div>
-        </div>
       </section>
     );
   }

@@ -398,6 +398,7 @@ export default function YoutubePlaylistPlayer({
             playsinline: 1,
             controls: nativeControls ? 1 : 0,
             iv_load_policy: 3,
+            ...(typeof window !== 'undefined' ? { origin: window.location.origin } : {}),
           },
           events: {
             onReady: (event) => {

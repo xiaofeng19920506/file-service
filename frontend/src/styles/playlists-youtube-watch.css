@@ -63,23 +63,125 @@
   justify-content: flex-end;
 }
 
-.youtube-player-section--audio-watch .youtube-player-audio-cover {
+.youtube-player-section--native .youtube-player-frame-wrap {
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
+  max-height: none;
+  border: none;
+  border-radius: 0;
+  overflow: hidden;
   background: #000;
+}
+
+.youtube-player-section--native .youtube-player-video-shell {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
 }
 
-.youtube-player-audio-artwork {
+.youtube-player-section--native .youtube-player-frame,
+.youtube-player-section--native .youtube-player-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* MP3：与视频相同的 16:9 容器 + 底部叠层控制 */
+.youtube-player-section--audio-watch .youtube-player-frame-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: none;
+  border: none;
+  border-radius: 0;
+  overflow: hidden;
+  background: #000;
+}
+
+.youtube-player-section--audio-watch .youtube-player-video-shell {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.youtube-player-section--audio-watch .youtube-player-audio-cover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+}
+
+.youtube-player-section--audio-watch .yt-native-audio-controls {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 4;
+  padding: 2rem 0.65rem max(0.55rem, var(--safe-bottom));
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.82));
+  pointer-events: none;
+}
+
+.youtube-player-section--audio-watch .yt-native-audio-controls > * {
+  pointer-events: auto;
+}
+
+.youtube-player-section--audio-watch .yt-native-btn {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  border: none;
+}
+
+.youtube-player-section--audio-watch .yt-native-btn--primary {
+  background: rgba(255, 255, 255, 0.95);
+  color: #111;
+}
+
+.youtube-player-section--audio-watch .yt-native-seek {
+  accent-color: #ff0033;
+}
+
+.youtube-player-section--audio-watch .yt-native-time {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.youtube-player-section--audio-watch .playlist-audio-status {
+  margin: 0.35rem var(--page-gutter) 0;
+}
+
+@media (max-width: 900px) {
+  .youtube-player-section--audio-watch .youtube-player-audio-artwork {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.youtube-player-section--native .youtube-player-frame-wrap {
-  border-radius: 0;
+.youtube-player-section--audio-watch .youtube-player-subtitles {
+  bottom: 5.75rem;
+}
+
+/* 手机 native / audio-watch：确保 shell 填满 16:9 容器（避免 iframe 高度塌陷黑屏） */
+.youtube-player-section--native.youtube-player-section--mobile-inline .youtube-player-video-shell,
+.youtube-player-section--audio-watch.youtube-player-section--mobile-inline .youtube-player-video-shell {
+  position: absolute;
+  inset: 0;
+  flex: none;
+  width: 100%;
+  height: 100%;
+}
+
+.youtube-player-section--native .youtube-player-frame-wrap,
+  .youtube-player-section--audio-watch .youtube-player-frame-wrap {
+    border-radius: 0;
+    max-height: none;
+  }
 }
 
 @media (min-width: 901px) {
