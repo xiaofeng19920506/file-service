@@ -1155,24 +1155,80 @@ export default function PlaylistAudioPlayer({
         <div className="playlist-audio-record-transport">{transportControls}</div>
 
         <footer className="playlist-audio-record-footer">
-          <div className="playlist-audio-record-modes" role="group" aria-label={t('playlists.playbackOptions')}>
+          <div className="playlist-audio-record-modes-wrap" ref={mobileOptionsRef}>
             <button
               type="button"
-              className={`playlist-audio-record-mode-btn${shuffleEnabled ? ' active' : ''}`}
-              aria-pressed={shuffleEnabled}
-              aria-label={t('playlists.shuffle')}
-              onClick={onToggleShuffle}
+              className={`playlist-audio-record-mode-btn${mobilePlaybackOptionsActive ? ' active' : ''}`}
+              aria-label={t('playlists.playbackOptions')}
+              aria-expanded={mobileOptionsOpen}
+              aria-haspopup="menu"
+              onClick={() => setMobileOptionsOpen((open) => !open)}
             >
-              <ShuffleIcon />
+              {shuffleEnabled ? (
+                <ShuffleIcon />
+              ) : repeatMode !== 'off' ? (
+                <RepeatIcon mode={repeatMode} />
+              ) : (
+                <PlaybackMoreIcon />
+              )}
             </button>
-            <button
-              type="button"
-              className={`playlist-audio-record-mode-btn${repeatMode !== 'off' ? ' active' : ''}`}
-              aria-label={repeatLabel}
-              onClick={onCycleRepeat}
-            >
-              <RepeatIcon mode={repeatMode} />
-            </button>
+            {mobileOptionsOpen && (
+              <div className="playlist-audio-record-mode-menu" role="menu">
+                <button
+                  type="button"
+                  role="menuitemcheckbox"
+                  aria-checked={shuffleEnabled}
+                  className={`playlist-audio-record-mode-item${shuffleEnabled ? ' active' : ''}`}
+                  onClick={() => {
+                    onToggleShuffle?.();
+                    setMobileOptionsOpen(false);
+                  }}
+                >
+                  <ShuffleIcon />
+                  <span>{t('playlists.shuffle')}</span>
+                </button>
+                <button
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={repeatMode === 'off' && !shuffleEnabled}
+                  className={`playlist-audio-record-mode-item${repeatMode === 'off' && !shuffleEnabled ? ' active' : ''}`}
+                  onClick={() => {
+                    onRepeatModeChange?.('off');
+                    if (shuffleEnabled) onToggleShuffle?.();
+                    setMobileOptionsOpen(false);
+                  }}
+                >
+                  <RepeatIcon mode="off" />
+                  <span>{t('playlists.repeatOff')}</span>
+                </button>
+                <button
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={repeatMode === 'all'}
+                  className={`playlist-audio-record-mode-item${repeatMode === 'all' ? ' active' : ''}`}
+                  onClick={() => {
+                    onRepeatModeChange?.('all');
+                    setMobileOptionsOpen(false);
+                  }}
+                >
+                  <RepeatIcon mode="all" />
+                  <span>{t('playlists.repeatAll')}</span>
+                </button>
+                <button
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={repeatMode === 'one'}
+                  className={`playlist-audio-record-mode-item${repeatMode === 'one' ? ' active' : ''}`}
+                  onClick={() => {
+                    onRepeatModeChange?.('one');
+                    setMobileOptionsOpen(false);
+                  }}
+                >
+                  <RepeatIcon mode="one" />
+                  <span>{t('playlists.repeatOne')}</span>
+                </button>
+              </div>
+            )}
           </div>
           <button
             type="button"

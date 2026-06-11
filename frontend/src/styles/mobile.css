@@ -720,7 +720,9 @@
     max-height: min(36vh, 240px);
   }
 
-  .playlists-player-stage[data-player-engaged='true'] .playlist-audio-player .audio-transport {
+  .playlists-player-stage[data-player-engaged='true']:not([data-audio-mobile-record='true'])
+    .playlist-audio-player
+    .audio-transport {
     display: none;
   }
 
