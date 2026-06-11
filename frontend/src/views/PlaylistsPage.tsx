@@ -544,13 +544,65 @@ export default function PlaylistsPage({
     </div>
   );
 
-  const renderMobileTransport = () => (
-    <div className="playlists-mobile-transport mobile-only" role="group" aria-label={t('playlists.playerSectionAudio')}>
+  const handleMobilePlayToggle = useCallback(() => {
+    if (!detail?.items.length) return;
+    if (!playerEngaged) {
+      startPlayback();
+      return;
+    }
+    setPlaying((wasPlaying) => !wasPlaying);
+  }, [detail?.items.length, playerEngaged, startPlayback]);
+
+  const handleMobilePrev = useCallback(() => {
+    if (!detail?.items.length) return;
+    if (!playerEngaged) {
+      if (activeIndex > 0) engageAndPlay(activeIndex - 1);
+      return;
+    }
+    goToPrevTrack();
+  }, [detail?.items.length, playerEngaged, activeIndex, engageAndPlay, goToPrevTrack]);
+
+  const handleMobileNext = useCallback(() => {
+    if (!detail?.items.length) return;
+    if (!playerEngaged) {
+      if (shuffleEnabled) {
+        const order = beginShuffleRound(detail.items.length);
+        engageAndPlay(order[1] ?? order[0]!);
+      } else if (detail.items.length > 1) {
+        engageAndPlay(Math.min(activeIndex + 1, detail.items.length - 1));
+      } else {
+        startPlayback();
+      }
+      return;
+    }
+    goToNextTrack();
+  }, [
+    detail?.items.length,
+    playerEngaged,
+    shuffleEnabled,
+    activeIndex,
+    beginShuffleRound,
+    engageAndPlay,
+    startPlayback,
+    goToNextTrack,
+  ]);
+
+  const mobileCanGoPrev =
+    playerEngaged ? canGoPrev : activeIndex > 0 || (shuffleEnabled && shuffleCursor > 0);
+  const mobileCanGoNext =
+    playerEngaged ? canGoNext : itemCount > 1 || shuffleEnabled;
+
+  const renderMobileTransport = (variant: 'toolbar' | 'dock' = 'toolbar') => (
+    <div
+      className={`playlists-mobile-transport playlists-mobile-transport--${variant} mobile-only`}
+      role="group"
+      aria-label={t('playlists.playerSectionAudio')}
+    >
       <button
         type="button"
         className="playlists-mobile-transport-btn"
-        onClick={goToPrevTrack}
-        disabled={!canGoPrev}
+        onClick={handleMobilePrev}
+        disabled={!mobileCanGoPrev}
         aria-label={t('playlists.prevTrack')}
       >
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -560,10 +612,10 @@ export default function PlaylistsPage({
       <button
         type="button"
         className="playlists-mobile-transport-btn playlists-mobile-transport-btn--primary"
-        onClick={() => setPlaying(!playing)}
-        aria-label={playing ? t('playlists.pause') : t('playlists.play')}
+        onClick={handleMobilePlayToggle}
+        aria-label={playing && playerEngaged ? t('playlists.pause') : t('playlists.play')}
       >
-        {playing ? (
+        {playing && playerEngaged ? (
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
             <path d="M7 6h3v12H7V6zm7 0h3v12h-3V6z" />
           </svg>
@@ -576,8 +628,8 @@ export default function PlaylistsPage({
       <button
         type="button"
         className="playlists-mobile-transport-btn"
-        onClick={goToNextTrack}
-        disabled={!canGoNext}
+        onClick={handleMobileNext}
+        disabled={!mobileCanGoNext}
         aria-label={t('playlists.nextTrack')}
       >
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -652,17 +704,13 @@ export default function PlaylistsPage({
         {hasTracks && (
           <>
             {renderPlaybackModeToggle()}
-            {showPlayer ? (
-              renderMobileTransport()
-            ) : (
-              <button
-                type="button"
-                className="btn-primary playlists-btn-play-all"
-                onClick={startPlayback}
-              >
-                {t('playlists.playAll')}
-              </button>
-            )}
+            <button
+              type="button"
+              className="btn-primary playlists-btn-play-all"
+              onClick={startPlayback}
+            >
+              {t('playlists.playAll')}
+            </button>
             <div className="playlists-toolbar-row">
               {renderShuffleToggle()}
               <button type="button" className="btn-secondary" onClick={() => setShowAddModal(true)}>
@@ -1103,6 +1151,21 @@ export default function PlaylistsPage({
             void performDelete(id);
           }}
         />
+      )}
+
+      {selectedId && detail && detail.items.length > 0 && currentItem && (
+        <div className="playlists-mobile-dock mobile-only">
+          <div className="playlists-mobile-dock-meta">
+            <span className="playlists-mobile-dock-title">{currentItem.title}</span>
+            <span className="playlists-mobile-dock-index">
+              {t('playlists.trackCounter', {
+                current: activeIndex + 1,
+                total: detail.items.length,
+              })}
+            </span>
+          </div>
+          {renderMobileTransport('dock')}
+        </div>
       )}
     </div>
   );
