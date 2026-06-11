@@ -355,11 +355,17 @@
   }
 
   /* 手机详情：管理按钮只在汉堡菜单，页面内只保留返回 + 模式切换 */
+  .playlists-detail-header,
+  .playlists-detail-actions,
   .playlists-main-toolbar,
   .playlists-toolbar-mobile,
   .playlists-toolbar-more,
   .playlists-toolbar-row,
   .playlists-hero {
+    display: none !important;
+  }
+
+  .playlists-empty-tracks .btn-secondary {
     display: none !important;
   }
 

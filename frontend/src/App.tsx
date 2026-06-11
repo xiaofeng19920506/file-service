@@ -18,7 +18,7 @@ import { homePageForPermissions } from './lib/permissions';
 import { useI18n } from './i18n';
 import {
   PlaylistsMobileMenuProvider,
-  usePlaylistsMobileMenu,
+  PLAYLISTS_MOBILE_MENU_MOUNT_ID,
 } from './contexts/PlaylistsMobileMenuContext';
 
 function AppShellInner({
@@ -29,7 +29,6 @@ function AppShellInner({
   setMobileMenuOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   const { t, locale, setLocale } = useI18n();
-  const { menuContent: playlistsMobileMenu } = usePlaylistsMobileMenu();
   const { user, loading, logout, permissions, isAdmin } = useAuth();
   const {
     page,
@@ -218,19 +217,18 @@ function AppShellInner({
           </div>
         </div>
 
-        {mobileMenuOpen && (
-          <div className="nav-mobile-menu" id="nav-mobile-menu">
-            {page === 'playlists' && playlistsMobileMenu && (
-              <div className="nav-mobile-menu-section nav-mobile-menu-playlists mobile-only">
-                {playlistsMobileMenu}
-              </div>
-            )}
-            <div className="nav-mobile-menu-section">{accountActions}</div>
-            <div className="nav-mobile-menu-section nav-mobile-menu-tools">
-              {langToggle}
-            </div>
+        <div className={`nav-mobile-menu${mobileMenuOpen ? ' is-open' : ''}`} id="nav-mobile-menu" hidden={!mobileMenuOpen}>
+          {page === 'playlists' && (
+            <div
+              id={PLAYLISTS_MOBILE_MENU_MOUNT_ID}
+              className="nav-mobile-menu-section nav-mobile-menu-playlists"
+            />
+          )}
+          <div className="nav-mobile-menu-section nav-mobile-menu-account">{accountActions}</div>
+          <div className="nav-mobile-menu-section nav-mobile-menu-tools">
+            {langToggle}
           </div>
-        )}
+        </div>
       </header>
 
       <div className="app-content">

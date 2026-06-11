@@ -1,10 +1,11 @@
 'use client';
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useLayoutEffect, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
+
+export const PLAYLISTS_MOBILE_MENU_MOUNT_ID = 'playlists-mobile-menu-mount';
 
 type PlaylistsMobileMenuContextValue = {
-  menuContent: ReactNode | null;
-  setMenuContent: (content: ReactNode | null) => void;
   closeMenu: () => void;
 };
 
@@ -17,23 +18,14 @@ export function PlaylistsMobileMenuProvider({
   children: ReactNode;
   onCloseMenu: () => void;
 }) {
-  const [menuContent, setMenuContent] = useState<ReactNode | null>(null);
-
   const closeMenu = useCallback(() => {
     onCloseMenu();
   }, [onCloseMenu]);
 
-  const value = useMemo(
-    () => ({
-      menuContent,
-      setMenuContent,
-      closeMenu,
-    }),
-    [menuContent, closeMenu],
-  );
-
   return (
-    <PlaylistsMobileMenuContext.Provider value={value}>{children}</PlaylistsMobileMenuContext.Provider>
+    <PlaylistsMobileMenuContext.Provider value={{ closeMenu }}>
+      {children}
+    </PlaylistsMobileMenuContext.Provider>
   );
 }
 
@@ -43,4 +35,15 @@ export function usePlaylistsMobileMenu() {
     throw new Error('usePlaylistsMobileMenu must be used within PlaylistsMobileMenuProvider');
   }
   return ctx;
+}
+
+export function PlaylistsMobileMenuPortal({ children }: { children: ReactNode }) {
+  const [mount, setMount] = useState<HTMLElement | null>(null);
+
+  useLayoutEffect(() => {
+    setMount(document.getElementById(PLAYLISTS_MOBILE_MENU_MOUNT_ID));
+  }, []);
+
+  if (!mount || !children) return null;
+  return createPortal(children, mount);
 }

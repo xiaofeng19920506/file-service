@@ -38,7 +38,7 @@ import {
   writePlaylistShuffleEnabled,
 } from '../lib/playlist-shuffle';
 import { useI18n } from '../i18n';
-import { usePlaylistsMobileMenu } from '../contexts/PlaylistsMobileMenuContext';
+import { usePlaylistsMobileMenu, PlaylistsMobileMenuPortal } from '../contexts/PlaylistsMobileMenuContext';
 import { useAuth } from '../auth/AuthContext';
 import { readLastPlaylistId, writeLastPlaylistId } from '../lib/playlist-last-open';
 
@@ -103,7 +103,7 @@ export default function PlaylistsPage({
   const homeResumeDoneRef = useRef(false);
   const userDismissedHomeResumeRef = useRef(false);
   const isMobileViewport = useMediaQuery(MOBILE_MEDIA_QUERY);
-  const { setMenuContent, closeMenu } = usePlaylistsMobileMenu();
+  const { closeMenu } = usePlaylistsMobileMenu();
 
   useEffect(() => {
     setTracksEditMode(false);
@@ -752,141 +752,140 @@ export default function PlaylistsPage({
     </>
   );
 
-  useEffect(() => {
-    const media = window.matchMedia(MOBILE_MEDIA_QUERY);
+  const focusImportField = () => {
+    closeMenu();
+    userDismissedHomeResumeRef.current = true;
+    onSelectId(undefined);
+    window.requestAnimationFrame(() => {
+      const input = document.getElementById('playlist-import-url');
+      input?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      if (input instanceof HTMLInputElement) input.focus();
+    });
+  };
 
-    const syncMenu = () => {
-      if (!media.matches || !selectedId || !detail) {
-        setMenuContent(null);
-        return;
-      }
+  const renderPlaylistsMobileMenu = () => {
+    if (!isMobileViewport) return null;
 
-      const playlist = detail.playlist;
-      const hasTracks = detail.items.length > 0;
-
-      setMenuContent(
+    if (!selectedId || !detail) {
+      return (
         <div className="nav-mobile-menu-playlists-inner">
-          {hasTracks && (
-            <button
-              type="button"
-              className="nav-mobile-menu-item btn-primary"
-              onClick={() => {
-                startPlayback();
-                closeMenu();
-              }}
-            >
-              {t('playlists.playAll')}
-            </button>
-          )}
-          <button
-            type="button"
-            className="nav-mobile-menu-item btn-secondary"
-            onClick={() => {
-              setShowAddModal(true);
-              closeMenu();
-            }}
-          >
-            {t('playlists.addTitle')}
+          <p className="nav-mobile-menu-playlists-title">{t('playlists.mobileMenuTitle')}</p>
+          <button type="button" className="nav-mobile-menu-item btn-primary" onClick={focusImportField}>
+            {t('playlists.importButton')}
           </button>
-          {hasTracks && (
-            <>
-              <button
-                type="button"
-                className={`nav-mobile-menu-item btn-secondary playlists-tracks-edit-btn${tracksEditMode ? ' active' : ''}`}
-                aria-pressed={tracksEditMode}
-                onClick={() => {
-                  toggleTracksEditMode();
-                  closeMenu();
-                }}
-              >
-                {tracksEditMode ? t('playlists.doneEditTracks') : t('playlists.editTracks')}
-              </button>
-              <button
-                type="button"
-                className={`nav-mobile-menu-item btn-secondary playlists-shuffle-btn${shuffleEnabled ? ' active' : ''}`}
-                aria-pressed={shuffleEnabled}
-                onClick={() => {
-                  toggleShuffle();
-                  closeMenu();
-                }}
-              >
-                {t('playlists.shuffle')}
-              </button>
-              <button
-                type="button"
-                className={`nav-mobile-menu-item btn-secondary playlists-repeat-btn${repeatMode !== 'off' ? ' active' : ''}`}
-                onClick={() => {
-                  cycleRepeat();
-                  closeMenu();
-                }}
-              >
-                {repeatMode === 'one'
-                  ? t('playlists.repeatOne')
-                  : repeatMode === 'all'
-                    ? t('playlists.repeatAll')
-                    : t('playlists.repeatOff')}
-              </button>
-            </>
-          )}
-          <button
-            type="button"
-            className="nav-mobile-menu-item btn-secondary"
-            onClick={() => {
-              setShareTarget({ id: playlist.id, title: playlist.title });
-              closeMenu();
-            }}
-          >
-            {t('playlists.share')}
-          </button>
-          {permissions.canMerge && playlist.matchedCount > 0 && (
-            <button
-              type="button"
-              className="nav-mobile-menu-item btn-secondary"
-              onClick={() => {
-                onLoadToMerge(playlist.id);
-                closeMenu();
-              }}
-            >
-              {t('playlists.loadToMerge')}
-            </button>
-          )}
-          <button
-            type="button"
-            className="nav-mobile-menu-item btn-secondary btn-danger-outline"
-            disabled={deletingId === playlist.id}
-            onClick={() => {
-              setDeleteTarget({ id: playlist.id, title: playlist.title });
-              closeMenu();
-            }}
-          >
-            {deletingId === playlist.id ? t('playlists.deleting') : t('playlists.delete')}
-          </button>
-        </div>,
+        </div>
       );
-    };
+    }
 
-    syncMenu();
-    media.addEventListener('change', syncMenu);
-    return () => {
-      media.removeEventListener('change', syncMenu);
-      setMenuContent(null);
-    };
-  }, [
-    selectedId,
-    detail,
-    tracksEditMode,
-    shuffleEnabled,
-    repeatMode,
-    deletingId,
-    setMenuContent,
-    closeMenu,
-    t,
-    onLoadToMerge,
-    permissions.canMerge,
-  ]);
+    const playlist = detail.playlist;
+    const hasTracks = detail.items.length > 0;
+
+    return (
+      <div className="nav-mobile-menu-playlists-inner">
+        <p className="nav-mobile-menu-playlists-title">{t('playlists.mobileMenuTitle')}</p>
+        {hasTracks && (
+          <button
+            type="button"
+            className="nav-mobile-menu-item btn-primary"
+            onClick={() => {
+              startPlayback();
+              closeMenu();
+            }}
+          >
+            {t('playlists.playAll')}
+          </button>
+        )}
+        <button
+          type="button"
+          className="nav-mobile-menu-item btn-secondary"
+          onClick={() => {
+            setShowAddModal(true);
+            closeMenu();
+          }}
+        >
+          {t('playlists.addTitle')}
+        </button>
+        {hasTracks && (
+          <>
+            <button
+              type="button"
+              className={`nav-mobile-menu-item btn-secondary playlists-tracks-edit-btn${tracksEditMode ? ' active' : ''}`}
+              aria-pressed={tracksEditMode}
+              onClick={() => {
+                toggleTracksEditMode();
+                closeMenu();
+              }}
+            >
+              {tracksEditMode ? t('playlists.doneEditTracks') : t('playlists.editTracks')}
+            </button>
+            <button
+              type="button"
+              className={`nav-mobile-menu-item btn-secondary playlists-shuffle-btn${shuffleEnabled ? ' active' : ''}`}
+              aria-pressed={shuffleEnabled}
+              onClick={() => {
+                toggleShuffle();
+                closeMenu();
+              }}
+            >
+              {t('playlists.shuffle')}
+            </button>
+            <button
+              type="button"
+              className={`nav-mobile-menu-item btn-secondary playlists-repeat-btn${repeatMode !== 'off' ? ' active' : ''}`}
+              onClick={() => {
+                cycleRepeat();
+                closeMenu();
+              }}
+            >
+              {repeatMode === 'one'
+                ? t('playlists.repeatOne')
+                : repeatMode === 'all'
+                  ? t('playlists.repeatAll')
+                  : t('playlists.repeatOff')}
+            </button>
+          </>
+        )}
+        <button
+          type="button"
+          className="nav-mobile-menu-item btn-secondary"
+          onClick={() => {
+            setShareTarget({ id: playlist.id, title: playlist.title });
+            closeMenu();
+          }}
+        >
+          {t('playlists.share')}
+        </button>
+        {permissions.canMerge && playlist.matchedCount > 0 && (
+          <button
+            type="button"
+            className="nav-mobile-menu-item btn-secondary"
+            onClick={() => {
+              onLoadToMerge(playlist.id);
+              closeMenu();
+            }}
+          >
+            {t('playlists.loadToMerge')}
+          </button>
+        )}
+        <button
+          type="button"
+          className="nav-mobile-menu-item btn-secondary btn-danger-outline"
+          disabled={deletingId === playlist.id}
+          onClick={() => {
+            setDeleteTarget({ id: playlist.id, title: playlist.title });
+            closeMenu();
+          }}
+        >
+          {deletingId === playlist.id ? t('playlists.deleting') : t('playlists.delete')}
+        </button>
+      </div>
+    );
+  };
 
   return (
-    <div className="page-body page-body-playlists">
+    <>
+      <PlaylistsMobileMenuPortal>{renderPlaylistsMobileMenu()}</PlaylistsMobileMenuPortal>
+      <div className="page-body page-body-playlists">
       <main
         className="playlists-page"
         data-youtube-watch={youtubeWatchActive ? 'true' : 'false'}
@@ -1303,5 +1302,6 @@ export default function PlaylistsPage({
       )}
 
     </div>
+    </>
   );
 }
