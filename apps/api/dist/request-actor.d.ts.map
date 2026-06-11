@@ -1,1 +1,0 @@
-{"version":3,"file":"request-actor.d.ts","sourceRoot":"","sources":["../src/request-actor.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,YAAY,EAAE,MAAM,sBAAsB,CAAC;AACzD,OAAO,KAAK,EAAE,cAAc,EAAE,MAAM,SAAS,CAAC;AAG9C,wBAAgB,mBAAmB,CAAC,IAAI,EAAE;IACxC,OAAO,EAAE,cAAc,CAAC;IACxB,aAAa,EAAE,MAAM,CAAC;IACtB,YAAY,EAAE,YAAY,CAAC;CAC5B,GAAG,MAAM,CAET"}

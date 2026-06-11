@@ -1,1 +1,0 @@
-{"version":3,"file":"notify-webhook.d.ts","sourceRoot":"","sources":["../src/notify-webhook.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,EAAE,EAAE,MAAM,sBAAsB,CAAC;AAC/C,OAAO,EAAiC,KAAK,eAAe,EAAE,MAAM,sBAAsB,CAAC;AAG3F,wBAAsB,gBAAgB,CACpC,EAAE,EAAE,EAAE,EACN,KAAK,EAAE,MAAM,EACb,KAAK,EAAE,eAAe,EACtB,aAAa,CAAC,EAAE,MAAM,GACrB,OAAO,CAAC,IAAI,CAAC,CAkBf"}
