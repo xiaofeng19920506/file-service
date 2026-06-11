@@ -559,6 +559,11 @@ export default {
     youtube_oauth_start_failed: '启动 YouTube 授权失败',
     youtube_oauth_disconnect_failed: '解除 YouTube 绑定失败',
     youtube_oauth_failed: 'YouTube 授权失败',
+    token_exchange_failed: 'Google 授权失败，请检查服务器 OAuth 配置',
+    oauth_redirect_uri_mismatch:
+      'OAuth 重定向 URI 不一致，请确认 GOOGLE_OAUTH_REDIRECT_URI 与 Google Console 完全相同',
+    oauth_invalid_client: 'Google OAuth 客户端 ID 或密钥无效',
+    oauth_invalid_grant: '授权码已过期，请重新绑定 YouTube',
     invalid_privacy_status: '无效的播放列表可见性',
     youtube_quota_exceeded: 'YouTube API 今日配额已用完，请明天再试',
     youtube_insufficient_permissions: 'YouTube 账号无权创建播放列表，请重新绑定',

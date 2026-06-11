@@ -65,6 +65,15 @@ export async function exchangeGoogleOAuthCode(opts: {
   return data;
 }
 
+/** 将 Google OAuth token 交换错误映射为 API 错误码 */
+export function mapGoogleOAuthExchangeError(message: string): string {
+  const lower = message.toLowerCase();
+  if (lower.includes('redirect_uri_mismatch')) return 'oauth_redirect_uri_mismatch';
+  if (lower.includes('invalid_client')) return 'oauth_invalid_client';
+  if (lower.includes('invalid_grant')) return 'oauth_invalid_grant';
+  return 'token_exchange_failed';
+}
+
 export async function refreshGoogleAccessToken(opts: {
   clientId: string;
   clientSecret: string;

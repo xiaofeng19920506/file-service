@@ -22,10 +22,13 @@ export async function fetchYoutubeOAuthStatus(): Promise<YoutubeOAuthStatus> {
 }
 
 export async function startYoutubeOAuth(returnPlaylistId?: string): Promise<{ url: string }> {
-  const query = returnPlaylistId
-    ? `?returnPlaylistId=${encodeURIComponent(returnPlaylistId)}`
-    : '';
-  const res = await apiFetch(`/v1/youtube/oauth/start${query}`);
+  const params = new URLSearchParams();
+  if (returnPlaylistId) params.set('returnPlaylistId', returnPlaylistId);
+  if (typeof window !== 'undefined') {
+    params.set('returnUrl', window.location.origin);
+  }
+  const query = params.toString();
+  const res = await apiFetch(`/v1/youtube/oauth/start${query ? `?${query}` : ''}`);
   return parseJson(res);
 }
 

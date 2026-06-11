@@ -87,7 +87,8 @@ S3_ACCESS_KEY=...
 S3_SECRET_KEY=...
 DOWNLOAD_HMAC_SECRET=...
 CORS_ORIGIN=https://你的前端.vercel.app
-PUBLIC_BASE_URL=https://你的API.vercel.app
+WEB_APP_URL=https://你的前端.vercel.app
+PUBLIC_BASE_URL=https://你的API HTTPS地址
 ```
 
 **注意**：Vercel 只跑 API；**Worker（合并任务）和 LibreOffice 需另部署**（本机、Railway、家里 Docker 等），并共用同一 `DATABASE_URL`、`REDIS_URL`、S3。

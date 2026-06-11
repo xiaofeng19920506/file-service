@@ -4,6 +4,7 @@ import {
   exchangeGoogleOAuthCode,
   exportVideosToYoutubePlaylist,
   fetchYoutubeChannelInfo,
+  mapGoogleOAuthExchangeError,
   mapYoutubeApiError,
   playlistItems,
   playlists,
@@ -16,7 +17,7 @@ import {
   type Db,
   type YoutubePrivacyStatus,
 } from '@file-service/shared';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { resolveWebAppUrl } from './mail.js';
 
 type OAuthConfig = {
@@ -24,6 +25,55 @@ type OAuthConfig = {
   clientSecret: string;
   redirectUri: string;
 };
+
+function normalizeWebAppOrigin(raw: string): string | null {
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+    return `${url.protocol}//${url.host}`;
+  } catch {
+    return null;
+  }
+}
+
+function allowedReturnWebAppOrigins(env: ApiEnv, processEnv: NodeJS.ProcessEnv = process.env): Set<string> {
+  const allowed = new Set<string>();
+  const add = (raw?: string) => {
+    const normalized = raw ? normalizeWebAppOrigin(raw) : null;
+    if (normalized) allowed.add(normalized);
+  };
+  add(env.WEB_APP_URL);
+  for (const part of processEnv.CORS_ORIGIN?.split(',') ?? []) {
+    add(part.trim());
+  }
+  add('http://localhost:5173');
+  add('http://127.0.0.1:5173');
+  add('http://localhost:3000');
+  return allowed;
+}
+
+function resolveReturnWebAppUrl(opts: {
+  env: ApiEnv;
+  request: FastifyRequest;
+  queryReturnUrl?: string;
+}): string {
+  const fallback = resolveWebAppUrl(opts.env);
+  const allowed = allowedReturnWebAppOrigins(opts.env);
+
+  const candidates = [
+    opts.queryReturnUrl?.trim(),
+    typeof opts.request.headers.referer === 'string' ? opts.request.headers.referer : undefined,
+    typeof opts.request.headers.origin === 'string' ? opts.request.headers.origin : undefined,
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const normalized = normalizeWebAppOrigin(candidate);
+    if (normalized && allowed.has(normalized)) return normalized;
+  }
+
+  return fallback;
+}
 
 function resolveOAuthConfig(env: ApiEnv): OAuthConfig | null {
   const clientId = env.GOOGLE_OAUTH_CLIENT_ID?.trim();
@@ -101,7 +151,20 @@ function redirectToPlaylists(
   params: Record<string, string>,
 ) {
   const search = new URLSearchParams(params);
-  return `${webAppUrl}/#/playlists?${search.toString()}`;
+  const base = webAppUrl.replace(/\/$/, '');
+  return `${base}/#/playlists?${search.toString()}`;
+}
+
+function callbackRedirectWebAppUrl(
+  env: ApiEnv,
+  state: { returnWebAppUrl?: string } | null,
+): string {
+  if (state?.returnWebAppUrl) {
+    const allowed = allowedReturnWebAppOrigins(env);
+    const normalized = normalizeWebAppOrigin(state.returnWebAppUrl);
+    if (normalized && allowed.has(normalized)) return normalized;
+  }
+  return resolveWebAppUrl(env);
 }
 
 export function registerYoutubeOAuthRoutes(
@@ -109,7 +172,7 @@ export function registerYoutubeOAuthRoutes(
   opts: { db: Db; env: ApiEnv },
 ) {
   const { db, env } = opts;
-  const webAppUrl = resolveWebAppUrl(env);
+  const defaultWebAppUrl = resolveWebAppUrl(env);
 
   app.get('/v1/youtube/oauth/status', async (request, reply) => {
     const user = request.authUser;
@@ -136,7 +199,7 @@ export function registerYoutubeOAuthRoutes(
     };
   });
 
-  app.get<{ Querystring: { returnPlaylistId?: string } }>(
+  app.get<{ Querystring: { returnPlaylistId?: string; returnUrl?: string } }>(
     '/v1/youtube/oauth/start',
     async (request, reply) => {
       const user = request.authUser;
@@ -146,10 +209,16 @@ export function registerYoutubeOAuthRoutes(
       if (!oauth) return oauthNotConfiguredReply(reply);
 
       const returnPlaylistId = request.query.returnPlaylistId?.trim() || undefined;
+      const returnWebAppUrl = resolveReturnWebAppUrl({
+        env,
+        request,
+        queryReturnUrl: request.query.returnUrl,
+      });
       const state = signYoutubeOAuthState({
         secret: env.DOWNLOAD_HMAC_SECRET,
         userId: user.id,
         returnPlaylistId,
+        returnWebAppUrl,
       });
 
       const url = buildGoogleOAuthAuthorizeUrl({
@@ -168,13 +237,13 @@ export function registerYoutubeOAuthRoutes(
       const oauth = resolveOAuthConfig(env);
       if (!oauth) {
         return reply.redirect(
-          redirectToPlaylists(webAppUrl, { youtube_oauth: 'error', reason: 'not_configured' }),
+          redirectToPlaylists(defaultWebAppUrl, { youtube_oauth: 'error', reason: 'not_configured' }),
         );
       }
 
       if (request.query.error) {
         return reply.redirect(
-          redirectToPlaylists(webAppUrl, {
+          redirectToPlaylists(defaultWebAppUrl, {
             youtube_oauth: 'error',
             reason: request.query.error,
           }),
@@ -185,7 +254,7 @@ export function registerYoutubeOAuthRoutes(
       const stateToken = request.query.state?.trim();
       if (!code || !stateToken) {
         return reply.redirect(
-          redirectToPlaylists(webAppUrl, { youtube_oauth: 'error', reason: 'invalid_callback' }),
+          redirectToPlaylists(defaultWebAppUrl, { youtube_oauth: 'error', reason: 'invalid_callback' }),
         );
       }
 
@@ -193,6 +262,7 @@ export function registerYoutubeOAuthRoutes(
         secret: env.DOWNLOAD_HMAC_SECRET,
         token: stateToken,
       });
+      const webAppUrl = callbackRedirectWebAppUrl(env, state);
       if (!state) {
         return reply.redirect(
           redirectToPlaylists(webAppUrl, { youtube_oauth: 'error', reason: 'invalid_state' }),
@@ -250,9 +320,11 @@ export function registerYoutubeOAuthRoutes(
         if (state.returnPlaylistId) params.id = state.returnPlaylistId;
         return reply.redirect(redirectToPlaylists(webAppUrl, params));
       } catch (e) {
-        request.log.error(e, 'youtube oauth callback failed');
+        const raw = e instanceof Error ? e.message : 'token_exchange_failed';
+        request.log.error({ err: e, redirectUri: oauth.redirectUri }, 'youtube oauth callback failed');
+        const reason = mapGoogleOAuthExchangeError(raw);
         return reply.redirect(
-          redirectToPlaylists(webAppUrl, { youtube_oauth: 'error', reason: 'token_exchange_failed' }),
+          redirectToPlaylists(webAppUrl, { youtube_oauth: 'error', reason }),
         );
       }
     },

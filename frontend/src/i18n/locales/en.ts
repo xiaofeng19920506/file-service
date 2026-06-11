@@ -569,6 +569,11 @@ const en: MessageTree = {
     youtube_oauth_start_failed: 'Failed to start YouTube authorization',
     youtube_oauth_disconnect_failed: 'Failed to disconnect YouTube account',
     youtube_oauth_failed: 'YouTube authorization failed',
+    token_exchange_failed: 'Google authorization failed — check OAuth client settings on the server',
+    oauth_redirect_uri_mismatch:
+      'OAuth redirect URI mismatch — ensure GOOGLE_OAUTH_REDIRECT_URI matches Google Console exactly',
+    oauth_invalid_client: 'Invalid Google OAuth client ID or secret on the server',
+    oauth_invalid_grant: 'Authorization code expired — try connecting YouTube again',
     invalid_privacy_status: 'Invalid playlist visibility',
     youtube_quota_exceeded: 'YouTube API daily quota exceeded — try again tomorrow',
     youtube_insufficient_permissions: 'YouTube account lacks permission to create playlists — reconnect',

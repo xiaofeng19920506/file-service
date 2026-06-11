@@ -6,21 +6,37 @@ const DEFAULT_TTL_SECONDS = 600;
 export type YoutubeOAuthState = {
   userId: string;
   returnPlaylistId?: string;
+  returnWebAppUrl?: string;
   expiresAtUnix: number;
 };
+
+function encodePart(value: string): string {
+  return Buffer.from(value, 'utf8').toString('base64url');
+}
+
+function decodePart(value: string): string | null {
+  try {
+    return Buffer.from(value, 'base64url').toString('utf8');
+  } catch {
+    return null;
+  }
+}
 
 export function signYoutubeOAuthState(opts: {
   secret: string;
   userId: string;
   returnPlaylistId?: string;
+  returnWebAppUrl?: string;
   expiresAtUnix?: number;
 }): string {
   const expiresAtUnix = opts.expiresAtUnix ?? Math.floor(Date.now() / 1000) + DEFAULT_TTL_SECONDS;
   const playlistId = opts.returnPlaylistId ?? '';
-  const playlistEnc = Buffer.from(playlistId, 'utf8').toString('base64url');
-  const payload = `${PREFIX}:${opts.userId}:${playlistId}:${expiresAtUnix}`;
+  const returnWebAppUrl = opts.returnWebAppUrl ?? '';
+  const playlistEnc = encodePart(playlistId);
+  const webAppEnc = encodePart(returnWebAppUrl);
+  const payload = `${PREFIX}:${opts.userId}:${playlistId}:${returnWebAppUrl}:${expiresAtUnix}`;
   const sig = createHmac('sha256', opts.secret).update(payload).digest('base64url');
-  return `${PREFIX}.${opts.userId}.${playlistEnc}.${expiresAtUnix}.${sig}`;
+  return `${PREFIX}.${opts.userId}.${playlistEnc}.${webAppEnc}.${expiresAtUnix}.${sig}`;
 }
 
 export function verifyYoutubeOAuthState(opts: {
@@ -30,20 +46,39 @@ export function verifyYoutubeOAuthState(opts: {
 }): YoutubeOAuthState | null {
   const now = opts.nowUnix ?? Math.floor(Date.now() / 1000);
   const parts = opts.token.split('.');
-  if (parts.length !== 5 || parts[0] !== PREFIX) return null;
-  const [, userId, playlistEnc, expStr, sig] = parts;
-  const expiresAtUnix = Number(expStr);
-  if (!userId || !Number.isFinite(expiresAtUnix)) return null;
-  if (expiresAtUnix < now) return null;
+  if (parts[0] !== PREFIX) return null;
 
-  let returnPlaylistId = '';
-  try {
-    returnPlaylistId = Buffer.from(playlistEnc, 'base64url').toString('utf8');
-  } catch {
-    return null;
+  if (parts.length === 5) {
+    const [, userId, playlistEnc, expStr, sig] = parts;
+    const expiresAtUnix = Number(expStr);
+    if (!userId || !Number.isFinite(expiresAtUnix) || expiresAtUnix < now) return null;
+    const returnPlaylistId = decodePart(playlistEnc);
+    if (returnPlaylistId === null) return null;
+    const payload = `${PREFIX}:${userId}:${returnPlaylistId}:${expiresAtUnix}`;
+    const expected = createHmac('sha256', opts.secret).update(payload).digest('base64url');
+    try {
+      if (expected.length !== sig.length) return null;
+      if (!timingSafeEqual(Buffer.from(expected), Buffer.from(sig))) return null;
+    } catch {
+      return null;
+    }
+    return {
+      userId,
+      returnPlaylistId: returnPlaylistId || undefined,
+      expiresAtUnix,
+    };
   }
 
-  const payload = `${PREFIX}:${userId}:${returnPlaylistId}:${expiresAtUnix}`;
+  if (parts.length !== 6) return null;
+  const [, userId, playlistEnc, webAppEnc, expStr, sig] = parts;
+  const expiresAtUnix = Number(expStr);
+  if (!userId || !Number.isFinite(expiresAtUnix) || expiresAtUnix < now) return null;
+
+  const returnPlaylistId = decodePart(playlistEnc);
+  const returnWebAppUrl = decodePart(webAppEnc);
+  if (returnPlaylistId === null || returnWebAppUrl === null) return null;
+
+  const payload = `${PREFIX}:${userId}:${returnPlaylistId}:${returnWebAppUrl}:${expiresAtUnix}`;
   const expected = createHmac('sha256', opts.secret).update(payload).digest('base64url');
   try {
     if (expected.length !== sig.length) return null;
@@ -55,6 +90,7 @@ export function verifyYoutubeOAuthState(opts: {
   return {
     userId,
     returnPlaylistId: returnPlaylistId || undefined,
+    returnWebAppUrl: returnWebAppUrl || undefined,
     expiresAtUnix,
   };
 }
