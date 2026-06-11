@@ -59,6 +59,9 @@ const en: MessageTree = {
     savingMetadata: 'Saving…',
     clearCompleted: 'Clear completed',
     mergeHint: 'To combine multiple songs, switch to the Presentation Merge page.',
+    mobileSections: 'Library sections',
+    mobileBrowse: 'Browse',
+    mobileUpload: 'Upload',
     edit: 'Edit',
     editTitle: 'Edit library entry',
     saveMetadata: 'Save metadata',
@@ -331,6 +334,9 @@ const en: MessageTree = {
     remove: 'Remove',
   },
   merge: {
+    mobileSections: 'Merge workspace',
+    mobileSearch: 'Search & add',
+    mobileSetlist: 'Setlist',
     description:
       'Pick songs from the library, arrange the order, and merge into one service deck.',
     fromLibrary: 'Add songs from library',

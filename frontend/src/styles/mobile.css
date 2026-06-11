@@ -159,6 +159,11 @@
     overflow: hidden;
   }
 
+  .merge-mobile-segments {
+    flex-shrink: 0;
+    margin: 0.5rem var(--page-gutter) 0;
+  }
+
   .page-body-merge[data-mobile-panel='search'] .merge-panel-setlist {
     display: none;
   }

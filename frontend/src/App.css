@@ -56,6 +56,10 @@
   text-overflow: ellipsis;
 }
 
+.nav-brand-page-title {
+  display: none;
+}
+
 .nav-brand-tagline {
   font-size: 0.6875rem;
   color: var(--text-tertiary);
