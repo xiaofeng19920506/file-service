@@ -1,4 +1,55 @@
-/* YouTube 式观看页：左/上播放器 + 右/下 Mix 列表 + 标题（视频用 YouTube 原生控制条，MP3 用浏览器原生 range） */
+/* YouTube 式观看页：视频用原生控制条；MP3 样式见下方 audio-watch（后续单独完善） */
+
+/* --- 视频 native：全端 16:9 + shell 填满，防止 iframe 高度塌陷黑屏 --- */
+.youtube-player-section--native .youtube-player-frame-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: none;
+  border: none;
+  border-radius: 0;
+  overflow: hidden;
+  background: #000;
+}
+
+.youtube-player-section--native .youtube-player-video-shell {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.youtube-player-section--native .youtube-player-frame,
+.youtube-player-section--native .youtube-player-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100%;
+}
+
+.youtube-player-section--native.youtube-player-section--mobile-inline .youtube-player-video-shell {
+  flex: none;
+}
+
+@media (min-width: 901px) {
+  .youtube-player-section--native.youtube-player-section--desktop-watch .youtube-player-frame-wrap {
+    max-height: min(56vh, 640px);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+}
+
+@media (max-width: 900px) {
+  .youtube-player-section--native.youtube-player-section--mobile-inline .youtube-player-frame-wrap {
+    border-radius: 0;
+    max-height: none;
+    border: none;
+  }
+}
+
+/* --- MP3 audio-watch（暂保留，后续单独处理） --- */
 
 .yt-native-audio-controls {
   display: flex;
@@ -61,33 +112,6 @@
 .yt-native-audio-options {
   display: flex;
   justify-content: flex-end;
-}
-
-.youtube-player-section--native .youtube-player-frame-wrap {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  max-height: none;
-  border: none;
-  border-radius: 0;
-  overflow: hidden;
-  background: #000;
-}
-
-.youtube-player-section--native .youtube-player-video-shell {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-}
-
-.youtube-player-section--native .youtube-player-frame,
-.youtube-player-section--native .youtube-player-frame iframe {
-  position: absolute;
-  inset: 0;
-  width: 100% !important;
-  height: 100% !important;
 }
 
 /* MP3：与视频相同的 16:9 容器 + 底部叠层控制 */
@@ -153,8 +177,7 @@
   margin: 0.35rem var(--page-gutter) 0;
 }
 
-@media (max-width: 900px) {
-  .youtube-player-section--audio-watch .youtube-player-audio-artwork {
+.youtube-player-section--audio-watch .youtube-player-audio-artwork {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -167,17 +190,15 @@
   bottom: 5.75rem;
 }
 
-/* 手机 native / audio-watch：确保 shell 填满 16:9 容器（避免 iframe 高度塌陷黑屏） */
-.youtube-player-section--native.youtube-player-section--mobile-inline .youtube-player-video-shell,
-.youtube-player-section--audio-watch.youtube-player-section--mobile-inline .youtube-player-video-shell {
-  position: absolute;
-  inset: 0;
-  flex: none;
-  width: 100%;
-  height: 100%;
-}
+@media (max-width: 900px) {
+  .youtube-player-section--audio-watch.youtube-player-section--mobile-inline .youtube-player-video-shell {
+    position: absolute;
+    inset: 0;
+    flex: none;
+    width: 100%;
+    height: 100%;
+  }
 
-.youtube-player-section--native .youtube-player-frame-wrap,
   .youtube-player-section--audio-watch .youtube-player-frame-wrap {
     border-radius: 0;
     max-height: none;
@@ -230,12 +251,17 @@
     flex: 0 0 7rem;
   }
 
-  .playlists-player-stage[data-youtube-watch='true'] .youtube-player-frame-wrap,
+  .playlists-player-stage[data-youtube-watch='true'] .youtube-player-section--native .youtube-player-frame-wrap,
   .playlists-player-stage[data-youtube-watch='true'] .playlists-hero {
-    max-height: none;
     border-radius: 12px;
     box-shadow: none;
-    border: none;
+  }
+
+  .playlists-player-stage[data-youtube-watch='true']
+    .youtube-player-section--native.youtube-player-section--desktop-watch
+    .youtube-player-frame-wrap {
+    max-height: min(56vh, 640px);
+    border: 1px solid var(--border);
   }
 
   .playlists-youtube-meta {
@@ -265,6 +291,17 @@
   .playlists-player-stage[data-youtube-watch='true'] {
     flex-direction: column;
     gap: 0;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
+
+  .playlists-player-stage[data-youtube-watch='true'] .playlists-player-col,
+  .playlists-player-stage[data-youtube-watch='true'] .playlists-tracks-col,
+  .playlists-player-stage[data-youtube-watch='true'] .playlists-youtube-meta {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
   }
 
   .playlists-player-stage[data-youtube-watch='true'] .playlists-tracks-col {

@@ -328,7 +328,15 @@
   }
 
   .playlists-workspace[data-mobile-view='detail'] {
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: 1fr;
+  }
+
+  .playlists-workspace[data-mobile-view='detail'] .playlists-main {
+    grid-column: 1 / -1;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
   }
 
   .playlists-workspace[data-mobile-view='list'] .playlists-sidebar {

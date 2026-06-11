@@ -100,6 +100,34 @@ function readStoredVolume(): number {
   }
 }
 
+/** 等容器有尺寸再初始化 iframe，避免高度为 0 导致黑屏 */
+function waitForContainerSize(element: HTMLElement, cancelled: () => boolean): Promise<void> {
+  return new Promise((resolve) => {
+    let attempts = 0;
+    const maxAttempts = 120;
+
+    const check = () => {
+      if (cancelled()) {
+        resolve();
+        return;
+      }
+      const { width, height } = element.getBoundingClientRect();
+      if (width > 0 && height > 0) {
+        resolve();
+        return;
+      }
+      attempts += 1;
+      if (attempts >= maxAttempts) {
+        resolve();
+        return;
+      }
+      requestAnimationFrame(check);
+    };
+
+    check();
+  });
+}
+
 function loadYoutubeIframeApi(): Promise<void> {
   if (window.YT?.Player) return Promise.resolve();
   if (!youtubeApiPromise) {
@@ -380,6 +408,11 @@ export default function YoutubePlaylistPlayer({
         await loadYoutubeIframeApi();
         if (cancelled || !window.YT?.Player) return;
 
+        if (nativeControls && frameWrapRef.current) {
+          await waitForContainerSize(frameWrapRef.current, () => cancelled);
+        }
+        if (cancelled || !window.YT?.Player) return;
+
         if (playerRef.current) {
           playerRef.current.destroy();
           playerRef.current = null;
@@ -396,6 +429,7 @@ export default function YoutubePlaylistPlayer({
             rel: 0,
             modestbranding: 1,
             playsinline: 1,
+            enablejsapi: 1,
             controls: nativeControls ? 1 : 0,
             iv_load_policy: 3,
             ...(typeof window !== 'undefined' ? { origin: window.location.origin } : {}),
@@ -481,7 +515,7 @@ export default function YoutubePlaylistPlayer({
       lastLoadedIndexRef.current = -1;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- recreate only when list identity changes
-  }, [elementId, items.map((i) => i.youtubeVideoId).join('|')]);
+  }, [elementId, items.map((i) => i.youtubeVideoId).join('|'), nativeControls]);
 
   useEffect(() => {
     const player = playerRef.current;
@@ -862,10 +896,10 @@ export default function YoutubePlaylistPlayer({
   if (nativeControls) {
     return (
       <section
-        className={`youtube-player-section youtube-player-section--native${mobileInline ? ' youtube-player-section--mobile-inline' : ''}`}
+        className={`youtube-player-section youtube-player-section--native${mobileInline ? ' youtube-player-section--mobile-inline' : ' youtube-player-section--desktop-watch'}`}
         aria-label={t('playlists.playerSection')}
       >
-        <div className="youtube-player-frame-wrap">
+        <div className="youtube-player-frame-wrap" ref={frameWrapRef}>
           <div className="youtube-player-video-shell">
             <div id={elementId} className="youtube-player-frame" />
             {activeCaption && (

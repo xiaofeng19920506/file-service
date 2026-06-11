@@ -482,8 +482,14 @@ export default function PlaylistsPage({
 
   const currentItem = detail?.items[activeIndex];
   const showPlayer = playerEngaged && playerItems.length > 0;
-  const youtubeWatchActive = showPlayer;
-  const youtubeWatchMobile = showPlayer && isMobileViewport;
+  const youtubeWatchActive = showPlayer && playbackMode === 'video';
+  const youtubeWatchMobile = youtubeWatchActive && isMobileViewport;
+
+  useEffect(() => {
+    if (!youtubeWatchMobile) return;
+    document.body.classList.add('playlists-mobile-video-active');
+    return () => document.body.classList.remove('playlists-mobile-video-active');
+  }, [youtubeWatchMobile]);
 
   const startRename = (id: string, title: string) => {
     setRenamingId(id);

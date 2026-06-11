@@ -4657,6 +4657,15 @@
   background: #000;
 }
 
+/* native 模式由 playlists-youtube-watch.css 覆盖为 absolute 填满容器 */
+.youtube-player-section--native .youtube-player-video-shell {
+  position: absolute;
+  inset: 0;
+  flex: none;
+  min-height: 100%;
+  height: 100%;
+}
+
 .youtube-player-video-shell .youtube-player-frame {
   position: absolute;
   inset: 0;
