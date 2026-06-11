@@ -4814,6 +4814,9 @@
   min-width: 0;
   padding: 0.45rem 0;
   cursor: pointer;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .youtube-player-progress:focus-visible {

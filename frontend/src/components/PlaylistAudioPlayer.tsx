@@ -18,9 +18,9 @@ import {
   writeStoredPlayerVolume,
 } from '../lib/player-volume';
 import { useMediaSession } from '../hooks/useMediaSession';
+import type { PlaylistRepeatMode } from '../lib/playlist-repeat-mode';
 import AudioSeekBar from './AudioSeekBar';
 import ScrollingTitle from './ScrollingTitle';
-import '../styles/playlist-audio.css';
 
 export type PlaylistAudioItem = {
   youtubeVideoId: string;
@@ -43,6 +43,8 @@ type PlaylistAudioPlayerProps = {
   progressHandleRef?: RefObject<PlaylistAudioProgressHandle | null>;
   /** 用于车载 / 锁屏 Media Session 显示的列表名 */
   playlistTitle?: string;
+  variant?: 'default' | 'nowPlaying';
+  repeatMode?: PlaylistRepeatMode;
 };
 
 function youtubeThumb(videoId: string): string {
@@ -133,6 +135,8 @@ export default function PlaylistAudioPlayer({
   onProgressUpdate,
   progressHandleRef,
   playlistTitle,
+  variant = 'default',
+  repeatMode = 'off',
 }: PlaylistAudioPlayerProps) {
   const { t } = useI18n();
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -524,6 +528,18 @@ export default function PlaylistAudioPlayer({
   const advanceToNextTrack = useCallback(() => {
     if (endedHandledRef.current) return;
     endedHandledRef.current = true;
+
+    if (repeatMode === 'one') {
+      const el = audioRef.current;
+      endedHandledRef.current = false;
+      if (el) {
+        el.currentTime = 0;
+        void el.play().catch(() => undefined);
+      }
+      onPlayingChange(true);
+      return;
+    }
+
     skipPauseSyncRef.current = true;
     if (onNextTrack) {
       onNextTrack();
@@ -534,7 +550,7 @@ export default function PlaylistAudioPlayer({
       skipPauseSyncRef.current = false;
       onPlayingChange(false);
     }
-  }, [activeIndex, items.length, onActiveIndexChange, onPlayingChange, onNextTrack]);
+  }, [activeIndex, items.length, onActiveIndexChange, onPlayingChange, onNextTrack, repeatMode]);
 
   const handleTimeUpdate = useCallback(
     (e: React.SyntheticEvent<HTMLAudioElement>) => {
@@ -642,8 +658,13 @@ export default function PlaylistAudioPlayer({
   if (!current) return null;
 
   return (
-    <section className="playlist-audio-player" aria-label={t('playlists.playerSectionAudio')}>
-      <div className="playlist-audio-artwork-wrap desktop-audio-artwork">
+    <section
+      className={`playlist-audio-player${variant === 'nowPlaying' ? ' playlist-audio-player--now-playing' : ''}`}
+      aria-label={t('playlists.playerSectionAudio')}
+    >
+      <div
+        className={`playlist-audio-artwork-wrap${variant === 'nowPlaying' ? '' : ' desktop-audio-artwork'}`}
+      >
         <img
           className="playlist-audio-artwork"
           src={youtubeThumb(current.youtubeVideoId)}

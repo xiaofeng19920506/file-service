@@ -58,9 +58,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void (async () => {
       const verified = await verifyAuthSession();
       if (cancelled) return;
-      setUser(verified);
+      setUser(verified ?? getCachedUser());
       setLoading(false);
-      if (verified && window.location.hash === '#/login') {
+      if ((verified ?? getCachedUser()) && window.location.hash === '#/login') {
         goLibraryAfterAuth();
       }
     })();

@@ -3,15 +3,14 @@ import AcceptSharedPlaylistModal from '../components/AcceptSharedPlaylistModal';
 import AddPlaylistItemsModal from '../components/AddPlaylistItemsModal';
 import ConfirmModal from '../components/ConfirmModal';
 import SharePlaylistModal from '../components/SharePlaylistModal';
-import { CloseIcon, DragHandleIcon, MenuIcon, PencilIcon } from '../components/icons';
+import { DragHandleIcon, PencilIcon } from '../components/icons';
 import { useMediaQuery } from '../hooks/useMediaQuery';
-import AudioSeekBar from '../components/AudioSeekBar';
-import ScrollingTitle from '../components/ScrollingTitle';
 import PlaylistAudioPlayer, {
-  formatPlaybackTimeRange,
   type PlaylistAudioProgressHandle,
-  type PlaylistAudioProgressState,
 } from '../components/PlaylistAudioPlayer';
+import PlaylistNowPlayingShell from '../components/PlaylistNowPlayingShell';
+import PlaylistPlayerBottomChrome from '../components/PlaylistPlayerBottomChrome';
+import PlaylistQueuePanel from '../components/PlaylistQueuePanel';
 import YoutubePlaylistPlayer from '../components/YoutubePlaylistPlayer';
 import { prioritizeYoutubeAudioCache, type YoutubeAudioStatus } from '../api/youtube-audio';
 import {
@@ -32,6 +31,12 @@ import {
   writePlaylistPlaybackMode,
   type PlaylistPlaybackMode,
 } from '../lib/playlist-playback-mode';
+import {
+  cyclePlaylistRepeatMode,
+  readPlaylistRepeatMode,
+  writePlaylistRepeatMode,
+  type PlaylistRepeatMode,
+} from '../lib/playlist-repeat-mode';
 import {
   buildShuffleOrder,
   readPlaylistShuffleEnabled,
@@ -93,15 +98,11 @@ export default function PlaylistsPage({
   const [activeIndex, setActiveIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const audioProgressHandleRef = useRef<PlaylistAudioProgressHandle | null>(null);
-  const [audioProgress, setAudioProgress] = useState<PlaylistAudioProgressState>({
-    currentTime: 0,
-    duration: 0,
-    canSeek: false,
-  });
   const [playerEngaged, setPlayerEngaged] = useState(false);
+  const [playerView, setPlayerView] = useState<'nowPlaying' | 'browse'>('browse');
+  const [queueOpen, setQueueOpen] = useState(false);
+  const [repeatMode, setRepeatMode] = useState<PlaylistRepeatMode>(readPlaylistRepeatMode);
   const [toolbarExpanded, setToolbarExpanded] = useState(false);
-  const [mobilePlaylistMenuOpen, setMobilePlaylistMenuOpen] = useState(false);
-  const [mobileVideoShowTracks, setMobileVideoShowTracks] = useState(false);
   const isMobileViewport = useMediaQuery('(max-width: 900px)');
 
   useEffect(() => {
@@ -146,6 +147,8 @@ export default function PlaylistsPage({
         setActiveIndex(0);
         setPlaying(false);
         setPlayerEngaged(false);
+        setPlayerView('browse');
+        setQueueOpen(false);
       } catch (e) {
         setError(friendlyError(e instanceof Error ? e.message : 'load_playlist_failed', t));
         setDetail(null);
@@ -337,20 +340,28 @@ export default function PlaylistsPage({
           : beginShuffleRound(detail.items.length, activeIndex);
       let nextCursor = shuffleCursor + 1;
       if (nextCursor >= detail.items.length) {
-        const nextOrder = buildShuffleOrder(detail.items.length);
-        setShuffleOrder(nextOrder);
-        setShuffleCursor(0);
-        setActiveIndex(nextOrder[0]!);
+        if (repeatMode === 'all') {
+          const nextOrder = buildShuffleOrder(detail.items.length);
+          setShuffleOrder(nextOrder);
+          setShuffleCursor(0);
+          setActiveIndex(nextOrder[0]!);
+          setPlaying(true);
+        } else {
+          setPlaying(false);
+        }
       } else {
         setShuffleCursor(nextCursor);
         setActiveIndex(order[nextCursor]!);
+        setPlaying(true);
       }
-      setPlaying(true);
       return;
     }
 
     if (activeIndex < detail.items.length - 1) {
       setActiveIndex(activeIndex + 1);
+      setPlaying(true);
+    } else if (repeatMode === 'all') {
+      setActiveIndex(0);
       setPlaying(true);
     } else {
       setPlaying(false);
@@ -362,6 +373,7 @@ export default function PlaylistsPage({
     shuffleCursor,
     activeIndex,
     beginShuffleRound,
+    repeatMode,
   ]);
 
   const goToPrevTrack = useCallback(() => {
@@ -397,6 +409,9 @@ export default function PlaylistsPage({
     setActiveIndex(index);
     setPlaying(true);
     setPlayerEngaged(true);
+    if (playbackMode === 'audio') {
+      setPlayerView('nowPlaying');
+    }
   };
 
   const startPlayback = () => {
@@ -480,15 +495,31 @@ export default function PlaylistsPage({
 
   const currentItem = detail?.items[activeIndex];
   const showPlayer = playerEngaged && playerItems.length > 0;
-  const mobileVideoImmersive =
-    showPlayer && playbackMode === 'video' && isMobileViewport;
+  const videoImmersive = showPlayer && playbackMode === 'video';
+  const audioNowPlaying = showPlayer && playbackMode === 'audio' && playerView === 'nowPlaying';
+  const audioMinimized = showPlayer && playbackMode === 'audio' && playerView === 'browse';
 
   useEffect(() => {
-    if (!mobileVideoImmersive) {
-      setMobilePlaylistMenuOpen(false);
-      setMobileVideoShowTracks(false);
+    if (!audioNowPlaying) {
+      document.body.classList.remove('playlists-immersive-active');
+      return;
     }
-  }, [mobileVideoImmersive]);
+    document.body.classList.add('playlists-immersive-active');
+    return () => {
+      document.body.classList.remove('playlists-immersive-active');
+    };
+  }, [audioNowPlaying]);
+
+  useEffect(() => {
+    if (!videoImmersive) {
+      document.body.classList.remove('playlists-video-immersive-active');
+      return;
+    }
+    document.body.classList.add('playlists-video-immersive-active');
+    return () => {
+      document.body.classList.remove('playlists-video-immersive-active');
+    };
+  }, [videoImmersive]);
 
   const startRename = (id: string, title: string) => {
     setRenamingId(id);
@@ -533,9 +564,18 @@ export default function PlaylistsPage({
   const onPlaybackModeChange = (mode: PlaylistPlaybackMode) => {
     setPlaybackMode(mode);
     writePlaylistPlaybackMode(mode);
+    setQueueOpen(false);
     if (mode === 'audio') {
-      setMobilePlaylistMenuOpen(false);
+      setPlayerView('nowPlaying');
+    } else {
+      setPlayerView('browse');
     }
+  };
+
+  const cycleRepeat = () => {
+    const next = cyclePlaylistRepeatMode(repeatMode);
+    setRepeatMode(next);
+    writePlaylistRepeatMode(next);
   };
 
   const renderShuffleToggle = () => (
@@ -572,253 +612,60 @@ export default function PlaylistsPage({
     </div>
   );
 
-  const handleMobilePlayToggle = useCallback(() => {
-    if (!detail?.items.length) return;
-    if (!playerEngaged) {
-      startPlayback();
-      return;
-    }
-    setPlaying((wasPlaying) => !wasPlaying);
-  }, [detail?.items.length, playerEngaged, startPlayback]);
-
-  const handleMobilePrev = useCallback(() => {
-    if (!detail?.items.length) return;
-    if (!playerEngaged) {
-      if (activeIndex > 0) engageAndPlay(activeIndex - 1);
-      return;
-    }
-    goToPrevTrack();
-  }, [detail?.items.length, playerEngaged, activeIndex, engageAndPlay, goToPrevTrack]);
-
-  const handleMobileNext = useCallback(() => {
-    if (!detail?.items.length) return;
-    if (!playerEngaged) {
-      if (shuffleEnabled) {
-        const order = beginShuffleRound(detail.items.length);
-        engageAndPlay(order[1] ?? order[0]!);
-      } else if (detail.items.length > 1) {
-        engageAndPlay(Math.min(activeIndex + 1, detail.items.length - 1));
-      } else {
-        startPlayback();
-      }
-      return;
-    }
-    goToNextTrack();
-  }, [
-    detail?.items.length,
-    playerEngaged,
+  const renderPlayerChromeProps = () => ({
+    onToggleQueue: () => setQueueOpen((open) => !open),
+    repeatMode,
+    onCycleRepeat: cycleRepeat,
     shuffleEnabled,
-    activeIndex,
-    beginShuffleRound,
-    engageAndPlay,
-    startPlayback,
-    goToNextTrack,
-  ]);
+    onToggleShuffle: toggleShuffle,
+    playbackMode,
+    onPlaybackModeChange,
+  });
 
-  const mobileCanGoPrev =
-    playerEngaged ? canGoPrev : activeIndex > 0 || (shuffleEnabled && shuffleCursor > 0);
-  const mobileCanGoNext =
-    playerEngaged ? canGoNext : itemCount > 1 || shuffleEnabled;
+  const renderQueuePanel = () =>
+    detail ? (
+      <PlaylistQueuePanel
+        open={queueOpen}
+        onClose={() => setQueueOpen(false)}
+        items={detail.items}
+        activeIndex={activeIndex}
+        playing={playing}
+        onSelectTrack={engageAndPlay}
+        onRemoveTrack={(id) => void handleRemoveItem(id)}
+        removingItemId={removingItemId}
+        savingOrder={savingOrder}
+        trackDragIndex={trackDragIndex}
+        trackDragOver={trackDragOver}
+        onDragStart={setTrackDragIndex}
+        onDragEnd={() => {
+          setTrackDragIndex(null);
+          setTrackDragOver(null);
+        }}
+        onDragOver={(index, after) => setTrackDragOver({ index, after })}
+        onDragLeave={() => setTrackDragOver(null)}
+        onDrop={(from, target) => void applyTrackReorder(from, target)}
+      />
+    ) : null;
 
-  const seekDockRatio = useCallback((ratio: number) => {
-    audioProgressHandleRef.current?.seekToRatio(ratio);
-  }, []);
-
-  const renderDockTransport = (variant: 'toolbar' | 'dock' = 'toolbar') => (
-    <div
-      className={`playlists-mobile-transport playlists-mobile-transport--${variant} mobile-only`}
-      role="group"
-      aria-label={t('playlists.playerSectionAudio')}
-    >
-      <button
-        type="button"
-        className="playlists-mobile-transport-btn"
-        onClick={handleMobilePrev}
-        disabled={!mobileCanGoPrev}
-        aria-label={t('playlists.prevTrack')}
-      >
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-          <path d="M14 6l-6 6 6 6V6z" />
-        </svg>
-      </button>
-      <button
-        type="button"
-        className="playlists-mobile-transport-btn playlists-mobile-transport-btn--primary"
-        onClick={handleMobilePlayToggle}
-        aria-label={playing && playerEngaged ? t('playlists.pause') : t('playlists.play')}
-      >
-        {playing && playerEngaged ? (
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-            <path d="M7 6h3v12H7V6zm7 0h3v12h-3V6z" />
-          </svg>
-        ) : (
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-            <path d="M8 5v14l11-7L8 5z" />
-          </svg>
-        )}
-      </button>
-      <button
-        type="button"
-        className="playlists-mobile-transport-btn"
-        onClick={handleMobileNext}
-        disabled={!mobileCanGoNext}
-        aria-label={t('playlists.nextTrack')}
-      >
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-          <path d="M10 6l6 6-6 6V6z" />
-        </svg>
-      </button>
-    </div>
-  );
-
-  const renderMobileVideoMenu = (playlist: PlaylistDetail['playlist'], hasTracks: boolean) => {
-    if (!mobileVideoImmersive || !detail) return null;
-
-    return (
-      <>
-        <button
-          type="button"
-          className="playlists-mobile-video-menu-btn mobile-only"
-          aria-label={t('playlists.playlistMenu')}
-          aria-expanded={mobilePlaylistMenuOpen}
-          onClick={() => setMobilePlaylistMenuOpen(true)}
-        >
-          <MenuIcon />
-        </button>
-        {mobilePlaylistMenuOpen && (
-          <>
-            <button
-              type="button"
-              className="playlists-mobile-video-menu-backdrop"
-              aria-label={t('common.cancel')}
-              onClick={() => setMobilePlaylistMenuOpen(false)}
-            />
-            <div
-              className="playlists-mobile-video-menu-sheet mobile-only"
-              role="dialog"
-              aria-modal="true"
-              aria-label={t('playlists.playlistMenu')}
-            >
-              <div className="playlists-mobile-video-menu-head">
-                <h2>{t('playlists.playlistMenu')}</h2>
-                <button
-                  type="button"
-                  className="playlists-mobile-video-menu-close"
-                  aria-label={t('common.cancel')}
-                  onClick={() => setMobilePlaylistMenuOpen(false)}
-                >
-                  <CloseIcon />
-                </button>
-              </div>
-              <div className="playlists-mobile-video-menu-actions">
-                {renderPlaybackModeToggle()}
-                {hasTracks && (
-                  <>
-                    <button type="button" className="btn-primary" onClick={startPlayback}>
-                      {t('playlists.playAll')}
-                    </button>
-                    {renderShuffleToggle()}
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      onClick={() => {
-                        setMobileVideoShowTracks((open) => !open);
-                        setMobilePlaylistMenuOpen(false);
-                      }}
-                    >
-                      {mobileVideoShowTracks
-                        ? t('playlists.hideTracks')
-                        : t('playlists.showTracks')}
-                    </button>
-                  </>
-                )}
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => {
-                    setMobilePlaylistMenuOpen(false);
-                    onSelectId(undefined);
-                  }}
-                >
-                  {t('playlists.backToList')}
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => {
-                    setMobilePlaylistMenuOpen(false);
-                    setShowAddModal(true);
-                  }}
-                >
-                  {t('playlists.addTitle')}
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => {
-                    setMobilePlaylistMenuOpen(false);
-                    setShareTarget({ id: playlist.id, title: playlist.title });
-                  }}
-                >
-                  {t('playlists.share')}
-                </button>
-                {playlist.matchedCount > 0 && (
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => {
-                      setMobilePlaylistMenuOpen(false);
-                      onLoadToMerge(playlist.id);
-                    }}
-                  >
-                    {t('playlists.loadToMerge')}
-                  </button>
-                )}
-              </div>
-            </div>
-          </>
-        )}
-      </>
-    );
-  };
-
-  const renderPlaybackDock = (variant: 'mobile' | 'desktop') => {
-    if (playbackMode !== 'audio') return null;
-    if (!selectedId || !detail || detail.items.length === 0 || !currentItem) return null;
-
-    const showAudioProgress = true;
-
-    return (
-      <div
-        className={`playlists-playback-dock playlists-playback-dock--${variant}${showAudioProgress ? ' playlists-playback-dock--audio' : ''}${variant === 'mobile' ? ' mobile-only' : ' desktop-only'}`}
-      >
-        <div className="playlists-playback-dock-meta">
-          <ScrollingTitle text={currentItem.title} className="playlists-playback-dock-title" />
-          <span className="playlists-playback-dock-index">
-            {t('playlists.trackCounter', {
-              current: activeIndex + 1,
-              total: detail.items.length,
-            })}
-          </span>
-        </div>
-        {showAudioProgress && (
-          <div className="playlists-playback-dock-progress-wrap">
-            <AudioSeekBar
-              currentTime={audioProgress.currentTime}
-              duration={audioProgress.duration}
-              canSeek={audioProgress.canSeek}
-              onSeekRatio={seekDockRatio}
-              className="playlists-playback-dock-progress"
-            />
-            <div className="playlists-playback-dock-time">
-              {formatPlaybackTimeRange(audioProgress.currentTime, audioProgress.duration)}
-            </div>
-          </div>
-        )}
-        {renderDockTransport('dock')}
-      </div>
-    );
-  };
+  const renderAudioPlayer = (variant: 'default' | 'nowPlaying') =>
+    showPlayer && playbackMode === 'audio' ? (
+      <PlaylistAudioPlayer
+        items={playerItems}
+        activeIndex={activeIndex}
+        onActiveIndexChange={setActiveIndex}
+        playing={playing}
+        onPlayingChange={setPlaying}
+        onAudioStatusChange={handleAudioStatusChange}
+        onNextTrack={goToNextTrack}
+        onPrevTrack={goToPrevTrack}
+        canGoNext={canGoNext}
+        canGoPrev={canGoPrev}
+        progressHandleRef={audioProgressHandleRef}
+        playlistTitle={detail?.playlist.title}
+        variant={variant}
+        repeatMode={repeatMode}
+      />
+    ) : null;
 
   const renderMainToolbar = (playlist: PlaylistDetail['playlist'], hasTracks: boolean) => (
     <div
@@ -836,6 +683,20 @@ export default function PlaylistsPage({
         {hasTracks && (
           <>
             {renderPlaybackModeToggle()}
+            <button
+              type="button"
+              className={`playlists-repeat-btn${repeatMode !== 'off' ? ' active' : ''}`}
+              onClick={cycleRepeat}
+              aria-label={
+                repeatMode === 'one'
+                  ? t('playlists.repeatOne')
+                  : repeatMode === 'all'
+                    ? t('playlists.repeatAll')
+                    : t('playlists.repeatOff')
+              }
+            >
+              {repeatMode === 'one' ? '1' : repeatMode === 'all' ? '∞' : '↻'}
+            </button>
             {renderShuffleToggle()}
             <button type="button" className="btn-primary" onClick={startPlayback}>
               {t('playlists.playAll')}
@@ -963,7 +824,8 @@ export default function PlaylistsPage({
     <div className="page-body page-body-playlists">
       <main
         className="playlists-page"
-        data-mobile-video-immersive={mobileVideoImmersive ? 'true' : 'false'}
+        data-video-immersive={videoImmersive ? 'true' : 'false'}
+        data-audio-now-playing={audioNowPlaying ? 'true' : 'false'}
       >
         <header className="playlists-header">
           <h1>{t('playlists.title')}</h1>
@@ -1116,11 +978,25 @@ export default function PlaylistsPage({
                 <p className="playlists-muted">{t('playlists.loadingDetail')}</p>
               </div>
             ) : detail ? (
+              audioNowPlaying ? (
+                <div className="playlists-main-inner playlists-main-inner--audio-now-playing">
+                  <PlaylistNowPlayingShell
+                    playlistTitle={detail.playlist.title}
+                    trackTitle={currentItem?.title ?? ''}
+                    trackCurrent={activeIndex + 1}
+                    trackTotal={detail.items.length}
+                    onMinimize={() => setPlayerView('browse')}
+                    {...renderPlayerChromeProps()}
+                  >
+                    {renderAudioPlayer('nowPlaying')}
+                  </PlaylistNowPlayingShell>
+                  {renderQueuePanel()}
+                </div>
+              ) : (
               <div
-                className={`playlists-main-inner${mobileVideoImmersive ? ' playlists-main-inner--mobile-video' : ''}`}
+                className={`playlists-main-inner${videoImmersive ? ' playlists-main-inner--video-immersive' : ''}`}
               >
-                {renderMainToolbar(detail.playlist, detail.items.length > 0)}
-                {renderMobileVideoMenu(detail.playlist, detail.items.length > 0)}
+                {!videoImmersive && renderMainToolbar(detail.playlist, detail.items.length > 0)}
 
                 {detail.items.length === 0 ? (
                   <div className="playlists-empty-card playlists-empty-tracks">
@@ -1132,8 +1008,8 @@ export default function PlaylistsPage({
                     className="playlists-player-stage"
                     data-playback-mode={playbackMode}
                     data-player-engaged={showPlayer ? 'true' : 'false'}
-                    data-mobile-video-immersive={mobileVideoImmersive ? 'true' : 'false'}
-                    data-mobile-video-tracks-open={mobileVideoShowTracks ? 'true' : 'false'}
+                    data-video-immersive={videoImmersive ? 'true' : 'false'}
+                    data-queue-open={queueOpen ? 'true' : 'false'}
                   >
                     <div className="playlists-player-col">
                       {!showPlayer && currentItem && (
@@ -1160,22 +1036,10 @@ export default function PlaylistsPage({
                         </button>
                       )}
 
-                      {showPlayer && playbackMode === 'audio' && (
-                        <PlaylistAudioPlayer
-                          items={playerItems}
-                          activeIndex={activeIndex}
-                          onActiveIndexChange={setActiveIndex}
-                          playing={playing}
-                          onPlayingChange={setPlaying}
-                          onAudioStatusChange={handleAudioStatusChange}
-                          onNextTrack={goToNextTrack}
-                          onPrevTrack={goToPrevTrack}
-                          canGoNext={canGoNext}
-                          canGoPrev={canGoPrev}
-                          onProgressUpdate={setAudioProgress}
-                          progressHandleRef={audioProgressHandleRef}
-                          playlistTitle={detail.playlist.title}
-                        />
+                      {audioMinimized && (
+                        <div className="playlist-audio-player-headless-wrap" aria-hidden>
+                          {renderAudioPlayer('default')}
+                        </div>
                       )}
 
                       {showPlayer && playbackMode === 'video' && (
@@ -1189,7 +1053,8 @@ export default function PlaylistsPage({
                           onPrevTrack={goToPrevTrack}
                           canGoNext={canGoNext}
                           canGoPrev={canGoPrev}
-                          controlsBelow={mobileVideoImmersive}
+                          immersive={videoImmersive}
+                          lockLandscape={isMobileViewport}
                         />
                       )}
                     </div>
@@ -1294,6 +1159,7 @@ export default function PlaylistsPage({
                   </div>
                 )}
               </div>
+              )
             ) : null}
           </section>
         </div>
@@ -1348,8 +1214,51 @@ export default function PlaylistsPage({
         />
       )}
 
-      {showPlayer && playbackMode === 'audio' && renderPlaybackDock('mobile')}
-      {showPlayer && playbackMode === 'audio' && renderPlaybackDock('desktop')}
+      {videoImmersive && (
+        <>
+          <PlaylistPlayerBottomChrome
+            className="playlist-video-chrome"
+            {...renderPlayerChromeProps()}
+          />
+          {renderQueuePanel()}
+        </>
+      )}
+
+      {audioMinimized && currentItem && detail && (
+        <div
+          className="playlists-mini-player"
+          role="button"
+          tabIndex={0}
+          onClick={() => setPlayerView('nowPlaying')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setPlayerView('nowPlaying');
+            }
+          }}
+        >
+          <img
+            className="playlists-mini-player-thumb"
+            src={youtubeThumb(currentItem.youtubeVideoId)}
+            alt=""
+          />
+          <div className="playlists-mini-player-meta">
+            <div className="playlists-mini-player-title">{currentItem.title}</div>
+            <div className="playlists-mini-player-sub">{detail.playlist.title}</div>
+          </div>
+          <button
+            type="button"
+            className="playlists-mini-player-btn"
+            aria-label={playing ? t('playlists.pause') : t('playlists.play')}
+            onClick={(e) => {
+              e.stopPropagation();
+              setPlaying((was) => !was);
+            }}
+          >
+            {playing ? '▮▮' : '▶'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

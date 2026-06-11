@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useSeekBarDrag } from '../hooks/useSeekBarDrag';
+import { lockLandscapeOrientation } from '../lib/mobile-landscape-lock';
 import {
   fetchVideoCaptions,
   findActiveCaption,
@@ -25,8 +27,14 @@ type YoutubePlaylistPlayerProps = {
   onPrevTrack?: () => void;
   canGoNext?: boolean;
   canGoPrev?: boolean;
-  /** 手机端：控制条移到视频下方，与桌面横向布局一致 */
-  controlsBelow?: boolean;
+  /** 全屏沉浸：控制条在视频底部叠层内 */
+  immersive?: boolean;
+  /** 沉浸模式下尝试锁定横屏（手机） */
+  lockLandscape?: boolean;
+  /** @deprecated 使用 immersive */
+  mobileImmersive?: boolean;
+  /** 沉浸模式 UI（菜单按钮等），渲染在视频层内以便全屏可见 */
+  mobileChrome?: ReactNode;
 };
 
 type YtPlayer = {
@@ -126,8 +134,12 @@ export default function YoutubePlaylistPlayer({
   onPrevTrack,
   canGoNext,
   canGoPrev,
-  controlsBelow = false,
+  immersive: immersiveProp,
+  lockLandscape = false,
+  mobileImmersive = false,
+  mobileChrome,
 }: YoutubePlaylistPlayerProps) {
+  const immersive = immersiveProp ?? mobileImmersive;
   const { t } = useI18n();
   const elementId = useId().replace(/:/g, '');
   const playerRef = useRef<YtPlayer | null>(null);
@@ -291,20 +303,22 @@ export default function YoutubePlaylistPlayer({
   const prevDisabled =
     canGoPrev !== undefined ? !canGoPrev : activeIndex <= 0;
 
-  const seekFromClientX = useCallback((clientX: number) => {
-    const bar = progressRef.current;
-    const player = playerRef.current;
-    if (!bar || !player || !readyRef.current || duration <= 0) return;
-    const rect = bar.getBoundingClientRect();
-    const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
-    const target = ratio * duration;
-    player.seekTo(target, true);
-    setCurrentTime(target);
-  }, [duration]);
+  const seekProgressRatio = useCallback(
+    (ratio: number) => {
+      const player = playerRef.current;
+      if (!player || !readyRef.current || duration <= 0) return;
+      const target = ratio * duration;
+      player.seekTo(target, true);
+      setCurrentTime(target);
+    },
+    [duration],
+  );
 
-  const onProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    seekFromClientX(e.clientX);
-  };
+  const { handleClick: handleProgressClick } = useSeekBarDrag({
+    barRef: progressRef,
+    enabled: duration > 0,
+    onSeekRatio: seekProgressRatio,
+  });
 
   const onProgressKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     const player = playerRef.current;
@@ -616,6 +630,62 @@ export default function YoutubePlaylistPlayer({
     }
   }, [blurIdleControlFocus, scheduleOverlayHide]);
 
+  const unlockOrientationRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    if (!immersive || !playing) return;
+
+    let cancelled = false;
+
+    void (async () => {
+      const el = frameWrapRef.current;
+      if (!el) return;
+
+      try {
+        const doc = document as Document & { webkitFullscreenElement?: Element };
+        const elWithWebkit = el as HTMLDivElement & {
+          webkitRequestFullscreen?: () => Promise<void>;
+        };
+        if (!document.fullscreenElement && !doc.webkitFullscreenElement) {
+          if (el.requestFullscreen) await el.requestFullscreen();
+          else await elWithWebkit.webkitRequestFullscreen?.();
+        }
+      } catch {
+        /* 用户拒绝或无全屏 API，继续用 CSS 沉浸 */
+      }
+
+      if (cancelled || !lockLandscape) return;
+      unlockOrientationRef.current = await lockLandscapeOrientation();
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [immersive, playing, lockLandscape]);
+
+  useEffect(() => {
+    if (immersive && lockLandscape) return;
+
+    unlockOrientationRef.current?.();
+    unlockOrientationRef.current = null;
+
+    const el = frameWrapRef.current;
+    const doc = document as Document & { webkitFullscreenElement?: Element };
+    const isActive =
+      document.fullscreenElement === el || doc.webkitFullscreenElement === el;
+    if (!isActive) return;
+
+    void (async () => {
+      try {
+        if (document.exitFullscreen) await document.exitFullscreen();
+        else await (document as Document & { webkitExitFullscreen?: () => Promise<void> })
+          .webkitExitFullscreen?.();
+      } catch {
+        /* ignore */
+      }
+    })();
+  }, [immersive, lockLandscape]);
+
   if (!items.length || !current) return null;
 
   const controlBar = (
@@ -658,7 +728,7 @@ export default function YoutubePlaylistPlayer({
               aria-valuemin={0}
               aria-valuemax={duration}
               aria-valuenow={currentTime}
-              onClick={onProgressClick}
+              onClick={(e) => handleProgressClick(e.clientX)}
               onKeyDown={onProgressKeyDown}
             >
               <div className="youtube-player-progress-track">
@@ -752,7 +822,7 @@ export default function YoutubePlaylistPlayer({
               </button>
             </div>
 
-            {!controlsBelow && (
+            {!immersive && (
               <button
                 type="button"
                 className="youtube-player-icon-btn youtube-player-fullscreen-btn"
@@ -798,27 +868,35 @@ export default function YoutubePlaylistPlayer({
 
   return (
     <section
-      className={`youtube-player-section${controlsBelow ? ' youtube-player-section--controls-below' : ''}`}
+      className={`youtube-player-section${immersive ? ' youtube-player-section--mobile-immersive youtube-player-section--immersive' : ''}`}
       aria-label={t('playlists.playerSection')}
     >
       <div
         ref={frameWrapRef}
         className={`youtube-player-frame-wrap${isFullscreen ? ' is-fullscreen' : ''}${
-          controlsBelow || overlayVisible ? '' : ' controls-idle'
+          overlayVisible ? '' : ' controls-idle'
         }`}
-        onMouseEnter={controlsBelow ? undefined : bumpPlayerActivity}
-        onMouseMove={controlsBelow ? undefined : isFullscreen ? bumpPlayerActivity : undefined}
+        onMouseEnter={bumpPlayerActivity}
+        onMouseMove={isFullscreen ? bumpPlayerActivity : undefined}
       >
         <div id={elementId} className="youtube-player-frame" />
 
-        {!controlsBelow && (
-          <div
-            className="youtube-player-hit-area"
-            onMouseMove={bumpPlayerActivity}
-            onTouchStart={bumpPlayerActivity}
-            onClick={bumpPlayerActivity}
-            aria-hidden
-          />
+        <div
+          className="youtube-player-hit-area"
+          onMouseMove={bumpPlayerActivity}
+          onTouchStart={bumpPlayerActivity}
+          onClick={bumpPlayerActivity}
+          aria-hidden
+        />
+
+        {immersive && mobileChrome && (
+          <div className="youtube-player-mobile-chrome">{mobileChrome}</div>
+        )}
+
+        {immersive && lockLandscape && (
+          <div className="youtube-player-rotate-hint" aria-live="polite">
+            {t('playlists.rotateForVideo')}
+          </div>
         )}
 
         {activeCaption && (
@@ -827,21 +905,16 @@ export default function YoutubePlaylistPlayer({
           </div>
         )}
 
-        {!controlsBelow && (
-          <div
-            className={`youtube-player-overlay${overlayVisible ? '' : ' is-hidden'}`}
-            aria-hidden={!overlayVisible}
-            onMouseMove={bumpPlayerActivity}
-            onFocusCapture={bumpPlayerActivity}
-          >
-            {controlsPanel}
-          </div>
-        )}
+        <div
+          className={`youtube-player-overlay${overlayVisible ? '' : ' is-hidden'}`}
+          aria-hidden={!overlayVisible}
+          onMouseMove={bumpPlayerActivity}
+          onFocusCapture={bumpPlayerActivity}
+          onTouchStart={bumpPlayerActivity}
+        >
+          {controlsPanel}
+        </div>
       </div>
-
-      {controlsBelow && (
-        <div className="youtube-player-controls-panel">{controlsPanel}</div>
-      )}
 
       {playerError && <p className="error-msg">{playerError}</p>}
     </section>

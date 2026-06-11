@@ -52,8 +52,20 @@ export async function verifyAuthSession(): Promise<AuthUser | null> {
   try {
     const res = await apiFetch('/v1/auth/session');
     if (res.status === 401) {
-      clearAuthSession();
-      return null;
+      // 仅当服务端明确拒绝当前 token 时才清除；避免偶发网关错误误登出
+      let errorCode: string | undefined;
+      try {
+        const body = (await res.clone().json()) as { error?: string };
+        errorCode = body.error;
+      } catch {
+        // 无法解析响应体时保留本地会话
+        return cached;
+      }
+      if (errorCode === 'session_invalid' || errorCode === 'unauthorized') {
+        clearAuthSession();
+        return null;
+      }
+      return cached;
     }
     if (!res.ok) {
       return cached;
@@ -62,7 +74,7 @@ export async function verifyAuthSession(): Promise<AuthUser | null> {
     setAuthSession(token, data.expiresAt, data.user);
     return data.user;
   } catch {
-    return cached;
+    return cached ?? null;
   }
 }
 

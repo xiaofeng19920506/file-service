@@ -201,6 +201,36 @@ body {
   .mobile-segment {
     touch-action: manipulation;
   }
+
+  /* 进度条：扩大触控区，禁止浏览器抢占手势 */
+  .audio-progress,
+  .youtube-player-progress {
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    min-height: var(--touch-target);
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+  }
+
+  .playlists-playback-dock-progress {
+    flex: 1;
+    min-width: 0;
+    padding: 0.35rem 0;
+  }
+
+  .playlists-playback-dock-progress .audio-progress-track,
+  .youtube-player-section--mobile-immersive .youtube-player-progress .youtube-player-progress-track {
+    height: 8px;
+  }
+
+  .playlists-playback-dock-progress .audio-progress-thumb,
+  .youtube-player-section--mobile-immersive .youtube-player-progress .youtube-player-progress-thumb {
+    width: 18px;
+    height: 18px;
+    margin-left: -9px;
+  }
 }
 
 /* 播放中：曲目列表置顶，方便随时点选切歌 */
