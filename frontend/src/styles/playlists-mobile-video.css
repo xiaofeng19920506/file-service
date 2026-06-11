@@ -5,6 +5,12 @@ body.playlists-mobile-video-active .nav-bottom {
   display: none;
 }
 
+body.youtube-landscape-theater-active {
+  overflow: hidden;
+  height: 100dvh;
+  max-height: 100dvh;
+}
+
 @media (max-width: 900px) {
   .playlists-page[data-mobile-video-immersive='true'] {
     padding: 0;
@@ -114,6 +120,7 @@ body.playlists-mobile-video-active .nav-bottom {
   }
 
   .youtube-player-section--mobile-immersive .youtube-player-frame-wrap {
+    position: relative;
     flex: 1;
     width: 100%;
     height: 100%;
@@ -122,12 +129,143 @@ body.playlists-mobile-video-active .nav-bottom {
     aspect-ratio: auto;
     border: none;
     border-radius: 0;
+    overflow: hidden;
   }
 
-  .youtube-player-section--mobile-immersive .youtube-player-frame,
-  .youtube-player-section--mobile-immersive .youtube-player-frame iframe {
+  .youtube-player-landscape-stage {
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
     width: 100%;
     height: 100%;
+    min-height: 0;
+  }
+
+  .youtube-player-video-shell {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    overflow: hidden;
+    background: #000;
+  }
+
+  .youtube-player-section--mobile-immersive .youtube-player-video-shell {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  .youtube-player-section--mobile-immersive .youtube-player-frame {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .youtube-player-section--mobile-immersive .youtube-player-frame iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .youtube-player-section--mobile-immersive .youtube-player-hit-area {
+    position: absolute;
+    inset: 0;
+  }
+
+  /* 整块 UI（视频区 + 控制条 + 切换）随容器旋转横屏 */
+  .youtube-player-frame-wrap.is-landscape-theater-host {
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--z-modal) + 4);
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    aspect-ratio: auto !important;
+    background: #000;
+    border: none;
+    border-radius: 0;
+    overflow: hidden;
+  }
+
+  .youtube-player-frame-wrap.is-landscape-theater-host .youtube-player-landscape-stage {
+    width: 100%;
+    height: 100%;
+  }
+
+  /*
+   * 竖屏下旋转整块 stage：本地坐标系宽=屏高、高=屏宽，旋转后刚好铺满视口。
+   * 使用 top-left 原点 + translate，比 center 旋转更少出现 1px 留白或比例失真。
+   */
+  @media (orientation: portrait) {
+    .youtube-player-landscape-stage.is-landscape-theater {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100svh;
+      height: 100svw;
+      transform-origin: top left;
+      transform: rotate(90deg) translateY(-100%);
+    }
+  }
+
+  @media (orientation: landscape) {
+    .youtube-player-landscape-stage.is-landscape-theater {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      transform: none;
+    }
+  }
+
+  .youtube-player-landscape-stage.is-landscape-theater {
+    display: flex;
+    flex-direction: column;
+    background: #000;
+  }
+
+  .youtube-player-landscape-stage.is-landscape-theater .youtube-player-video-shell {
+    flex: 1 1 0;
+    min-height: 0;
+    width: 100%;
+  }
+
+  .youtube-player-landscape-stage.is-landscape-theater .youtube-player-frame {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .youtube-player-landscape-stage.is-landscape-theater .youtube-player-frame iframe {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .youtube-player-landscape-stage.is-landscape-theater .youtube-player-hit-area {
+    position: absolute;
+    inset: 0;
+  }
+
+  .youtube-player-landscape-stage.is-landscape-theater .youtube-player-overlay {
+    position: absolute;
+    inset: auto 0 0;
+    z-index: 3;
+  }
+
+  .youtube-player-landscape-stage.is-landscape-theater .youtube-player-subtitles {
+    bottom: 4.75rem;
+  }
+
+  .youtube-player-landscape-stage.is-landscape-theater
+    .youtube-player-frame-wrap.controls-idle
+    .youtube-player-subtitles {
+    bottom: 1.25rem;
   }
 
   /* 控制条在视频底部叠层内，横向排列（覆盖 mobile.css 的纵向堆叠） */

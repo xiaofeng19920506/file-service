@@ -269,6 +269,7 @@
     height: 100%;
     overflow: hidden;
     padding: 0;
+    background: #0a0a0a;
   }
 
   .playlist-now-playing--audio {
@@ -277,6 +278,7 @@
     z-index: var(--z-modal);
     flex: 1;
     min-height: 0;
+    width: 100%;
     height: 100dvh;
     max-height: 100dvh;
     display: flex;
@@ -293,9 +295,10 @@
     padding:
       max(0.5rem, var(--safe-top))
       max(0.75rem, var(--page-gutter))
-      0.5rem;
+      0.35rem;
+    margin: 0;
     border-bottom: none;
-    background: transparent;
+    background: #0a0a0a;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
@@ -385,6 +388,7 @@
     position: relative;
     flex: 1;
     min-height: 0;
+    margin: 0;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;

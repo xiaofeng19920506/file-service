@@ -4,19 +4,32 @@ type UseSeekBarDragOptions = {
   barRef: RefObject<HTMLElement | null>;
   enabled: boolean;
   onSeekRatio: (ratio: number) => void;
+  onScrubStart?: () => void;
+  onScrubEnd?: () => void;
 };
 
 /**
  * 进度条点击 / 拖动 seek。Pointer + Touch 双通道，兼容 iOS Safari。
  */
-export function useSeekBarDrag({ barRef, enabled, onSeekRatio }: UseSeekBarDragOptions) {
+export function useSeekBarDrag({
+  barRef,
+  enabled,
+  onSeekRatio,
+  onScrubStart,
+  onScrubEnd,
+}: UseSeekBarDragOptions) {
   const enabledRef = useRef(enabled);
   const onSeekRatioRef = useRef(onSeekRatio);
+  const onScrubStartRef = useRef(onScrubStart);
+  const onScrubEndRef = useRef(onScrubEnd);
   const suppressClickRef = useRef(false);
   const activePointerIdRef = useRef<number | null>(null);
+  const scrubbingRef = useRef(false);
 
   enabledRef.current = enabled;
   onSeekRatioRef.current = onSeekRatio;
+  onScrubStartRef.current = onScrubStart;
+  onScrubEndRef.current = onScrubEnd;
 
   const seekFromClientX = useCallback((clientX: number) => {
     const bar = barRef.current;
@@ -31,8 +44,19 @@ export function useSeekBarDrag({ barRef, enabled, onSeekRatio }: UseSeekBarDragO
     const bar = barRef.current;
     if (!bar) return;
 
+    const beginDrag = () => {
+      if (!scrubbingRef.current) {
+        scrubbingRef.current = true;
+        onScrubStartRef.current?.();
+      }
+    };
+
     const finishDrag = () => {
       activePointerIdRef.current = null;
+      if (scrubbingRef.current) {
+        scrubbingRef.current = false;
+        onScrubEndRef.current?.();
+      }
       suppressClickRef.current = true;
       window.setTimeout(() => {
         suppressClickRef.current = false;
@@ -46,6 +70,7 @@ export function useSeekBarDrag({ barRef, enabled, onSeekRatio }: UseSeekBarDragO
       if (activePointerIdRef.current !== null) return;
       activePointerIdRef.current = e.pointerId;
       e.preventDefault();
+      beginDrag();
       bar.setPointerCapture(e.pointerId);
       seekFromClientX(e.clientX);
     };
@@ -69,6 +94,7 @@ export function useSeekBarDrag({ barRef, enabled, onSeekRatio }: UseSeekBarDragO
     const onTouchStart = (e: TouchEvent) => {
       if (!enabledRef.current || e.touches.length !== 1) return;
       e.preventDefault();
+      beginDrag();
       seekFromClientX(e.touches[0]!.clientX);
     };
 

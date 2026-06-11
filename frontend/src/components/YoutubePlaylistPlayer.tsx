@@ -157,7 +157,9 @@ export default function YoutubePlaylistPlayer({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isLandscapeTheater, setIsLandscapeTheater] = useState(false);
   const [overlayVisible, setOverlayVisible] = useState(true);
+  const scrubbingRef = useRef(false);
   const [captionCues, setCaptionCues] = useState<CaptionCue[]>([]);
   const [subtitleLang, setSubtitleLang] = useState<SubtitleLanguage>('en');
   const [volume, setVolume] = useState(readStoredVolume);
@@ -234,6 +236,7 @@ export default function YoutubePlaylistPlayer({
   }, [muted, volume]);
 
   const syncProgress = useCallback(() => {
+    if (scrubbingRef.current) return;
     const player = playerRef.current;
     if (!player || !readyRef.current) return;
     try {
@@ -318,6 +321,13 @@ export default function YoutubePlaylistPlayer({
     barRef: progressRef,
     enabled: duration > 0,
     onSeekRatio: seekProgressRatio,
+    onScrubStart: () => {
+      scrubbingRef.current = true;
+    },
+    onScrubEnd: () => {
+      scrubbingRef.current = false;
+      syncProgress();
+    },
   });
 
   const onProgressKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -612,6 +622,12 @@ export default function YoutubePlaylistPlayer({
         (document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement ===
           el;
       setIsFullscreen(active);
+      if (!active && lockLandscape) {
+        setIsLandscapeTheater(false);
+        document.body.classList.remove('youtube-landscape-theater-active');
+        unlockOrientationRef.current?.();
+        unlockOrientationRef.current = null;
+      }
       if (active && playingRef.current) {
         window.requestAnimationFrame(() => {
           blurIdleControlFocus();
@@ -625,7 +641,7 @@ export default function YoutubePlaylistPlayer({
       document.removeEventListener('fullscreenchange', onFullscreenChange);
       document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
     };
-  }, [blurIdleControlFocus, scheduleOverlayHide]);
+  }, [blurIdleControlFocus, lockLandscape, scheduleOverlayHide]);
 
   useEffect(() => {
     const wrap = frameWrapRef.current;
@@ -640,7 +656,64 @@ export default function YoutubePlaylistPlayer({
     };
   }, [isFullscreen, playing, bumpPlayerActivity]);
 
+  const unlockOrientationRef = useRef<(() => void) | null>(null);
+
+  const exitNativeFullscreen = useCallback(async () => {
+    const el = frameWrapRef.current;
+    const doc = document as Document & { webkitFullscreenElement?: Element };
+    const isActive =
+      document.fullscreenElement === el || doc.webkitFullscreenElement === el;
+    if (!isActive) return;
+    try {
+      if (document.exitFullscreen) await document.exitFullscreen();
+      else await (document as Document & { webkitExitFullscreen?: () => Promise<void> })
+        .webkitExitFullscreen?.();
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const exitLandscapeTheater = useCallback(async () => {
+    setIsLandscapeTheater(false);
+    document.body.classList.remove('youtube-landscape-theater-active');
+    unlockOrientationRef.current?.();
+    unlockOrientationRef.current = null;
+    await exitNativeFullscreen();
+  }, [exitNativeFullscreen]);
+
+  const enterLandscapeTheater = useCallback(async () => {
+    unlockOrientationRef.current?.();
+    unlockOrientationRef.current = await lockLandscapeOrientation();
+    setIsLandscapeTheater(true);
+    document.body.classList.add('youtube-landscape-theater-active');
+    bumpPlayerActivity();
+
+    const el = frameWrapRef.current;
+    if (!el) return;
+    try {
+      const doc = document as Document & { webkitFullscreenElement?: Element };
+      const elWithWebkit = el as HTMLDivElement & {
+        webkitRequestFullscreen?: () => Promise<void>;
+      };
+      if (!document.fullscreenElement && !doc.webkitFullscreenElement) {
+        if (el.requestFullscreen) await el.requestFullscreen();
+        else await elWithWebkit.webkitRequestFullscreen?.();
+      }
+    } catch {
+      /* iOS 等环境用 CSS 旋转整块 UI */
+    }
+  }, [bumpPlayerActivity]);
+
   const toggleFullscreen = useCallback(async () => {
+    if (lockLandscape) {
+      if (isLandscapeTheater) {
+        await exitLandscapeTheater();
+      } else {
+        await enterLandscapeTheater();
+      }
+      return;
+    }
+
     const el = frameWrapRef.current;
     if (!el) return;
 
@@ -657,8 +730,7 @@ export default function YoutubePlaylistPlayer({
 
     try {
       if (isActive) {
-        if (document.exitFullscreen) await document.exitFullscreen();
-        else await doc.webkitExitFullscreen?.();
+        await exitNativeFullscreen();
       } else if (el.requestFullscreen) {
         await el.requestFullscreen();
       } else {
@@ -671,83 +743,43 @@ export default function YoutubePlaylistPlayer({
     } catch {
       // user denied or browser blocked
     }
-  }, [blurIdleControlFocus, scheduleOverlayHide]);
-
-  const unlockOrientationRef = useRef<(() => void) | null>(null);
+  }, [
+    blurIdleControlFocus,
+    enterLandscapeTheater,
+    exitLandscapeTheater,
+    exitNativeFullscreen,
+    isLandscapeTheater,
+    lockLandscape,
+    scheduleOverlayHide,
+  ]);
 
   useEffect(() => {
-    if (!immersive || !playing) return;
-
-    let cancelled = false;
-
-    void (async () => {
-      try {
-        playerRef.current?.playVideo();
-      } catch {
-        /* ignore */
-      }
-
-      if (cancelled) return;
-
-      if (lockLandscape) {
-        unlockOrientationRef.current = await lockLandscapeOrientation();
-      }
-
-      await new Promise((resolve) => window.setTimeout(resolve, 450));
-      if (cancelled) return;
-
-      const el = frameWrapRef.current;
-      if (!el) return;
-
-      try {
-        const doc = document as Document & { webkitFullscreenElement?: Element };
-        const elWithWebkit = el as HTMLDivElement & {
-          webkitRequestFullscreen?: () => Promise<void>;
-        };
-        if (!document.fullscreenElement && !doc.webkitFullscreenElement) {
-          if (el.requestFullscreen) await el.requestFullscreen();
-          else await elWithWebkit.webkitRequestFullscreen?.();
-        }
-      } catch {
-        /* 用户拒绝或无全屏 API，继续用 CSS 沉浸 */
-      }
-
-      if (!cancelled && playingRef.current) {
-        try {
-          playerRef.current?.playVideo();
-        } catch {
-          /* ignore */
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
+    if (!isLandscapeTheater) return;
+    const bumpLayout = () => window.dispatchEvent(new Event('resize'));
+    const onOrientationChange = () => {
+      bumpPlayerActivity();
+      bumpLayout();
     };
-  }, [immersive, playing, lockLandscape]);
+    bumpLayout();
+    const t1 = window.setTimeout(bumpLayout, 120);
+    const t2 = window.setTimeout(bumpLayout, 420);
+    window.addEventListener('orientationchange', onOrientationChange);
+    window.addEventListener('resize', bumpLayout);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      window.removeEventListener('orientationchange', onOrientationChange);
+      window.removeEventListener('resize', bumpLayout);
+    };
+  }, [isLandscapeTheater, bumpPlayerActivity]);
 
   useEffect(() => {
-    if (immersive && lockLandscape) return;
-
-    unlockOrientationRef.current?.();
-    unlockOrientationRef.current = null;
-
-    const el = frameWrapRef.current;
-    const doc = document as Document & { webkitFullscreenElement?: Element };
-    const isActive =
-      document.fullscreenElement === el || doc.webkitFullscreenElement === el;
-    if (!isActive) return;
-
-    void (async () => {
-      try {
-        if (document.exitFullscreen) await document.exitFullscreen();
-        else await (document as Document & { webkitExitFullscreen?: () => Promise<void> })
-          .webkitExitFullscreen?.();
-      } catch {
-        /* ignore */
-      }
-    })();
-  }, [immersive, lockLandscape]);
+    return () => {
+      document.body.classList.remove('youtube-landscape-theater-active');
+      unlockOrientationRef.current?.();
+      unlockOrientationRef.current = null;
+    };
+  }, []);
 
   if (!items.length || !current) return null;
 
@@ -890,10 +922,18 @@ export default function YoutubePlaylistPlayer({
                 type="button"
                 className="youtube-player-icon-btn youtube-player-fullscreen-btn"
                 onClick={() => void toggleFullscreen()}
-                aria-label={isFullscreen ? t('playlists.exitFullscreen') : t('playlists.fullscreen')}
-                title={isFullscreen ? t('playlists.exitFullscreen') : t('playlists.fullscreen')}
+                aria-label={
+                  isLandscapeTheater || isFullscreen
+                    ? t('playlists.exitFullscreen')
+                    : t('playlists.fullscreen')
+                }
+                title={
+                  isLandscapeTheater || isFullscreen
+                    ? t('playlists.exitFullscreen')
+                    : t('playlists.fullscreen')
+                }
               >
-                {isFullscreen ? (
+                {isLandscapeTheater || isFullscreen ? (
                   <svg className="youtube-player-fs-icon" viewBox="0 0 16 16" aria-hidden>
                     <path
                       fill="currentColor"
@@ -936,40 +976,48 @@ export default function YoutubePlaylistPlayer({
     >
       <div
         ref={frameWrapRef}
-        className={`youtube-player-frame-wrap${isFullscreen ? ' is-fullscreen' : ''}${
-          overlayVisible ? '' : ' controls-idle'
-        }`}
+        className={`youtube-player-frame-wrap${
+          isLandscapeTheater ? ' is-landscape-theater-host' : ''
+        }${isFullscreen ? ' is-fullscreen' : ''}${overlayVisible ? '' : ' controls-idle'}`}
         onMouseEnter={bumpPlayerActivity}
-        onMouseMove={isFullscreen ? bumpPlayerActivity : undefined}
+        onMouseMove={isFullscreen || isLandscapeTheater ? bumpPlayerActivity : undefined}
       >
-        <div id={elementId} className="youtube-player-frame" />
-
         <div
-          className="youtube-player-hit-area"
-          onMouseMove={bumpPlayerActivity}
-          onTouchStart={bumpPlayerActivity}
-          onClick={bumpPlayerActivity}
-          aria-hidden
-        />
-
-        {immersive && mobileChrome && (
-          <div className="youtube-player-mobile-chrome">{mobileChrome}</div>
-        )}
-
-        {activeCaption && (
-          <div className="youtube-player-subtitles" aria-live="polite">
-            <p className="youtube-player-subtitle-text">{activeCaption}</p>
-          </div>
-        )}
-
-        <div
-          className={`youtube-player-overlay${overlayVisible ? '' : ' is-hidden'}`}
-          aria-hidden={!overlayVisible}
-          onMouseMove={bumpPlayerActivity}
-          onFocusCapture={bumpPlayerActivity}
-          onTouchStart={bumpPlayerActivity}
+          className={`youtube-player-landscape-stage${
+            isLandscapeTheater ? ' is-landscape-theater' : ''
+          }`}
         >
-          {controlsPanel}
+          <div className="youtube-player-video-shell">
+            <div id={elementId} className="youtube-player-frame" />
+
+            <div
+              className="youtube-player-hit-area"
+              onMouseMove={bumpPlayerActivity}
+              onTouchStart={bumpPlayerActivity}
+              onClick={bumpPlayerActivity}
+              aria-hidden
+            />
+
+            {activeCaption && (
+              <div className="youtube-player-subtitles" aria-live="polite">
+                <p className="youtube-player-subtitle-text">{activeCaption}</p>
+              </div>
+            )}
+          </div>
+
+          {immersive && mobileChrome && (
+            <div className="youtube-player-mobile-chrome">{mobileChrome}</div>
+          )}
+
+          <div
+            className={`youtube-player-overlay${overlayVisible ? '' : ' is-hidden'}`}
+            aria-hidden={!overlayVisible}
+            onMouseMove={bumpPlayerActivity}
+            onFocusCapture={bumpPlayerActivity}
+            onTouchStart={bumpPlayerActivity}
+          >
+            {controlsPanel}
+          </div>
         </div>
       </div>
 
