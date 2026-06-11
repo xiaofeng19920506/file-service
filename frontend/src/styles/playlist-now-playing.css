@@ -411,7 +411,7 @@
   }
 
   .playlist-now-playing-body .playlist-np-stage {
-    position: static;
+    position: relative;
     flex: 1;
     min-height: 0;
     height: 100%;
@@ -498,7 +498,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 5;
+    z-index: 8;
     width: 100%;
     margin-top: 0;
     padding:
@@ -509,6 +509,38 @@
     -webkit-backdrop-filter: saturate(180%) blur(24px);
     border-top: 1px solid color-mix(in srgb, var(--border-light) 45%, transparent);
     box-shadow: 0 -10px 36px color-mix(in srgb, #000 22%, transparent);
+    pointer-events: auto;
+  }
+
+  .playlist-now-playing--audio .playlist-np-mobile-dock .playlist-np-progress {
+    overflow: visible;
+    padding: 0.15rem 0;
+  }
+
+  .playlist-now-playing--audio .playlist-np-mobile-dock .audio-player-bar-progress {
+    min-height: 2rem;
+    padding: 0.55rem 0;
+  }
+
+  .playlist-now-playing--audio .playlist-np-mobile-dock .audio-progress-track {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.32);
+  }
+
+  .playlist-now-playing--audio .playlist-np-mobile-dock .audio-progress-fill {
+    background: #fff;
+  }
+
+  .playlist-now-playing--audio .playlist-np-mobile-dock .audio-progress-thumb {
+    width: 16px;
+    height: 16px;
+    margin-left: -8px;
+    background: #fff;
+    border: 2px solid rgba(0, 0, 0, 0.2);
+  }
+
+  .playlist-now-playing--audio .playlist-np-mobile-dock .playlist-np-time-row {
+    color: rgba(255, 255, 255, 0.72);
   }
 
   .playlist-np-mobile-dock .playlist-np-track-title {
@@ -1003,10 +1035,27 @@
 
   .playlist-np-dock {
     grid-area: footer;
+    position: relative;
+    z-index: 4;
     width: 100%;
     padding-top: 1rem;
     border-top: 1px solid var(--border-light);
     margin-top: 0.75rem;
+    overflow: visible;
+  }
+
+  .playlist-np-desktop-footer .playlist-np-progress--desktop-inline {
+    overflow: visible;
+  }
+
+  .playlist-np-desktop-footer .audio-player-bar-progress {
+    min-height: 1.75rem;
+    padding: 0.65rem 0;
+    overflow: visible;
+  }
+
+  .playlist-np-desktop-footer .audio-progress-track {
+    overflow: visible;
   }
 
   .playlist-np-desktop-footer {

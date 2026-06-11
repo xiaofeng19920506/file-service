@@ -187,11 +187,8 @@ export default function PlaylistAudioPlayer({
     if (lastCue && lastCue.end > 0) return lastCue.end;
     return 0;
   }, [duration, captionCues]);
-  const canSeek =
-    !usingPreview &&
-    Number.isFinite(duration) &&
-    duration > 0 &&
-    duration !== Infinity;
+  const canSeek = !usingPreview && playbackDuration > 0;
+  const scrubbingRef = useRef(false);
   const volumePct = muted ? 0 : volume;
   const activeCaption = useMemo(
     () => findActiveCaption(captionCues, currentTime),
@@ -554,15 +551,22 @@ export default function PlaylistAudioPlayer({
     [setVolumeLevel],
   );
 
-  const seekToRatio = useCallback((ratio: number) => {
-    const el = audioRef.current;
-    if (!el) return;
-    const trackDuration = el.duration;
-    if (!Number.isFinite(trackDuration) || trackDuration <= 0) return;
-    const clamped = Math.min(1, Math.max(0, ratio));
-    el.currentTime = clamped * trackDuration;
-    setCurrentTime(el.currentTime);
-  }, []);
+  const seekToRatio = useCallback(
+    (ratio: number) => {
+      if (usingPreview) return;
+      const el = audioRef.current;
+      if (!el) return;
+      const trackDuration =
+        Number.isFinite(el.duration) && el.duration > 0 && el.duration !== Infinity
+          ? el.duration
+          : playbackDuration;
+      if (!Number.isFinite(trackDuration) || trackDuration <= 0) return;
+      const clamped = Math.min(1, Math.max(0, ratio));
+      el.currentTime = clamped * trackDuration;
+      setCurrentTime(el.currentTime);
+    },
+    [playbackDuration, usingPreview],
+  );
 
   useEffect(() => {
     if (!progressHandleRef) return;
@@ -611,6 +615,7 @@ export default function PlaylistAudioPlayer({
   }, []);
 
   const syncProgressFromAudio = useCallback(() => {
+    if (scrubbingRef.current) return;
     const el = audioRef.current;
     if (!el) return;
     setCurrentTime(el.currentTime);
@@ -618,7 +623,7 @@ export default function PlaylistAudioPlayer({
   }, [syncDurationFromAudio]);
 
   useEffect(() => {
-    if (!playing || !streamUrl) return;
+    if (!streamUrl) return;
 
     let rafId = 0;
     const tick = () => {
@@ -630,13 +635,15 @@ export default function PlaylistAudioPlayer({
     return () => {
       window.cancelAnimationFrame(rafId);
     };
-  }, [playing, streamUrl, activeIndex, syncProgressFromAudio]);
+  }, [streamUrl, activeIndex, syncProgressFromAudio]);
 
   const handleTimeUpdate = useCallback(
     (e: React.SyntheticEvent<HTMLAudioElement>) => {
       const el = e.currentTarget;
-      setCurrentTime(el.currentTime);
-      syncDurationFromAudio(el);
+      if (!scrubbingRef.current) {
+        setCurrentTime(el.currentTime);
+        syncDurationFromAudio(el);
+      }
 
       if (usingPreview || endedHandledRef.current) return;
 
@@ -880,6 +887,13 @@ export default function PlaylistAudioPlayer({
       canSeek={canSeek}
       usingPreview={usingPreview}
       onSeekRatio={seekToRatio}
+      onScrubStart={() => {
+        scrubbingRef.current = true;
+      }}
+      onScrubEnd={() => {
+        scrubbingRef.current = false;
+        syncProgressFromAudio();
+      }}
       className="audio-player-bar-progress"
     />
   );

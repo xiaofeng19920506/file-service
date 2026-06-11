@@ -529,8 +529,6 @@ export default function YoutubePlaylistPlayer({
   }, [immersive, playing, activeIndex]);
 
   useEffect(() => {
-    if (!playing) return;
-
     let rafId = 0;
     const tick = () => {
       syncProgress();
@@ -541,7 +539,7 @@ export default function YoutubePlaylistPlayer({
     return () => {
       window.cancelAnimationFrame(rafId);
     };
-  }, [playing, activeIndex, syncProgress]);
+  }, [activeIndex, syncProgress]);
 
   useEffect(
     () => () => {

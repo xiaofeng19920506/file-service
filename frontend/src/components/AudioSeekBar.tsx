@@ -8,6 +8,8 @@ type AudioSeekBarProps = {
   canSeek: boolean;
   usingPreview?: boolean;
   onSeekRatio: (ratio: number) => void;
+  onScrubStart?: () => void;
+  onScrubEnd?: () => void;
   className?: string;
 };
 
@@ -17,6 +19,8 @@ export default function AudioSeekBar({
   canSeek,
   usingPreview = false,
   onSeekRatio,
+  onScrubStart,
+  onScrubEnd,
   className = '',
 }: AudioSeekBarProps) {
   const { t } = useI18n();
@@ -43,9 +47,11 @@ export default function AudioSeekBar({
     },
     onScrubStart: () => {
       setScrubRatio((prev) => prev ?? (hasDuration ? currentTime / duration : 0));
+      onScrubStart?.();
     },
     onScrubEnd: () => {
       setScrubRatio(null);
+      onScrubEnd?.();
     },
   });
 

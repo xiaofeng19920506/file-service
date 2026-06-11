@@ -9,7 +9,7 @@ type UseSeekBarDragOptions = {
 };
 
 /**
- * 进度条点击 / 拖动 seek。统一用 Pointer Events + capture，兼容 iOS Safari。
+ * 进度条点击 / 拖动 seek。Pointer + Touch 双通道（iOS 上 touch 比 pointer 更可靠）。
  */
 export function useSeekBarDrag({
   barRef,
@@ -24,6 +24,7 @@ export function useSeekBarDrag({
   const onScrubEndRef = useRef(onScrubEnd);
   const suppressClickRef = useRef(false);
   const activePointerIdRef = useRef<number | null>(null);
+  const touchDragRef = useRef(false);
   const scrubbingRef = useRef(false);
 
   enabledRef.current = enabled;
@@ -56,17 +57,8 @@ export function useSeekBarDrag({
     const finishDrag = () => {
       removeWindowListeners?.();
       removeWindowListeners = null;
-
-      const pointerId = activePointerIdRef.current;
       activePointerIdRef.current = null;
-
-      if (pointerId !== null && bar.hasPointerCapture(pointerId)) {
-        try {
-          bar.releasePointerCapture(pointerId);
-        } catch {
-          // ignore
-        }
-      }
+      touchDragRef.current = false;
 
       if (scrubbingRef.current) {
         scrubbingRef.current = false;
@@ -83,19 +75,30 @@ export function useSeekBarDrag({
       if (removeWindowListeners) return;
 
       const onWindowPointerEnd = (e: PointerEvent) => {
-        if (activePointerIdRef.current !== e.pointerId) return;
+        if (!touchDragRef.current && activePointerIdRef.current !== e.pointerId) return;
+        finishDrag();
+      };
+
+      const onWindowTouchEnd = () => {
+        if (!touchDragRef.current) return;
         finishDrag();
       };
 
       window.addEventListener('pointerup', onWindowPointerEnd);
       window.addEventListener('pointercancel', onWindowPointerEnd);
+      window.addEventListener('touchend', onWindowTouchEnd, { passive: false });
+      window.addEventListener('touchcancel', onWindowTouchEnd, { passive: false });
+
       removeWindowListeners = () => {
         window.removeEventListener('pointerup', onWindowPointerEnd);
         window.removeEventListener('pointercancel', onWindowPointerEnd);
+        window.removeEventListener('touchend', onWindowTouchEnd);
+        window.removeEventListener('touchcancel', onWindowTouchEnd);
       };
     };
 
     const onPointerDown = (e: PointerEvent) => {
+      if (e.pointerType === 'touch' || touchDragRef.current) return;
       if (!enabledRef.current || e.button !== 0) return;
       if (activePointerIdRef.current !== null) return;
 
@@ -114,13 +117,42 @@ export function useSeekBarDrag({
     };
 
     const onPointerMove = (e: PointerEvent) => {
+      if (e.pointerType === 'touch' || touchDragRef.current) return;
       if (activePointerIdRef.current !== e.pointerId) return;
       e.preventDefault();
       seekFromClientX(e.clientX);
     };
 
     const onPointerUp = (e: PointerEvent) => {
+      if (e.pointerType === 'touch' || touchDragRef.current) return;
       if (activePointerIdRef.current !== e.pointerId) return;
+      try {
+        if (bar.hasPointerCapture(e.pointerId)) {
+          bar.releasePointerCapture(e.pointerId);
+        }
+      } catch {
+        // ignore
+      }
+      finishDrag();
+    };
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (!enabledRef.current || e.touches.length !== 1) return;
+      e.preventDefault();
+      touchDragRef.current = true;
+      beginDrag();
+      attachWindowEndListeners();
+      seekFromClientX(e.touches[0]!.clientX);
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!touchDragRef.current || !enabledRef.current || e.touches.length !== 1) return;
+      e.preventDefault();
+      seekFromClientX(e.touches[0]!.clientX);
+    };
+
+    const onTouchEnd = () => {
+      if (!touchDragRef.current) return;
       finishDrag();
     };
 
@@ -128,19 +160,27 @@ export function useSeekBarDrag({
     bar.addEventListener('pointermove', onPointerMove);
     bar.addEventListener('pointerup', onPointerUp);
     bar.addEventListener('pointercancel', onPointerUp);
+    bar.addEventListener('touchstart', onTouchStart, { passive: false });
+    bar.addEventListener('touchmove', onTouchMove, { passive: false });
+    bar.addEventListener('touchend', onTouchEnd);
+    bar.addEventListener('touchcancel', onTouchEnd);
 
     return () => {
       bar.removeEventListener('pointerdown', onPointerDown);
       bar.removeEventListener('pointermove', onPointerMove);
       bar.removeEventListener('pointerup', onPointerUp);
       bar.removeEventListener('pointercancel', onPointerUp);
+      bar.removeEventListener('touchstart', onTouchStart);
+      bar.removeEventListener('touchmove', onTouchMove);
+      bar.removeEventListener('touchend', onTouchEnd);
+      bar.removeEventListener('touchcancel', onTouchEnd);
       if (scrubbingRef.current) {
         finishDrag();
       } else {
         removeWindowListeners?.();
       }
     };
-  }, [barRef, enabled, seekFromClientX]);
+  }, [barRef, seekFromClientX]);
 
   const handleClick = useCallback(
     (clientX: number) => {
