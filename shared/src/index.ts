@@ -20,4 +20,6 @@ export * from './youtube-captions.js';
 export * from './audio-stream-token.js';
 export * from './youtube-audio-extract.js';
 export * from './youtube-audio-cache.js';
+export * from './youtube-oauth-state.js';
+export * from './youtube-oauth.js';
 export * from './persist-raw-blob.js';

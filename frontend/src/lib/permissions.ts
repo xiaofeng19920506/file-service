@@ -27,6 +27,10 @@ export function canUpload(role: UserRole | null): boolean {
   return role === 'worship_team' || role === 'admin';
 }
 
+export function canExportToYoutube(role: UserRole | null): boolean {
+  return role === 'worship_team' || role === 'admin';
+}
+
 export function canEdit(role: UserRole | null): boolean {
   return role === 'admin';
 }
@@ -44,6 +48,7 @@ export function permissionsForRole(role: UserRole | null) {
     canMerge: canMerge(normalized),
     canUpload: canUpload(normalized),
     canEdit: canEdit(normalized),
+    canExportToYoutube: canExportToYoutube(normalized),
   };
 }
 

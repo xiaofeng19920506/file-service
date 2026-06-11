@@ -49,6 +49,7 @@ import { registerAdminUserRoutes } from './admin-users.js';
 import { registerPlaylistRoutes } from './playlists.js';
 import { registerYoutubeCaptionRoutes } from './youtube-captions.js';
 import { registerYoutubeAudioRoutes } from './youtube-audio.js';
+import { registerYoutubeOAuthRoutes } from './youtube-oauth.js';
 import { resolveRequestActor } from './request-actor.js';
 
 async function buildApp() {
@@ -98,6 +99,7 @@ async function buildApp() {
   registerPlaylistRoutes(app, { db, env, audioQueue });
   registerYoutubeCaptionRoutes(app);
   registerYoutubeAudioRoutes(app, { db, env, storage, audioQueue });
+  registerYoutubeOAuthRoutes(app, { db, env });
 
   const maxUploadBytes = env.MAX_UPLOAD_MB * 1024 * 1024;
   const getActor = (request: import('fastify').FastifyRequest) =>

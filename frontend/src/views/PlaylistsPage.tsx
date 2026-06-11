@@ -3,6 +3,7 @@ import AcceptSharedPlaylistModal from '../components/AcceptSharedPlaylistModal';
 import AddPlaylistItemsModal from '../components/AddPlaylistItemsModal';
 import ConfirmModal from '../components/ConfirmModal';
 import SharePlaylistModal from '../components/SharePlaylistModal';
+import ExportYoutubePlaylistModal from '../components/ExportYoutubePlaylistModal';
 import { DragHandleIcon, PencilIcon } from '../components/icons';
 import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 import PlaylistAudioPlayer, {
@@ -117,6 +118,8 @@ export default function PlaylistsPage({
   const [showAddModal, setShowAddModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
   const [shareTarget, setShareTarget] = useState<{ id: string; title: string } | null>(null);
+  const [exportTarget, setExportTarget] = useState<{ id: string; title: string } | null>(null);
+  const [oauthJustConnected, setOauthJustConnected] = useState(false);
   const [trackDragIndex, setTrackDragIndex] = useState<number | null>(null);
   const [trackDragOver, setTrackDragOver] = useState<TrackDragOver | null>(null);
   const [savingOrder, setSavingOrder] = useState(false);
@@ -133,6 +136,42 @@ export default function PlaylistsPage({
     duration: 0,
     canSeek: false,
   });
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    const qIndex = hash.indexOf('?');
+    if (qIndex === -1) return;
+
+    const params = new URLSearchParams(hash.slice(qIndex + 1));
+    const oauth = params.get('youtube_oauth');
+    if (!oauth) return;
+
+    const playlistId = params.get('id')?.trim() || selectedId;
+    const reason = params.get('reason')?.trim();
+
+    params.delete('youtube_oauth');
+    params.delete('reason');
+    const rest = params.toString();
+    const newHash = rest
+      ? `#/playlists?${rest}`
+      : playlistId
+        ? `#/playlists?id=${encodeURIComponent(playlistId)}`
+        : '#/playlists';
+    window.history.replaceState(null, '', newHash);
+
+    if (oauth === 'connected' && playlistId) {
+      setOauthJustConnected(true);
+      setExportTarget({
+        id: playlistId,
+        title: detail?.playlist.id === playlistId ? detail.playlist.title : '',
+      });
+      if (selectedId !== playlistId) {
+        onSelectId(playlistId);
+      }
+    } else if (oauth === 'error') {
+      setError(friendlyError(reason ?? 'youtube_oauth_failed', t));
+    }
+  }, [detail?.playlist.id, detail?.playlist.title, onSelectId, selectedId, t]);
 
   const loadList = useCallback(async () => {
     setLoadingList(true);
@@ -743,6 +782,20 @@ export default function PlaylistsPage({
             {t('playlists.addTitle')}
           </button>
           {hasTracks && renderTracksEditToggle()}
+          {permissions.canExportToYoutube && playbackMode === 'video' && hasTracks && (
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() =>
+                setExportTarget({
+                  id: playlist.id,
+                  title: playlist.title,
+                })
+              }
+            >
+              {t('playlists.exportYoutube')}
+            </button>
+          )}
           <button
             type="button"
             className="btn-secondary"
@@ -885,6 +938,18 @@ export default function PlaylistsPage({
         >
           {t('playlists.share')}
         </button>
+        {permissions.canExportToYoutube && playbackMode === 'video' && hasTracks && (
+          <button
+            type="button"
+            className="nav-mobile-menu-item btn-secondary"
+            onClick={() => {
+              setExportTarget({ id: playlist.id, title: playlist.title });
+              closeMenu();
+            }}
+          >
+            {t('playlists.exportYoutube')}
+          </button>
+        )}
         {permissions.canMerge && playlist.matchedCount > 0 && (
           <button
             type="button"
@@ -1331,6 +1396,19 @@ export default function PlaylistsPage({
           playlistTitle={shareTarget.title}
           onClose={() => setShareTarget(null)}
           onSent={() => setNotice(t('playlists.shareSent'))}
+        />
+      )}
+
+      {exportTarget && (
+        <ExportYoutubePlaylistModal
+          playlistId={exportTarget.id}
+          playlistTitle={exportTarget.title || detail?.playlist.title || t('playlists.title')}
+          oauthJustConnected={oauthJustConnected}
+          onClose={() => {
+            setExportTarget(null);
+            setOauthJustConnected(false);
+          }}
+          onExported={() => setNotice(t('playlists.exportYoutubeDone'))}
         />
       )}
 

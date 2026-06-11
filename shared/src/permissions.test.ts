@@ -30,6 +30,9 @@ describe('resolvePathAccessLevel', () => {
     expect(resolvePathAccessLevel('DELETE', '/v1/blobs/x')).toBe('admin');
     expect(resolvePathAccessLevel('GET', '/v1/admin/users')).toBe('admin');
     expect(resolvePathAccessLevel('GET', '/v1/auth/session')).toBe('member');
+    expect(resolvePathAccessLevel('GET', '/v1/youtube/oauth/status')).toBe('youtube_export');
+    expect(resolvePathAccessLevel('POST', '/v1/playlists/x/export-youtube')).toBe('youtube_export');
+    expect(resolvePathAccessLevel('GET', '/v1/youtube/oauth/callback')).toBe('public');
   });
 
   it('defaults unknown v1 routes to member', () => {
@@ -62,6 +65,12 @@ describe('roleMeetsAccessLevel', () => {
   it('enforces admin only paths', () => {
     expect(roleMeetsAccessLevel('admin', 'worship_team')).toBe(false);
     expect(roleMeetsAccessLevel('admin', 'admin')).toBe(true);
+  });
+
+  it('enforces youtube export for worship team', () => {
+    expect(roleMeetsAccessLevel('youtube_export', 'member')).toBe(false);
+    expect(roleMeetsAccessLevel('youtube_export', 'worship_team')).toBe(true);
+    expect(roleMeetsAccessLevel('youtube_export', 'admin')).toBe(true);
   });
 });
 

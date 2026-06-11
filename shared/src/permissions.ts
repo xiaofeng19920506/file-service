@@ -33,6 +33,10 @@ export function canUpload(role: UserRole | null): boolean {
   return role === 'worship_team' || role === 'admin';
 }
 
+export function canExportToYoutube(role: UserRole | null): boolean {
+  return role === 'worship_team' || role === 'admin';
+}
+
 export function canEdit(role: UserRole | null): boolean {
   return role === 'admin';
 }
@@ -93,6 +97,17 @@ export function isAdminOnlyPath(method: string, path: string): boolean {
   return isEditPath(method, path) || isAdminUserManagePath(method, path);
 }
 
+export function isYoutubeOAuthCallbackPath(method: string, path: string): boolean {
+  return method === 'GET' && path === '/v1/youtube/oauth/callback';
+}
+
+export function isYoutubeExportPath(method: string, path: string): boolean {
+  if (isYoutubeOAuthCallbackPath(method, path)) return false;
+  if (path.startsWith('/v1/youtube/oauth')) return true;
+  if (method === 'POST' && /^\/v1\/playlists\/[^/]+\/export-youtube$/.test(path)) return true;
+  return false;
+}
+
 /** @deprecated use isEditPath */
 export function isAdminWritePath(method: string, path: string): boolean {
   return isEditPath(method, path);
@@ -107,7 +122,8 @@ export type PathAccessLevel =
   | 'upload'
   | 'playlist'
   | 'merge'
-  | 'admin';
+  | 'admin'
+  | 'youtube_export';
 
 function isPublicInfrastructurePath(path: string): boolean {
   return path === '/health' || path === '/ready' || path === '/docs' || path.startsWith('/docs/');
@@ -143,6 +159,8 @@ export function resolvePathAccessLevel(method: string, path: string): PathAccess
   if (isSignedAudioStreamPath(method, path)) return 'public';
   if (isSignedAudioPreviewPath(method, path)) return 'public';
   if (isAuthEntryPath(method, path)) return 'public';
+  if (isYoutubeOAuthCallbackPath(method, path)) return 'public';
+  if (isYoutubeExportPath(method, path)) return 'youtube_export';
   if (isSearchPath(method, path)) return 'search';
   if (isAdminOnlyPath(method, path)) return 'admin';
   if (isUploadPath(method, path)) return 'upload';
@@ -181,6 +199,8 @@ export function roleMeetsAccessLevel(
       return canMerge(role);
     case 'admin':
       return canEdit(role);
+    case 'youtube_export':
+      return canExportToYoutube(role);
     default:
       return false;
   }
@@ -200,6 +220,8 @@ export function accessDeniedErrorCode(level: PathAccessLevel): string {
       return 'merge_forbidden';
     case 'admin':
       return 'admin_required';
+    case 'youtube_export':
+      return 'youtube_export_forbidden';
     case 'member':
       return 'unauthorized';
     default:
