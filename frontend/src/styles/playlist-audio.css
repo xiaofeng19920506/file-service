@@ -217,6 +217,9 @@
 
 .audio-progress-track {
   position: relative;
+  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
   height: 6px;
   border-radius: 999px;
   background: var(--border-light);

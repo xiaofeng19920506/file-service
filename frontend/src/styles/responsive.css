@@ -242,6 +242,12 @@ body {
     box-sizing: border-box;
   }
 
+  .audio-progress .audio-progress-track {
+    width: 100%;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
   .playlists-playback-dock-progress {
     flex: 1;
     min-width: 0;

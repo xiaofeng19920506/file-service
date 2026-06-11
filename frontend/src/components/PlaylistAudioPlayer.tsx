@@ -582,9 +582,21 @@ export default function PlaylistAudioPlayer({
     };
   }, [progressHandleRef, seekToRatio]);
 
+  const progressNotifyRef = useRef(onProgressUpdate);
+  const lastProgressNotifyAtRef = useRef(0);
+  progressNotifyRef.current = onProgressUpdate;
+
   useEffect(() => {
-    onProgressUpdate?.({ currentTime, duration, canSeek });
-  }, [currentTime, duration, canSeek, onProgressUpdate]);
+    if (!progressNotifyRef.current) return;
+    const now = performance.now();
+    if (now - lastProgressNotifyAtRef.current < 250) return;
+    lastProgressNotifyAtRef.current = now;
+    progressNotifyRef.current({
+      currentTime,
+      duration: playbackDuration,
+      canSeek,
+    });
+  }, [currentTime, playbackDuration, canSeek]);
 
   const advanceToNextTrack = useCallback(() => {
     if (endedHandledRef.current) return;
@@ -642,6 +654,20 @@ export default function PlaylistAudioPlayer({
       window.cancelAnimationFrame(rafId);
     };
   }, [streamUrl, activeIndex, syncProgressFromAudio]);
+
+  useEffect(() => {
+    if (!playing || !streamUrl) return;
+    const id = window.setInterval(() => {
+      if (!scrubbingRef.current) return;
+      const el = audioRef.current;
+      if (!el || el.paused) return;
+      if (Math.abs(el.currentTime - currentTime) > 1.25) {
+        scrubbingRef.current = false;
+        syncProgressFromAudio();
+      }
+    }, 1500);
+    return () => window.clearInterval(id);
+  }, [playing, streamUrl, currentTime, syncProgressFromAudio]);
 
   const handleTimeUpdate = useCallback(
     (e: React.SyntheticEvent<HTMLAudioElement>) => {

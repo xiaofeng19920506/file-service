@@ -30,6 +30,8 @@ export function useSeekBarDrag({
   const touchDragRef = useRef(false);
   const touchStartXRef = useRef(0);
   const touchMovedRef = useRef(false);
+  const pointerStartXRef = useRef(0);
+  const pointerMovedRef = useRef(false);
   const scrubbingRef = useRef(false);
 
   enabledRef.current = enabled;
@@ -80,6 +82,7 @@ export function useSeekBarDrag({
       activePointerIdRef.current = null;
       touchDragRef.current = false;
       touchMovedRef.current = false;
+      pointerMovedRef.current = false;
 
       if (pointerId !== null) {
         try {
@@ -148,14 +151,38 @@ export function useSeekBarDrag({
       };
     };
 
+    const releasePointerCapture = (pointerId: number) => {
+      try {
+        if (bar.hasPointerCapture(pointerId)) {
+          bar.releasePointerCapture(pointerId);
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    const finishPointerTap = (clientX: number, pointerId: number) => {
+      releasePointerCapture(pointerId);
+      activePointerIdRef.current = null;
+      pointerMovedRef.current = false;
+      removeWindowListeners?.();
+      removeWindowListeners = null;
+      seekFromClientX(clientX);
+      suppressClickRef.current = true;
+      window.setTimeout(() => {
+        suppressClickRef.current = false;
+      }, 400);
+    };
+
     const onPointerDown = (e: PointerEvent) => {
       if (e.pointerType === 'touch' || touchDragRef.current) return;
       if (!enabledRef.current || e.button !== 0) return;
       if (activePointerIdRef.current !== null) return;
 
       activePointerIdRef.current = e.pointerId;
+      pointerMovedRef.current = false;
+      pointerStartXRef.current = e.clientX;
       e.preventDefault();
-      beginDrag();
       attachWindowEndListeners();
 
       try {
@@ -163,27 +190,29 @@ export function useSeekBarDrag({
       } catch {
         // ignore
       }
-
-      seekFromClientX(e.clientX);
     };
 
     const onPointerMove = (e: PointerEvent) => {
       if (e.pointerType === 'touch' || touchDragRef.current) return;
       if (activePointerIdRef.current !== e.pointerId) return;
+      const moved =
+        Math.abs(e.clientX - pointerStartXRef.current) >= TOUCH_DRAG_THRESHOLD_PX;
+      if (!moved && !scrubbingRef.current) return;
+
       e.preventDefault();
+      pointerMovedRef.current = true;
+      if (!scrubbingRef.current) beginDrag();
       seekFromClientX(e.clientX);
     };
 
     const onPointerUp = (e: PointerEvent) => {
       if (e.pointerType === 'touch' || touchDragRef.current) return;
       if (activePointerIdRef.current !== e.pointerId) return;
-      try {
-        if (bar.hasPointerCapture(e.pointerId)) {
-          bar.releasePointerCapture(e.pointerId);
-        }
-      } catch {
-        // ignore
+      if (!scrubbingRef.current) {
+        finishPointerTap(e.clientX, e.pointerId);
+        return;
       }
+      releasePointerCapture(e.pointerId);
       finishDrag();
     };
 
