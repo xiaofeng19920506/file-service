@@ -44,7 +44,7 @@ type PlaylistAudioPlayerProps = {
   progressHandleRef?: RefObject<PlaylistAudioProgressHandle | null>;
   /** 用于车载 / 锁屏 Media Session 显示的列表名 */
   playlistTitle?: string;
-  variant?: 'default' | 'nowPlaying' | 'youtubeWatch';
+  variant?: 'default' | 'nowPlaying' | 'youtubeWatch' | 'desktopDock' | 'mobileRecord';
   /** 手机 YouTube 式页内布局（与视频播放器一致） */
   mobileInline?: boolean;
   repeatMode?: PlaylistRepeatMode;
@@ -157,6 +157,8 @@ export default function PlaylistAudioPlayer({
   const { t } = useI18n();
   const isNowPlaying = variant === 'nowPlaying';
   const isYoutubeWatch = variant === 'youtubeWatch';
+  const isDesktopDock = variant === 'desktopDock';
+  const isMobileRecord = variant === 'mobileRecord';
   const audioRef = useRef<HTMLAudioElement>(null);
   const volumeProgressRef = useRef<HTMLDivElement>(null);
   const mobileOptionsRef = useRef<HTMLDivElement>(null);
@@ -1023,7 +1025,7 @@ export default function PlaylistAudioPlayer({
 
   const mobilePlaybackOptionsActive = shuffleEnabled || repeatMode !== 'off';
 
-  const shuffleRepeatControls = isNowPlaying ? (
+  const shuffleRepeatControls = isNowPlaying || isDesktopDock || isMobileRecord ? (
     <div
       className="playlist-np-secondary"
       role="group"
@@ -1050,6 +1052,144 @@ export default function PlaylistAudioPlayer({
       </button>
     </div>
   ) : null;
+
+  const audioElement = (
+    <audio
+      ref={audioRef}
+      className="playlist-audio-element"
+      src={streamUrl ?? undefined}
+      preload="auto"
+      playsInline
+      loop={false}
+      onTimeUpdate={handleTimeUpdate}
+      onLoadedMetadata={(e) => syncDurationFromAudio(e.currentTarget)}
+      onDurationChange={(e) => syncDurationFromAudio(e.currentTarget)}
+      onEnded={handleEnded}
+      onPlay={() => {
+        skipPauseSyncRef.current = false;
+        onPlayingChange(true);
+      }}
+      onPause={handlePause}
+    />
+  );
+
+  const statusMessages = (isProcessing || playerError || audioStatus?.status === 'failed') && (
+    <p
+      className={`playlist-audio-status${playerError || audioStatus?.status === 'failed' ? ' error-msg' : ' playlists-muted'}`}
+    >
+      {playerError ??
+        (audioStatus?.status === 'failed'
+          ? friendlyError(audioStatus.errorCode ?? 'audio_extract_failed', t)
+          : usingPreview
+            ? t('playlists.audioCachingWhilePlaying', { title: current.title })
+            : t('playlists.audioCaching', { title: current.title }))}
+    </p>
+  );
+
+  if (isDesktopDock) {
+    return (
+      <section className="playlist-audio-dock" aria-label={t('playlists.playerSectionAudio')}>
+        <div className="playlist-audio-dock-inner">
+          <div className="playlist-audio-dock-track">
+            <img className="playlist-audio-dock-thumb" src={artworkUrl} alt="" loading="lazy" />
+            <div className="playlist-audio-dock-meta">
+              <ScrollingTitle text={current.title} className="playlist-audio-dock-title" />
+              {playlistTitle && <p className="playlist-audio-dock-album">{playlistTitle}</p>}
+            </div>
+          </div>
+          <div className="playlist-audio-dock-transport">{transportControls}</div>
+          <div className="playlist-audio-dock-progress">{desktopProgressBlock}</div>
+          <div className="playlist-audio-dock-options">
+            {shuffleRepeatControls}
+            {volumeControls}
+          </div>
+        </div>
+        {statusMessages}
+        {audioElement}
+      </section>
+    );
+  }
+
+  if (isMobileRecord) {
+    const lyricLine = activeCaption ?? captionCues[0]?.text ?? null;
+
+    return (
+      <section
+        className="playlist-audio-player playlist-audio-player--mobile-record"
+        aria-label={t('playlists.playerSectionAudio')}
+      >
+        <header className="playlist-audio-record-header">
+          <ScrollingTitle text={current.title} className="playlist-audio-record-header-title" />
+        </header>
+
+        <div className="playlist-audio-record-stage">
+          <div className={`playlist-audio-record-disc${playing ? ' is-playing' : ''}`}>
+            <div className="playlist-audio-record-disc-ring" aria-hidden />
+            <img className="playlist-audio-record-art" src={artworkUrl} alt="" loading="lazy" />
+          </div>
+        </div>
+
+        <div className="playlist-audio-record-meta">
+          <p className="playlist-audio-record-song">{current.title}</p>
+          <p className="playlist-audio-record-detail">
+            {playlistTitle && <span>{playlistTitle}</span>}
+            {playlistTitle && lyricLine && <span className="playlist-audio-record-dot"> · </span>}
+            {lyricLine ? (
+              <span className="playlist-audio-record-lyric">{lyricLine}</span>
+            ) : (
+              <span className="playlist-audio-record-lyric">
+                {t('playlists.trackCounter', { current: activeIndex + 1, total: items.length })}
+              </span>
+            )}
+          </p>
+        </div>
+
+        <div className="playlist-audio-record-progress">
+          {seekBar}
+          <div className="playlist-audio-record-times">
+            <span>{currentTimeLabel}</span>
+            <span>{totalDurationLabel}</span>
+          </div>
+        </div>
+
+        <div className="playlist-audio-record-transport">{transportControls}</div>
+
+        <footer className="playlist-audio-record-footer">
+          <div className="playlist-audio-record-modes" role="group" aria-label={t('playlists.playbackOptions')}>
+            <button
+              type="button"
+              className={`playlist-audio-record-mode-btn${shuffleEnabled ? ' active' : ''}`}
+              aria-pressed={shuffleEnabled}
+              aria-label={t('playlists.shuffle')}
+              onClick={onToggleShuffle}
+            >
+              <ShuffleIcon />
+            </button>
+            <button
+              type="button"
+              className={`playlist-audio-record-mode-btn${repeatMode !== 'off' ? ' active' : ''}`}
+              aria-label={repeatLabel}
+              onClick={onCycleRepeat}
+            >
+              <RepeatIcon mode={repeatMode} />
+            </button>
+          </div>
+          <button
+            type="button"
+            className={`playlist-audio-record-queue-btn${queueOpen ? ' active' : ''}`}
+            aria-label={t('playlists.queueTitle')}
+            aria-pressed={queueOpen}
+            onClick={onToggleQueue}
+          >
+            <QueueIcon />
+          </button>
+        </footer>
+
+        {statusMessages}
+        {audioElement}
+      </section>
+    );
+  }
 
   return (
     <section

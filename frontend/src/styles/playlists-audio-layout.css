@@ -1,0 +1,357 @@
+/* 桌面 MP3：酷狗式 — 右侧曲目列表 + 底部播放栏 */
+
+@media (min-width: 901px) {
+  .playlists-page[data-audio-desktop-dock='true'] .playlists-player-stage {
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .playlists-page[data-audio-desktop-dock='true'] .playlists-player-col {
+    display: none;
+  }
+
+  .playlists-page[data-audio-desktop-dock='true'] .playlists-tracks-col {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    width: 100%;
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    background: var(--surface);
+  }
+
+  .playlists-main-inner--desktop-audio {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1;
+    padding-bottom: 5.75rem;
+  }
+
+  .playlists-main-inner--desktop-audio .playlists-tracks {
+    max-height: none;
+  }
+
+  .playlist-audio-dock {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: calc(var(--z-dock, 15) + 2);
+    border-top: 1px solid var(--border-light);
+    background: color-mix(in srgb, var(--surface) 94%, transparent);
+    backdrop-filter: saturate(180%) blur(16px);
+    -webkit-backdrop-filter: saturate(180%) blur(16px);
+    box-shadow: 0 -4px 24px color-mix(in srgb, var(--shadow-sm) 70%, transparent);
+  }
+
+  .playlist-audio-dock-inner {
+    display: grid;
+    grid-template-columns: minmax(10rem, 16rem) auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 1rem 1.25rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0.65rem 1.25rem;
+    min-height: 4.75rem;
+  }
+
+  .playlist-audio-dock-track {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-width: 0;
+  }
+
+  .playlist-audio-dock-thumb {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid var(--border-light);
+  }
+
+  .playlist-audio-dock-meta {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .playlist-audio-dock-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .playlist-audio-dock-album {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .playlist-audio-dock-transport .audio-transport {
+    gap: 0.35rem;
+  }
+
+  .playlist-audio-dock-transport .audio-transport-btn--primary {
+    width: 2.65rem;
+    height: 2.65rem;
+  }
+
+  .playlist-audio-dock-progress {
+    min-width: 0;
+  }
+
+  .playlist-audio-dock-progress .playlist-np-progress--desktop-inline {
+    width: 100%;
+  }
+
+  .playlist-audio-dock-options {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-shrink: 0;
+  }
+
+  .playlist-audio-dock-options .audio-volume {
+    min-width: 6.5rem;
+  }
+}
+
+/* 手机 MP3：唱片机式全屏播放器 */
+
+@media (max-width: 900px) {
+  .playlists-page[data-audio-mobile-record='true'] {
+    padding: 0;
+  }
+
+  .playlists-page[data-audio-mobile-record='true'] .playlists-workspace[data-mobile-view='detail'] .playlists-main {
+    min-height: 0;
+  }
+
+  .playlists-main-inner--mobile-audio {
+    padding: 0 !important;
+    overflow: hidden !important;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .playlists-player-stage[data-audio-mobile-record='true'] {
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    gap: 0;
+  }
+
+  .playlists-player-stage[data-audio-mobile-record='true'] .playlists-player-col {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    max-width: none;
+    grid-column: 1 / -1;
+  }
+
+  .playlists-tracks-col--hidden-mobile-audio {
+    display: none !important;
+  }
+
+  .playlists-mobile-watch-toolbar {
+    flex-shrink: 0;
+  }
+
+  .playlist-audio-player--mobile-record {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 0.35rem var(--page-gutter) calc(0.5rem + var(--bottom-nav-height));
+    background: var(--surface);
+  }
+
+  .playlist-audio-record-header {
+    flex-shrink: 0;
+    padding: 0.35rem 0 0.75rem;
+    text-align: center;
+  }
+
+  .playlist-audio-record-header-title {
+    font-size: 1.05rem;
+    font-weight: 650;
+    justify-content: center;
+  }
+
+  .playlist-audio-record-stage {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    padding: 0.5rem 0 1rem;
+  }
+
+  .playlist-audio-record-disc {
+    position: relative;
+    width: min(72vw, 17.5rem);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: radial-gradient(circle at 50% 50%, #2a2a2a 0%, #111 68%);
+    box-shadow:
+      0 18px 40px color-mix(in srgb, #000 22%, transparent),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  }
+
+  .playlist-audio-record-disc.is-playing {
+    animation: playlist-record-spin 22s linear infinite;
+  }
+
+  @keyframes playlist-record-spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .playlist-audio-record-disc-ring {
+    position: absolute;
+    inset: 0.35rem;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.08);
+    pointer-events: none;
+  }
+
+  .playlist-audio-record-art {
+    width: 62%;
+    height: 62%;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 0 0 6px rgba(0, 0, 0, 0.35);
+  }
+
+  .playlist-audio-record-meta {
+    flex-shrink: 0;
+    padding: 0 0 0.85rem;
+    min-width: 0;
+  }
+
+  .playlist-audio-record-song {
+    margin: 0 0 0.25rem;
+    font-size: 1rem;
+    font-weight: 650;
+    line-height: 1.35;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .playlist-audio-record-detail {
+    margin: 0;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: var(--text-secondary);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .playlist-audio-record-lyric {
+    color: var(--text-tertiary);
+  }
+
+  .playlist-audio-record-progress {
+    flex-shrink: 0;
+    padding-bottom: 0.65rem;
+  }
+
+  .playlist-audio-record-progress .audio-player-bar-progress {
+    width: 100%;
+  }
+
+  .playlist-audio-record-times {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.35rem;
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .playlist-audio-record-transport {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+    padding: 0.25rem 0 1rem;
+  }
+
+  .playlist-audio-record-transport .audio-transport {
+    gap: 1.75rem;
+  }
+
+  .playlist-audio-record-transport .audio-transport-btn {
+    width: 2.5rem;
+    height: 2.5rem;
+    color: var(--text-secondary);
+  }
+
+  .playlist-audio-record-transport .audio-transport-btn--primary {
+    width: 4rem;
+    height: 4rem;
+    background: var(--text);
+    color: var(--surface);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--text) 18%, transparent);
+  }
+
+  .playlist-audio-record-transport .audio-transport-btn--primary .audio-transport-icon {
+    width: 1.35rem;
+    height: 1.35rem;
+  }
+
+  .playlist-audio-record-footer {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 0.15rem;
+  }
+
+  .playlist-audio-record-modes {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  .playlist-audio-record-mode-btn,
+  .playlist-audio-record-queue-btn {
+    width: 2.5rem;
+    height: 2.5rem;
+    display: inline-grid;
+    place-items: center;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+
+  .playlist-audio-record-mode-btn.active,
+  .playlist-audio-record-queue-btn.active {
+    color: var(--blue);
+    background: var(--blue-muted);
+  }
+
+  .playlist-audio-record-mode-btn svg,
+  .playlist-audio-record-queue-btn svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}

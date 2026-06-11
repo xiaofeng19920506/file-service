@@ -10,6 +10,7 @@ import '../styles/responsive.css';
 import '../styles/playlists-mobile-video.css';
 import '../styles/playlists-desktop-watch.css';
 import '../styles/playlists-youtube-watch.css';
+import '../styles/playlists-audio-layout.css';
 
 export const metadata: Metadata = {
   title: '敬拜诗库',

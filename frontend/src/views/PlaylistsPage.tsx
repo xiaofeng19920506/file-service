@@ -6,6 +6,7 @@ import SharePlaylistModal from '../components/SharePlaylistModal';
 import { DragHandleIcon, PencilIcon } from '../components/icons';
 import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 import PlaylistAudioPlayer from '../components/PlaylistAudioPlayer';
+import PlaylistQueuePanel from '../components/PlaylistQueuePanel';
 import YoutubePlaylistPlayer from '../components/YoutubePlaylistPlayer';
 import { prioritizeYoutubeAudioCache, type YoutubeAudioStatus } from '../api/youtube-audio';
 import {
@@ -107,6 +108,7 @@ export default function PlaylistsPage({
 
   useEffect(() => {
     setTracksEditMode(false);
+    setQueueOpen(false);
   }, [selectedId]);
   const [removingItemId, setRemovingItemId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -122,6 +124,7 @@ export default function PlaylistsPage({
   const [shuffleEnabled, setShuffleEnabled] = useState(readPlaylistShuffleEnabled);
   const [shuffleOrder, setShuffleOrder] = useState<number[]>([]);
   const [shuffleCursor, setShuffleCursor] = useState(0);
+  const [queueOpen, setQueueOpen] = useState(false);
 
   const loadList = useCallback(async () => {
     setLoadingList(true);
@@ -534,12 +537,19 @@ export default function PlaylistsPage({
   const showPlayer = playerEngaged && playerItems.length > 0;
   const youtubeWatchActive = showPlayer && playbackMode === 'video';
   const youtubeWatchMobile = youtubeWatchActive && isMobileViewport;
+  const audioWatchActive = showPlayer && playbackMode === 'audio';
+  const audioWatchDesktop = audioWatchActive && !isMobileViewport;
+  const audioWatchMobile = audioWatchActive && isMobileViewport;
 
   useEffect(() => {
-    if (!youtubeWatchMobile) return;
-    document.body.classList.add('playlists-mobile-video-active');
-    return () => document.body.classList.remove('playlists-mobile-video-active');
-  }, [youtubeWatchMobile]);
+    if (!youtubeWatchMobile && !audioWatchMobile) return;
+    document.body.classList.add(
+      youtubeWatchMobile ? 'playlists-mobile-video-active' : 'playlists-mobile-audio-active',
+    );
+    return () => {
+      document.body.classList.remove('playlists-mobile-video-active', 'playlists-mobile-audio-active');
+    };
+  }, [youtubeWatchMobile, audioWatchMobile]);
 
   const startRename = (id: string, title: string) => {
     setRenamingId(id);
@@ -655,8 +665,12 @@ export default function PlaylistsPage({
     </div>
   );
 
-  const renderAudioPlayer = () =>
-    showPlayer && playbackMode === 'audio' ? (
+  const renderAudioPlayer = (placement: 'inline' | 'dock') => {
+    if (!showPlayer || playbackMode !== 'audio') return null;
+    if (placement === 'dock' && !audioWatchDesktop) return null;
+    if (placement === 'inline' && !audioWatchMobile) return null;
+
+    return (
       <PlaylistAudioPlayer
         items={playerItems}
         activeIndex={activeIndex}
@@ -669,15 +683,17 @@ export default function PlaylistsPage({
         canGoNext={canGoNext}
         canGoPrev={canGoPrev}
         playlistTitle={detail?.playlist.title}
-        variant="youtubeWatch"
-        mobileInline={youtubeWatchMobile}
+        variant={audioWatchMobile ? 'mobileRecord' : 'desktopDock'}
         repeatMode={repeatMode}
         onCycleRepeat={cycleRepeat}
         onRepeatModeChange={changeRepeatMode}
         shuffleEnabled={shuffleEnabled}
         onToggleShuffle={toggleShuffle}
+        onToggleQueue={() => setQueueOpen((open) => !open)}
+        queueOpen={queueOpen}
       />
-    ) : null;
+    );
+  };
 
   const renderMainToolbar = (
     playlist: PlaylistDetail['playlist'],
@@ -890,6 +906,9 @@ export default function PlaylistsPage({
         className="playlists-page"
         data-youtube-watch={youtubeWatchActive ? 'true' : 'false'}
         data-mobile-video-immersive={youtubeWatchMobile ? 'true' : 'false'}
+        data-audio-now-playing={audioWatchActive ? 'true' : 'false'}
+        data-audio-desktop-dock={audioWatchDesktop ? 'true' : 'false'}
+        data-audio-mobile-record={audioWatchMobile ? 'true' : 'false'}
       >
         <header className={`playlists-header${selectedId ? ' mobile-only-hidden' : ''}`}>
           <h1>{t('playlists.title')}</h1>
@@ -909,6 +928,9 @@ export default function PlaylistsPage({
           data-player-active={showPlayer ? 'true' : 'false'}
           data-youtube-watch={youtubeWatchActive ? 'true' : 'false'}
           data-mobile-video-immersive={youtubeWatchMobile ? 'true' : 'false'}
+          data-audio-now-playing={audioWatchActive ? 'true' : 'false'}
+          data-audio-desktop-dock={audioWatchDesktop ? 'true' : 'false'}
+          data-audio-mobile-record={audioWatchMobile ? 'true' : 'false'}
           data-playback-mode={playbackMode}
         >
           <aside className="playlists-sidebar" aria-label={t('playlists.savedTitle')}>
@@ -1049,7 +1071,7 @@ export default function PlaylistsPage({
               </div>
             ) : detail ? (
               <div
-                className={`playlists-main-inner${youtubeWatchActive ? ' playlists-main-inner--youtube-watch' : ''}${youtubeWatchMobile ? ' playlists-main-inner--mobile-video' : ''}`}
+                className={`playlists-main-inner${youtubeWatchActive ? ' playlists-main-inner--youtube-watch' : ''}${youtubeWatchMobile ? ' playlists-main-inner--mobile-video' : ''}${audioWatchMobile ? ' playlists-main-inner--mobile-audio' : ''}${audioWatchDesktop ? ' playlists-main-inner--desktop-audio' : ''}`}
               >
                 {renderMainToolbar(detail.playlist, detail.items.length > 0)}
 
@@ -1077,6 +1099,8 @@ export default function PlaylistsPage({
                     data-youtube-watch={youtubeWatchActive ? 'true' : 'false'}
                     data-mobile-video-immersive={youtubeWatchMobile ? 'true' : 'false'}
                     data-mobile-video-tracks-open={youtubeWatchActive ? 'true' : 'false'}
+                    data-audio-desktop-dock={audioWatchDesktop ? 'true' : 'false'}
+                    data-audio-mobile-record={audioWatchMobile ? 'true' : 'false'}
                     data-tracks-edit={tracksEditMode ? 'true' : 'false'}
                   >
                     <div className="playlists-player-col">
@@ -1104,7 +1128,7 @@ export default function PlaylistsPage({
                         </button>
                       )}
 
-                      {showPlayer && playbackMode === 'audio' && renderAudioPlayer()}
+                      {showPlayer && playbackMode === 'audio' && renderAudioPlayer('inline')}
 
                       {showPlayer && playbackMode === 'video' && (
                         <YoutubePlaylistPlayer
@@ -1130,7 +1154,10 @@ export default function PlaylistsPage({
                       )}
                     </div>
 
-                    <aside className="playlists-tracks-col" aria-label={t('playlists.tracksTitle')}>
+                    <aside
+                      className={`playlists-tracks-col${audioWatchMobile ? ' playlists-tracks-col--hidden-mobile-audio' : ''}`}
+                      aria-label={t('playlists.tracksTitle')}
+                    >
                       <div className="playlists-tracks-head">
                         <h3>
                           {youtubeWatchActive
@@ -1242,6 +1269,17 @@ export default function PlaylistsPage({
                       </div>
                     )}
                   </div>
+                )}
+                {audioWatchDesktop && renderAudioPlayer('dock')}
+                {audioWatchMobile && detail && (
+                  <PlaylistQueuePanel
+                    open={queueOpen}
+                    onClose={() => setQueueOpen(false)}
+                    items={detail.items}
+                    activeIndex={activeIndex}
+                    playing={playing}
+                    onSelectTrack={(index) => engageAndPlay(index)}
+                  />
                 )}
               </div>
             ) : null}
