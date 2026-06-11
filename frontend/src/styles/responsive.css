@@ -179,7 +179,8 @@ body {
     padding: 0;
   }
 
-  body.playlists-immersive-active .page-body-playlists {
+  body.playlists-immersive-active .page-body-playlists,
+  body.playlists-mobile-video-active .page-body-playlists {
     flex: 1;
     min-height: 0;
     height: 100%;

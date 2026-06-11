@@ -496,6 +496,7 @@ export default function PlaylistsPage({
   const currentItem = detail?.items[activeIndex];
   const showPlayer = playerEngaged && playerItems.length > 0;
   const videoImmersive = showPlayer && playbackMode === 'video';
+  const mobileVideoImmersive = videoImmersive && isMobileViewport;
   const audioNowPlaying = showPlayer && playbackMode === 'audio' && playerView === 'nowPlaying';
   const audioMinimized = showPlayer && playbackMode === 'audio' && playerView === 'browse';
 
@@ -520,6 +521,18 @@ export default function PlaylistsPage({
       document.body.classList.remove('playlists-video-immersive-active');
     };
   }, [videoImmersive]);
+
+  useEffect(() => {
+    if (!mobileVideoImmersive) {
+      document.body.classList.remove('playlists-mobile-video-active');
+      return;
+    }
+    setQueueOpen(false);
+    document.body.classList.add('playlists-mobile-video-active');
+    return () => {
+      document.body.classList.remove('playlists-mobile-video-active');
+    };
+  }, [mobileVideoImmersive]);
 
   const startRename = (id: string, title: string) => {
     setRenamingId(id);
@@ -618,7 +631,11 @@ export default function PlaylistsPage({
   );
 
   const renderPlayerChromeProps = () => ({
-    onToggleQueue: () => setQueueOpen((open) => !open),
+    onToggleQueue: () => {
+      if (mobileVideoImmersive) return;
+      setQueueOpen((open) => !open);
+    },
+    showQueue: !mobileVideoImmersive,
     repeatMode,
     onCycleRepeat: cycleRepeat,
     shuffleEnabled,
@@ -836,6 +853,7 @@ export default function PlaylistsPage({
       <main
         className="playlists-page"
         data-video-immersive={videoImmersive ? 'true' : 'false'}
+        data-mobile-video-immersive={mobileVideoImmersive ? 'true' : 'false'}
         data-audio-now-playing={audioNowPlaying ? 'true' : 'false'}
       >
         <header className="playlists-header">
@@ -855,6 +873,7 @@ export default function PlaylistsPage({
           data-mobile-view={selectedId ? 'detail' : 'list'}
           data-player-active={showPlayer ? 'true' : 'false'}
           data-audio-now-playing={audioNowPlaying ? 'true' : 'false'}
+          data-mobile-video-immersive={mobileVideoImmersive ? 'true' : 'false'}
           data-playback-mode={playbackMode}
         >
           <aside className="playlists-sidebar" aria-label={t('playlists.savedTitle')}>
@@ -1006,7 +1025,7 @@ export default function PlaylistsPage({
                 </div>
               ) : (
               <div
-                className={`playlists-main-inner${videoImmersive ? ' playlists-main-inner--video-immersive' : ''}`}
+                className={`playlists-main-inner${videoImmersive ? ' playlists-main-inner--video-immersive' : ''}${mobileVideoImmersive ? ' playlists-main-inner--mobile-video' : ''}`}
               >
                 {!videoImmersive && renderMainToolbar(detail.playlist, detail.items.length > 0)}
 
@@ -1021,7 +1040,9 @@ export default function PlaylistsPage({
                     data-playback-mode={playbackMode}
                     data-player-engaged={showPlayer ? 'true' : 'false'}
                     data-video-immersive={videoImmersive ? 'true' : 'false'}
-                    data-queue-open={queueOpen ? 'true' : 'false'}
+                    data-mobile-video-immersive={mobileVideoImmersive ? 'true' : 'false'}
+                    data-mobile-video-tracks-open="false"
+                    data-queue-open={mobileVideoImmersive ? 'false' : queueOpen ? 'true' : 'false'}
                   >
                     <div className="playlists-player-col">
                       {!showPlayer && currentItem && (
@@ -1232,7 +1253,7 @@ export default function PlaylistsPage({
             className="playlist-video-chrome"
             {...renderPlayerChromeProps()}
           />
-          {renderQueuePanel()}
+          {!mobileVideoImmersive && renderQueuePanel()}
         </>
       )}
 

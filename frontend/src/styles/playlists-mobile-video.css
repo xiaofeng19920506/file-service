@@ -113,8 +113,9 @@ body.playlists-mobile-video-active .nav-bottom {
 
   /* 控制条在视频底部叠层内，横向排列（覆盖 mobile.css 的纵向堆叠） */
   .youtube-player-section--mobile-immersive .youtube-player-overlay {
-    padding: 2rem 0.65rem 0.55rem;
-    padding-bottom: max(0.55rem, var(--safe-bottom));
+    padding:
+      2rem 0.65rem
+      calc(4.25rem + max(0.55rem, var(--safe-bottom)));
   }
 
   .youtube-player-section--mobile-immersive .youtube-player-bar {
@@ -163,27 +164,8 @@ body.playlists-mobile-video-active .nav-bottom {
     bottom: 1.25rem;
   }
 
-  /* 竖屏时提示旋转 */
-  .youtube-player-section--mobile-immersive .youtube-player-rotate-hint {
-    display: none;
-  }
-
-  @media (orientation: portrait) {
-    .youtube-player-section--mobile-immersive .youtube-player-rotate-hint {
-      display: flex;
-      position: absolute;
-      inset: 0;
-      z-index: 8;
-      align-items: center;
-      justify-content: center;
-      padding: 1.5rem;
-      text-align: center;
-      font-size: 1rem;
-      font-weight: 600;
-      color: #fff;
-      background: rgba(0, 0, 0, 0.72);
-      pointer-events: none;
-    }
+  .playlists-player-stage[data-mobile-video-immersive='true'] .playlists-tracks-col {
+    display: none !important;
   }
 
   /* 菜单（在全屏视频层内） */

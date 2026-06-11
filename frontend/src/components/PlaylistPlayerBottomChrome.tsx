@@ -5,6 +5,7 @@ import type { PlaylistRepeatMode } from '../lib/playlist-repeat-mode';
 
 type PlaylistPlayerBottomChromeProps = {
   className?: string;
+  showQueue?: boolean;
   onToggleQueue: () => void;
   repeatMode: PlaylistRepeatMode;
   onCycleRepeat: () => void;
@@ -16,6 +17,7 @@ type PlaylistPlayerBottomChromeProps = {
 
 export default function PlaylistPlayerBottomChrome({
   className = '',
+  showQueue = true,
   onToggleQueue,
   repeatMode,
   onCycleRepeat,
@@ -38,15 +40,17 @@ export default function PlaylistPlayerBottomChrome({
       className={`playlist-now-playing-chrome${className ? ` ${className}` : ''}`}
       aria-label={t('playlists.playerChrome')}
     >
-      <button
-        type="button"
-        className="playlist-chrome-btn playlist-chrome-btn--queue"
-        onClick={onToggleQueue}
-        aria-label={t('playlists.queueTitle')}
-      >
-        <QueueIcon />
-        <span className="playlist-chrome-label">{t('playlists.queueShort')}</span>
-      </button>
+      {showQueue && (
+        <button
+          type="button"
+          className="playlist-chrome-btn playlist-chrome-btn--queue"
+          onClick={onToggleQueue}
+          aria-label={t('playlists.queueTitle')}
+        >
+          <QueueIcon />
+          <span className="playlist-chrome-label">{t('playlists.queueShort')}</span>
+        </button>
+      )}
 
       <div className="playlist-chrome-actions" role="group" aria-label={t('playlists.playbackOptions')}>
         <button

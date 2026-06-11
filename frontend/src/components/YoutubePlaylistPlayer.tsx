@@ -893,12 +893,6 @@ export default function YoutubePlaylistPlayer({
           <div className="youtube-player-mobile-chrome">{mobileChrome}</div>
         )}
 
-        {immersive && lockLandscape && (
-          <div className="youtube-player-rotate-hint" aria-live="polite">
-            {t('playlists.rotateForVideo')}
-          </div>
-        )}
-
         {activeCaption && (
           <div className="youtube-player-subtitles" aria-live="polite">
             <p className="youtube-player-subtitle-text">{activeCaption}</p>
