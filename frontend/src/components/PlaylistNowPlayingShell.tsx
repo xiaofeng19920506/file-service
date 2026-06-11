@@ -24,9 +24,9 @@ type PlaylistNowPlayingShellProps = {
 
 export default function PlaylistNowPlayingShell({
   playlistTitle,
-  trackTitle,
-  trackCurrent,
-  trackTotal,
+  trackTitle: _trackTitle,
+  trackCurrent: _trackCurrent,
+  trackTotal: _trackTotal,
   onMinimize,
   onToggleQueue,
   repeatMode,
@@ -52,17 +52,42 @@ export default function PlaylistNowPlayingShell({
         </button>
 
         <div className="playlist-now-playing-header-text desktop-only">
-          <span className="playlist-now-playing-eyebrow">{t('playlists.nowPlaying')}</span>
-          <ScrollingTitle text={trackTitle} className="playlist-now-playing-title" />
-          <span className="playlist-now-playing-subtitle">{playlistTitle}</span>
+          <ScrollingTitle text={playlistTitle} className="playlist-now-playing-title" />
         </div>
 
         <p className="playlist-np-mobile-playlist mobile-only">{playlistTitle}</p>
 
         <div className="playlist-now-playing-header-end">
-          <span className="playlist-now-playing-counter desktop-only">
-            {t('playlists.trackCounter', { current: trackCurrent, total: trackTotal })}
-          </span>
+          <div
+            className="playlist-np-mode-switch desktop-only"
+            role="group"
+            aria-label={t('playlists.playbackMode')}
+          >
+            <button
+              type="button"
+              className={`playlist-np-mode-btn${playbackMode === 'audio' ? ' active' : ''}`}
+              aria-pressed={playbackMode === 'audio'}
+              onClick={() => onPlaybackModeChange('audio')}
+            >
+              {t('playlists.playbackMp3')}
+            </button>
+            <button
+              type="button"
+              className={`playlist-np-mode-btn${playbackMode === 'video' ? ' active' : ''}`}
+              aria-pressed={playbackMode === 'video'}
+              onClick={() => onPlaybackModeChange('video')}
+            >
+              {t('playlists.playbackVideo')}
+            </button>
+          </div>
+          <button
+            type="button"
+            className="playlist-np-queue-btn desktop-only"
+            onClick={onToggleQueue}
+            aria-label={t('playlists.queueTitle')}
+          >
+            <QueueIcon />
+          </button>
           <div
             className="playlist-np-mode-switch mobile-only"
             role="group"

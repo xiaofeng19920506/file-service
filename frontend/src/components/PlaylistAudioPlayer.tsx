@@ -164,6 +164,7 @@ export default function PlaylistAudioPlayer({
   const [volume, setVolume] = useState(readStoredPlayerVolume);
   const [muted, setMuted] = useState(false);
   const volumeBeforeMuteRef = useRef(volume);
+  const lyricsPanelRef = useRef<HTMLDivElement>(null);
 
   const current = items[activeIndex];
   const audioStatus = current?.audio;
@@ -180,6 +181,13 @@ export default function PlaylistAudioPlayer({
   useEffect(() => {
     wantPlayRef.current = playing;
   }, [playing]);
+
+  useEffect(() => {
+    const panel = lyricsPanelRef.current;
+    if (!panel) return;
+    const activeLine = panel.querySelector<HTMLElement>('[data-active="true"]');
+    activeLine?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [currentTime, captionCues]);
 
   const refreshAudioStatus = useCallback(
     async (videoId: string) => {
@@ -673,6 +681,173 @@ export default function PlaylistAudioPlayer({
         ? t('playlists.repeatAll')
         : t('playlists.repeatOff');
 
+  const audioOptions = (
+    <div className={`audio-options${isNowPlaying ? ' playlist-np-audio-options' : ''}`}>
+      <div className="audio-lang-switch" role="group" aria-label={t('playlists.subtitleLanguage')}>
+        <button
+          type="button"
+          className={`audio-lang-btn${subtitleLang === 'en' ? ' active' : ''}`}
+          onClick={() => {
+            setSubtitleLang('en');
+            writeSubtitleLanguageForVideo(current.youtubeVideoId, 'en');
+          }}
+        >
+          {t('playlists.subtitleEnglishShort')}
+        </button>
+        <button
+          type="button"
+          className={`audio-lang-btn${subtitleLang === 'zh' ? ' active' : ''}`}
+          onClick={() => {
+            setSubtitleLang('zh');
+            writeSubtitleLanguageForVideo(current.youtubeVideoId, 'zh');
+          }}
+        >
+          {t('playlists.subtitleChineseShort')}
+        </button>
+      </div>
+
+      <div className="audio-volume">
+        <div
+          ref={volumeProgressRef}
+          className="audio-volume-slider"
+          role="slider"
+          tabIndex={0}
+          aria-label={t('playlists.volume')}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={volumePct}
+          onClick={(e) => seekVolumeFromClientX(e.clientX)}
+          onKeyDown={(e) => {
+            if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+            e.preventDefault();
+            const step = e.key === 'ArrowRight' ? 5 : -5;
+            setVolumeLevel((muted ? 0 : volume) + step);
+          }}
+        >
+          <div className="audio-volume-track">
+            <div className="audio-volume-fill" style={{ width: `${volumePct}%` }} />
+          </div>
+        </div>
+        <button
+          type="button"
+          className="audio-transport-btn audio-volume-btn"
+          onClick={toggleMute}
+          aria-label={muted || volume === 0 ? t('playlists.unmute') : t('playlists.mute')}
+        >
+          <VolumeIcon level={volume} muted={muted || volume === 0} />
+        </button>
+      </div>
+    </div>
+  );
+
+  const transportControls = (
+    <div className="audio-transport" role="group" aria-label={t('playlists.playerSectionAudio')}>
+      <button
+        type="button"
+        className="audio-transport-btn"
+        onClick={goPrev}
+        disabled={prevDisabled}
+        aria-label={t('playlists.prevTrack')}
+      >
+        <svg className="audio-transport-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <path d="M14 6l-6 6 6 6V6z" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        className="audio-transport-btn audio-transport-btn--primary"
+        onClick={() => {
+          if (!streamUrl && loadingStream) return;
+          if (!streamUrl) {
+            wantPlayRef.current = true;
+            onPlayingChange(true);
+            return;
+          }
+          onPlayingChange(!playing);
+        }}
+        disabled={loadingStream && !streamUrl}
+        aria-label={playing ? t('playlists.pause') : t('playlists.play')}
+      >
+        {playing ? (
+          <svg className="audio-transport-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+            <path d="M7 6h3v12H7V6zm7 0h3v12h-3V6z" />
+          </svg>
+        ) : (
+          <svg
+            className="audio-transport-icon audio-transport-icon--play"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-hidden
+          >
+            <path d="M8 5v14l11-7L8 5z" />
+          </svg>
+        )}
+      </button>
+      <button
+        type="button"
+        className="audio-transport-btn"
+        onClick={goNext}
+        disabled={nextDisabled}
+        aria-label={t('playlists.nextTrack')}
+      >
+        <svg className="audio-transport-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <path d="M10 6l6 6-6 6V6z" />
+        </svg>
+      </button>
+    </div>
+  );
+
+  const progressBlock = (
+    <div className="playlist-np-progress">
+      <AudioSeekBar
+        currentTime={currentTime}
+        duration={duration}
+        canSeek={canSeek}
+        usingPreview={usingPreview}
+        onSeekRatio={seekToRatio}
+        className="audio-player-bar-progress"
+      />
+      <div className={`audio-time${isNowPlaying ? ' playlist-np-times' : ''}`}>
+        {isNowPlaying ? (
+          <>
+            <span>{formatPlaybackTime(currentTime)}</span>
+            <span>{formatPlaybackTime(duration)}</span>
+          </>
+        ) : (
+          formatPlaybackTimeRange(currentTime, duration)
+        )}
+      </div>
+    </div>
+  );
+
+  const shuffleRepeatControls = isNowPlaying ? (
+    <div
+      className="playlist-np-secondary"
+      role="group"
+      aria-label={t('playlists.playbackOptions')}
+    >
+      <button
+        type="button"
+        className={`playlist-np-icon-btn${shuffleEnabled ? ' active' : ''}`}
+        onClick={onToggleShuffle}
+        aria-pressed={shuffleEnabled}
+        aria-label={t('playlists.shuffle')}
+        title={t('playlists.shuffle')}
+      >
+        <ShuffleIcon />
+      </button>
+      <button
+        type="button"
+        className={`playlist-np-icon-btn${repeatMode !== 'off' ? ' active' : ''}`}
+        onClick={onCycleRepeat}
+        aria-label={repeatLabel}
+        title={repeatLabel}
+      >
+        <RepeatIcon mode={repeatMode} />
+      </button>
+    </div>
+  ) : null;
+
   return (
     <section
       className={`playlist-audio-player${isNowPlaying ? ' playlist-audio-player--now-playing' : ''}`}
@@ -706,22 +881,6 @@ export default function PlaylistAudioPlayer({
           </div>
         )}
 
-      {isProcessing && (
-        <p className="playlists-muted playlist-audio-status">
-          {usingPreview
-            ? t('playlists.audioCachingWhilePlaying', { title: current.title })
-            : t('playlists.audioCaching', { title: current.title })}
-        </p>
-      )}
-
-      {audioStatus?.status === 'failed' && (
-        <p className="error-msg playlist-audio-status">
-          {friendlyError(audioStatus.errorCode ?? 'audio_extract_failed', t)}
-        </p>
-      )}
-
-      {playerError && <p className="error-msg playlist-audio-status">{playerError}</p>}
-
       <audio
         ref={audioRef}
         className="playlist-audio-element"
@@ -739,186 +898,100 @@ export default function PlaylistAudioPlayer({
         onPause={handlePause}
       />
 
-      <div className="playlist-audio-controls">
+      <div className={`playlist-audio-controls${isNowPlaying ? ' playlist-np-info-col' : ''}`}>
+        {isProcessing && (
+          <p className="playlists-muted playlist-audio-status">
+            {usingPreview
+              ? t('playlists.audioCachingWhilePlaying', { title: current.title })
+              : t('playlists.audioCaching', { title: current.title })}
+          </p>
+        )}
+
+        {audioStatus?.status === 'failed' && (
+          <p className="error-msg playlist-audio-status">
+            {friendlyError(audioStatus.errorCode ?? 'audio_extract_failed', t)}
+          </p>
+        )}
+
+        {playerError && <p className="error-msg playlist-audio-status">{playerError}</p>}
+
         <header className={`playlist-audio-meta${isNowPlaying ? ' desktop-only' : ''}`}>
           <ScrollingTitle text={current.title} className="playlist-audio-title" />
+          {playlistTitle && isNowPlaying && (
+            <span className="playlist-np-album-label desktop-only">{playlistTitle}</span>
+          )}
           <span className="playlist-audio-index">
             {t('playlists.trackCounter', { current: activeIndex + 1, total: items.length })}
           </span>
         </header>
 
-        <div className={isNowPlaying ? 'playlist-np-dock' : undefined}>
         {isNowPlaying && (
           <div
-            className="playlist-np-secondary"
-            role="group"
-            aria-label={t('playlists.playbackOptions')}
+            ref={lyricsPanelRef}
+            className="playlist-np-lyrics-desktop desktop-only"
+            aria-live="polite"
           >
-            <button
-              type="button"
-              className={`playlist-np-icon-btn${shuffleEnabled ? ' active' : ''}`}
-              onClick={onToggleShuffle}
-              aria-pressed={shuffleEnabled}
-              aria-label={t('playlists.shuffle')}
-              title={t('playlists.shuffle')}
-            >
-              <ShuffleIcon />
-            </button>
-            <button
-              type="button"
-              className={`playlist-np-icon-btn${repeatMode !== 'off' ? ' active' : ''}`}
-              onClick={onCycleRepeat}
-              aria-label={repeatLabel}
-              title={repeatLabel}
-            >
-              <RepeatIcon mode={repeatMode} />
-            </button>
+            {captionCues.length > 0 ? (
+              <ul className="playlist-np-lyrics-lines">
+                {captionCues.map((cue, index) => {
+                  const active =
+                    currentTime >= cue.start - 0.05 && currentTime < cue.end + 0.05;
+                  return (
+                    <li
+                      key={`${cue.start}-${index}`}
+                      className={active ? 'active' : undefined}
+                      data-active={active || undefined}
+                    >
+                      {cue.text}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="playlist-np-lyrics-empty">{t('playlists.noLyricsYet')}</p>
+            )}
           </div>
         )}
 
-        <div className={`audio-player-bar${isNowPlaying ? ' playlist-np-transport-block' : ''}`}>
-          <div className="audio-transport" role="group" aria-label={t('playlists.playerSectionAudio')}>
-            <button
-              type="button"
-              className="audio-transport-btn"
-              onClick={goPrev}
-              disabled={prevDisabled}
-              aria-label={t('playlists.prevTrack')}
-            >
-              <svg className="audio-transport-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                <path d="M14 6l-6 6 6 6V6z" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              className="audio-transport-btn audio-transport-btn--primary"
-              onClick={() => {
-                if (!streamUrl && loadingStream) return;
-                if (!streamUrl) {
-                  wantPlayRef.current = true;
-                  onPlayingChange(true);
-                  return;
-                }
-                onPlayingChange(!playing);
-              }}
-              disabled={loadingStream && !streamUrl}
-              aria-label={playing ? t('playlists.pause') : t('playlists.play')}
-            >
-              {playing ? (
-                <svg className="audio-transport-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                  <path d="M7 6h3v12H7V6zm7 0h3v12h-3V6z" />
-                </svg>
-              ) : (
-                <svg
-                  className="audio-transport-icon audio-transport-icon--play"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  aria-hidden
-                >
-                  <path d="M8 5v14l11-7L8 5z" />
-                </svg>
-              )}
-            </button>
-            <button
-              type="button"
-              className="audio-transport-btn"
-              onClick={goNext}
-              disabled={nextDisabled}
-              aria-label={t('playlists.nextTrack')}
-            >
-              <svg className="audio-transport-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                <path d="M10 6l6 6-6 6V6z" />
-              </svg>
-            </button>
-          </div>
+        {isNowPlaying && (
+          <div className="playlist-np-lang-desktop desktop-only">{audioOptions}</div>
+        )}
 
-          {isNowPlaying && (
-            <div className="playlist-np-track">
-              <ScrollingTitle text={current.title} className="playlist-np-track-title" />
-              {playlistTitle && <p className="playlist-np-track-album">{playlistTitle}</p>}
+        {!isNowPlaying && (
+          <>
+            <div className="audio-player-bar">
+              {transportControls}
+              {progressBlock}
             </div>
-          )}
-
-          <div className="playlist-np-progress">
-            <AudioSeekBar
-              currentTime={currentTime}
-              duration={duration}
-              canSeek={canSeek}
-              usingPreview={usingPreview}
-              onSeekRatio={seekToRatio}
-              className="audio-player-bar-progress"
-            />
-            <div className={`audio-time${isNowPlaying ? ' playlist-np-times' : ''}`}>
-              {isNowPlaying ? (
-                <>
-                  <span>{formatPlaybackTime(currentTime)}</span>
-                  <span>{formatPlaybackTime(duration)}</span>
-                </>
-              ) : (
-                formatPlaybackTimeRange(currentTime, duration)
-              )}
-            </div>
-          </div>
-        </div>
-        </div>
-
-        <div className={`audio-options${isNowPlaying ? ' desktop-only' : ''}`}>
-          <div className="audio-lang-switch" role="group" aria-label={t('playlists.subtitleLanguage')}>
-            <button
-              type="button"
-              className={`audio-lang-btn${subtitleLang === 'en' ? ' active' : ''}`}
-              onClick={() => {
-                setSubtitleLang('en');
-                writeSubtitleLanguageForVideo(current.youtubeVideoId, 'en');
-              }}
-            >
-              {t('playlists.subtitleEnglishShort')}
-            </button>
-            <button
-              type="button"
-              className={`audio-lang-btn${subtitleLang === 'zh' ? ' active' : ''}`}
-              onClick={() => {
-                setSubtitleLang('zh');
-                writeSubtitleLanguageForVideo(current.youtubeVideoId, 'zh');
-              }}
-            >
-              {t('playlists.subtitleChineseShort')}
-            </button>
-          </div>
-
-          <div className="audio-volume">
-            <div
-              ref={volumeProgressRef}
-              className="audio-volume-slider"
-              role="slider"
-              tabIndex={0}
-              aria-label={t('playlists.volume')}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={volumePct}
-              onClick={(e) => seekVolumeFromClientX(e.clientX)}
-              onKeyDown={(e) => {
-                if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-                e.preventDefault();
-                const step = e.key === 'ArrowRight' ? 5 : -5;
-                setVolumeLevel((muted ? 0 : volume) + step);
-              }}
-            >
-              <div className="audio-volume-track">
-                <div className="audio-volume-fill" style={{ width: `${volumePct}%` }} />
-              </div>
-            </div>
-            <button
-              type="button"
-              className="audio-transport-btn audio-volume-btn"
-              onClick={toggleMute}
-              aria-label={muted || volume === 0 ? t('playlists.unmute') : t('playlists.mute')}
-            >
-              <VolumeIcon level={volume} muted={muted || volume === 0} />
-            </button>
-          </div>
-        </div>
+            {audioOptions}
+          </>
+        )}
       </div>
+
+      {isNowPlaying && (
+        <div className="playlist-np-dock">
+          <div className="playlist-np-desktop-footer desktop-only">
+            {progressBlock}
+            <div className="playlist-np-footer-row">
+              {shuffleRepeatControls}
+              <div className="playlist-np-transport-block">{transportControls}</div>
+              <div className="playlist-np-volume-desktop">{audioOptions}</div>
+            </div>
+          </div>
+
+          <div className="playlist-np-mobile-dock mobile-only">
+            {shuffleRepeatControls}
+            <div className="playlist-np-transport-block">
+              <div className="playlist-np-track">
+                <ScrollingTitle text={current.title} className="playlist-np-track-title" />
+                {playlistTitle && <p className="playlist-np-track-album">{playlistTitle}</p>}
+              </div>
+              {transportControls}
+              {progressBlock}
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </section>
   );
