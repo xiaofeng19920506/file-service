@@ -796,6 +796,7 @@ export default function PlaylistsPage({
         <div
           className="playlists-workspace"
           data-mobile-view={selectedId ? 'detail' : 'list'}
+          data-player-active={showPlayer ? 'true' : 'false'}
         >
           <aside className="playlists-sidebar" aria-label={t('playlists.savedTitle')}>
             <form className="playlists-create-form" onSubmit={(e) => void handleImport(e)}>
@@ -1153,7 +1154,7 @@ export default function PlaylistsPage({
         />
       )}
 
-      {selectedId && detail && detail.items.length > 0 && currentItem && (
+      {showPlayer && selectedId && detail && detail.items.length > 0 && currentItem && (
         <div className="playlists-mobile-dock mobile-only">
           <div className="playlists-mobile-dock-meta">
             <span className="playlists-mobile-dock-title">{currentItem.title}</span>

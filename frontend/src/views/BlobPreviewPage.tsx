@@ -76,7 +76,14 @@ export default function BlobPreviewPage({ blobId }: BlobPreviewPageProps) {
           <h1>{title}</h1>
           <p className="blob-preview-subtitle">{t('library.previewPageSubtitle')}</p>
         </div>
-        <button type="button" className="btn-secondary" onClick={() => window.close()}>
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={() => {
+            if (window.history.length > 1) window.history.back();
+            else window.location.hash = '#/library';
+          }}
+        >
           {t('library.closePreviewTab')}
         </button>
       </header>

@@ -399,7 +399,7 @@
     left: 0;
     right: 0;
     bottom: var(--bottom-nav-height);
-    z-index: 12;
+    z-index: var(--z-dock, 15);
     display: flex;
     flex-direction: column;
     gap: 0.45rem;
@@ -459,9 +459,7 @@
     box-shadow: none;
   }
 
-  .page-body-playlists .playlists-workspace[data-mobile-view='detail'] {
-    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
-  }
+  /* 播放条底部留白见 responsive.css（data-player-active） */
 
   .playlists-mobile-transport-btn {
     flex-shrink: 0;
@@ -596,14 +594,15 @@
     overflow: visible;
   }
 
-  .playlists-player-stage[data-player-engaged='true'] .playlists-tracks-col {
-    max-height: min(26vh, 200px);
+  .playlists-tracks-col {
+    flex: 1 1 auto;
+    min-height: 6rem;
+    max-height: none;
   }
 
-  .playlists-tracks-col {
+  .playlists-player-stage:not([data-player-engaged='true']) .playlists-tracks-col {
+    max-height: min(40vh, 280px);
     flex: 0 0 auto;
-    max-height: min(32vh, 260px);
-    min-height: 0;
   }
 
   /* MP3 模式：歌词区优先 */
@@ -657,12 +656,8 @@
     font-weight: 600;
   }
 
-  .playlists-player-stage[data-playback-mode='audio'] .playlists-tracks-col {
-    max-height: min(28vh, 220px);
-  }
-
-  .playlists-player-stage[data-player-engaged='true'][data-playback-mode='audio'] .playlists-tracks-col {
-    max-height: min(24vh, 180px);
+  .playlists-player-stage[data-playback-mode='audio']:not([data-player-engaged='true']) .playlists-tracks-col {
+    max-height: min(36vh, 240px);
   }
 
   .playlists-player-stage[data-player-engaged='true'] .playlist-audio-player .audio-transport {
@@ -683,11 +678,11 @@
 
   .playlist-audio-lyrics-panel {
     display: flex;
-    flex: 0 1 auto;
+    flex: 1 1 auto;
     flex-direction: column;
     justify-content: center;
     min-height: 4.5rem;
-    max-height: min(28vh, 200px);
+    max-height: min(32vh, 220px);
     padding: 1rem 1.1rem;
     border-radius: 14px;
     background: var(--surface-secondary);
@@ -1045,7 +1040,7 @@
 
   .upload-confirm-workspace {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
   }
 
   .upload-confirm-meta-pane,

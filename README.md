@@ -5,7 +5,8 @@
 ## 目录结构
 
 ```
-frontend/          React 前端（:5173）
+frontend/          Next.js 前端（`npm run dev` → :3000）
+  src/styles/      responsive.css（响应式基础）+ mobile.css（≤900px）
 backend/
   api/             Fastify API（:3000）
   worker/          BullMQ 合并任务

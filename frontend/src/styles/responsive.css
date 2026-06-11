@@ -1,0 +1,203 @@
+/**
+ * 响应式设计基础层
+ * - 安全区（刘海 /  Home 指示条）
+ * - 触控目标、滚动容器、层级（z-index）
+ * - 模态框小屏适配
+ */
+
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+
+  --z-nav: 10;
+  --z-dock: 15;
+  --z-bottom-nav: 20;
+  --z-overlay: 100;
+  --z-modal: 200;
+
+  --playlists-mobile-dock-height: 5.75rem;
+  --touch-target: 2.75rem;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100dvh;
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+}
+
+/* 可滚动主内容区（避免 fixed 底栏挡住最后一项） */
+.scroll-region {
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+.nav {
+  z-index: var(--z-nav);
+  padding-top: var(--safe-top);
+}
+
+.nav-bottom {
+  z-index: var(--z-bottom-nav);
+}
+
+.metadata-modal-overlay,
+.image-crop-overlay {
+  z-index: var(--z-modal);
+  padding:
+    max(0.75rem, var(--safe-top))
+    max(0.75rem, var(--safe-right))
+    max(0.75rem, var(--safe-bottom))
+    max(0.75rem, var(--safe-left));
+}
+
+.metadata-modal {
+  max-height: min(90dvh, calc(100dvh - var(--safe-top) - var(--safe-bottom) - 1.5rem));
+}
+
+.image-crop-modal {
+  max-height: min(90dvh, calc(100dvh - var(--safe-top) - var(--safe-bottom) - 1.5rem));
+}
+
+.modal-close-btn {
+  min-width: var(--touch-target);
+  min-height: var(--touch-target);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+
+@media (max-width: 900px) {
+  .app-content {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* 管理页：与诗库/合并一致，内容区可滚动 */
+  .admin-page {
+    flex: 1;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    padding-bottom: calc(1.25rem + var(--bottom-nav-height));
+  }
+
+  /* 模态框：底部 sheet，全宽可点按钮 */
+  .metadata-modal-overlay {
+    align-items: flex-end;
+    padding:
+      max(0.5rem, var(--safe-top))
+      max(0, var(--safe-right))
+      max(0, var(--safe-bottom))
+      max(0, var(--safe-left));
+  }
+
+  .metadata-modal {
+    width: 100%;
+    max-width: 100%;
+    max-height: min(92dvh, calc(100dvh - var(--safe-top) - 0.5rem));
+    border-radius: 16px 16px 0 0;
+    margin: 0;
+  }
+
+  .metadata-modal-header {
+    padding-top: max(1rem, calc(0.5rem + var(--safe-top)));
+  }
+
+  .metadata-modal-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .metadata-modal-actions,
+  .blob-action-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 0.5rem;
+    padding-bottom: max(1rem, var(--safe-bottom));
+  }
+
+  .metadata-modal-actions .btn-primary,
+  .metadata-modal-actions .btn-secondary,
+  .blob-action-actions .btn-primary,
+  .blob-action-actions .btn-secondary {
+    width: 100%;
+    min-height: var(--touch-target);
+    justify-content: center;
+  }
+
+  .image-crop-overlay {
+    align-items: flex-end;
+    padding-bottom: max(0, var(--safe-bottom));
+  }
+
+  .image-crop-modal {
+    width: 100%;
+    border-radius: 16px 16px 0 0;
+  }
+
+  /* 敬拜列表：播放条仅在播放时显示，避免挡住内容 */
+  .playlists-mobile-dock {
+    z-index: var(--z-dock);
+    bottom: calc(var(--bottom-nav-height) + var(--safe-bottom));
+    padding-bottom: max(0.65rem, var(--safe-bottom));
+  }
+
+  .page-body-playlists .playlists-workspace[data-mobile-view='detail'][data-player-active='true'] {
+    padding-bottom: calc(
+      var(--playlists-mobile-dock-height) + var(--bottom-nav-height) + var(--safe-bottom) + 0.75rem
+    );
+  }
+
+  .page-body-playlists .playlists-main-inner {
+    padding-bottom: 0.5rem;
+  }
+
+  /* 顶栏移动菜单内导航 */
+  .nav-mobile-menu-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .nav-mobile-menu-nav .page-tab {
+    width: 100%;
+    min-height: var(--touch-target);
+    justify-content: flex-start;
+    text-align: left;
+    padding: 0.65rem 0.85rem;
+    border-radius: 10px;
+  }
+
+  .nav-mobile-menu-nav .page-tab.active {
+    background: var(--blue-muted);
+    color: var(--blue);
+    box-shadow: none;
+  }
+
+  /* 减少误触缩放延迟 */
+  button,
+  a,
+  .page-tab,
+  .mobile-segment {
+    touch-action: manipulation;
+  }
+}

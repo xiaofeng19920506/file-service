@@ -15,10 +15,6 @@ import { useAppPage } from './hooks/useAppPage';
 import { hasStoredSession } from './lib/auth-session';
 import { formatUserDisplayName } from './lib/user-name';
 import { useI18n } from './i18n';
-import './App.css';
-import './styles/apple-design.css';
-import './styles/mobile.css';
-
 export default function App() {
   const { t, locale, setLocale } = useI18n();
   const { user, loading, logout, permissions, isAdmin } = useAuth();
@@ -224,6 +220,18 @@ export default function App() {
 
         {mobileMenuOpen && (
           <div className="nav-mobile-menu" id="nav-mobile-menu">
+            <div className="nav-mobile-menu-section nav-mobile-menu-nav mobile-only">
+              <PageNavTabs
+                page={page}
+                navigate={(p) => {
+                  navigate(p);
+                  setMobileMenuOpen(false);
+                }}
+                canMerge={permissions.canMerge}
+                canEdit={permissions.canEdit}
+                variant="header"
+              />
+            </div>
             <div className="nav-mobile-menu-section">{accountActions}</div>
             <div className="nav-mobile-menu-section nav-mobile-menu-tools">
               {langToggle}
