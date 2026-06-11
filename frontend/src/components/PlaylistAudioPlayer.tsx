@@ -206,6 +206,10 @@ export default function PlaylistAudioPlayer({
     return () => document.removeEventListener('pointerdown', handlePointerDown);
   }, [mobileOptionsOpen]);
 
+  useEffect(() => {
+    if (queueOpen) setMobileOptionsOpen(false);
+  }, [queueOpen]);
+
   const refreshAudioStatus = useCallback(
     async (videoId: string) => {
       try {
@@ -1013,7 +1017,7 @@ export default function PlaylistAudioPlayer({
 
             <div className="playlist-np-progress playlist-np-progress--seek-only">{seekBar}</div>
 
-            <div className="playlist-np-time-row" aria-hidden={false}>
+            <div className="playlist-np-time-row">
               <span className="playlist-np-time-current">{formatPlaybackTime(currentTime)}</span>
               <span className="playlist-np-time-total">{totalDurationLabel}</span>
             </div>
