@@ -12,6 +12,8 @@ export type YoutubeExportResult = {
   youtubePlaylistId: string;
   youtubePlaylistUrl: string;
   itemsAdded: number;
+  itemsFailed: number;
+  failedVideoIds: string[];
 };
 
 export type YoutubePrivacyStatus = 'public' | 'unlisted' | 'private';

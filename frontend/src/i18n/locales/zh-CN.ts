@@ -304,6 +304,10 @@ export default {
     exportYoutubeSuccess: 'YouTube 播放列表已创建。',
     exportYoutubeOpenLink: '在 YouTube 打开',
     exportYoutubeDone: 'YouTube 播放列表已创建，可在对话框中打开链接。',
+    exportYoutubeNextStep: '下一步：点击下方「创建 YouTube 播放列表」把曲目写入 YouTube。',
+    exportYoutubeSuccessCount: '已成功添加 {count} 首到 YouTube 播放列表。',
+    exportYoutubeSuccessPartial: '已添加 {added} 首，{failed} 首未能添加。',
+    exportYoutubeVisibilityHint: '若播放列表看起来是空的，请到 YouTube 内容库 → 播放列表，并确认可见性（不公开/私享）。',
     exportYoutubeTrackCount: '将导出 {count} 首曲目',
     exportYoutubeSlowHint: '曲目较多时可能需要一分钟，请保持窗口打开。',
   },
@@ -567,6 +571,8 @@ export default {
     invalid_privacy_status: '无效的播放列表可见性',
     youtube_quota_exceeded: 'YouTube API 今日配额已用完，请明天再试',
     youtube_insufficient_permissions: 'YouTube 账号无权创建播放列表，请重新绑定',
+    youtube_export_no_items_added: '没有曲目成功写入 YouTube，请确认视频公开且 ID 有效',
+    youtube_video_not_found: '部分 YouTube 视频不存在或无法加入播放列表',
   },
 } as const;
 

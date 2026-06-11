@@ -312,6 +312,10 @@ const en: MessageTree = {
     exportYoutubeSuccess: 'YouTube playlist created.',
     exportYoutubeOpenLink: 'Open on YouTube',
     exportYoutubeDone: 'YouTube playlist created — open it in a new tab from the dialog.',
+    exportYoutubeNextStep: 'Next: click “Create YouTube playlist” below to add your tracks.',
+    exportYoutubeSuccessCount: 'Added {count} tracks to your YouTube playlist.',
+    exportYoutubeSuccessPartial: 'Added {added} tracks; {failed} could not be added.',
+    exportYoutubeVisibilityHint: 'If the playlist looks empty, check YouTube Library → Playlists and the visibility you chose (unlisted/private).',
     exportYoutubeTrackCount: '{count} tracks will be exported',
     exportYoutubeSlowHint: 'Large lists may take a minute — please keep this window open.',
   },
@@ -577,6 +581,8 @@ const en: MessageTree = {
     invalid_privacy_status: 'Invalid playlist visibility',
     youtube_quota_exceeded: 'YouTube API daily quota exceeded — try again tomorrow',
     youtube_insufficient_permissions: 'YouTube account lacks permission to create playlists — reconnect',
+    youtube_export_no_items_added: 'No tracks could be added to YouTube — check that videos are public and IDs are valid',
+    youtube_video_not_found: 'One or more YouTube videos were not found or cannot be added',
   },
 };
 

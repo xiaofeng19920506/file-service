@@ -388,18 +388,27 @@ export function registerYoutubeOAuthRoutes(
         description,
         privacyStatus,
         videoIds: items.map((item) => item.youtubeVideoId),
+        onItemResult: ({ videoId, ok, error }) => {
+          if (ok) {
+            request.log.info({ videoId, playlistId: request.params.id }, 'youtube export item added');
+          } else {
+            request.log.warn({ videoId, error }, 'youtube export item failed');
+          }
+        },
       });
 
       return {
         youtubePlaylistId: result.youtubePlaylistId,
         youtubePlaylistUrl: result.youtubePlaylistUrl,
         itemsAdded: result.itemsAdded,
+        itemsFailed: result.itemsFailed,
+        failedVideoIds: result.failedVideoIds,
       };
     } catch (e) {
       const raw = e instanceof Error ? e.message : 'youtube_export_failed';
       request.log.error(e, 'youtube export failed');
-      if (raw === 'youtube_playlist_empty') {
-        return reply.code(400).send({ error: 'youtube_playlist_empty' });
+      if (raw === 'youtube_playlist_empty' || raw === 'youtube_export_no_items_added') {
+        return reply.code(400).send({ error: mapYoutubeApiError(raw) });
       }
       const code = mapYoutubeApiError(raw);
       const status = code === 'youtube_quota_exceeded' ? 429 : 502;

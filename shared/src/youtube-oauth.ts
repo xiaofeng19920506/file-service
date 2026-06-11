@@ -1,9 +1,19 @@
+import { normalizeYoutubeVideoIds } from './youtube.js';
+
 export const YOUTUBE_OAUTH_SCOPES = [
   'https://www.googleapis.com/auth/youtube.force-ssl',
   'https://www.googleapis.com/auth/userinfo.email',
 ] as const;
 
 export type YoutubePrivacyStatus = 'public' | 'unlisted' | 'private';
+
+export type YoutubeExportResult = {
+  youtubePlaylistId: string;
+  youtubePlaylistUrl: string;
+  itemsAdded: number;
+  itemsFailed: number;
+  failedVideoIds: string[];
+};
 
 export type GoogleTokenResponse = {
   access_token: string;
@@ -159,12 +169,14 @@ export async function fetchYoutubeChannelInfo(accessToken: string): Promise<Yout
 }
 
 export function mapYoutubeApiError(message: string): string {
+  if (message === 'youtube_export_no_items_added') return 'youtube_export_no_items_added';
   const lower = message.toLowerCase();
   if (lower.includes('quota') || lower.includes('dailylimitexceeded')) return 'youtube_quota_exceeded';
   if (lower.includes('insufficientpermissions') || lower.includes('forbidden')) {
     return 'youtube_insufficient_permissions';
   }
   if (lower.includes('playlistnotfound')) return 'youtube_playlist_not_found';
+  if (lower.includes('videonotfound')) return 'youtube_video_not_found';
   return 'youtube_export_failed';
 }
 
@@ -197,25 +209,37 @@ export async function createYoutubePlaylist(opts: {
   };
 }
 
+export async function deleteYoutubePlaylist(accessToken: string, playlistId: string): Promise<void> {
+  await youtubeApiRequest(
+    accessToken,
+    `/playlists?id=${encodeURIComponent(playlistId)}`,
+    { method: 'DELETE' },
+  );
+}
+
 export async function addVideoToYoutubePlaylist(opts: {
   accessToken: string;
   playlistId: string;
   videoId: string;
+  position?: number;
 }): Promise<void> {
+  const snippet: Record<string, unknown> = {
+    playlistId: opts.playlistId,
+    resourceId: {
+      kind: 'youtube#video',
+      videoId: opts.videoId,
+    },
+  };
+  if (typeof opts.position === 'number') {
+    snippet.position = opts.position;
+  }
+
   await youtubeApiRequest(
     opts.accessToken,
-    '/playlistItems?part=snippet',
+    '/playlistItems?part=snippet,contentDetails',
     {
       method: 'POST',
-      body: JSON.stringify({
-        snippet: {
-          playlistId: opts.playlistId,
-          resourceId: {
-            kind: 'youtube#video',
-            videoId: opts.videoId,
-          },
-        },
-      }),
+      body: JSON.stringify({ snippet }),
     },
   );
 }
@@ -226,9 +250,10 @@ export async function exportVideosToYoutubePlaylist(opts: {
   description?: string;
   privacyStatus: YoutubePrivacyStatus;
   videoIds: string[];
-}): Promise<{ youtubePlaylistId: string; youtubePlaylistUrl: string; itemsAdded: number }> {
-  const uniqueIds = [...new Set(opts.videoIds.map((id) => id.trim()).filter(Boolean))];
-  if (!uniqueIds.length) {
+  onItemResult?: (result: { videoId: string; ok: boolean; error?: string }) => void;
+}): Promise<YoutubeExportResult> {
+  const { valid, invalid } = normalizeYoutubeVideoIds(opts.videoIds);
+  if (!valid.length) {
     throw new Error('youtube_playlist_empty');
   }
 
@@ -239,19 +264,41 @@ export async function exportVideosToYoutubePlaylist(opts: {
     privacyStatus: opts.privacyStatus,
   });
 
+  const failedVideoIds = [...invalid];
   let itemsAdded = 0;
-  for (const videoId of uniqueIds) {
-    await addVideoToYoutubePlaylist({
-      accessToken: opts.accessToken,
-      playlistId: created.playlistId,
-      videoId,
-    });
-    itemsAdded += 1;
+
+  for (let i = 0; i < valid.length; i++) {
+    const videoId = valid[i]!;
+    try {
+      await addVideoToYoutubePlaylist({
+        accessToken: opts.accessToken,
+        playlistId: created.playlistId,
+        videoId,
+        position: i,
+      });
+      itemsAdded += 1;
+      opts.onItemResult?.({ videoId, ok: true });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'youtube_api_failed';
+      failedVideoIds.push(videoId);
+      opts.onItemResult?.({ videoId, ok: false, error: message });
+    }
+  }
+
+  if (itemsAdded === 0) {
+    try {
+      await deleteYoutubePlaylist(opts.accessToken, created.playlistId);
+    } catch {
+      // ignore cleanup failure
+    }
+    throw new Error('youtube_export_no_items_added');
   }
 
   return {
     youtubePlaylistId: created.playlistId,
     youtubePlaylistUrl: created.url,
     itemsAdded,
+    itemsFailed: failedVideoIds.length,
+    failedVideoIds,
   };
 }

@@ -36,6 +36,7 @@ export default function ExportYoutubePlaylistModal({
   const [privacyStatus, setPrivacyStatus] = useState<YoutubePrivacyStatus>('unlisted');
   const [error, setError] = useState<string | null>(null);
   const [exportUrl, setExportUrl] = useState<string | null>(null);
+  const [exportSummary, setExportSummary] = useState<{ added: number; failed: number } | null>(null);
 
   const loadStatus = useCallback(async () => {
     setLoadingStatus(true);
@@ -92,6 +93,7 @@ export default function ExportYoutubePlaylistModal({
         title: playlistTitle,
       });
       setExportUrl(result.youtubePlaylistUrl);
+      setExportSummary({ added: result.itemsAdded, failed: result.itemsFailed });
       onExported(result.youtubePlaylistUrl);
     } catch (err) {
       setError(friendlyError(err instanceof Error ? err.message : 'youtube_export_failed', t));
@@ -131,8 +133,13 @@ export default function ExportYoutubePlaylistModal({
             <p className="export-youtube-hint">{t('playlists.exportYoutubeSlowHint')}</p>
           )}
 
-          {oauthJustConnected && connected && (
-            <p className="export-youtube-notice">{t('playlists.exportYoutubeConnected')}</p>
+          {oauthJustConnected && connected && !exportUrl && (
+            <>
+              <p className="export-youtube-notice">{t('playlists.exportYoutubeConnected')}</p>
+              <p className="export-youtube-notice export-youtube-next-step">
+                {t('playlists.exportYoutubeNextStep')}
+              </p>
+            </>
           )}
 
           {loadingStatus ? (
@@ -190,10 +197,20 @@ export default function ExportYoutubePlaylistModal({
 
               {exportUrl && (
                 <div className="export-youtube-result">
-                  <p>{t('playlists.exportYoutubeSuccess')}</p>
+                  <p>
+                    {exportSummary && exportSummary.failed > 0
+                      ? t('playlists.exportYoutubeSuccessPartial', {
+                          added: exportSummary.added,
+                          failed: exportSummary.failed,
+                        })
+                      : t('playlists.exportYoutubeSuccessCount', {
+                          count: exportSummary?.added ?? trackCount,
+                        })}
+                  </p>
                   <a href={exportUrl} target="_blank" rel="noopener noreferrer" className="export-youtube-link">
                     {t('playlists.exportYoutubeOpenLink')}
                   </a>
+                  <p className="export-youtube-hint">{t('playlists.exportYoutubeVisibilityHint')}</p>
                 </div>
               )}
             </>
