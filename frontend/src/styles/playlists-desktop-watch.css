@@ -102,9 +102,9 @@
   /* YouTube 双栏：播放器左、列表右 */
   .playlists-player-stage {
     flex-direction: row;
-    align-items: stretch;
+    align-items: flex-start;
     gap: 1.25rem;
-    flex: 1;
+    flex: 0 1 auto;
     min-height: 0;
   }
 
@@ -113,6 +113,7 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
+    align-self: flex-start;
   }
 
   .playlists-tracks-col {
@@ -145,7 +146,7 @@
 
   .playlists-player-stage[data-player-engaged='true'] {
     flex-direction: row;
-    align-items: stretch;
+    align-items: flex-start;
   }
 
   .playlists-player-stage[data-player-engaged='true'] .playlists-tracks-col {
@@ -168,6 +169,17 @@
   .playlists-player-stage[data-player-engaged='true'][data-playback-mode='audio'] .playlists-player-col {
     max-height: none;
     overflow: visible;
+    align-self: flex-start;
+  }
+
+  .playlists-player-stage[data-player-engaged='true'][data-playback-mode='video'] .youtube-player-section {
+    width: 100%;
+    flex: 0 0 auto;
+  }
+
+  .playlists-player-stage[data-player-engaged='true'][data-playback-mode='video'] .youtube-player-landscape-stage {
+    flex: 0 0 auto;
+    height: auto;
   }
 
   .playlists-player-stage[data-player-engaged='true'][data-playback-mode='video'] .youtube-player-frame-wrap {

@@ -53,6 +53,8 @@ type YtPlayer = {
   isMuted: () => boolean;
 };
 
+const SCRUB_DRIFT_HEAL_SEC = 1.25;
+
 declare global {
   interface Window {
     YT?: {
@@ -161,7 +163,8 @@ export default function YoutubePlaylistPlayer({
   const [isLandscapeTheater, setIsLandscapeTheater] = useState(false);
   const [overlayVisible, setOverlayVisible] = useState(true);
   const scrubbingRef = useRef(false);
-  const [scrubRatio, setScrubRatio] = useState<number | null>(null);
+  const [scrubActive, setScrubActive] = useState(false);
+  const [scrubPreview, setScrubPreview] = useState(0);
   const [captionCues, setCaptionCues] = useState<CaptionCue[]>([]);
   const [subtitleLang, setSubtitleLang] = useState<SubtitleLanguage>('en');
   const [volume, setVolume] = useState(readStoredVolume);
@@ -175,12 +178,22 @@ export default function YoutubePlaylistPlayer({
   onNextTrackRef.current = onNextTrack;
 
   const current = items[activeIndex];
-  const progressPct =
-    scrubRatio !== null
-      ? scrubRatio * 100
-      : duration > 0
-        ? Math.min(100, (currentTime / duration) * 100)
-        : 0;
+  const progressPct = scrubActive
+    ? scrubPreview * 100
+    : duration > 0
+      ? Math.min(100, (currentTime / duration) * 100)
+      : 0;
+
+  useEffect(() => {
+    if (!scrubActive || duration <= 0) return;
+    const expected = scrubPreview * duration;
+    if (Math.abs(currentTime - expected) > SCRUB_DRIFT_HEAL_SEC) {
+      scrubbingRef.current = false;
+      setScrubActive(false);
+      setScrubPreview(0);
+    }
+  }, [currentTime, scrubActive, scrubPreview, duration]);
+
   const volumePct = muted ? 0 : volume;
   const activeCaption = useMemo(
     () => findActiveCaption(captionCues, currentTime),
@@ -277,6 +290,9 @@ export default function YoutubePlaylistPlayer({
       lastLoadedIndexRef.current = index;
       setCurrentTime(0);
       setDuration(0);
+      setScrubActive(false);
+      setScrubPreview(0);
+      scrubbingRef.current = false;
 
       if (autoplay) {
         playingRef.current = true;
@@ -330,14 +346,12 @@ export default function YoutubePlaylistPlayer({
       if (!player || !readyRef.current) return;
 
       const trackDuration = readPlayerDuration() || duration;
-      if (trackDuration <= 0) {
-        setScrubRatio(ratio);
-        return;
-      }
-
       const clamped = Math.min(1, Math.max(0, ratio));
+      setScrubPreview(clamped);
+
+      if (trackDuration <= 0) return;
+
       const target = clamped * trackDuration;
-      setScrubRatio(clamped);
       setCurrentTime(target);
       player.seekTo(target, true);
     },
@@ -350,10 +364,13 @@ export default function YoutubePlaylistPlayer({
     onSeekRatio: seekProgressRatio,
     onScrubStart: () => {
       scrubbingRef.current = true;
+      setScrubActive(true);
+      setScrubPreview(duration > 0 ? currentTime / duration : 0);
     },
     onScrubEnd: () => {
       scrubbingRef.current = false;
-      setScrubRatio(null);
+      setScrubActive(false);
+      setScrubPreview(0);
       syncProgress();
     },
   });
@@ -544,7 +561,8 @@ export default function YoutubePlaylistPlayer({
   useEffect(
     () => () => {
       scrubbingRef.current = false;
-      setScrubRatio(null);
+      setScrubActive(false);
+      setScrubPreview(0);
     },
     [],
   );

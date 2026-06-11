@@ -8,8 +8,11 @@ type UseSeekBarDragOptions = {
   onScrubEnd?: () => void;
 };
 
+const TOUCH_DRAG_THRESHOLD_PX = 4;
+
 /**
  * 进度条点击 / 拖动 seek。Pointer + Touch 双通道（iOS 上 touch 比 pointer 更可靠）。
+ * 触摸轻点只 seek、不进入拖拽态；手指移动超过阈值后才进入拖拽，避免 scrub 状态卡住。
  */
 export function useSeekBarDrag({
   barRef,
@@ -25,6 +28,8 @@ export function useSeekBarDrag({
   const suppressClickRef = useRef(false);
   const activePointerIdRef = useRef<number | null>(null);
   const touchDragRef = useRef(false);
+  const touchStartXRef = useRef(0);
+  const touchMovedRef = useRef(false);
   const scrubbingRef = useRef(false);
 
   enabledRef.current = enabled;
@@ -46,19 +51,45 @@ export function useSeekBarDrag({
     if (!bar) return;
 
     let removeWindowListeners: (() => void) | null = null;
+    let scrubFailsafeTimer: number | null = null;
+
+    const clearScrubFailsafe = () => {
+      if (scrubFailsafeTimer !== null) {
+        window.clearTimeout(scrubFailsafeTimer);
+        scrubFailsafeTimer = null;
+      }
+    };
 
     const beginDrag = () => {
       if (!scrubbingRef.current) {
         scrubbingRef.current = true;
         onScrubStartRef.current?.();
       }
+      clearScrubFailsafe();
+      scrubFailsafeTimer = window.setTimeout(() => {
+        if (scrubbingRef.current) finishDrag();
+      }, 8000);
     };
 
     const finishDrag = () => {
+      clearScrubFailsafe();
       removeWindowListeners?.();
       removeWindowListeners = null;
+
+      const pointerId = activePointerIdRef.current;
       activePointerIdRef.current = null;
       touchDragRef.current = false;
+      touchMovedRef.current = false;
+
+      if (pointerId !== null) {
+        try {
+          if (bar.hasPointerCapture(pointerId)) {
+            bar.releasePointerCapture(pointerId);
+          }
+        } catch {
+          // ignore
+        }
+      }
 
       if (scrubbingRef.current) {
         scrubbingRef.current = false;
@@ -71,17 +102,37 @@ export function useSeekBarDrag({
       }, 400);
     };
 
+    const finishTouch = (e?: TouchEvent) => {
+      if (!touchDragRef.current) return;
+
+      if (!scrubbingRef.current) {
+        const touch = e?.changedTouches?.[0];
+        if (touch) seekFromClientX(touch.clientX);
+        touchDragRef.current = false;
+        touchMovedRef.current = false;
+        removeWindowListeners?.();
+        removeWindowListeners = null;
+        suppressClickRef.current = true;
+        window.setTimeout(() => {
+          suppressClickRef.current = false;
+        }, 400);
+        return;
+      }
+
+      finishDrag();
+    };
+
     const attachWindowEndListeners = () => {
       if (removeWindowListeners) return;
 
       const onWindowPointerEnd = (e: PointerEvent) => {
-        if (!touchDragRef.current && activePointerIdRef.current !== e.pointerId) return;
+        if (touchDragRef.current || activePointerIdRef.current !== e.pointerId) return;
         finishDrag();
       };
 
-      const onWindowTouchEnd = () => {
+      const onWindowTouchEnd = (e: TouchEvent) => {
         if (!touchDragRef.current) return;
-        finishDrag();
+        finishTouch(e);
       };
 
       window.addEventListener('pointerup', onWindowPointerEnd);
@@ -140,20 +191,25 @@ export function useSeekBarDrag({
       if (!enabledRef.current || e.touches.length !== 1) return;
       e.preventDefault();
       touchDragRef.current = true;
-      beginDrag();
+      touchMovedRef.current = false;
+      touchStartXRef.current = e.touches[0]!.clientX;
       attachWindowEndListeners();
-      seekFromClientX(e.touches[0]!.clientX);
     };
 
     const onTouchMove = (e: TouchEvent) => {
       if (!touchDragRef.current || !enabledRef.current || e.touches.length !== 1) return;
+      const touch = e.touches[0]!;
+      const moved = Math.abs(touch.clientX - touchStartXRef.current) >= TOUCH_DRAG_THRESHOLD_PX;
+      if (!moved && !scrubbingRef.current) return;
+
       e.preventDefault();
-      seekFromClientX(e.touches[0]!.clientX);
+      touchMovedRef.current = true;
+      if (!scrubbingRef.current) beginDrag();
+      seekFromClientX(touch.clientX);
     };
 
-    const onTouchEnd = () => {
-      if (!touchDragRef.current) return;
-      finishDrag();
+    const onTouchEnd = (e: TouchEvent) => {
+      finishTouch(e);
     };
 
     bar.addEventListener('pointerdown', onPointerDown);
@@ -176,6 +232,8 @@ export function useSeekBarDrag({
       bar.removeEventListener('touchcancel', onTouchEnd);
       if (scrubbingRef.current) {
         finishDrag();
+      } else if (touchDragRef.current) {
+        finishTouch();
       } else {
         removeWindowListeners?.();
       }
