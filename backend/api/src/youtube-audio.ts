@@ -11,6 +11,7 @@ import {
   spawnYoutubeAudioPreviewStream,
   verifyAudioStreamToken,
   youtubeAudioCache,
+  fetchYoutubeVideoDurationSeconds,
   type ApiEnv,
   type Db,
 } from '@file-service/shared';
@@ -39,6 +40,19 @@ function buildStreamUrl(env: ApiEnv, videoId: string, token: string): string {
 
 function buildPreviewUrl(env: ApiEnv, videoId: string, token: string): string {
   return buildSignedMediaUrl(env, buildPreviewPath(videoId, token));
+}
+
+const durationCache = new Map<string, { seconds: number; cachedAt: number }>();
+const DURATION_CACHE_TTL_MS = 86_400_000;
+
+async function getCachedVideoDurationSeconds(videoId: string): Promise<number | null> {
+  const hit = durationCache.get(videoId);
+  if (hit && Date.now() - hit.cachedAt < DURATION_CACHE_TTL_MS) return hit.seconds;
+  const seconds = await fetchYoutubeVideoDurationSeconds(videoId);
+  if (seconds !== null) {
+    durationCache.set(videoId, { seconds, cachedAt: Date.now() });
+  }
+  return seconds;
 }
 
 function signMediaToken(env: ApiEnv, videoId: string): { token: string; expiresAt: string } {
@@ -81,10 +95,12 @@ export function registerYoutubeAudioRoutes(
       };
 
       const { token, expiresAt } = signMediaToken(env, videoId);
+      const durationSeconds = await getCachedVideoDurationSeconds(videoId);
 
       if (status.status !== 'ready' || !status.blobId) {
         return {
           ...status,
+          durationSeconds: durationSeconds ?? undefined,
           previewStreamUrl: buildPreviewUrl(env, videoId, token),
           previewExpiresAt: expiresAt,
         };
@@ -92,6 +108,7 @@ export function registerYoutubeAudioRoutes(
 
       return {
         ...status,
+        durationSeconds: durationSeconds ?? undefined,
         streamUrl: buildStreamUrl(env, videoId, token),
         expiresAt,
         previewStreamUrl: buildPreviewUrl(env, videoId, token),
@@ -245,6 +262,7 @@ export function registerYoutubeAudioRoutes(
       const stream = await storage.createReadStream(blob.storageKey);
       return reply
         .header('Content-Type', blob.mimeType ?? 'audio/mpeg')
+        .header('Content-Length', String(blob.sizeBytes))
         .header('Content-Disposition', `inline; filename="${blob.originalFilename ?? `${videoId}.mp3`}"`)
         .header('Accept-Ranges', 'bytes')
         .header('Cache-Control', 'private, max-age=3600')

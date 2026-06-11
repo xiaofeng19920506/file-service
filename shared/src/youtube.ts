@@ -460,3 +460,22 @@ export async function fetchYoutubePlaylistData(
   }
   return fetchPlaylistPublic(source.playlistId, sourceUrl);
 }
+
+/** 从 YouTube Innertube 读取视频时长（秒），失败返回 null */
+export async function fetchYoutubeVideoDurationSeconds(videoId: string): Promise<number | null> {
+  if (!VIDEO_ID_RE.test(videoId)) return null;
+  try {
+    const data = await innertubePost('player', { videoId });
+    let seconds: number | null = null;
+    walkJson(data, (obj) => {
+      if (seconds !== null) return;
+      const details = obj.videoDetails as { lengthSeconds?: string } | undefined;
+      if (!details?.lengthSeconds) return;
+      const parsed = Number(details.lengthSeconds);
+      if (Number.isFinite(parsed) && parsed > 0) seconds = parsed;
+    });
+    return seconds;
+  } catch {
+    return null;
+  }
+}

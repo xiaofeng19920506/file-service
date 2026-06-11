@@ -173,6 +173,7 @@ export default function PlaylistAudioPlayer({
   const [playerError, setPlayerError] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [durationHint, setDurationHint] = useState(0);
   const [captionCues, setCaptionCues] = useState<CaptionCue[]>([]);
   const [subtitleLang, setSubtitleLang] = useState<SubtitleLanguage>('en');
   const [volume, setVolume] = useState(readStoredPlayerVolume);
@@ -189,10 +190,13 @@ export default function PlaylistAudioPlayer({
     if (Number.isFinite(duration) && duration > 0 && duration !== Infinity) {
       return duration;
     }
+    if (Number.isFinite(durationHint) && durationHint > 0) {
+      return durationHint;
+    }
     const lastCue = captionCues[captionCues.length - 1];
     if (lastCue && lastCue.end > 0) return lastCue.end;
     return 0;
-  }, [duration, captionCues]);
+  }, [duration, durationHint, captionCues]);
   const canSeek = !usingPreview && playbackDuration > 0;
   const scrubbingRef = useRef(false);
   const volumePct = muted ? 0 : volume;
@@ -231,6 +235,13 @@ export default function PlaylistAudioPlayer({
     async (videoId: string) => {
       try {
         const status = await getYoutubeAudioStatus(videoId);
+        if (
+          typeof status.durationSeconds === 'number' &&
+          Number.isFinite(status.durationSeconds) &&
+          status.durationSeconds > 0
+        ) {
+          setDurationHint(status.durationSeconds);
+        }
         onAudioStatusChange?.(videoId, status);
         return status;
       } catch {
@@ -309,6 +320,7 @@ export default function PlaylistAudioPlayer({
     setUsingPreview(false);
     setCurrentTime(0);
     setDuration(0);
+    setDurationHint(0);
 
     void (async () => {
       try {
@@ -631,6 +643,13 @@ export default function PlaylistAudioPlayer({
       setDuration(trackDuration);
     }
   }, []);
+
+  const handleAudioReady = useCallback(
+    (e: React.SyntheticEvent<HTMLAudioElement>) => {
+      syncDurationFromAudio(e.currentTarget);
+    },
+    [syncDurationFromAudio],
+  );
 
   const syncProgressFromAudio = useCallback(() => {
     if (scrubbingRef.current) return;
@@ -983,8 +1002,11 @@ export default function PlaylistAudioPlayer({
           playsInline
           loop={false}
           onTimeUpdate={handleTimeUpdate}
-          onLoadedMetadata={(e) => syncDurationFromAudio(e.currentTarget)}
-          onDurationChange={(e) => syncDurationFromAudio(e.currentTarget)}
+          onLoadedMetadata={handleAudioReady}
+          onDurationChange={handleAudioReady}
+          onLoadedData={handleAudioReady}
+          onCanPlay={handleAudioReady}
+          onCanPlayThrough={handleAudioReady}
           onEnded={handleEnded}
           onPlay={() => {
             skipPauseSyncRef.current = false;
@@ -1088,8 +1110,11 @@ export default function PlaylistAudioPlayer({
       playsInline
       loop={false}
       onTimeUpdate={handleTimeUpdate}
-      onLoadedMetadata={(e) => syncDurationFromAudio(e.currentTarget)}
-      onDurationChange={(e) => syncDurationFromAudio(e.currentTarget)}
+      onLoadedMetadata={handleAudioReady}
+      onDurationChange={handleAudioReady}
+      onLoadedData={handleAudioReady}
+      onCanPlay={handleAudioReady}
+      onCanPlayThrough={handleAudioReady}
       onEnded={handleEnded}
       onPlay={() => {
         skipPauseSyncRef.current = false;
@@ -1324,8 +1349,11 @@ export default function PlaylistAudioPlayer({
         playsInline
         loop={false}
         onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={(e) => syncDurationFromAudio(e.currentTarget)}
-        onDurationChange={(e) => syncDurationFromAudio(e.currentTarget)}
+        onLoadedMetadata={handleAudioReady}
+        onDurationChange={handleAudioReady}
+        onLoadedData={handleAudioReady}
+        onCanPlay={handleAudioReady}
+        onCanPlayThrough={handleAudioReady}
         onEnded={handleEnded}
         onPlay={() => {
           skipPauseSyncRef.current = false;

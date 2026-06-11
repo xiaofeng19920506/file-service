@@ -5,6 +5,8 @@ export type YoutubeAudioStatus = {
   status: 'pending' | 'processing' | 'ready' | 'failed';
   blobId: string | null;
   errorCode: string | null;
+  /** YouTube 原视频时长（秒），预览/缓存未完成时用于显示总时长 */
+  durationSeconds?: number;
   streamUrl?: string;
   expiresAt?: string;
   /** 未缓存完成时的即时播放地址（边播边缓存） */
