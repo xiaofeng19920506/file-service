@@ -13,6 +13,10 @@ import {
   type SubtitleLanguage,
 } from '../lib/subtitle-preference';
 import { friendlyError } from '../lib/error-messages';
+import {
+  readStoredPlayerVolume,
+  writeStoredPlayerVolume,
+} from '../lib/player-volume';
 
 export type PlaylistAudioItem = {
   youtubeVideoId: string;
@@ -46,6 +50,15 @@ function formatTime(seconds: number): string {
 }
 
 function resolveStreamSrc(url: string): string {
+  if (url.startsWith('/')) return url;
+  try {
+    const parsed = new URL(url);
+    if (parsed.pathname.startsWith('/v1/')) {
+      return `${parsed.pathname}${parsed.search}`;
+    }
+  } catch {
+    /* fall through */
+  }
   if (url.startsWith('http')) return url;
   const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') ?? '';
   return `${base}${url}`;
@@ -65,13 +78,18 @@ export default function PlaylistAudioPlayer({
 }: PlaylistAudioPlayerProps) {
   const { t } = useI18n();
   const audioRef = useRef<HTMLAudioElement>(null);
+  const volumeProgressRef = useRef<HTMLDivElement>(null);
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
+  const [usingPreview, setUsingPreview] = useState(false);
   const [loadingStream, setLoadingStream] = useState(false);
   const [playerError, setPlayerError] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [captionCues, setCaptionCues] = useState<CaptionCue[]>([]);
   const [subtitleLang, setSubtitleLang] = useState<SubtitleLanguage>('en');
+  const [volume, setVolume] = useState(readStoredPlayerVolume);
+  const [muted, setMuted] = useState(false);
+  const volumeBeforeMuteRef = useRef(volume);
 
   const current = items[activeIndex];
   const audioStatus = current?.audio;
@@ -79,6 +97,7 @@ export default function PlaylistAudioPlayer({
   const isProcessing =
     audioStatus?.status === 'pending' || audioStatus?.status === 'processing';
   const progressPct = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
+  const volumePct = muted ? 0 : volume;
   const activeCaption = useMemo(
     () => findActiveCaption(captionCues, currentTime),
     [captionCues, currentTime],
@@ -103,7 +122,7 @@ export default function PlaylistAudioPlayer({
   }, [current?.youtubeVideoId]);
 
   useEffect(() => {
-    if (!current?.youtubeVideoId || !isReady) {
+    if (!current?.youtubeVideoId) {
       setCaptionCues([]);
       return;
     }
@@ -119,7 +138,7 @@ export default function PlaylistAudioPlayer({
     return () => {
       cancelled = true;
     };
-  }, [current?.youtubeVideoId, isReady, subtitleLang]);
+  }, [current?.youtubeVideoId, subtitleLang]);
 
   useEffect(() => {
     const videoId = current?.youtubeVideoId;
@@ -134,6 +153,7 @@ export default function PlaylistAudioPlayer({
     const videoId = current?.youtubeVideoId;
     if (!videoId) {
       setStreamUrl(null);
+      setUsingPreview(false);
       return;
     }
 
@@ -141,27 +161,40 @@ export default function PlaylistAudioPlayer({
     setLoadingStream(true);
     setPlayerError(null);
     setStreamUrl(null);
+    setUsingPreview(false);
     setCurrentTime(0);
     setDuration(0);
 
     void (async () => {
       try {
-        let status = audioStatus;
-        if (!status || status.status !== 'ready') {
-          status = (await refreshAudioStatus(videoId)) ?? status;
-        }
-        if (!status || status.status !== 'ready') {
+        const status = (await refreshAudioStatus(videoId)) ?? audioStatus;
+        if (!status || cancelled) {
           if (!cancelled) setLoadingStream(false);
           return;
         }
 
-        const { url } =
-          status.streamUrl && status.expiresAt
-            ? { url: status.streamUrl }
-            : await getYoutubeAudioStreamUrl(videoId);
+        let url: string | null = null;
+        let preview = false;
+        if (status.status === 'ready') {
+          if (status.streamUrl) {
+            url = status.streamUrl;
+          } else {
+            const streamed = await getYoutubeAudioStreamUrl(videoId);
+            url = streamed.url;
+          }
+        } else if (status.previewStreamUrl) {
+          url = status.previewStreamUrl;
+          preview = true;
+        }
+
+        if (!url) {
+          if (!cancelled) setLoadingStream(false);
+          return;
+        }
 
         if (!cancelled) {
           setStreamUrl(resolveStreamSrc(url));
+          setUsingPreview(preview);
           setLoadingStream(false);
         }
       } catch (e) {
@@ -177,8 +210,8 @@ export default function PlaylistAudioPlayer({
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload when track or ready state changes
-  }, [current?.youtubeVideoId, audioStatus?.status, audioStatus?.blobId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 换歌时重新选流，不因后台缓存完成而中断当前播放
+  }, [current?.youtubeVideoId]);
 
   useEffect(() => {
     const el = audioRef.current;
@@ -193,6 +226,47 @@ export default function PlaylistAudioPlayer({
     if (playing) void el.play().catch(() => onPlayingChange(false));
     else el.pause();
   }, [playing, onPlayingChange]);
+
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    el.volume = Math.min(1, Math.max(0, volume / 100));
+    el.muted = muted || volume === 0;
+  }, [volume, muted]);
+
+  useEffect(() => {
+    writeStoredPlayerVolume(volume);
+  }, [volume]);
+
+  const setVolumeLevel = useCallback((next: number) => {
+    const clamped = Math.min(100, Math.max(0, Math.round(next)));
+    setVolume(clamped);
+    if (clamped > 0) setMuted(false);
+    volumeBeforeMuteRef.current = clamped > 0 ? clamped : volumeBeforeMuteRef.current;
+  }, []);
+
+  const toggleMute = useCallback(() => {
+    setMuted((prev) => {
+      if (prev || volume === 0) {
+        const restored = volumeBeforeMuteRef.current || 100;
+        setVolume(restored);
+        return false;
+      }
+      volumeBeforeMuteRef.current = volume > 0 ? volume : volumeBeforeMuteRef.current || 100;
+      return true;
+    });
+  }, [volume]);
+
+  const seekVolumeFromClientX = useCallback(
+    (clientX: number) => {
+      const bar = volumeProgressRef.current;
+      if (!bar) return;
+      const rect = bar.getBoundingClientRect();
+      const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+      setVolumeLevel(ratio * 100);
+    },
+    [setVolumeLevel],
+  );
 
   const goNext = useCallback(() => {
     if (onNextTrack) {
@@ -242,7 +316,9 @@ export default function PlaylistAudioPlayer({
 
       {isProcessing && (
         <p className="playlists-muted playlist-audio-status">
-          {t('playlists.audioCaching', { title: current.title })}
+          {usingPreview
+            ? t('playlists.audioCachingWhilePlaying', { title: current.title })
+            : t('playlists.audioCaching', { title: current.title })}
         </p>
       )}
 
@@ -354,6 +430,63 @@ export default function PlaylistAudioPlayer({
               }}
             >
               {t('playlists.subtitleChineseShort')}
+            </button>
+          </div>
+
+          <div className="youtube-player-volume">
+            <div
+              ref={volumeProgressRef}
+              className="youtube-player-volume-progress"
+              role="slider"
+              tabIndex={0}
+              aria-label={t('playlists.volume')}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={volumePct}
+              onClick={(e) => seekVolumeFromClientX(e.clientX)}
+              onKeyDown={(e) => {
+                if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+                e.preventDefault();
+                const step = e.key === 'ArrowRight' ? 5 : -5;
+                setVolumeLevel((muted ? 0 : volume) + step);
+              }}
+            >
+              <div className="youtube-player-volume-progress-track">
+                <div
+                  className="youtube-player-volume-progress-fill"
+                  style={{ width: `${volumePct}%` }}
+                />
+              </div>
+            </div>
+            <button
+              type="button"
+              className="youtube-player-icon-btn youtube-player-volume-btn"
+              onClick={toggleMute}
+              aria-label={muted || volume === 0 ? t('playlists.unmute') : t('playlists.mute')}
+              title={muted || volume === 0 ? t('playlists.unmute') : t('playlists.mute')}
+            >
+              {muted || volume === 0 ? (
+                <svg className="youtube-player-volume-icon" viewBox="0 0 16 16" aria-hidden>
+                  <path
+                    fill="currentColor"
+                    d="M2 5.5v5h2.5L8 14V2L4.5 5.5H2zM11.8 4.2 11 5l2 2-2 2 .8.8 2.8-2.8L14.6 6l-2.8-2.8zM9 6.4 10.6 8 9 9.6V6.4z"
+                  />
+                </svg>
+              ) : volume < 50 ? (
+                <svg className="youtube-player-volume-icon" viewBox="0 0 16 16" aria-hidden>
+                  <path
+                    fill="currentColor"
+                    d="M2 5.5v5h2.5L8 14V2L4.5 5.5H2zm5.5 2.5a3.5 3.5 0 0 1 0 5v-1.5a2 2 0 0 0 0-2v-1.5z"
+                  />
+                </svg>
+              ) : (
+                <svg className="youtube-player-volume-icon" viewBox="0 0 16 16" aria-hidden>
+                  <path
+                    fill="currentColor"
+                    d="M2 5.5v5h2.5L8 14V2L4.5 5.5H2zm5.5 2.5a3.5 3.5 0 0 1 0 5v-1.5a2 2 0 0 0 0-2v-1.5zm2-5a6.5 6.5 0 0 1 0 11v-1.5a5 5 0 0 0 0-8v-1.5z"
+                  />
+                </svg>
+              )}
             </button>
           </div>
         </div>

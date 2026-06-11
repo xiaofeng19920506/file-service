@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import AcceptSharedPlaylistModal from '../components/AcceptSharedPlaylistModal';
 import AddPlaylistItemsModal from '../components/AddPlaylistItemsModal';
 import ConfirmModal from '../components/ConfirmModal';
@@ -6,7 +6,7 @@ import SharePlaylistModal from '../components/SharePlaylistModal';
 import { DragHandleIcon, PencilIcon } from '../components/icons';
 import PlaylistAudioPlayer from '../components/PlaylistAudioPlayer';
 import YoutubePlaylistPlayer from '../components/YoutubePlaylistPlayer';
-import type { YoutubeAudioStatus } from '../api/youtube-audio';
+import { prioritizeYoutubeAudioCache, type YoutubeAudioStatus } from '../api/youtube-audio';
 import {
   deletePlaylist,
   getPlaylist,
@@ -414,6 +414,36 @@ export default function PlaylistsPage({
       title: item.title,
       audio: item.audio,
     })) ?? [];
+
+  const audioCachePriorityIds = useMemo(() => {
+    if (!detail?.items.length) return [] as string[];
+    const ids: string[] = [];
+    const pushIndex = (idx: number) => {
+      const id = detail.items[idx]?.youtubeVideoId;
+      if (id && !ids.includes(id)) ids.push(id);
+    };
+    pushIndex(activeIndex);
+    if (shuffleEnabled && shuffleOrder.length === detail.items.length) {
+      const cursor = shuffleOrder.indexOf(activeIndex);
+      const start = cursor >= 0 ? cursor : shuffleCursor;
+      for (let i = start + 1; i < shuffleOrder.length; i++) pushIndex(shuffleOrder[i]!);
+      for (let i = 0; i < start; i++) pushIndex(shuffleOrder[i]!);
+    } else {
+      for (let i = activeIndex + 1; i < detail.items.length; i++) pushIndex(i);
+      for (let i = 0; i < activeIndex; i++) pushIndex(i);
+    }
+    return ids;
+  }, [detail?.items, activeIndex, shuffleEnabled, shuffleOrder, shuffleCursor]);
+
+  useEffect(() => {
+    if (playbackMode !== 'audio' || audioCachePriorityIds.length === 0 || !detail?.items.length) {
+      return;
+    }
+    void prioritizeYoutubeAudioCache(
+      audioCachePriorityIds,
+      detail.items.map((item) => ({ videoId: item.youtubeVideoId, title: item.title })),
+    );
+  }, [playbackMode, audioCachePriorityIds, detail?.items]);
 
   const handleAudioStatusChange = useCallback((videoId: string, status: YoutubeAudioStatus) => {
     setDetail((prev) => {

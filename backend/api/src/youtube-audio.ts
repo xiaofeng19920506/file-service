@@ -3,10 +3,12 @@ import type { Queue } from 'bullmq';
 import {
   blobs,
   ensureYoutubeAudioJobs,
+  prioritizeYoutubeAudioJobs,
   getAudioCacheMap,
   isValidYoutubeVideoId,
   serializeAudioCache,
   signAudioStreamToken,
+  spawnYoutubeAudioPreviewStream,
   verifyAudioStreamToken,
   youtubeAudioCache,
   type ApiEnv,
@@ -19,10 +21,37 @@ function buildStreamPath(videoId: string, token: string): string {
   return `/v1/youtube/videos/${encodeURIComponent(videoId)}/audio/stream?token=${encodeURIComponent(token)}`;
 }
 
-function buildStreamUrl(env: ApiEnv, videoId: string, token: string): string {
-  const path = buildStreamPath(videoId, token);
+function buildPreviewPath(videoId: string, token: string): string {
+  return `/v1/youtube/videos/${encodeURIComponent(videoId)}/audio/preview?token=${encodeURIComponent(token)}`;
+}
+
+function buildSignedMediaUrl(env: ApiEnv, path: string): string {
   const publicBase = env.PUBLIC_BASE_URL?.replace(/\/$/, '');
-  return publicBase ? `${publicBase}${path}` : path;
+  if (!publicBase || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(publicBase)) {
+    return path;
+  }
+  return `${publicBase}${path}`;
+}
+
+function buildStreamUrl(env: ApiEnv, videoId: string, token: string): string {
+  return buildSignedMediaUrl(env, buildStreamPath(videoId, token));
+}
+
+function buildPreviewUrl(env: ApiEnv, videoId: string, token: string): string {
+  return buildSignedMediaUrl(env, buildPreviewPath(videoId, token));
+}
+
+function signMediaToken(env: ApiEnv, videoId: string): { token: string; expiresAt: string } {
+  const expiresAtUnix = Math.floor(Date.now() / 1000) + env.DOWNLOAD_URL_TTL_SECONDS;
+  const token = signAudioStreamToken({
+    secret: env.DOWNLOAD_HMAC_SECRET,
+    videoId,
+    expiresAtUnix,
+  });
+  return {
+    token,
+    expiresAt: new Date(expiresAtUnix * 1000).toISOString(),
+  };
 }
 
 export function registerYoutubeAudioRoutes(
@@ -51,22 +80,41 @@ export function registerYoutubeAudioRoutes(
         errorCode: null,
       };
 
-      if (status.status !== 'ready' || !status.blobId) {
-        return status;
-      }
+      const { token, expiresAt } = signMediaToken(env, videoId);
 
-      const expiresAtUnix = Math.floor(Date.now() / 1000) + env.DOWNLOAD_URL_TTL_SECONDS;
-      const token = signAudioStreamToken({
-        secret: env.DOWNLOAD_HMAC_SECRET,
-        videoId,
-        expiresAtUnix,
-      });
+      if (status.status !== 'ready' || !status.blobId) {
+        return {
+          ...status,
+          previewStreamUrl: buildPreviewUrl(env, videoId, token),
+          previewExpiresAt: expiresAt,
+        };
+      }
 
       return {
         ...status,
         streamUrl: buildStreamUrl(env, videoId, token),
-        expiresAt: new Date(expiresAtUnix * 1000).toISOString(),
+        expiresAt,
+        previewStreamUrl: buildPreviewUrl(env, videoId, token),
+        previewExpiresAt: expiresAt,
       };
+    },
+  );
+
+  app.post<{ Body: { videoIds?: string[]; entries?: { videoId: string; title?: string }[] } }>(
+    '/v1/youtube/audio/prioritize',
+    async (request, reply) => {
+      const videoIds = request.body?.videoIds ?? [];
+      const entries = request.body?.entries ?? [];
+      const order =
+        videoIds.length > 0
+          ? videoIds
+          : entries.map((e) => e.videoId).filter(isValidYoutubeVideoId);
+      if (!order.length) {
+        return reply.code(400).send({ error: 'video_ids_required' });
+      }
+
+      await prioritizeYoutubeAudioJobs(db, audioQueue, order, entries.length ? entries : undefined);
+      return { ok: true, prioritized: order.length };
     },
   );
 
@@ -103,17 +151,68 @@ export function registerYoutubeAudioRoutes(
         return reply.code(404).send({ error: 'audio_not_ready' });
       }
 
-      const expiresAtUnix = Math.floor(Date.now() / 1000) + env.DOWNLOAD_URL_TTL_SECONDS;
-      const token = signAudioStreamToken({
-        secret: env.DOWNLOAD_HMAC_SECRET,
-        videoId,
-        expiresAtUnix,
-      });
+      const { token, expiresAt } = signMediaToken(env, videoId);
 
       return {
         url: buildStreamUrl(env, videoId, token),
-        expiresAt: new Date(expiresAtUnix * 1000).toISOString(),
+        expiresAt,
       };
+    },
+  );
+
+  app.get<{ Params: { videoId: string }; Querystring: { token?: string } }>(
+    '/v1/youtube/videos/:videoId/audio/preview',
+    async (request, reply) => {
+      const videoId = request.params.videoId;
+      const token = request.query.token;
+      if (!token) return reply.code(401).send({ error: 'token_required' });
+
+      const verified = verifyAudioStreamToken({
+        secret: env.DOWNLOAD_HMAC_SECRET,
+        token,
+      });
+      if (!verified || verified.videoId !== videoId) {
+        return reply.code(401).send({ error: 'invalid_token' });
+      }
+
+      let child: ReturnType<typeof spawnYoutubeAudioPreviewStream>;
+      try {
+        child = spawnYoutubeAudioPreviewStream(videoId, env.YT_DLP_PATH);
+      } catch {
+        return reply.code(400).send({ error: 'invalid_video_id' });
+      }
+      if (!child.stdout) {
+        child.kill('SIGTERM');
+        return reply.code(502).send({ error: 'audio_preview_failed' });
+      }
+
+      const cleanup = () => {
+        if (!child.killed) child.kill('SIGTERM');
+      };
+      request.raw.on('close', cleanup);
+
+      child.stderr?.on('data', (chunk: Buffer) => {
+        request.log.warn({ videoId, stderr: chunk.toString().slice(0, 200) }, 'audio preview stderr');
+      });
+
+      child.on('error', (err) => {
+        request.log.error({ err, videoId }, 'audio preview spawn failed');
+        cleanup();
+        if (!reply.sent) void reply.code(502).send({ error: 'audio_preview_failed' });
+      });
+
+      child.on('close', (code) => {
+        cleanup();
+        if (code !== 0 && !reply.sent) {
+          void reply.code(502).send({ error: 'audio_preview_failed' });
+        }
+      });
+
+      return reply
+        .header('Content-Type', 'application/octet-stream')
+        .header('Cache-Control', 'no-store')
+        .header('Accept-Ranges', 'none')
+        .send(child.stdout);
     },
   );
 

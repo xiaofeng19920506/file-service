@@ -63,9 +63,11 @@ export async function startYoutubeAudioWorker(): Promise<Worker> {
         const errorCode =
           message === 'invalid_video_id'
             ? 'invalid_video_id'
-            : message.includes('ENOENT') || message.includes('not found')
-              ? 'ytdlp_not_installed'
-              : 'audio_extract_failed';
+            : message.includes('ffmpeg') || message.includes('ffprobe')
+              ? 'ffmpeg_not_installed'
+              : message.includes('ENOENT') || message.includes('not found')
+                ? 'ytdlp_not_installed'
+                : 'audio_extract_failed';
 
         await db
           .update(youtubeAudioCache)

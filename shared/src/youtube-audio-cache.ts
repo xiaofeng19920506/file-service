@@ -13,12 +13,29 @@ export type YoutubeAudioExtractQueue = {
   add(
     name: string,
     data: { videoId: string; title?: string | null },
-    opts?: { jobId?: string; removeOnComplete?: number; removeOnFail?: number },
+    opts?: {
+      jobId?: string;
+      priority?: number;
+      removeOnComplete?: number;
+      removeOnFail?: number;
+    },
   ): Promise<unknown>;
   getJob(
     jobId: string,
-  ): Promise<{ getState(): Promise<string>; remove(): Promise<void> } | undefined>;
+  ): Promise<
+    | {
+        getState(): Promise<string>;
+        remove(): Promise<void>;
+        changePriority(opts: { priority: number }): Promise<void>;
+      }
+    | undefined
+  >;
 };
+
+function priorityForOrderIndex(index: number, total: number): number {
+  if (total <= 0) return 0;
+  return (total - index) * 100;
+}
 
 export type YoutubeAudioCachePublic = {
   videoId: string;
@@ -65,10 +82,16 @@ export async function getAudioCacheMap(
   return map;
 }
 
+export type EnsureYoutubeAudioJobsOptions = {
+  /** 按播放顺序排列的 videoId，越靠前优先级越高 */
+  priorityOrder?: string[];
+};
+
 export async function ensureYoutubeAudioJobs(
   db: Db,
   queue: YoutubeAudioExtractQueue,
   entries: { videoId: string; title?: string }[],
+  options?: EnsureYoutubeAudioJobsOptions,
 ): Promise<void> {
   const unique = new Map<string, string | undefined>();
   for (const entry of entries) {
@@ -76,6 +99,19 @@ export async function ensureYoutubeAudioJobs(
     if (!unique.has(entry.videoId)) unique.set(entry.videoId, entry.title);
   }
   if (!unique.size) return;
+
+  const orderedUnique: string[] = [];
+  for (const id of [
+    ...(options?.priorityOrder ?? []),
+    ...entries.map((e) => e.videoId),
+  ]) {
+    if (!isValidYoutubeVideoId(id) || orderedUnique.includes(id)) continue;
+    orderedUnique.push(id);
+  }
+  const priorityByVideoId = new Map<string, number>();
+  orderedUnique.forEach((id, index) => {
+    priorityByVideoId.set(id, priorityForOrderIndex(index, orderedUnique.length));
+  });
 
   const videoIds = [...unique.keys()];
   const existing = await db
@@ -87,13 +123,16 @@ export async function ensureYoutubeAudioJobs(
   );
 
   const now = new Date();
-  for (const [videoId, title] of unique) {
+  const sortedVideoIds = [...unique.keys()].sort(
+    (a, b) => (priorityByVideoId.get(b) ?? 0) - (priorityByVideoId.get(a) ?? 0),
+  );
+
+  for (const videoId of sortedVideoIds) {
+    const title = unique.get(videoId);
+    const priority = priorityByVideoId.get(videoId) ?? 0;
     const row = existingMap.get(videoId);
     if (row?.status === 'ready' && row.blobId) continue;
-    if (row?.status === 'processing') {
-      await enqueueAudioJob(queue, videoId, title);
-      continue;
-    }
+    if (row?.status === 'processing') continue;
 
     if (!row) {
       await db.insert(youtubeAudioCache).values({
@@ -102,7 +141,7 @@ export async function ensureYoutubeAudioJobs(
         title: title ?? null,
         updatedAt: now,
       });
-    } else if (row.status === 'failed' || row.status === 'pending') {
+    } else if (row.status === 'failed') {
       await db
         .update(youtubeAudioCache)
         .set({
@@ -113,27 +152,59 @@ export async function ensureYoutubeAudioJobs(
           updatedAt: now,
         })
         .where(eq(youtubeAudioCache.youtubeVideoId, videoId));
+    } else if (row.status === 'pending' && title && title !== row.title) {
+      await db
+        .update(youtubeAudioCache)
+        .set({ title, updatedAt: now })
+        .where(eq(youtubeAudioCache.youtubeVideoId, videoId));
     }
 
-    await enqueueAudioJob(queue, videoId, title);
+    await enqueueAudioJob(queue, videoId, title ?? row?.title ?? undefined, priority);
   }
+}
+
+/** 提升指定歌曲的缓存优先级（当前播放曲目应排在数组最前） */
+export async function prioritizeYoutubeAudioJobs(
+  db: Db,
+  queue: YoutubeAudioExtractQueue,
+  priorityOrder: string[],
+  entries?: { videoId: string; title?: string }[],
+): Promise<void> {
+  const titleById = new Map(entries?.map((e) => [e.videoId, e.title]));
+  const uniqueOrder = [...new Set(priorityOrder.filter(isValidYoutubeVideoId))];
+  if (!uniqueOrder.length) return;
+
+  await ensureYoutubeAudioJobs(
+    db,
+    queue,
+    uniqueOrder.map((videoId) => ({
+      videoId,
+      title: titleById.get(videoId),
+    })),
+    { priorityOrder: uniqueOrder },
+  );
 }
 
 async function enqueueAudioJob(
   queue: YoutubeAudioExtractQueue,
   videoId: string,
   title?: string,
+  priority = 0,
 ): Promise<void> {
   const jobId = `yt-audio-${videoId}`;
   const existing = await queue.getJob(jobId);
   if (existing) {
     const state = await existing.getState();
-    if (state === 'active' || state === 'waiting' || state === 'delayed') return;
+    if (state === 'active') return;
+    if (state === 'waiting' || state === 'delayed' || state === 'prioritized') {
+      await existing.changePriority({ priority });
+      return;
+    }
     await existing.remove();
   }
   await queue.add(
     'extract',
     { videoId, title: title ?? null },
-    { jobId, removeOnComplete: 100, removeOnFail: 50 },
+    { jobId, priority, removeOnComplete: 100, removeOnFail: 50 },
   );
 }
