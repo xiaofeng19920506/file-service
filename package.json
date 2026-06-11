@@ -23,6 +23,7 @@
     "dev:stop": "bash scripts/dev-mode.sh stop",
     "dev:status": "bash scripts/dev-mode.sh status",
     "dev:api": "tsx watch backend/api/src/index.ts",
+    "dev:api-only": "docker compose -f shared/docker-compose.yml up -d postgres redis && npm run dev:api",
     "dev:worker": "tsx watch backend/worker/src/index.ts",
     "dev:web": "npm run dev -w @file-service/web",
     "start": "node backend/api/dist/index.js",
