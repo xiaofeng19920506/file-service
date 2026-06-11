@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from './auth/AuthContext';
 import BlobPreviewPage from './views/BlobPreviewPage';
 import MergeEditPage from './views/MergeEditPage';
@@ -9,7 +9,8 @@ import MergePage from './views/MergePage';
 import PlaylistsPage from './views/PlaylistsPage';
 import UploadConfirmPage from './views/UploadConfirmPage';
 import { useLibraryUpload } from './hooks/useLibraryUpload';
-import { MoonIcon, SunIcon } from './components/icons';
+import PageNavTabs from './components/PageNavTabs';
+import { CloseIcon, MenuIcon, MoonIcon, SunIcon } from './components/icons';
 import { useAppPage } from './hooks/useAppPage';
 import { hasStoredSession } from './lib/auth-session';
 import { formatUserDisplayName } from './lib/user-name';
@@ -37,6 +38,8 @@ export default function App() {
   const [theme, setTheme] = useState<'light' | 'dark'>(() =>
     document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light',
   );
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (loading) return;
@@ -60,6 +63,19 @@ export default function App() {
       navigate('library');
     }
   }, [loading, user, page, navigate, permissions]);
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [page]);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!navRef.current?.contains(event.target as Node)) setMobileMenuOpen(false);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [mobileMenuOpen]);
 
   useEffect(() => {
     if (page === 'preview' || page === 'login' || page === 'merge-edit' || page === 'library-upload')
@@ -109,120 +125,128 @@ export default function App() {
     window.location.hash = '#/login';
   };
 
+  const langToggle = (
+    <div className="lang-toggle" role="group" aria-label={t('nav.lang')}>
+      <button
+        type="button"
+        className={`lang-btn${locale === 'zh-CN' ? ' active' : ''}`}
+        onClick={() => setLocale('zh-CN')}
+      >
+        中
+      </button>
+      <button
+        type="button"
+        className={`lang-btn${locale === 'en' ? ' active' : ''}`}
+        onClick={() => setLocale('en')}
+      >
+        EN
+      </button>
+    </div>
+  );
+
+  const themeToggle = (
+    <button
+      type="button"
+      className="theme-toggle"
+      onClick={toggleTheme}
+      aria-label={theme === 'dark' ? t('nav.themeLight') : t('nav.themeDark')}
+    >
+      {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+    </button>
+  );
+
+  const accountActions = user ? (
+    <>
+      <span className="nav-user" title={user.email}>
+        {formatUserDisplayName(user)}
+        {isAdmin && <span className="nav-user-badge">{t('auth.adminBadge')}</span>}
+      </span>
+      <button type="button" className="btn-secondary btn-logout" onClick={logout}>
+        {t('auth.logout')}
+      </button>
+    </>
+  ) : (
+    <button type="button" className="btn-primary btn-login" onClick={goLogin}>
+      {t('auth.login')}
+    </button>
+  );
+
   return (
     <div className={`app${page === 'playlists' ? ' app-playlists' : ''}`}>
-      <nav className="nav">
+      <header className="nav" ref={navRef}>
         <div className="nav-inner">
-        <div className="nav-brand">
-          <span className="nav-brand-name">{t('app.name')}</span>
-          <span className="nav-brand-tagline">{t('app.tagline')}</span>
-        </div>
+          <div className="nav-brand">
+            <span className="nav-brand-name">{t('app.name')}</span>
+            <span className="nav-brand-tagline">{t('app.tagline')}</span>
+          </div>
 
-        <div className="nav-center">
-          <div className="page-tabs" role="tablist" aria-label={t('nav.pages')}>
+          <div className="nav-center nav-center-desktop">
+            <PageNavTabs
+              page={page}
+              navigate={navigate}
+              canMerge={permissions.canMerge}
+              canEdit={permissions.canEdit}
+              variant="header"
+            />
+          </div>
+
+          <div className="nav-actions nav-actions-desktop">
+            {accountActions}
+            {langToggle}
+            {themeToggle}
+          </div>
+
+          <div className="nav-actions nav-actions-compact">
+            {themeToggle}
             <button
               type="button"
-              role="tab"
-              aria-selected={page === 'library'}
-              className={`page-tab${page === 'library' ? ' active' : ''}`}
-              onClick={() => navigate('library')}
+              className="nav-menu-btn"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="nav-mobile-menu"
+              aria-label={t('nav.menu')}
+              onClick={() => setMobileMenuOpen((open) => !open)}
             >
-              {t('nav.library')}
+              {mobileMenuOpen ? <CloseIcon /> : <MenuIcon />}
             </button>
-            {permissions.canMerge && (
-              <>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={page === 'playlists'}
-                  className={`page-tab${page === 'playlists' ? ' active' : ''}`}
-                  onClick={() => navigate('playlists')}
-                >
-                  {t('nav.playlists')}
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={page === 'merge'}
-                  className={`page-tab${page === 'merge' ? ' active' : ''}`}
-                  onClick={() => navigate('merge')}
-                >
-                  {t('nav.merge')}
-                </button>
-              </>
-            )}
-            {permissions.canEdit && (
-              <button
-                type="button"
-                role="tab"
-                aria-selected={page === 'admin'}
-                className={`page-tab${page === 'admin' ? ' active' : ''}`}
-                onClick={() => navigate('admin')}
-              >
-                {t('nav.admin')}
-              </button>
-            )}
           </div>
         </div>
 
-        <div className="nav-actions">
-          {user ? (
-            <>
-              <span className="nav-user" title={user.email}>
-                {formatUserDisplayName(user)}
-                {isAdmin && <span className="nav-user-badge">{t('auth.adminBadge')}</span>}
-              </span>
-              <button type="button" className="btn-secondary btn-logout" onClick={logout}>
-                {t('auth.logout')}
-              </button>
-            </>
-          ) : (
-            <button type="button" className="btn-primary btn-login" onClick={goLogin}>
-              {t('auth.login')}
-            </button>
-          )}
-          <div className="lang-toggle" role="group" aria-label={t('nav.lang')}>
-            <button
-              type="button"
-              className={`lang-btn${locale === 'zh-CN' ? ' active' : ''}`}
-              onClick={() => setLocale('zh-CN')}
-            >
-              中
-            </button>
-            <button
-              type="button"
-              className={`lang-btn${locale === 'en' ? ' active' : ''}`}
-              onClick={() => setLocale('en')}
-            >
-              EN
-            </button>
+        {mobileMenuOpen && (
+          <div className="nav-mobile-menu" id="nav-mobile-menu">
+            <div className="nav-mobile-menu-section">{accountActions}</div>
+            <div className="nav-mobile-menu-section nav-mobile-menu-tools">
+              {langToggle}
+            </div>
           </div>
-          <button
-            type="button"
-            className="theme-toggle"
-            onClick={toggleTheme}
-            aria-label={theme === 'dark' ? t('nav.themeLight') : t('nav.themeDark')}
-          >
-            {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
-          </button>
-        </div>
-        </div>
-      </nav>
+        )}
+      </header>
 
-      {page === 'library' && <LibraryPage libraryUpload={libraryUpload} />}
-      {page === 'playlists' && permissions.canMerge && (
-        <PlaylistsPage
-          selectedId={playlistId}
-          shareToken={playlistShareToken}
-          onSelectId={navigateToPlaylist}
-          onClearShareToken={() => navigateClearPlaylistShare(playlistId)}
-          onLoadToMerge={navigateToMergeWithPlaylist}
+      <div className="app-content">
+        {page === 'library' && <LibraryPage libraryUpload={libraryUpload} />}
+        {page === 'playlists' && permissions.canMerge && (
+          <PlaylistsPage
+            selectedId={playlistId}
+            shareToken={playlistShareToken}
+            onSelectId={navigateToPlaylist}
+            onClearShareToken={() => navigateClearPlaylistShare(playlistId)}
+            onLoadToMerge={navigateToMergeWithPlaylist}
+          />
+        )}
+        {page === 'merge' && permissions.canMerge && (
+          <MergePage mergePlaylistId={mergePlaylistId} />
+        )}
+        {page === 'admin' && permissions.canEdit && <AdminPage />}
+      </div>
+
+      <nav className="nav-bottom" aria-label={t('nav.pages')}>
+        <PageNavTabs
+          page={page}
+          navigate={navigate}
+          canMerge={permissions.canMerge}
+          canEdit={permissions.canEdit}
+          variant="bottom"
         />
-      )}
-      {page === 'merge' && permissions.canMerge && (
-        <MergePage mergePlaylistId={mergePlaylistId} />
-      )}
-      {page === 'admin' && permissions.canEdit && <AdminPage />}
+      </nav>
     </div>
   );
 }

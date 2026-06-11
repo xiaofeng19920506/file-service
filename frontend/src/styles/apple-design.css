@@ -656,14 +656,6 @@ button.link-btn:hover {
 }
 
 @media (max-width: 768px) {
-  .nav-center {
-    display: none;
-  }
-
-  .page-tabs {
-    flex-wrap: wrap;
-  }
-
   .workflow-section {
     padding: 1rem;
   }

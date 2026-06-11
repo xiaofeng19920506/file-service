@@ -45,6 +45,7 @@
   --admin-max: 1200px;
   --nav-height: 5rem;
   --nav-padding-block: 0.75rem;
+  --bottom-nav-height: 0px;
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 18px;
