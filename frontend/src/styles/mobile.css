@@ -347,7 +347,9 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     padding: 0.65rem;
   }
 
@@ -390,6 +392,66 @@
     min-height: 2.875rem;
     font-size: 0.9375rem;
     font-weight: 600;
+  }
+
+  .playlists-mobile-transport {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.25rem;
+    width: 100%;
+    padding: 0.35rem 0.5rem;
+    border-radius: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border-light);
+    box-shadow: 0 1px 3px var(--shadow-sm);
+  }
+
+  .playlists-mobile-transport-btn {
+    flex-shrink: 0;
+    width: 2.875rem;
+    height: 2.875rem;
+    padding: 0;
+    border: 1px solid var(--border-light);
+    border-radius: 50%;
+    background: var(--surface-secondary);
+    color: var(--text);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  .playlists-mobile-transport-btn svg {
+    width: 1.125rem;
+    height: 1.125rem;
+    display: block;
+  }
+
+  .playlists-mobile-transport-btn--primary {
+    width: 3.5rem;
+    height: 3.5rem;
+    background: var(--blue);
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--blue) 35%, transparent);
+  }
+
+  .playlists-mobile-transport-btn--primary svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-left: 0.1rem;
+  }
+
+  .playlists-mobile-transport-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  .playlists-mobile-transport-btn:active:not(:disabled) {
+    transform: scale(0.96);
   }
 
   .playlists-toolbar-row {
@@ -471,11 +533,15 @@
   }
 
   .playlists-player-col {
-    flex: 1;
+    flex: 0 0 auto;
     display: flex;
     flex-direction: column;
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
+  }
+
+  .playlists-player-stage[data-player-engaged='true'] .playlists-tracks-col {
+    max-height: min(26vh, 200px);
   }
 
   .playlists-tracks-col {
@@ -539,17 +605,33 @@
     max-height: min(28vh, 220px);
   }
 
+  .playlists-player-stage[data-player-engaged='true'][data-playback-mode='audio'] .playlists-tracks-col {
+    max-height: min(24vh, 180px);
+  }
+
+  .playlists-player-stage[data-player-engaged='true'] .playlist-audio-player .audio-transport {
+    display: none;
+  }
+
+  .playlists-main-toolbar.has-player {
+    margin-bottom: 0.5rem;
+  }
+
+  .playlists-main-toolbar.has-player .playlists-toolbar-more {
+    display: none;
+  }
+
   .desktop-audio-artwork {
     display: none;
   }
 
   .playlist-audio-lyrics-panel {
     display: flex;
-    flex: 1;
+    flex: 0 1 auto;
     flex-direction: column;
     justify-content: center;
-    min-height: 6rem;
-    max-height: none;
+    min-height: 4.5rem;
+    max-height: min(28vh, 200px);
     padding: 1rem 1.1rem;
     border-radius: 14px;
     background: var(--surface-secondary);

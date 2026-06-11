@@ -544,8 +544,53 @@ export default function PlaylistsPage({
     </div>
   );
 
+  const renderMobileTransport = () => (
+    <div className="playlists-mobile-transport mobile-only" role="group" aria-label={t('playlists.playerSectionAudio')}>
+      <button
+        type="button"
+        className="playlists-mobile-transport-btn"
+        onClick={goToPrevTrack}
+        disabled={!canGoPrev}
+        aria-label={t('playlists.prevTrack')}
+      >
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <path d="M14 6l-6 6 6 6V6z" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        className="playlists-mobile-transport-btn playlists-mobile-transport-btn--primary"
+        onClick={() => setPlaying(!playing)}
+        aria-label={playing ? t('playlists.pause') : t('playlists.play')}
+      >
+        {playing ? (
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+            <path d="M7 6h3v12H7V6zm7 0h3v12h-3V6z" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+            <path d="M8 5v14l11-7L8 5z" />
+          </svg>
+        )}
+      </button>
+      <button
+        type="button"
+        className="playlists-mobile-transport-btn"
+        onClick={goToNextTrack}
+        disabled={!canGoNext}
+        aria-label={t('playlists.nextTrack')}
+      >
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <path d="M10 6l6 6-6 6V6z" />
+        </svg>
+      </button>
+    </div>
+  );
+
   const renderMainToolbar = (playlist: PlaylistDetail['playlist'], hasTracks: boolean) => (
-    <div className={`playlists-main-toolbar${toolbarExpanded ? ' is-expanded' : ''}`}>
+    <div
+      className={`playlists-main-toolbar${toolbarExpanded ? ' is-expanded' : ''}${showPlayer ? ' has-player' : ''}`}
+    >
       <button
         type="button"
         className="btn-secondary playlists-mobile-back"
@@ -607,13 +652,17 @@ export default function PlaylistsPage({
         {hasTracks && (
           <>
             {renderPlaybackModeToggle()}
-            <button
-              type="button"
-              className="btn-primary playlists-btn-play-all"
-              onClick={startPlayback}
-            >
-              {t('playlists.playAll')}
-            </button>
+            {showPlayer ? (
+              renderMobileTransport()
+            ) : (
+              <button
+                type="button"
+                className="btn-primary playlists-btn-play-all"
+                onClick={startPlayback}
+              >
+                {t('playlists.playAll')}
+              </button>
+            )}
             <div className="playlists-toolbar-row">
               {renderShuffleToggle()}
               <button type="button" className="btn-secondary" onClick={() => setShowAddModal(true)}>
@@ -842,7 +891,11 @@ export default function PlaylistsPage({
                     <p className="playlists-muted">{t('playlists.noTracksHint')}</p>
                   </div>
                 ) : (
-                  <div className="playlists-player-stage" data-playback-mode={playbackMode}>
+                  <div
+                    className="playlists-player-stage"
+                    data-playback-mode={playbackMode}
+                    data-player-engaged={showPlayer ? 'true' : 'false'}
+                  >
                     <div className="playlists-player-col">
                       {!showPlayer && currentItem && (
                         <button

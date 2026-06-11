@@ -111,6 +111,8 @@ export default function PlaylistAudioPlayer({
   const { t } = useI18n();
   const audioRef = useRef<HTMLAudioElement>(null);
   const volumeProgressRef = useRef<HTMLDivElement>(null);
+  const wantPlayRef = useRef(playing);
+  const skipPauseSyncRef = useRef(false);
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [usingPreview, setUsingPreview] = useState(false);
   const [loadingStream, setLoadingStream] = useState(false);
@@ -135,6 +137,10 @@ export default function PlaylistAudioPlayer({
     [captionCues, currentTime],
   );
 
+  useEffect(() => {
+    wantPlayRef.current = playing;
+  }, [playing]);
+
   const refreshAudioStatus = useCallback(
     async (videoId: string) => {
       try {
@@ -147,6 +153,27 @@ export default function PlaylistAudioPlayer({
     },
     [onAudioStatusChange],
   );
+
+  const pickStreamFromStatus = useCallback(async (videoId: string, status: YoutubeAudioStatus) => {
+    if (status.status === 'ready') {
+      if (status.streamUrl) {
+        return { url: status.streamUrl, preview: false };
+      }
+      const streamed = await getYoutubeAudioStreamUrl(videoId);
+      return { url: streamed.url, preview: false };
+    }
+    if (status.previewStreamUrl) {
+      return { url: status.previewStreamUrl, preview: true };
+    }
+    return null;
+  }, []);
+
+  const applyStreamUrl = useCallback((url: string, preview: boolean) => {
+    setStreamUrl(resolveStreamSrc(url));
+    setUsingPreview(preview);
+    setLoadingStream(false);
+    setPlayerError(null);
+  }, []);
 
   useEffect(() => {
     if (!current?.youtubeVideoId) return;
@@ -205,30 +232,13 @@ export default function PlaylistAudioPlayer({
           return;
         }
 
-        let url: string | null = null;
-        let preview = false;
-        if (status.status === 'ready') {
-          if (status.streamUrl) {
-            url = status.streamUrl;
-          } else {
-            const streamed = await getYoutubeAudioStreamUrl(videoId);
-            url = streamed.url;
-          }
-        } else if (status.previewStreamUrl) {
-          url = status.previewStreamUrl;
-          preview = true;
-        }
-
-        if (!url) {
+        const picked = await pickStreamFromStatus(videoId, status);
+        if (!picked || cancelled) {
           if (!cancelled) setLoadingStream(false);
           return;
         }
 
-        if (!cancelled) {
-          setStreamUrl(resolveStreamSrc(url));
-          setUsingPreview(preview);
-          setLoadingStream(false);
-        }
+        if (!cancelled) applyStreamUrl(picked.url, picked.preview);
       } catch (e) {
         if (!cancelled) {
           setPlayerError(
@@ -242,22 +252,146 @@ export default function PlaylistAudioPlayer({
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 换歌时重新选流，不因后台缓存完成而中断当前播放
-  }, [current?.youtubeVideoId]);
+    // activeIndex 确保同 videoId 的相邻曲目也会重新拉流
+  }, [activeIndex, current?.youtubeVideoId]);
 
+  // 轮询到 preview / ready 后补拉流（初次未就绪时 streamUrl 为空）
   useEffect(() => {
+    const videoId = current?.youtubeVideoId;
+    if (!videoId || streamUrl || loadingStream) return;
+    const canPlay =
+      audioStatus?.status === 'ready' ||
+      audioStatus?.previewStreamUrl != null;
+    if (!canPlay) return;
+
+    let cancelled = false;
+    setLoadingStream(true);
+
+    void (async () => {
+      try {
+        const status = audioStatus ?? (await refreshAudioStatus(videoId));
+        if (!status || cancelled) {
+          if (!cancelled) setLoadingStream(false);
+          return;
+        }
+        const picked = await pickStreamFromStatus(videoId, status);
+        if (!picked || cancelled) {
+          if (!cancelled) setLoadingStream(false);
+          return;
+        }
+        if (!cancelled) applyStreamUrl(picked.url, picked.preview);
+      } catch (e) {
+        if (!cancelled) {
+          setPlayerError(
+            friendlyError(e instanceof Error ? e.message : 'audio_not_ready', t),
+          );
+          setLoadingStream(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    audioStatus?.status,
+    audioStatus?.previewStreamUrl,
+    audioStatus?.streamUrl,
+    streamUrl,
+    loadingStream,
+    current?.youtubeVideoId,
+    pickStreamFromStatus,
+    refreshAudioStatus,
+    applyStreamUrl,
+    audioStatus,
+    t,
+  ]);
+
+  // 后台缓存完成后从 preview 切到完整 MP3，避免直播流结束误触「单曲循环」
+  useEffect(() => {
+    const videoId = current?.youtubeVideoId;
+    if (!videoId || !usingPreview || !isReady) return;
+
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const status = (await refreshAudioStatus(videoId)) ?? audioStatus;
+        if (!status || cancelled) return;
+        const picked = await pickStreamFromStatus(videoId, status);
+        if (!picked || picked.preview || cancelled) return;
+
+        const el = audioRef.current;
+        const savedTime = el?.currentTime ?? 0;
+        const wasPlaying = wantPlayRef.current;
+
+        if (!cancelled) applyStreamUrl(picked.url, false);
+
+        if (el && savedTime > 0.5) {
+          const restore = () => {
+            el.currentTime = savedTime;
+            el.removeEventListener('loadedmetadata', restore);
+            if (wasPlaying) void el.play().catch(() => {});
+          };
+          el.addEventListener('loadedmetadata', restore);
+        }
+      } catch {
+        /* 继续用 preview */
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    usingPreview,
+    isReady,
+    current?.youtubeVideoId,
+    audioStatus,
+    pickStreamFromStatus,
+    refreshAudioStatus,
+    applyStreamUrl,
+  ]);
+
+  const attemptPlay = useCallback(() => {
     const el = audioRef.current;
-    if (!el || !streamUrl) return;
-    el.load();
-    if (playing) void el.play().catch(() => onPlayingChange(false));
-  }, [streamUrl, playing, onPlayingChange]);
+    if (!el || !streamUrl || !wantPlayRef.current) return;
+
+    const playNow = () => {
+      void el.play().catch(() => {
+        if (!wantPlayRef.current) return;
+        const onCanPlay = () => {
+          el.removeEventListener('canplay', onCanPlay);
+          if (wantPlayRef.current) void el.play().catch(() => {});
+        };
+        el.addEventListener('canplay', onCanPlay);
+      });
+    };
+
+    if (el.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
+      playNow();
+      return;
+    }
+
+    const onCanPlay = () => {
+      el.removeEventListener('canplay', onCanPlay);
+      playNow();
+    };
+    el.addEventListener('canplay', onCanPlay);
+  }, [streamUrl]);
 
   useEffect(() => {
     const el = audioRef.current;
     if (!el) return;
-    if (playing) void el.play().catch(() => onPlayingChange(false));
-    else el.pause();
-  }, [playing, onPlayingChange]);
+    if (!playing) {
+      el.pause();
+      return;
+    }
+    if (!streamUrl) return;
+    skipPauseSyncRef.current = true;
+    el.load();
+    attemptPlay();
+  }, [streamUrl, playing, attemptPlay]);
 
   useEffect(() => {
     const el = audioRef.current;
@@ -311,27 +445,50 @@ export default function PlaylistAudioPlayer({
     [duration],
   );
 
-  const goNext = useCallback(() => {
+  const handleEnded = useCallback(() => {
+    skipPauseSyncRef.current = true;
     if (onNextTrack) {
       onNextTrack();
-      return;
-    }
-    if (activeIndex < items.length - 1) {
+    } else if (activeIndex < items.length - 1) {
       onActiveIndexChange(activeIndex + 1);
       onPlayingChange(true);
     } else {
+      skipPauseSyncRef.current = false;
+      onPlayingChange(false);
+    }
+  }, [activeIndex, items.length, onActiveIndexChange, onPlayingChange, onNextTrack]);
+
+  const handlePause = useCallback(
+    (e: React.SyntheticEvent<HTMLAudioElement>) => {
+      if (skipPauseSyncRef.current) return;
+      if (e.currentTarget.ended) return;
+      onPlayingChange(false);
+    },
+    [onPlayingChange],
+  );
+
+  const goNext = useCallback(() => {
+    skipPauseSyncRef.current = true;
+    if (onNextTrack) {
+      onNextTrack();
+    } else if (activeIndex < items.length - 1) {
+      onActiveIndexChange(activeIndex + 1);
+      onPlayingChange(true);
+    } else {
+      skipPauseSyncRef.current = false;
       onPlayingChange(false);
     }
   }, [activeIndex, items.length, onActiveIndexChange, onPlayingChange, onNextTrack]);
 
   const goPrev = useCallback(() => {
+    skipPauseSyncRef.current = true;
     if (onPrevTrack) {
       onPrevTrack();
-      return;
-    }
-    if (activeIndex > 0) {
+    } else if (activeIndex > 0) {
       onActiveIndexChange(activeIndex - 1);
       onPlayingChange(true);
+    } else {
+      skipPauseSyncRef.current = false;
     }
   }, [activeIndex, onActiveIndexChange, onPlayingChange, onPrevTrack]);
 
@@ -385,12 +542,15 @@ export default function PlaylistAudioPlayer({
         ref={audioRef}
         className="playlist-audio-element"
         src={streamUrl ?? undefined}
-        preload="metadata"
+        preload="auto"
         onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
         onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
-        onEnded={goNext}
-        onPlay={() => onPlayingChange(true)}
-        onPause={() => onPlayingChange(false)}
+        onEnded={handleEnded}
+        onPlay={() => {
+          skipPauseSyncRef.current = false;
+          onPlayingChange(true);
+        }}
+        onPause={handlePause}
       />
 
       <div className="playlist-audio-controls">
@@ -416,8 +576,16 @@ export default function PlaylistAudioPlayer({
           <button
             type="button"
             className="audio-transport-btn audio-transport-btn--primary"
-            onClick={() => onPlayingChange(!playing)}
-            disabled={!streamUrl || loadingStream}
+            onClick={() => {
+              if (!streamUrl && loadingStream) return;
+              if (!streamUrl) {
+                wantPlayRef.current = true;
+                onPlayingChange(true);
+                return;
+              }
+              onPlayingChange(!playing);
+            }}
+            disabled={loadingStream && !streamUrl}
             aria-label={playing ? t('playlists.pause') : t('playlists.play')}
           >
             {playing ? (
