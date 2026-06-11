@@ -32,7 +32,11 @@
     "test:watch": "vitest",
     "db:generate": "npm run db:generate -w @file-service/shared",
     "db:migrate": "npm run db:migrate -w @file-service/shared",
-    "db:migrate:run": "npm run db:migrate:run -w @file-service/shared"
+    "db:migrate:run": "npm run db:migrate:run -w @file-service/shared",
+    "tunnel:start": "bash scripts/cloudflared-tunnel.sh start",
+    "tunnel:status": "bash scripts/cloudflared-tunnel.sh status",
+    "tunnel:stop": "bash scripts/cloudflared-tunnel.sh stop",
+    "tunnel:setup-server": "bash scripts/setup-cloudflared-server.sh"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
