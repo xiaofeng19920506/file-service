@@ -196,29 +196,40 @@
 
   .playlists-mobile-video-meta {
     order: 2;
-    flex-shrink: 0;
-    padding: 0.85rem var(--page-gutter) 1rem;
+    flex: 0 0 auto;
+    height: 4.75rem;
+    max-height: 4.75rem;
+    overflow: hidden;
+    padding: 0.65rem var(--page-gutter) 0.75rem;
     border-top: 1px solid var(--border-light);
     background: var(--surface);
+    box-sizing: border-box;
   }
 
-  .playlists-mobile-video-meta-title {
-    margin: 0 0 0.35rem;
-    font-size: 1rem;
+  .playlists-mobile-video-meta .playlists-youtube-meta-title {
+    margin: 0 0 0.2rem;
+    font-size: 0.9375rem;
     font-weight: 650;
     line-height: 1.35;
     color: var(--text);
+    max-height: calc(1.35em * 2);
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    text-overflow: ellipsis;
     word-break: break-word;
+    overflow-wrap: anywhere;
   }
 
-  .playlists-mobile-video-meta-playlist {
+  .playlists-mobile-video-meta .playlists-youtube-meta-sub {
     margin: 0;
     font-size: 0.8125rem;
+    line-height: 1.3;
     color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   /* 16:9 页内播放器 */

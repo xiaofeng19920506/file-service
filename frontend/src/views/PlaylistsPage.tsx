@@ -1043,7 +1043,7 @@ export default function PlaylistsPage({
 
                       {showPlayer && currentItem && !youtubeWatchMobile && (
                         <div className="playlists-youtube-meta desktop-only">
-                          <h2 className="playlists-youtube-meta-title">{currentItem.title}</h2>
+                          <h2 className="playlists-youtube-meta-title" title={currentItem.title}>{currentItem.title}</h2>
                           <p className="playlists-youtube-meta-sub">{detail.playlist.title}</p>
                         </div>
                       )}
@@ -1156,7 +1156,7 @@ export default function PlaylistsPage({
 
                     {youtubeWatchMobile && currentItem && (
                       <div className="playlists-youtube-meta playlists-mobile-video-meta mobile-only">
-                        <h2 className="playlists-youtube-meta-title">{currentItem.title}</h2>
+                        <h2 className="playlists-youtube-meta-title" title={currentItem.title}>{currentItem.title}</h2>
                         <p className="playlists-youtube-meta-sub">{detail.playlist.title}</p>
                       </div>
                     )}

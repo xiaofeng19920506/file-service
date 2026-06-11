@@ -316,8 +316,32 @@
 
   .playlists-youtube-meta {
     order: 2;
-    padding: 0.85rem var(--page-gutter) 1rem;
+    flex: 0 0 auto;
+    height: 4.75rem;
+    max-height: 4.75rem;
+    overflow: hidden;
+    padding: 0.65rem var(--page-gutter) 0.75rem;
     border-top: 1px solid var(--border-light);
+    box-sizing: border-box;
+  }
+
+  .playlists-player-stage[data-youtube-watch='true'] .playlists-youtube-meta-title {
+    margin: 0 0 0.2rem;
+    font-size: 0.9375rem;
+    max-height: calc(1.35em * 2);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  .playlists-player-stage[data-youtube-watch='true'] .playlists-youtube-meta-sub {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 
