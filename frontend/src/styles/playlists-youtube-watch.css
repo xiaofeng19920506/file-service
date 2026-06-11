@@ -287,17 +287,18 @@
     margin-bottom: 0.75rem;
   }
 
-  /* 桌面 Video 沉浸：隐藏左侧歌单栏，左视频 + 右曲目列表（YouTube 式） */
+  /* 桌面 Video 沉浸：保留左侧导入，隐藏歌单列表；左视频 + 右曲目列表（YouTube 式） */
   .playlists-page[data-youtube-desktop-watch='true'] .playlists-header,
   .playlists-page[data-youtube-desktop-watch='true'] .playlists-alerts,
-  .playlists-page[data-youtube-desktop-watch='true'] .playlists-sidebar {
+  .playlists-page[data-youtube-desktop-watch='true'] .playlists-sidebar-head,
+  .playlists-page[data-youtube-desktop-watch='true'] .playlists-sidebar-list {
     display: none;
   }
 
   .playlists-page[data-youtube-desktop-watch='true'] .playlists-workspace {
     min-height: 0;
     flex: 1;
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: minmax(240px, 17rem) minmax(0, 1fr);
   }
 
   .playlists-page[data-youtube-desktop-watch='true'] .playlists-main {

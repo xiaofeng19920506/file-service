@@ -1519,14 +1519,15 @@
 
 .playlists-page[data-audio-now-playing='true'] .playlists-header,
 .playlists-page[data-audio-now-playing='true'] .playlists-alerts,
-.playlists-page[data-audio-now-playing='true'] .playlists-sidebar {
+.playlists-page[data-audio-now-playing='true'] .playlists-sidebar-head,
+.playlists-page[data-audio-now-playing='true'] .playlists-sidebar-list {
   display: none;
 }
 
 .playlists-page[data-audio-now-playing='true'] .playlists-workspace {
   min-height: 0;
   flex: 1;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(240px, 17rem) minmax(0, 1fr);
 }
 
 .playlists-page[data-audio-now-playing='true'] .playlists-main {

@@ -21,7 +21,13 @@ export function registerYoutubeCaptionRoutes(app: FastifyInstance) {
       try {
         const result = await fetchYoutubeVideoCaptions(videoId, { subtitleLang });
         if (!result?.cues.length) {
-          return reply.code(404).send({ error: 'captions_not_available' });
+          return {
+            videoId,
+            language: subtitleLang,
+            sourceLanguage: null,
+            translated: false,
+            cues: [],
+          };
         }
         return result;
       } catch (e) {

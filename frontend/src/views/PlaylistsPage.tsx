@@ -864,6 +864,8 @@ export default function PlaylistsPage({
   const focusImportField = () => {
     closeMenu();
     userDismissedHomeResumeRef.current = true;
+    setPlayerEngaged(false);
+    setPlaying(false);
     onSelectId(undefined);
     window.requestAnimationFrame(() => {
       const input = document.getElementById('playlist-import-url');
@@ -880,7 +882,7 @@ export default function PlaylistsPage({
         <div className="nav-mobile-menu-playlists-inner">
           <p className="nav-mobile-menu-playlists-title">{t('playlists.mobileMenuTitle')}</p>
           <button type="button" className="nav-mobile-menu-item btn-primary" onClick={focusImportField}>
-            {t('playlists.importButton')}
+            {t('playlists.importTitle')}
           </button>
         </div>
       );
@@ -892,6 +894,9 @@ export default function PlaylistsPage({
     return (
       <div className="nav-mobile-menu-playlists-inner">
         <p className="nav-mobile-menu-playlists-title">{t('playlists.mobileMenuTitle')}</p>
+        <button type="button" className="nav-mobile-menu-item btn-secondary" onClick={focusImportField}>
+          {t('playlists.importTitle')}
+        </button>
         {hasTracks && (
           <button
             type="button"
