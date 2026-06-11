@@ -29,11 +29,13 @@ type YoutubePlaylistPlayerProps = {
   canGoPrev?: boolean;
   /** 全屏沉浸：控制条在视频底部叠层内 */
   immersive?: boolean;
+  /** 手机页内播放：16:9 视频 + 底部叠层控制（非全屏 fixed） */
+  mobileInline?: boolean;
   /** 沉浸模式下尝试锁定横屏（手机） */
   lockLandscape?: boolean;
   /** @deprecated 使用 immersive */
   mobileImmersive?: boolean;
-  /** 沉浸模式 UI（菜单按钮等），渲染在视频层内以便全屏可见 */
+  /** 沉浸/页内模式 UI（菜单按钮等），渲染在视频层内 */
   mobileChrome?: ReactNode;
 };
 
@@ -137,11 +139,13 @@ export default function YoutubePlaylistPlayer({
   canGoNext,
   canGoPrev,
   immersive: immersiveProp,
+  mobileInline = false,
   lockLandscape = false,
   mobileImmersive = false,
   mobileChrome,
 }: YoutubePlaylistPlayerProps) {
   const immersive = immersiveProp ?? mobileImmersive;
+  const overlayMode = immersive || mobileInline;
   const { t } = useI18n();
   const elementId = useId().replace(/:/g, '');
   const playerRef = useRef<YtPlayer | null>(null);
@@ -529,7 +533,7 @@ export default function YoutubePlaylistPlayer({
   }, [activeIndex, items, playing, loadTrack]);
 
   useEffect(() => {
-    if (!immersive || !playing || !readyRef.current) return;
+    if (!overlayMode || !playing || !readyRef.current) return;
     const retryPlay = () => {
       try {
         playerRef.current?.playVideo();
@@ -543,7 +547,7 @@ export default function YoutubePlaylistPlayer({
       window.clearTimeout(t1);
       window.clearTimeout(t2);
     };
-  }, [immersive, playing, activeIndex]);
+  }, [overlayMode, playing, activeIndex]);
 
   useEffect(() => {
     let rafId = 0;
@@ -1047,14 +1051,14 @@ export default function YoutubePlaylistPlayer({
     </div>
   );
 
-  const controlMeta = (
+  const controlMeta = !mobileInline ? (
     <div className="youtube-player-overlay-meta">
       <span className="youtube-player-overlay-title">{current.title}</span>
       <span className="youtube-player-overlay-index">
         {t('playlists.trackCounter', { current: activeIndex + 1, total: items.length })}
       </span>
     </div>
-  );
+  ) : null;
 
   const controlsPanel = (
     <>
@@ -1065,7 +1069,7 @@ export default function YoutubePlaylistPlayer({
 
   return (
     <section
-      className={`youtube-player-section${immersive ? ' youtube-player-section--immersive' : ''}${immersive && lockLandscape ? ' youtube-player-section--mobile-immersive' : ''}`}
+      className={`youtube-player-section${immersive ? ' youtube-player-section--immersive' : ''}${mobileInline ? ' youtube-player-section--mobile-inline' : ''}${immersive && lockLandscape ? ' youtube-player-section--mobile-immersive' : ''}`}
       aria-label={t('playlists.playerSection')}
     >
       <div
@@ -1100,19 +1104,23 @@ export default function YoutubePlaylistPlayer({
             )}
           </div>
 
-          {immersive && mobileChrome && (
+          {overlayMode && mobileChrome && (
             <div className="youtube-player-mobile-chrome">{mobileChrome}</div>
           )}
 
-          <div
-            className={`youtube-player-overlay${overlayVisible ? '' : ' is-hidden'}`}
-            aria-hidden={!overlayVisible}
-            onMouseMove={bumpPlayerActivity}
-            onFocusCapture={bumpPlayerActivity}
-            onTouchStart={bumpPlayerActivity}
-          >
-            {controlsPanel}
-          </div>
+          {overlayMode ? (
+            <div
+              className={`youtube-player-overlay${overlayVisible ? '' : ' is-hidden'}`}
+              aria-hidden={!overlayVisible}
+              onMouseMove={bumpPlayerActivity}
+              onFocusCapture={bumpPlayerActivity}
+              onTouchStart={bumpPlayerActivity}
+            >
+              {controlsPanel}
+            </div>
+          ) : (
+            controlBar
+          )}
         </div>
       </div>
 

@@ -1,21 +1,8 @@
-/* 手机端视频：横屏沉浸 + 控制条叠在视频底部（与桌面一致） */
-
-body.playlists-mobile-video-active .nav,
-body.playlists-mobile-video-active .nav-bottom {
-  display: none;
-}
-
-body.youtube-landscape-theater-active {
-  overflow: hidden;
-  height: 100dvh;
-  max-height: 100dvh;
-}
+/* 手机端视频：YouTube 式页内布局 — 视频置顶、Mix 列表在下、标题在底 */
 
 @media (max-width: 900px) {
   .playlists-page[data-mobile-video-immersive='true'] {
     padding: 0;
-    min-height: 0;
-    height: 100%;
   }
 
   .playlists-page[data-mobile-video-immersive='true'] .playlists-header,
@@ -27,122 +14,199 @@ body.youtube-landscape-theater-active {
   .playlists-page[data-mobile-video-immersive='true'] .playlists-main {
     border: none;
     border-radius: 0;
-    background: #000;
+    background: var(--surface);
     min-height: 0;
-    flex: 1;
   }
 
   .playlists-main-inner--mobile-video {
     padding: 0;
-    overflow: hidden;
     display: flex;
     flex-direction: column;
     min-height: 0;
     flex: 1;
-    height: 100%;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
-  .playlists-main-inner--mobile-video .playlists-main-toolbar {
-    display: none;
+  .playlists-mobile-watch-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem var(--page-gutter);
+    border-bottom: 1px solid var(--border-light);
+    background: var(--surface);
+    flex-shrink: 0;
   }
 
+  .playlists-mobile-watch-toolbar .playlists-mobile-back {
+    width: auto;
+    flex: 0 0 auto;
+    min-height: 2.25rem;
+    padding: 0 0.75rem;
+    font-size: 0.8125rem;
+  }
+
+  .playlists-mobile-watch-mode {
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  /* 页内 column：视频 → 列表 → 标题 */
   .playlists-player-stage[data-mobile-video-immersive='true'] {
-    position: fixed;
-    inset: 0;
-    z-index: var(--z-modal);
+    position: relative;
     flex: 1;
     min-height: 0;
     gap: 0;
-    background: #000;
-    overflow: hidden;
-  }
-
-  body.playlists-mobile-video-active .playlist-video-chrome {
-    display: none;
-  }
-
-  body.playlists-mobile-video-active .playlists-page[data-mobile-video-immersive='true'] {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    max-height: 100dvh;
-  }
-
-  body.playlists-mobile-video-active .playlists-page[data-mobile-video-immersive='true'] .playlists-workspace {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
+    background: var(--surface);
+    overflow: visible;
   }
 
   .playlists-player-stage[data-mobile-video-immersive='true'] .playlists-player-col {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    max-height: none;
-    width: 100%;
-    height: 100%;
-  }
-
-  .playlists-player-stage[data-mobile-video-immersive='true']:not([data-mobile-video-tracks-open='true'])
-    .playlists-tracks-col {
-    display: none;
-  }
-
-  .playlists-player-stage[data-mobile-video-immersive='true'][data-mobile-video-tracks-open='true'] {
-    flex-direction: column;
-  }
-
-  .playlists-player-stage[data-mobile-video-immersive='true'][data-mobile-video-tracks-open='true']
-    .playlists-tracks-col {
-    order: 1;
     flex: 0 0 auto;
-    max-height: min(34vh, 260px);
-    min-height: 7rem;
-    background: var(--surface);
-    border-top: 1px solid var(--border-light);
-  }
-
-  .playlists-player-stage[data-mobile-video-immersive='true'][data-mobile-video-tracks-open='true']
-    .playlists-player-col {
-    flex: 1;
-    min-height: 0;
-  }
-
-  .youtube-player-section--mobile-immersive {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    height: 100%;
-    margin: 0;
-  }
-
-  .youtube-player-section--mobile-immersive .youtube-player-frame-wrap {
-    position: relative;
-    flex: 1;
     width: 100%;
-    height: 100%;
-    min-height: 0;
+    height: auto;
     max-height: none;
-    aspect-ratio: auto;
-    border: none;
-    border-radius: 0;
+    order: 0;
+  }
+
+  .playlists-player-stage[data-mobile-video-immersive='true'] .playlists-tracks-col {
+    display: flex !important;
+    flex-direction: column;
+    order: 1;
+    flex: 1 1 auto;
+    min-height: 8rem;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--border-light);
+    background: var(--surface);
     overflow: hidden;
   }
 
-  .youtube-player-landscape-stage {
+  .playlists-player-stage[data-mobile-video-immersive='true'] .playlists-tracks-head {
+    flex-shrink: 0;
+    margin: 0;
+    padding: 0.65rem var(--page-gutter) 0.35rem;
+    background: var(--surface);
+    border-bottom: none;
+  }
+
+  .playlists-player-stage[data-mobile-video-immersive='true'] .playlists-tracks-head h3 {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 650;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .playlists-player-stage[data-mobile-video-immersive='true'] .playlists-tracks {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0;
+    padding: 0 0 0.25rem;
+  }
+
+  .playlists-player-stage[data-mobile-video-immersive='true'] .playlists-track {
+    border-radius: 0;
+    border: none;
+    border-bottom: none;
+    margin: 0;
+    background: transparent;
+  }
+
+  .playlists-player-stage[data-mobile-video-immersive='true'] .playlists-track.active {
+    background: var(--surface-secondary);
+  }
+
+  .playlists-player-stage[data-mobile-video-immersive='true'] .playlists-track-drag-handle {
+    display: none;
+  }
+
+  .playlists-player-stage[data-mobile-video-immersive='true'] .playlists-track-main {
+    gap: 0.65rem;
+    padding: 0.45rem var(--page-gutter);
+    min-height: 3.25rem;
+    border-radius: 0;
+  }
+
+  .playlists-player-stage[data-mobile-video-immersive='true'] .playlists-track-thumb-wrap {
+    width: 7.5rem;
+    flex: 0 0 7.5rem;
+    aspect-ratio: 16 / 9;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .playlists-player-stage[data-mobile-video-immersive='true'] .playlists-track-title {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    white-space: normal;
+  }
+
+  .playlists-player-stage[data-mobile-video-immersive='true'] .playlists-track-remove {
+    margin-right: 0.35rem;
+  }
+
+  .playlists-mobile-video-meta {
+    order: 2;
+    flex-shrink: 0;
+    padding: 0.85rem var(--page-gutter) 1rem;
+    border-top: 1px solid var(--border-light);
+    background: var(--surface);
+  }
+
+  .playlists-mobile-video-meta-title {
+    margin: 0 0 0.35rem;
+    font-size: 1rem;
+    font-weight: 650;
+    line-height: 1.35;
+    color: var(--text);
+  }
+
+  .playlists-mobile-video-meta-playlist {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+  }
+
+  /* 16:9 页内播放器 */
+  .youtube-player-section--mobile-inline {
+    width: 100%;
+    margin: 0;
+  }
+
+  .youtube-player-section--mobile-inline .youtube-player-frame-wrap {
     position: relative;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    height: auto;
+    max-height: none;
+    min-height: 0;
+    border: none;
+    border-radius: 0;
+    overflow: hidden;
+    background: #000;
+  }
+
+  .youtube-player-section--mobile-inline .youtube-player-landscape-stage {
+    position: relative;
     width: 100%;
     height: 100%;
     min-height: 0;
+    display: flex;
+    flex-direction: column;
   }
 
-  .youtube-player-video-shell {
+  .youtube-player-section--mobile-inline .youtube-player-video-shell {
     position: relative;
     flex: 1 1 auto;
     min-height: 0;
@@ -151,31 +215,152 @@ body.youtube-landscape-theater-active {
     background: #000;
   }
 
-  .youtube-player-section--mobile-immersive .youtube-player-video-shell {
-    flex: 1 1 0;
-    min-height: 0;
-  }
-
-  .youtube-player-section--mobile-immersive .youtube-player-frame {
+  .youtube-player-section--mobile-inline .youtube-player-frame {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
   }
 
-  .youtube-player-section--mobile-immersive .youtube-player-frame iframe {
+  .youtube-player-section--mobile-inline .youtube-player-frame iframe {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
   }
 
-  .youtube-player-section--mobile-immersive .youtube-player-hit-area {
+  .youtube-player-section--mobile-inline .youtube-player-hit-area {
     position: absolute;
     inset: 0;
   }
 
-  /* 整块 UI（视频区 + 控制条 + 切换）随容器旋转横屏 */
+  /* 控制条叠在视频底部（YouTube 风格） */
+  .youtube-player-section--mobile-inline .youtube-player-overlay {
+    position: absolute;
+    inset: auto 0 0;
+    z-index: 3;
+    padding: 1.5rem 0.5rem max(0.35rem, var(--safe-bottom));
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.72));
+    pointer-events: none;
+  }
+
+  .youtube-player-section--mobile-inline .youtube-player-overlay > * {
+    pointer-events: auto;
+  }
+
+  .youtube-player-section--mobile-inline .youtube-player-bar {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.5rem;
+  }
+
+  .youtube-player-section--mobile-inline .youtube-player-transport {
+    flex-shrink: 0;
+  }
+
+  .youtube-player-section--mobile-inline .youtube-player-progress {
+    order: 10;
+    flex: 1 1 100%;
+    min-width: 0;
+    width: 100%;
+    padding: 0.2rem 0 0;
+  }
+
+  .youtube-player-section--mobile-inline .youtube-player-progress-track {
+    height: 3px;
+    background: rgba(255, 255, 255, 0.35);
+  }
+
+  .youtube-player-section--mobile-inline .youtube-player-progress-fill {
+    background: #ff0033;
+  }
+
+  .youtube-player-section--mobile-inline .youtube-player-progress-thumb {
+    width: 12px;
+    height: 12px;
+    margin-left: -6px;
+    background: #ff0033;
+    box-shadow: none;
+  }
+
+  .youtube-player-section--mobile-inline .youtube-player-time {
+    flex-shrink: 0;
+    font-size: 0.6875rem;
+    color: rgba(255, 255, 255, 0.88);
+  }
+
+  .youtube-player-section--mobile-inline .youtube-player-subtitle-toggle,
+  .youtube-player-section--mobile-inline .youtube-player-volume {
+    flex-shrink: 0;
+    width: auto;
+    min-width: 0;
+  }
+
+  .youtube-player-section--mobile-inline .youtube-player-subtitles {
+    bottom: 4.25rem;
+  }
+
+  .youtube-player-section--mobile-inline .youtube-player-frame-wrap.controls-idle .youtube-player-subtitles {
+    bottom: 1rem;
+  }
+
+  .youtube-player-overlay-mode {
+    position: absolute;
+    top: max(0.5rem, var(--safe-top));
+    right: max(0.5rem, var(--safe-right));
+    z-index: 4;
+    display: inline-flex;
+    padding: 0.12rem;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .youtube-player-overlay-mode-btn {
+    min-height: 1.85rem;
+    padding: 0 0.6rem;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .youtube-player-overlay-mode-btn.active {
+    background: #fff;
+    color: #111;
+  }
+
+  .youtube-player-mobile-chrome {
+    position: absolute;
+    inset: 0;
+    z-index: 9;
+    pointer-events: none;
+  }
+
+  .youtube-player-mobile-chrome > * {
+    pointer-events: auto;
+  }
+
+  .page-body-playlists
+    .playlists-workspace[data-mobile-view='detail'][data-player-active='true'][data-playback-mode='video'] {
+    padding-bottom: 0;
+  }
+}
+
+/* 横屏 theater / 全屏 API（用户主动触发） */
+body.youtube-landscape-theater-active {
+  overflow: hidden;
+  height: 100dvh;
+  max-height: 100dvh;
+}
+
+@media (max-width: 900px) {
   .youtube-player-frame-wrap.is-landscape-theater-host {
     position: fixed;
     inset: 0;
@@ -190,18 +375,12 @@ body.youtube-landscape-theater-active {
     overflow: hidden;
   }
 
-  /*
-   * 竖屏下旋转整块 stage：本地宽=屏高、高=屏宽，绕视口中心旋转后铺满。
-   * （勿用 top-left + translateY(-100%)，会把画面挤到右上角。）
-   */
   @media (orientation: portrait) {
     .youtube-player-landscape-stage.is-landscape-theater {
       position: fixed;
       top: 50%;
       left: 50%;
       z-index: calc(var(--z-modal) + 5);
-      width: 100vh;
-      height: 100vw;
       width: 100dvh;
       height: 100dvw;
       max-width: 100dvh;
@@ -236,18 +415,12 @@ body.youtube-landscape-theater-active {
     width: 100%;
   }
 
-  .youtube-player-landscape-stage.is-landscape-theater .youtube-player-frame {
+  .youtube-player-landscape-stage.is-landscape-theater .youtube-player-frame,
+  .youtube-player-landscape-stage.is-landscape-theater .youtube-player-frame iframe {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
-  }
-
-  .youtube-player-landscape-stage.is-landscape-theater .youtube-player-frame iframe {
-    position: absolute !important;
-    inset: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
   }
 
   .youtube-player-landscape-stage.is-landscape-theater .youtube-player-hit-area {
@@ -260,224 +433,8 @@ body.youtube-landscape-theater-active {
     inset: auto 0 0;
     z-index: 3;
   }
-
-  .youtube-player-landscape-stage.is-landscape-theater .youtube-player-subtitles {
-    bottom: 4.75rem;
-  }
-
-  .youtube-player-landscape-stage.is-landscape-theater
-    .youtube-player-frame-wrap.controls-idle
-    .youtube-player-subtitles {
-    bottom: 1.25rem;
-  }
-
-  /* 控制条在视频底部叠层内，横向排列（覆盖 mobile.css 的纵向堆叠） */
-  .youtube-player-section--mobile-immersive .youtube-player-overlay {
-    padding:
-      2rem 0.65rem
-      max(0.65rem, var(--safe-bottom));
-  }
-
-  .youtube-player-section--mobile-immersive .youtube-player-bar {
-    flex-direction: row;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.4rem 0.55rem;
-  }
-
-  .youtube-player-section--mobile-immersive .youtube-player-transport {
-    flex-shrink: 0;
-    justify-content: flex-start;
-  }
-
-  .youtube-player-section--mobile-immersive .youtube-player-progress {
-    flex: 1;
-    min-width: 4.5rem;
-    width: auto;
-    padding: 0.45rem 0;
-  }
-
-  .youtube-player-section--mobile-immersive .youtube-player-time {
-    flex-shrink: 0;
-    align-self: center;
-    font-size: 0.72rem;
-  }
-
-  .youtube-player-section--mobile-immersive .youtube-player-subtitle-toggle {
-    flex-shrink: 0;
-    width: auto;
-    justify-content: flex-start;
-  }
-
-  .youtube-player-section--mobile-immersive .youtube-player-volume {
-    flex-shrink: 0;
-    width: auto;
-    min-width: 5rem;
-    justify-content: flex-start;
-  }
-
-  .youtube-player-section--mobile-immersive .youtube-player-subtitles {
-    bottom: 5.5rem;
-  }
-
-  .youtube-player-section--mobile-immersive .youtube-player-frame-wrap.controls-idle .youtube-player-subtitles {
-    bottom: 1.5rem;
-  }
-
-  .youtube-player-overlay-mode {
-    position: absolute;
-    top: max(0.5rem, var(--safe-top));
-    right: max(0.5rem, var(--safe-right));
-    z-index: 2;
-    display: inline-flex;
-    padding: 0.12rem;
-    border-radius: 999px;
-    background: rgba(0, 0, 0, 0.55);
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-  }
-
-  .youtube-player-overlay-mode-btn {
-    min-height: 1.85rem;
-    padding: 0 0.6rem;
-    border: none;
-    border-radius: 999px;
-    background: transparent;
-    color: rgba(255, 255, 255, 0.78);
-    font-size: 0.6875rem;
-    font-weight: 600;
-    cursor: pointer;
-  }
-
-  .youtube-player-overlay-mode-btn.active {
-    background: #fff;
-    color: #111;
-  }
-
-  .playlists-player-stage[data-mobile-video-immersive='true'] .playlists-tracks-col {
-    display: none !important;
-  }
-
-  /* 菜单（在全屏视频层内） */
-  .youtube-player-mobile-chrome {
-    position: absolute;
-    inset: 0;
-    z-index: 9;
-    pointer-events: none;
-  }
-
-  .youtube-player-mobile-chrome > * {
-    pointer-events: auto;
-  }
-
-  .playlists-mobile-video-menu-btn {
-    position: absolute;
-    top: max(0.5rem, var(--safe-top));
-    right: max(0.5rem, var(--safe-right));
-    z-index: 2;
-    width: 2.75rem;
-    height: 2.75rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: none;
-    border-radius: 50%;
-    background: rgba(0, 0, 0, 0.55);
-    color: #fff;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
-    cursor: pointer;
-  }
-
-  .playlists-mobile-video-menu-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 3;
-    border: none;
-    padding: 0;
-    background: rgba(0, 0, 0, 0.5);
-    cursor: pointer;
-  }
-
-  .playlists-mobile-video-menu-sheet {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 4;
-    max-height: min(85dvh, 520px);
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    padding:
-      calc(0.75rem + var(--safe-top))
-      var(--page-gutter)
-      max(1rem, var(--safe-bottom));
-    background: var(--surface);
-    border-bottom-left-radius: 16px;
-    border-bottom-right-radius: 16px;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
-  }
-
-  .playlists-mobile-video-menu-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    margin-bottom: 0.85rem;
-  }
-
-  .playlists-mobile-video-menu-head h2 {
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 650;
-  }
-
-  .playlists-mobile-video-menu-close {
-    width: 2.5rem;
-    height: 2.5rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: none;
-    border-radius: 50%;
-    background: var(--surface-secondary);
-    color: var(--text);
-    cursor: pointer;
-  }
-
-  .playlists-mobile-video-menu-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .playlists-mobile-video-menu-actions .playlists-playback-mode {
-    display: flex;
-    width: 100%;
-  }
-
-  .playlists-mobile-video-menu-actions .playlists-playback-mode-btn {
-    flex: 1;
-    min-height: 2.75rem;
-  }
-
-  .playlists-mobile-video-menu-actions .btn-primary,
-  .playlists-mobile-video-menu-actions .btn-secondary,
-  .playlists-mobile-video-menu-actions .playlists-shuffle-btn {
-    width: 100%;
-    min-height: 2.75rem;
-    justify-content: center;
-  }
-
-  .page-body-playlists
-    .playlists-workspace[data-mobile-view='detail'][data-player-active='true'][data-playback-mode='video'] {
-    padding-bottom: 0;
-  }
 }
 
-/* 全屏 API 激活时 */
 .youtube-player-frame-wrap:fullscreen,
 .youtube-player-frame-wrap:-webkit-full-screen {
   width: 100%;

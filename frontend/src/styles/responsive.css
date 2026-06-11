@@ -249,12 +249,14 @@ body {
   }
 
   .playlists-playback-dock-progress .audio-progress-track,
-  .youtube-player-section--mobile-immersive .youtube-player-progress .youtube-player-progress-track {
+  .youtube-player-section--mobile-immersive .youtube-player-progress .youtube-player-progress-track,
+  .youtube-player-section--mobile-inline .youtube-player-progress .youtube-player-progress-track {
     height: 8px;
   }
 
   .playlists-playback-dock-progress .audio-progress-thumb,
-  .youtube-player-section--mobile-immersive .youtube-player-progress .youtube-player-progress-thumb {
+  .youtube-player-section--mobile-immersive .youtube-player-progress .youtube-player-progress-thumb,
+  .youtube-player-section--mobile-inline .youtube-player-progress .youtube-player-progress-thumb {
     width: 18px;
     height: 18px;
     margin-left: -9px;

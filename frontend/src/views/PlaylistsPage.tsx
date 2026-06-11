@@ -511,15 +511,8 @@ export default function PlaylistsPage({
   }, [audioNowPlaying, isMobileViewport]);
 
   useEffect(() => {
-    if (!mobileVideoImmersive) {
-      document.body.classList.remove('playlists-mobile-video-active');
-      return;
-    }
+    if (!mobileVideoImmersive) return;
     setQueueOpen(false);
-    document.body.classList.add('playlists-mobile-video-active');
-    return () => {
-      document.body.classList.remove('playlists-mobile-video-active');
-    };
   }, [mobileVideoImmersive]);
 
   const startRename = (id: string, title: string) => {
@@ -1034,6 +1027,19 @@ export default function PlaylistsPage({
               >
                 {!mobileVideoImmersive && renderMainToolbar(detail.playlist, detail.items.length > 0, detail.items.length)}
 
+                {mobileVideoImmersive && (
+                  <div className="playlists-mobile-watch-toolbar mobile-only">
+                    <button
+                      type="button"
+                      className="btn-secondary playlists-mobile-back"
+                      onClick={() => onSelectId(undefined)}
+                    >
+                      {t('playlists.backToList')}
+                    </button>
+                    {renderPlaybackModeToggle('playlists-mobile-watch-mode')}
+                  </div>
+                )}
+
                 {detail.items.length === 0 ? (
                   <div className="playlists-empty-card playlists-empty-tracks">
                     <p className="playlists-empty-title">{t('playlists.noTracksTitle')}</p>
@@ -1045,7 +1051,7 @@ export default function PlaylistsPage({
                     data-playback-mode={playbackMode}
                     data-player-engaged={showPlayer ? 'true' : 'false'}
                     data-mobile-video-immersive={mobileVideoImmersive ? 'true' : 'false'}
-                    data-mobile-video-tracks-open="false"
+                    data-mobile-video-tracks-open={mobileVideoImmersive ? 'true' : 'false'}
                     data-queue-open={mobileVideoImmersive ? 'false' : queueOpen ? 'true' : 'false'}
                   >
                     <div className="playlists-player-col">
@@ -1090,20 +1096,20 @@ export default function PlaylistsPage({
                           onPrevTrack={goToPrevTrack}
                           canGoNext={canGoNext}
                           canGoPrev={canGoPrev}
-                          immersive={mobileVideoImmersive}
-                          lockLandscape={isMobileViewport}
-                          mobileChrome={
-                            mobileVideoImmersive
-                              ? renderPlaybackModeToggle('youtube-player-overlay-mode')
-                              : undefined
-                          }
+                          immersive={false}
+                          mobileInline={mobileVideoImmersive}
+                          lockLandscape={false}
                         />
                       )}
                     </div>
 
                     <aside className="playlists-tracks-col" aria-label={t('playlists.tracksTitle')}>
                       <div className="playlists-tracks-head">
-                        <h3>{t('playlists.tracksTitle')}</h3>
+                        <h3>
+                          {mobileVideoImmersive
+                            ? t('playlists.mixLabel', { title: detail.playlist.title })
+                            : t('playlists.tracksTitle')}
+                        </h3>
                       </div>
                       <ol className={`playlists-tracks${savingOrder ? ' saving-order' : ''}`}>
                         {detail.items.map((item, index) => {
@@ -1198,6 +1204,13 @@ export default function PlaylistsPage({
                         })}
                       </ol>
                     </aside>
+
+                    {mobileVideoImmersive && currentItem && (
+                      <div className="playlists-mobile-video-meta mobile-only">
+                        <h2 className="playlists-mobile-video-meta-title">{currentItem.title}</h2>
+                        <p className="playlists-mobile-video-meta-playlist">{detail.playlist.title}</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

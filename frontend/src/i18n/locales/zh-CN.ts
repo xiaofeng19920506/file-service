@@ -185,6 +185,7 @@ export default {
     noTracksHint: '点击上方「添加歌曲」按钮，粘贴 YouTube 链接添加第一首歌曲。',
     addUrlLabel: 'YouTube 链接',
     tracksTitle: '曲目',
+    mixLabel: '合辑 — {title}',
     noLyricsYet: '暂无歌词',
     addTitle: '添加歌曲',
     addPlaceholder: '粘贴 YouTube 视频或播放列表链接…',

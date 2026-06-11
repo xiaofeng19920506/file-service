@@ -193,6 +193,7 @@ const en: MessageTree = {
     noTracksHint: 'Click "Add tracks" above and paste a YouTube URL to add the first track.',
     addUrlLabel: 'YouTube URL',
     tracksTitle: 'Tracks',
+    mixLabel: 'Mix — {title}',
     noLyricsYet: 'No lyrics yet',
     addTitle: 'Add tracks',
     addPlaceholder: 'Paste a YouTube video or playlist URL…',
