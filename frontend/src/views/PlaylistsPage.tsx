@@ -634,17 +634,12 @@ export default function PlaylistsPage({
   const renderMainToolbar = (
     playlist: PlaylistDetail['playlist'],
     hasTracks: boolean,
-    trackCount: number,
   ) => (
     <>
       <header className="playlists-detail-header desktop-only">
-        <div className="playlists-detail-header-main">
-          <h2 className="playlists-detail-title">{playlist.title}</h2>
-          <p className="playlists-detail-meta">{t('playlists.trackCount', { count: trackCount })}</p>
-        </div>
         <div className="playlists-detail-actions">
           {hasTracks && (
-            <div className="playlists-detail-actions-playback">
+            <>
               <button type="button" className="btn-primary playlists-play-all-btn" onClick={startPlayback}>
                 {t('playlists.playAll')}
               </button>
@@ -664,48 +659,46 @@ export default function PlaylistsPage({
                 {repeatMode === 'one' ? '1' : repeatMode === 'all' ? '∞' : '↻'}
               </button>
               {renderShuffleToggle()}
-            </div>
+            </>
           )}
-          <div className="playlists-detail-actions-manage">
-            <button type="button" className="btn-secondary" onClick={() => setShowAddModal(true)}>
-              {t('playlists.addTitle')}
-            </button>
-            {hasTracks && renderTracksEditToggle()}
+          <button type="button" className="btn-secondary" onClick={() => setShowAddModal(true)}>
+            {t('playlists.addTitle')}
+          </button>
+          {hasTracks && renderTracksEditToggle()}
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() =>
+              setShareTarget({
+                id: playlist.id,
+                title: playlist.title,
+              })
+            }
+          >
+            {t('playlists.share')}
+          </button>
+          {playlist.matchedCount > 0 && (
             <button
               type="button"
               className="btn-secondary"
-              onClick={() =>
-                setShareTarget({
-                  id: playlist.id,
-                  title: playlist.title,
-                })
-              }
+              onClick={() => onLoadToMerge(playlist.id)}
             >
-              {t('playlists.share')}
+              {t('playlists.loadToMerge')}
             </button>
-            {playlist.matchedCount > 0 && (
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => onLoadToMerge(playlist.id)}
-              >
-                {t('playlists.loadToMerge')}
-              </button>
-            )}
-            <button
-              type="button"
-              className="btn-secondary btn-danger-outline"
-              disabled={deletingId === playlist.id}
-              onClick={() =>
-                setDeleteTarget({
-                  id: playlist.id,
-                  title: playlist.title,
-                })
-              }
-            >
-              {deletingId === playlist.id ? t('playlists.deleting') : t('playlists.delete')}
-            </button>
-          </div>
+          )}
+          <button
+            type="button"
+            className="btn-secondary btn-danger-outline"
+            disabled={deletingId === playlist.id}
+            onClick={() =>
+              setDeleteTarget({
+                id: playlist.id,
+                title: playlist.title,
+              })
+            }
+          >
+            {deletingId === playlist.id ? t('playlists.deleting') : t('playlists.delete')}
+          </button>
         </div>
       </header>
 
@@ -963,7 +956,7 @@ export default function PlaylistsPage({
               <div
                 className={`playlists-main-inner${youtubeWatchActive ? ' playlists-main-inner--youtube-watch' : ''}${youtubeWatchMobile ? ' playlists-main-inner--mobile-video' : ''}`}
               >
-                {!youtubeWatchMobile && renderMainToolbar(detail.playlist, detail.items.length > 0, detail.items.length)}
+                {!youtubeWatchMobile && renderMainToolbar(detail.playlist, detail.items.length > 0)}
 
                 {youtubeWatchMobile && (
                   <div className="playlists-mobile-watch-toolbar mobile-only">
@@ -977,10 +970,6 @@ export default function PlaylistsPage({
                     {detail.items.length > 0 && renderTracksEditToggle('btn-secondary playlists-mobile-watch-edit')}
                     {renderPlaybackModeToggle('playlists-mobile-watch-mode')}
                   </div>
-                )}
-
-                {!showPlayer && (
-                  <p className="playlists-free-hint">{t('playlists.freePlaybackHint')}</p>
                 )}
 
                 {detail.items.length === 0 ? (
