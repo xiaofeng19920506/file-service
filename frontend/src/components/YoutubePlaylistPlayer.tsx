@@ -25,6 +25,8 @@ type YoutubePlaylistPlayerProps = {
   onPrevTrack?: () => void;
   canGoNext?: boolean;
   canGoPrev?: boolean;
+  /** 手机端：控制条移到视频下方，与桌面横向布局一致 */
+  controlsBelow?: boolean;
 };
 
 type YtPlayer = {
@@ -124,6 +126,7 @@ export default function YoutubePlaylistPlayer({
   onPrevTrack,
   canGoNext,
   canGoPrev,
+  controlsBelow = false,
 }: YoutubePlaylistPlayerProps) {
   const { t } = useI18n();
   const elementId = useId().replace(/:/g, '');
@@ -615,44 +618,8 @@ export default function YoutubePlaylistPlayer({
 
   if (!items.length || !current) return null;
 
-  return (
-    <section className="youtube-player-section" aria-label={t('playlists.playerSection')}>
-      <div
-        ref={frameWrapRef}
-        className={`youtube-player-frame-wrap${isFullscreen ? ' is-fullscreen' : ''}${overlayVisible ? '' : ' controls-idle'}`}
-        onMouseEnter={bumpPlayerActivity}
-        onMouseMove={isFullscreen ? bumpPlayerActivity : undefined}
-      >
-        <div id={elementId} className="youtube-player-frame" />
-
-        <div
-          className="youtube-player-hit-area"
-          onMouseMove={bumpPlayerActivity}
-          onTouchStart={bumpPlayerActivity}
-          onClick={bumpPlayerActivity}
-          aria-hidden
-        />
-
-        {activeCaption && (
-          <div className="youtube-player-subtitles" aria-live="polite">
-            <p className="youtube-player-subtitle-text">{activeCaption}</p>
-          </div>
-        )}
-
-        <div
-          className={`youtube-player-overlay${overlayVisible ? '' : ' is-hidden'}`}
-          aria-hidden={!overlayVisible}
-          onMouseMove={bumpPlayerActivity}
-          onFocusCapture={bumpPlayerActivity}
-        >
-          <div className="youtube-player-overlay-meta">
-            <span className="youtube-player-overlay-title">{current.title}</span>
-            <span className="youtube-player-overlay-index">
-              {t('playlists.trackCounter', { current: activeIndex + 1, total: items.length })}
-            </span>
-          </div>
-
-          <div className="youtube-player-bar">
+  const controlBar = (
+    <div className="youtube-player-bar">
             <div className="youtube-player-transport">
               <button
                 type="button"
@@ -785,32 +752,96 @@ export default function YoutubePlaylistPlayer({
               </button>
             </div>
 
-            <button
-              type="button"
-              className="youtube-player-icon-btn youtube-player-fullscreen-btn"
-              onClick={() => void toggleFullscreen()}
-              aria-label={isFullscreen ? t('playlists.exitFullscreen') : t('playlists.fullscreen')}
-              title={isFullscreen ? t('playlists.exitFullscreen') : t('playlists.fullscreen')}
-            >
-              {isFullscreen ? (
-                <svg className="youtube-player-fs-icon" viewBox="0 0 16 16" aria-hidden>
-                  <path
-                    fill="currentColor"
-                    d="M3 9v4h4v-1H4V9H3zm9-5H9v1h3v3h1V4zm-9 0v1h3V4H3zm9 9h-1v3H9v1h4V9z"
-                  />
-                </svg>
-              ) : (
-                <svg className="youtube-player-fs-icon" viewBox="0 0 16 16" aria-hidden>
-                  <path
-                    fill="currentColor"
-                    d="M2 6V2h4V1H1v5h1zm8-5v1h4v4h1V1h-5zM1 10h1v4h4v1H1v-5zm13 5v-1h-4v-1h5v5h-1z"
-                  />
-                </svg>
-              )}
-            </button>
+            {!controlsBelow && (
+              <button
+                type="button"
+                className="youtube-player-icon-btn youtube-player-fullscreen-btn"
+                onClick={() => void toggleFullscreen()}
+                aria-label={isFullscreen ? t('playlists.exitFullscreen') : t('playlists.fullscreen')}
+                title={isFullscreen ? t('playlists.exitFullscreen') : t('playlists.fullscreen')}
+              >
+                {isFullscreen ? (
+                  <svg className="youtube-player-fs-icon" viewBox="0 0 16 16" aria-hidden>
+                    <path
+                      fill="currentColor"
+                      d="M3 9v4h4v-1H4V9H3zm9-5H9v1h3v3h1V4zm-9 0v1h3V4H3zm9 9h-1v3H9v1h4V9z"
+                    />
+                  </svg>
+                ) : (
+                  <svg className="youtube-player-fs-icon" viewBox="0 0 16 16" aria-hidden>
+                    <path
+                      fill="currentColor"
+                      d="M2 6V2h4V1H1v5h1zm8-5v1h4v4h1V1h-5zM1 10h1v4h4v1H1v-5zm13 5v-1h-4v-1h5v5h-1z"
+                    />
+                  </svg>
+                )}
+              </button>
+            )}
+    </div>
+  );
+
+  const controlMeta = (
+    <div className="youtube-player-overlay-meta">
+      <span className="youtube-player-overlay-title">{current.title}</span>
+      <span className="youtube-player-overlay-index">
+        {t('playlists.trackCounter', { current: activeIndex + 1, total: items.length })}
+      </span>
+    </div>
+  );
+
+  const controlsPanel = (
+    <>
+      {controlMeta}
+      {controlBar}
+    </>
+  );
+
+  return (
+    <section
+      className={`youtube-player-section${controlsBelow ? ' youtube-player-section--controls-below' : ''}`}
+      aria-label={t('playlists.playerSection')}
+    >
+      <div
+        ref={frameWrapRef}
+        className={`youtube-player-frame-wrap${isFullscreen ? ' is-fullscreen' : ''}${
+          controlsBelow || overlayVisible ? '' : ' controls-idle'
+        }`}
+        onMouseEnter={controlsBelow ? undefined : bumpPlayerActivity}
+        onMouseMove={controlsBelow ? undefined : isFullscreen ? bumpPlayerActivity : undefined}
+      >
+        <div id={elementId} className="youtube-player-frame" />
+
+        {!controlsBelow && (
+          <div
+            className="youtube-player-hit-area"
+            onMouseMove={bumpPlayerActivity}
+            onTouchStart={bumpPlayerActivity}
+            onClick={bumpPlayerActivity}
+            aria-hidden
+          />
+        )}
+
+        {activeCaption && (
+          <div className="youtube-player-subtitles" aria-live="polite">
+            <p className="youtube-player-subtitle-text">{activeCaption}</p>
           </div>
-        </div>
+        )}
+
+        {!controlsBelow && (
+          <div
+            className={`youtube-player-overlay${overlayVisible ? '' : ' is-hidden'}`}
+            aria-hidden={!overlayVisible}
+            onMouseMove={bumpPlayerActivity}
+            onFocusCapture={bumpPlayerActivity}
+          >
+            {controlsPanel}
+          </div>
+        )}
       </div>
+
+      {controlsBelow && (
+        <div className="youtube-player-controls-panel">{controlsPanel}</div>
+      )}
 
       {playerError && <p className="error-msg">{playerError}</p>}
     </section>

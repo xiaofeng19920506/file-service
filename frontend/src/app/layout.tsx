@@ -5,6 +5,7 @@ import '../styles/apple-design.css';
 import '../styles/ppt-editor.css';
 import '../styles/mobile.css';
 import '../styles/responsive.css';
+import '../styles/playlists-mobile-video.css';
 
 export const metadata: Metadata = {
   title: '敬拜诗库',

@@ -19,6 +19,7 @@ import {
 } from '../lib/player-volume';
 import { useMediaSession } from '../hooks/useMediaSession';
 import AudioSeekBar from './AudioSeekBar';
+import ScrollingTitle from './ScrollingTitle';
 import '../styles/playlist-audio.css';
 
 export type PlaylistAudioItem = {
@@ -54,6 +55,12 @@ export function formatPlaybackTime(seconds: number): string {
   const m = Math.floor(total / 60);
   const s = total % 60;
   return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+export function formatPlaybackTimeRange(currentTime: number, duration: number): string {
+  const total =
+    Number.isFinite(duration) && duration > 0 ? formatPlaybackTime(duration) : '--:--';
+  return `${formatPlaybackTime(currentTime)} / ${total}`;
 }
 
 export type PlaylistAudioProgressState = {
@@ -693,7 +700,7 @@ export default function PlaylistAudioPlayer({
 
       <div className="playlist-audio-controls">
         <header className="playlist-audio-meta">
-          <span className="playlist-audio-title">{current.title}</span>
+          <ScrollingTitle text={current.title} className="playlist-audio-title" />
           <span className="playlist-audio-index">
             {t('playlists.trackCounter', { current: activeIndex + 1, total: items.length })}
           </span>
@@ -764,10 +771,7 @@ export default function PlaylistAudioPlayer({
             className="audio-player-bar-progress"
           />
 
-          <div className="audio-time">
-            {formatPlaybackTime(currentTime)}
-            {canSeek ? ` / ${formatPlaybackTime(duration)}` : usingPreview ? ' · …' : ''}
-          </div>
+          <div className="audio-time">{formatPlaybackTimeRange(currentTime, duration)}</div>
         </div>
 
         <div className="audio-options">

@@ -1,0 +1,308 @@
+/* 手机端视频沉浸播放：全屏画面 + 控制条在视频下方 */
+
+@media (max-width: 900px) {
+  .playlists-page[data-mobile-video-immersive='true'] {
+    padding: 0;
+    min-height: 0;
+  }
+
+  .playlists-page[data-mobile-video-immersive='true'] .playlists-header,
+  .playlists-page[data-mobile-video-immersive='true'] .playlists-alerts {
+    display: none;
+  }
+
+  .playlists-page[data-mobile-video-immersive='true'] .playlists-workspace {
+    border: none;
+    border-radius: 0;
+    background: #000;
+  }
+
+  .playlists-page[data-mobile-video-immersive='true'] .playlists-main {
+    border: none;
+    border-radius: 0;
+    background: #000;
+  }
+
+  .playlists-main-inner--mobile-video {
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1;
+  }
+
+  .playlists-main-inner--mobile-video .playlists-main-toolbar {
+    display: none;
+  }
+
+  .playlists-player-stage[data-mobile-video-immersive='true'] {
+    flex: 1;
+    min-height: 0;
+    gap: 0;
+    background: #000;
+  }
+
+  .playlists-player-stage[data-mobile-video-immersive='true'] .playlists-player-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    max-height: none;
+    overflow: hidden;
+  }
+
+  .playlists-player-stage[data-mobile-video-immersive='true']:not([data-mobile-video-tracks-open='true'])
+    .playlists-tracks-col {
+    display: none;
+  }
+
+  .playlists-player-stage[data-mobile-video-immersive='true'][data-mobile-video-tracks-open='true'] {
+    flex-direction: column;
+  }
+
+  .playlists-player-stage[data-mobile-video-immersive='true'][data-mobile-video-tracks-open='true']
+    .playlists-tracks-col {
+    order: 1;
+    flex: 0 0 auto;
+    max-height: min(38vh, 300px);
+    min-height: 8rem;
+    background: var(--surface);
+    border-top: 1px solid var(--border-light);
+  }
+
+  .playlists-player-stage[data-mobile-video-immersive='true'][data-mobile-video-tracks-open='true']
+    .playlists-player-col {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .playlists-player-stage[data-mobile-video-immersive='true'] .youtube-player-section--controls-below {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    margin: 0;
+  }
+
+  .playlists-player-stage[data-mobile-video-immersive='true']
+    .youtube-player-section--controls-below
+    .youtube-player-frame-wrap {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+    aspect-ratio: auto;
+    border: none;
+    border-radius: 0;
+  }
+
+  .playlists-player-stage[data-mobile-video-immersive='true']
+    .youtube-player-section--controls-below
+    .youtube-player-subtitles {
+    bottom: 1rem;
+  }
+
+  .page-body-playlists
+    .playlists-workspace[data-mobile-view='detail'][data-player-active='true'][data-playback-mode='video'] {
+    padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom));
+  }
+
+  /* 视频下方控制条（浅色、横向，与桌面一致） */
+  .youtube-player-section--controls-below .youtube-player-controls-panel {
+    flex-shrink: 0;
+    padding: 0.65rem var(--page-gutter) 0.75rem;
+    padding-bottom: max(0.75rem, var(--safe-bottom));
+    background: var(--surface);
+    border-top: 1px solid var(--border-light);
+    color: var(--text);
+  }
+
+  .youtube-player-section--controls-below .youtube-player-overlay-meta {
+    margin-bottom: 0.4rem;
+    color: var(--text);
+  }
+
+  .youtube-player-section--controls-below .youtube-player-overlay-title {
+    color: var(--text);
+    font-size: 0.875rem;
+  }
+
+  .youtube-player-section--controls-below .youtube-player-overlay-index {
+    color: var(--text-tertiary);
+  }
+
+  .youtube-player-section--controls-below .youtube-player-bar {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.45rem 0.65rem;
+  }
+
+  .youtube-player-section--controls-below .youtube-player-transport {
+    flex-shrink: 0;
+    justify-content: flex-start;
+  }
+
+  .youtube-player-section--controls-below .youtube-player-progress {
+    flex: 1;
+    min-width: 6rem;
+    padding: 0.45rem 0;
+  }
+
+  .youtube-player-section--controls-below .youtube-player-progress-track {
+    background: var(--border-light);
+  }
+
+  .youtube-player-section--controls-below .youtube-player-progress-fill {
+    background: var(--blue);
+  }
+
+  .youtube-player-section--controls-below .youtube-player-progress-thumb {
+    background: var(--blue);
+  }
+
+  .youtube-player-section--controls-below .youtube-player-time {
+    flex-shrink: 0;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+  }
+
+  .youtube-player-section--controls-below .youtube-player-icon-btn {
+    background: var(--surface-secondary);
+    color: var(--text);
+    border: 1px solid var(--border-light);
+  }
+
+  .youtube-player-section--controls-below .youtube-player-icon-btn-primary {
+    background: var(--blue);
+    color: #fff;
+    border-color: transparent;
+  }
+
+  .youtube-player-section--controls-below .youtube-player-subtitle-toggle {
+    flex-shrink: 0;
+    background: var(--surface-secondary);
+    border: 1px solid var(--border-light);
+  }
+
+  .youtube-player-section--controls-below .youtube-player-subtitle-toggle-btn {
+    color: var(--text-secondary);
+  }
+
+  .youtube-player-section--controls-below .youtube-player-subtitle-toggle-btn.active {
+    background: var(--blue-muted);
+    color: var(--blue);
+  }
+
+  .youtube-player-section--controls-below .youtube-player-volume {
+    flex-shrink: 0;
+    width: auto;
+    min-width: 5.5rem;
+  }
+
+  .youtube-player-section--controls-below .youtube-player-volume-progress-track {
+    background: var(--border-light);
+  }
+
+  .youtube-player-section--controls-below .youtube-player-volume-progress-fill {
+    background: var(--blue);
+  }
+
+  /* 汉堡菜单 */
+  .playlists-mobile-video-menu-btn {
+    position: fixed;
+    top: calc(3.25rem + var(--safe-top));
+    right: calc(var(--page-gutter) + var(--safe-right));
+    z-index: var(--z-overlay);
+    width: 2.75rem;
+    height: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+    cursor: pointer;
+  }
+
+  .playlists-mobile-video-menu-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-modal);
+    background: rgba(0, 0, 0, 0.45);
+  }
+
+  .playlists-mobile-video-menu-sheet {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: calc(var(--z-modal) + 1);
+    max-height: min(85dvh, 520px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding:
+      calc(0.75rem + var(--safe-top))
+      var(--page-gutter)
+      max(1rem, var(--safe-bottom));
+    background: var(--surface);
+    border-bottom-left-radius: 16px;
+    border-bottom-right-radius: 16px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+  }
+
+  .playlists-mobile-video-menu-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .playlists-mobile-video-menu-head h2 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 650;
+  }
+
+  .playlists-mobile-video-menu-close {
+    width: 2.5rem;
+    height: 2.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    background: var(--surface-secondary);
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  .playlists-mobile-video-menu-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .playlists-mobile-video-menu-actions .playlists-playback-mode {
+    display: flex;
+    width: 100%;
+  }
+
+  .playlists-mobile-video-menu-actions .playlists-playback-mode-btn {
+    flex: 1;
+    min-height: 2.75rem;
+  }
+
+  .playlists-mobile-video-menu-actions .btn-primary,
+  .playlists-mobile-video-menu-actions .btn-secondary,
+  .playlists-mobile-video-menu-actions .playlists-shuffle-btn {
+    width: 100%;
+    min-height: 2.75rem;
+    justify-content: center;
+  }
+}

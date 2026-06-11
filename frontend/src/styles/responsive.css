@@ -202,3 +202,93 @@ body {
     touch-action: manipulation;
   }
 }
+
+/* 播放中：曲目列表置顶，方便随时点选切歌 */
+.playlists-main-inner .playlists-player-stage[data-player-engaged='true'] {
+  flex: 1;
+  min-height: 0;
+}
+
+.playlists-player-stage[data-player-engaged='true']:not([data-mobile-video-immersive='true'])
+  .playlists-tracks-col {
+  order: -1;
+  flex: 1 1 auto;
+  min-height: 8rem;
+  max-height: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.playlists-player-stage[data-player-engaged='true'] .playlists-player-col {
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+.playlists-player-stage[data-player-engaged='true'] .playlists-tracks-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin: 0 0 0.35rem;
+  padding: 0.2rem 0;
+  background: var(--surface);
+}
+
+/* 底部 dock 已含进度与控制，隐藏播放器内重复控件 */
+.playlists-player-stage[data-player-engaged='true'][data-playback-mode='audio'] .playlist-audio-controls {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .playlists-player-stage[data-player-engaged='true'] .playlists-tracks-col {
+    min-height: min(44vh, 360px);
+  }
+
+  .playlists-player-stage[data-player-engaged='true'][data-playback-mode='audio'] .playlist-audio-player {
+    flex: 0 0 auto;
+  }
+
+  .playlists-player-stage[data-player-engaged='true'][data-playback-mode='audio'] .playlist-audio-lyrics-panel {
+    flex: 0 0 auto;
+    min-height: 2.75rem;
+    max-height: min(18vh, 120px);
+  }
+
+  .playlists-player-stage[data-player-engaged='true'][data-playback-mode='video']:not(
+      [data-mobile-video-immersive='true']
+    )
+    .playlists-player-col {
+    max-height: min(40vh, 300px);
+    overflow: hidden;
+  }
+
+  .playlists-player-stage[data-player-engaged='true'][data-playback-mode='video']:not(
+      [data-mobile-video-immersive='true']
+    )
+    .youtube-player-frame-wrap {
+    max-height: 100%;
+  }
+}
+
+@media (min-width: 901px) {
+  .playlists-player-stage[data-player-engaged='true'] {
+    flex-direction: column;
+  }
+
+  .playlists-player-stage[data-player-engaged='true'] .playlists-tracks-col {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
+
+  .playlists-player-stage[data-player-engaged='true'][data-playback-mode='audio'] .playlists-player-col {
+    width: 100%;
+    max-height: min(30vh, 240px);
+    overflow: hidden;
+  }
+
+  .playlists-player-stage[data-player-engaged='true'][data-playback-mode='video'] .playlists-player-col {
+    width: 100%;
+    max-height: min(48vh, 400px);
+    overflow: hidden;
+  }
+}

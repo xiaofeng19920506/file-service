@@ -78,9 +78,6 @@
   font-weight: 600;
   font-size: 0.98rem;
   line-height: 1.35;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .playlist-audio-index {
@@ -380,6 +377,8 @@
 
   .playlists-playback-dock--desktop .playlists-playback-dock-title {
     font-size: 0.875rem;
+    flex: 1;
+    min-width: 0;
   }
 
   .playlists-playback-dock--desktop .playlists-playback-dock-index {

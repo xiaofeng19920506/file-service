@@ -1,0 +1,50 @@
+.scrolling-title {
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.scrolling-title-measure {
+  position: absolute;
+  visibility: hidden;
+  white-space: nowrap;
+  pointer-events: none;
+  height: 0;
+  overflow: hidden;
+}
+
+.scrolling-title-track {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scrolling-title.is-scrolling .scrolling-title-track {
+  display: inline-flex;
+  overflow: visible;
+  text-overflow: unset;
+  animation: scrolling-title-marquee 14s linear infinite;
+}
+
+.scrolling-title.is-scrolling:hover .scrolling-title-track {
+  animation-play-state: paused;
+}
+
+.scrolling-title-text {
+  flex-shrink: 0;
+  padding-right: 2.5rem;
+}
+
+.scrolling-title.is-scrolling .scrolling-title-text:last-child {
+  padding-right: 0;
+}
+
+@keyframes scrolling-title-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}

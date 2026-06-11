@@ -3,10 +3,12 @@ import AcceptSharedPlaylistModal from '../components/AcceptSharedPlaylistModal';
 import AddPlaylistItemsModal from '../components/AddPlaylistItemsModal';
 import ConfirmModal from '../components/ConfirmModal';
 import SharePlaylistModal from '../components/SharePlaylistModal';
-import { DragHandleIcon, PencilIcon } from '../components/icons';
+import { CloseIcon, DragHandleIcon, MenuIcon, PencilIcon } from '../components/icons';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 import AudioSeekBar from '../components/AudioSeekBar';
+import ScrollingTitle from '../components/ScrollingTitle';
 import PlaylistAudioPlayer, {
-  formatPlaybackTime,
+  formatPlaybackTimeRange,
   type PlaylistAudioProgressHandle,
   type PlaylistAudioProgressState,
 } from '../components/PlaylistAudioPlayer';
@@ -98,6 +100,9 @@ export default function PlaylistsPage({
   });
   const [playerEngaged, setPlayerEngaged] = useState(false);
   const [toolbarExpanded, setToolbarExpanded] = useState(false);
+  const [mobilePlaylistMenuOpen, setMobilePlaylistMenuOpen] = useState(false);
+  const [mobileVideoShowTracks, setMobileVideoShowTracks] = useState(false);
+  const isMobileViewport = useMediaQuery('(max-width: 900px)');
 
   useEffect(() => {
     setToolbarExpanded(false);
@@ -475,6 +480,15 @@ export default function PlaylistsPage({
 
   const currentItem = detail?.items[activeIndex];
   const showPlayer = playerEngaged && playerItems.length > 0;
+  const mobileVideoImmersive =
+    showPlayer && playbackMode === 'video' && isMobileViewport;
+
+  useEffect(() => {
+    if (!mobileVideoImmersive) {
+      setMobilePlaylistMenuOpen(false);
+      setMobileVideoShowTracks(false);
+    }
+  }, [mobileVideoImmersive]);
 
   const startRename = (id: string, title: string) => {
     setRenamingId(id);
@@ -519,6 +533,9 @@ export default function PlaylistsPage({
   const onPlaybackModeChange = (mode: PlaylistPlaybackMode) => {
     setPlaybackMode(mode);
     writePlaylistPlaybackMode(mode);
+    if (mode === 'audio') {
+      setMobilePlaylistMenuOpen(false);
+    }
   };
 
   const renderShuffleToggle = () => (
@@ -654,17 +671,129 @@ export default function PlaylistsPage({
     </div>
   );
 
+  const renderMobileVideoMenu = (playlist: PlaylistDetail['playlist'], hasTracks: boolean) => {
+    if (!mobileVideoImmersive || !detail) return null;
+
+    return (
+      <>
+        <button
+          type="button"
+          className="playlists-mobile-video-menu-btn mobile-only"
+          aria-label={t('playlists.playlistMenu')}
+          aria-expanded={mobilePlaylistMenuOpen}
+          onClick={() => setMobilePlaylistMenuOpen(true)}
+        >
+          <MenuIcon />
+        </button>
+        {mobilePlaylistMenuOpen && (
+          <>
+            <button
+              type="button"
+              className="playlists-mobile-video-menu-backdrop"
+              aria-label={t('common.cancel')}
+              onClick={() => setMobilePlaylistMenuOpen(false)}
+            />
+            <div
+              className="playlists-mobile-video-menu-sheet mobile-only"
+              role="dialog"
+              aria-modal="true"
+              aria-label={t('playlists.playlistMenu')}
+            >
+              <div className="playlists-mobile-video-menu-head">
+                <h2>{t('playlists.playlistMenu')}</h2>
+                <button
+                  type="button"
+                  className="playlists-mobile-video-menu-close"
+                  aria-label={t('common.cancel')}
+                  onClick={() => setMobilePlaylistMenuOpen(false)}
+                >
+                  <CloseIcon />
+                </button>
+              </div>
+              <div className="playlists-mobile-video-menu-actions">
+                {renderPlaybackModeToggle()}
+                {hasTracks && (
+                  <>
+                    <button type="button" className="btn-primary" onClick={startPlayback}>
+                      {t('playlists.playAll')}
+                    </button>
+                    {renderShuffleToggle()}
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => {
+                        setMobileVideoShowTracks((open) => !open);
+                        setMobilePlaylistMenuOpen(false);
+                      }}
+                    >
+                      {mobileVideoShowTracks
+                        ? t('playlists.hideTracks')
+                        : t('playlists.showTracks')}
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => {
+                    setMobilePlaylistMenuOpen(false);
+                    onSelectId(undefined);
+                  }}
+                >
+                  {t('playlists.backToList')}
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => {
+                    setMobilePlaylistMenuOpen(false);
+                    setShowAddModal(true);
+                  }}
+                >
+                  {t('playlists.addTitle')}
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => {
+                    setMobilePlaylistMenuOpen(false);
+                    setShareTarget({ id: playlist.id, title: playlist.title });
+                  }}
+                >
+                  {t('playlists.share')}
+                </button>
+                {playlist.matchedCount > 0 && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => {
+                      setMobilePlaylistMenuOpen(false);
+                      onLoadToMerge(playlist.id);
+                    }}
+                  >
+                    {t('playlists.loadToMerge')}
+                  </button>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </>
+    );
+  };
+
   const renderPlaybackDock = (variant: 'mobile' | 'desktop') => {
+    if (playbackMode !== 'audio') return null;
     if (!selectedId || !detail || detail.items.length === 0 || !currentItem) return null;
 
-    const showAudioProgress = playbackMode === 'audio';
+    const showAudioProgress = true;
 
     return (
       <div
         className={`playlists-playback-dock playlists-playback-dock--${variant}${showAudioProgress ? ' playlists-playback-dock--audio' : ''}${variant === 'mobile' ? ' mobile-only' : ' desktop-only'}`}
       >
         <div className="playlists-playback-dock-meta">
-          <span className="playlists-playback-dock-title">{currentItem.title}</span>
+          <ScrollingTitle text={currentItem.title} className="playlists-playback-dock-title" />
           <span className="playlists-playback-dock-index">
             {t('playlists.trackCounter', {
               current: activeIndex + 1,
@@ -682,10 +811,7 @@ export default function PlaylistsPage({
               className="playlists-playback-dock-progress"
             />
             <div className="playlists-playback-dock-time">
-              {formatPlaybackTime(audioProgress.currentTime)}
-              {audioProgress.canSeek
-                ? ` / ${formatPlaybackTime(audioProgress.duration)}`
-                : ''}
+              {formatPlaybackTimeRange(audioProgress.currentTime, audioProgress.duration)}
             </div>
           </div>
         )}
@@ -835,7 +961,10 @@ export default function PlaylistsPage({
 
   return (
     <div className="page-body page-body-playlists">
-      <main className="playlists-page">
+      <main
+        className="playlists-page"
+        data-mobile-video-immersive={mobileVideoImmersive ? 'true' : 'false'}
+      >
         <header className="playlists-header">
           <h1>{t('playlists.title')}</h1>
           <p className="playlists-intro">{t('playlists.intro')}</p>
@@ -852,6 +981,7 @@ export default function PlaylistsPage({
           className="playlists-workspace"
           data-mobile-view={selectedId ? 'detail' : 'list'}
           data-player-active={showPlayer ? 'true' : 'false'}
+          data-playback-mode={playbackMode}
         >
           <aside className="playlists-sidebar" aria-label={t('playlists.savedTitle')}>
             <form className="playlists-create-form" onSubmit={(e) => void handleImport(e)}>
@@ -986,8 +1116,11 @@ export default function PlaylistsPage({
                 <p className="playlists-muted">{t('playlists.loadingDetail')}</p>
               </div>
             ) : detail ? (
-              <div className="playlists-main-inner">
+              <div
+                className={`playlists-main-inner${mobileVideoImmersive ? ' playlists-main-inner--mobile-video' : ''}`}
+              >
                 {renderMainToolbar(detail.playlist, detail.items.length > 0)}
+                {renderMobileVideoMenu(detail.playlist, detail.items.length > 0)}
 
                 {detail.items.length === 0 ? (
                   <div className="playlists-empty-card playlists-empty-tracks">
@@ -999,6 +1132,8 @@ export default function PlaylistsPage({
                     className="playlists-player-stage"
                     data-playback-mode={playbackMode}
                     data-player-engaged={showPlayer ? 'true' : 'false'}
+                    data-mobile-video-immersive={mobileVideoImmersive ? 'true' : 'false'}
+                    data-mobile-video-tracks-open={mobileVideoShowTracks ? 'true' : 'false'}
                   >
                     <div className="playlists-player-col">
                       {!showPlayer && currentItem && (
@@ -1054,6 +1189,7 @@ export default function PlaylistsPage({
                           onPrevTrack={goToPrevTrack}
                           canGoNext={canGoNext}
                           canGoPrev={canGoPrev}
+                          controlsBelow={mobileVideoImmersive}
                         />
                       )}
                     </div>
@@ -1212,8 +1348,8 @@ export default function PlaylistsPage({
         />
       )}
 
-      {showPlayer && renderPlaybackDock('mobile')}
-      {showPlayer && renderPlaybackDock('desktop')}
+      {showPlayer && playbackMode === 'audio' && renderPlaybackDock('mobile')}
+      {showPlayer && playbackMode === 'audio' && renderPlaybackDock('desktop')}
     </div>
   );
 }
