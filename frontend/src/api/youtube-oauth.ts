@@ -6,6 +6,8 @@ export type YoutubeOAuthStatus = {
   channelTitle: string | null;
   googleAccountEmail: string | null;
   updatedAt: string | null;
+  dataApiReady?: boolean;
+  dataApiError?: string | null;
 };
 
 export type YoutubeExportResult = {
@@ -14,6 +16,8 @@ export type YoutubeExportResult = {
   itemsAdded: number;
   itemsFailed: number;
   failedVideoIds: string[];
+  invalidVideoIds?: string[];
+  itemErrors?: Array<{ videoId: string; reason: string }>;
 };
 
 export type YoutubePrivacyStatus = 'public' | 'unlisted' | 'private';

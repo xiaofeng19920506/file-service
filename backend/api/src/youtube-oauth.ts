@@ -8,6 +8,7 @@ import {
   mapYoutubeApiError,
   playlistItems,
   playlists,
+  probeYoutubeDataApiAccess,
   refreshGoogleAccessToken,
   signYoutubeOAuthState,
   verifyYoutubeOAuthState,
@@ -190,12 +191,29 @@ export function registerYoutubeOAuthRoutes(
       .from(youtubeOAuthConnections)
       .where(eq(youtubeOAuthConnections.userId, user.id));
 
+    let dataApiReady = false;
+    let dataApiError: string | null = null;
+    if (row) {
+      const tokenResult = await getValidAccessToken(db, oauth, user.id);
+      if ('accessToken' in tokenResult) {
+        const probe = await probeYoutubeDataApiAccess(tokenResult.accessToken);
+        dataApiReady = probe.ok;
+        if (!probe.ok) {
+          dataApiError = mapYoutubeApiError(probe.reason);
+        }
+      } else {
+        dataApiError = tokenResult.error === 'not_connected' ? 'youtube_not_connected' : 'youtube_token_refresh_failed';
+      }
+    }
+
     return {
       configured: true,
       connected: !!row,
       channelTitle: row?.channelTitle ?? null,
       googleAccountEmail: row?.googleAccountEmail ?? null,
       updatedAt: row?.updatedAt?.toISOString() ?? null,
+      dataApiReady,
+      dataApiError,
     };
   });
 
@@ -411,7 +429,12 @@ export function registerYoutubeOAuthRoutes(
         return reply.code(400).send({ error: mapYoutubeApiError(raw) });
       }
       const code = mapYoutubeApiError(raw);
-      const status = code === 'youtube_quota_exceeded' ? 429 : 502;
+      const status =
+        code === 'youtube_quota_exceeded'
+          ? 429
+          : code === 'youtube_api_not_enabled' || code === 'youtube_channel_required'
+            ? 503
+            : 502;
       return reply.code(status).send({ error: code });
     }
   });

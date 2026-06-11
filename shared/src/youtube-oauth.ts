@@ -7,12 +7,19 @@ export const YOUTUBE_OAUTH_SCOPES = [
 
 export type YoutubePrivacyStatus = 'public' | 'unlisted' | 'private';
 
+export type YoutubeExportItemError = {
+  videoId: string;
+  reason: string;
+};
+
 export type YoutubeExportResult = {
   youtubePlaylistId: string;
   youtubePlaylistUrl: string;
   itemsAdded: number;
   itemsFailed: number;
   failedVideoIds: string[];
+  invalidVideoIds: string[];
+  itemErrors: YoutubeExportItemError[];
 };
 
 export type GoogleTokenResponse = {
@@ -112,6 +119,19 @@ export async function refreshGoogleAccessToken(opts: {
   return data;
 }
 
+type YoutubeApiErrorBody = {
+  error?: {
+    message?: string;
+    errors?: Array<{ reason?: string; message?: string }>;
+  };
+};
+
+function throwYoutubeApiError(data: YoutubeApiErrorBody, status: number): never {
+  const reason = data.error?.errors?.[0]?.reason?.trim();
+  const message = data.error?.message?.trim();
+  throw new Error(reason || message || `youtube_api_failed:${status}`);
+}
+
 async function youtubeApiRequest<T>(
   accessToken: string,
   path: string,
@@ -129,13 +149,28 @@ async function youtubeApiRequest<T>(
     },
   });
 
-  const data = (await res.json()) as T & { error?: { message?: string; errors?: Array<{ reason?: string }> } };
+  const data = (await res.json()) as T & YoutubeApiErrorBody;
   if (!res.ok) {
-    const reason = data.error?.errors?.[0]?.reason;
-    const message = data.error?.message ?? reason ?? 'youtube_api_failed';
-    throw new Error(message);
+    throwYoutubeApiError(data, res.status);
   }
   return data;
+}
+
+/** 检查 OAuth 项目是否已启用 YouTube Data API v3 */
+export async function probeYoutubeDataApiAccess(
+  accessToken: string,
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  try {
+    await youtubeApiRequest(
+      accessToken,
+      '/playlists?part=id&mine=true&maxResults=1',
+      { method: 'GET' },
+    );
+    return { ok: true };
+  } catch (e) {
+    const reason = e instanceof Error ? e.message : 'youtube_api_failed';
+    return { ok: false, reason };
+  }
 }
 
 export async function fetchGoogleUserEmail(accessToken: string): Promise<string | null> {
@@ -171,6 +206,14 @@ export async function fetchYoutubeChannelInfo(accessToken: string): Promise<Yout
 export function mapYoutubeApiError(message: string): string {
   if (message === 'youtube_export_no_items_added') return 'youtube_export_no_items_added';
   const lower = message.toLowerCase();
+  if (
+    lower.includes('accessnotconfigured')
+    || lower.includes('has not been used in project')
+    || lower.includes('it is disabled')
+  ) {
+    return 'youtube_api_not_enabled';
+  }
+  if (lower.includes('youtubesignuprequired')) return 'youtube_channel_required';
   if (lower.includes('quota') || lower.includes('dailylimitexceeded')) return 'youtube_quota_exceeded';
   if (lower.includes('insufficientpermissions') || lower.includes('forbidden')) {
     return 'youtube_insufficient_permissions';
@@ -221,25 +264,21 @@ export async function addVideoToYoutubePlaylist(opts: {
   accessToken: string;
   playlistId: string;
   videoId: string;
-  position?: number;
 }): Promise<void> {
-  const snippet: Record<string, unknown> = {
-    playlistId: opts.playlistId,
-    resourceId: {
-      kind: 'youtube#video',
-      videoId: opts.videoId,
-    },
-  };
-  if (typeof opts.position === 'number') {
-    snippet.position = opts.position;
-  }
-
   await youtubeApiRequest(
     opts.accessToken,
-    '/playlistItems?part=snippet,contentDetails',
+    '/playlistItems?part=snippet',
     {
       method: 'POST',
-      body: JSON.stringify({ snippet }),
+      body: JSON.stringify({
+        snippet: {
+          playlistId: opts.playlistId,
+          resourceId: {
+            kind: 'youtube#video',
+            videoId: opts.videoId,
+          },
+        },
+      }),
     },
   );
 }
@@ -265,23 +304,26 @@ export async function exportVideosToYoutubePlaylist(opts: {
   });
 
   const failedVideoIds = [...invalid];
+  const itemErrors: YoutubeExportItemError[] = invalid.map((videoId) => ({
+    videoId,
+    reason: 'invalid_video_id',
+  }));
   let itemsAdded = 0;
 
-  for (let i = 0; i < valid.length; i++) {
-    const videoId = valid[i]!;
+  for (const videoId of valid) {
     try {
       await addVideoToYoutubePlaylist({
         accessToken: opts.accessToken,
         playlistId: created.playlistId,
         videoId,
-        position: i,
       });
       itemsAdded += 1;
       opts.onItemResult?.({ videoId, ok: true });
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'youtube_api_failed';
+      const reason = e instanceof Error ? e.message : 'youtube_api_failed';
       failedVideoIds.push(videoId);
-      opts.onItemResult?.({ videoId, ok: false, error: message });
+      itemErrors.push({ videoId, reason });
+      opts.onItemResult?.({ videoId, ok: false, error: reason });
     }
   }
 
@@ -300,5 +342,7 @@ export async function exportVideosToYoutubePlaylist(opts: {
     itemsAdded,
     itemsFailed: failedVideoIds.length,
     failedVideoIds,
+    invalidVideoIds: invalid,
+    itemErrors,
   };
 }

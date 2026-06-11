@@ -2804,6 +2804,34 @@
   word-break: break-all;
 }
 
+.export-youtube-share {
+  margin-top: 0.25rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.export-youtube-share-btn {
+  width: 100%;
+}
+
+.export-youtube-share-options {
+  margin-top: 0.25rem;
+}
+
+.export-youtube-share-options summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  user-select: none;
+}
+
+.export-youtube-share-options[open] summary {
+  margin-bottom: 0.5rem;
+}
+
 .accept-share-playlist-title {
   margin: 0 0 0.35rem;
   font-size: 1rem;

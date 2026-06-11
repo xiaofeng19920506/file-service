@@ -318,6 +318,17 @@ const en: MessageTree = {
     exportYoutubeVisibilityHint: 'If the playlist looks empty, check YouTube Library → Playlists and the visibility you chose (unlisted/private).',
     exportYoutubeTrackCount: '{count} tracks will be exported',
     exportYoutubeSlowHint: 'Large lists may take a minute — please keep this window open.',
+    exportYoutubeApiEnableHint:
+      'Enable “YouTube Data API v3” in Google Cloud Console (same project as your OAuth client), then reconnect your account.',
+    exportYoutubeFailedIds: 'Videos that could not be added: {ids}',
+    exportYoutubeShareMyPlaylist: 'Share my playlist',
+    exportYoutubeShareInGmail: 'Open in Gmail',
+    exportYoutubeShareHint: 'Opens your mail app or browser — you send the message yourself.',
+    exportYoutubeShareOptions: 'Optional: pre-fill recipient & message',
+    exportYoutubeShareEmailOptional: 'Leave blank to add recipient in your mail app',
+    exportYoutubeMailSubject: '{sender} shared a YouTube playlist: "{title}"',
+    exportYoutubeMailBodyIntro: '{sender} shared the YouTube playlist "{title}" ({count} tracks) with you.',
+    exportYoutubeMailBodyLink: 'Open on YouTube: {url}',
   },
   workflow: {
     search: 'Find songs',
@@ -583,6 +594,9 @@ const en: MessageTree = {
     youtube_insufficient_permissions: 'YouTube account lacks permission to create playlists — reconnect',
     youtube_export_no_items_added: 'No tracks could be added to YouTube — check that videos are public and IDs are valid',
     youtube_video_not_found: 'One or more YouTube videos were not found or cannot be added',
+    youtube_api_not_enabled:
+      'YouTube Data API v3 is not enabled — open Google Cloud → API Library → search “YouTube Data API v3” → Enable (same project as OAuth client)',
+    youtube_channel_required: 'This Google account has no YouTube channel — create one on YouTube before exporting',
   },
 };
 

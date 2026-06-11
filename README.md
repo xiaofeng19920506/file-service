@@ -107,8 +107,9 @@ PUBLIC_BASE_URL=https://你的API HTTPS地址
 
 **1. Google Cloud Console**
 
-- 启用 YouTube Data API v3
-- 创建 OAuth Web 客户端
+- 打开 [YouTube Data API v3](https://console.cloud.google.com/apis/library/youtube.googleapis.com) → 点击 **启用**（必须与下方 OAuth 客户端在 **同一项目**）
+- 若 API 库搜不到：左侧 **API 和服务 → 库**，搜索 `YouTube Data API v3`（不是 YouTube Analytics API）
+- 创建 OAuth **Web 应用** 客户端
 - **已授权的重定向 URI**（必填）：`https://你的API域名/v1/youtube/oauth/callback`
 - JavaScript 来源可留空
 
@@ -139,4 +140,6 @@ npm run tunnel:status         # 查看 https://xxx.trycloudflare.com
 curl -s https://你的API HTTPS 地址/health
 ```
 
-登录敬拜团账号 → 播放列表 → 视频模式 →「导出到 YouTube」。
+登录敬拜团账号 → 播放列表 → **视频模式** →「导出到 YouTube」→ 绑定 Google 账号 → 再点 **「创建 YouTube 播放列表」**（绑定不会自动写入曲目）。
+
+若对话框提示未启用 API，请按上文第 1 步启用 YouTube Data API v3 后，解除绑定并重新绑定。

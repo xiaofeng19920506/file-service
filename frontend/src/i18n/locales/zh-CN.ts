@@ -310,6 +310,17 @@ export default {
     exportYoutubeVisibilityHint: '若播放列表看起来是空的，请到 YouTube 内容库 → 播放列表，并确认可见性（不公开/私享）。',
     exportYoutubeTrackCount: '将导出 {count} 首曲目',
     exportYoutubeSlowHint: '曲目较多时可能需要一分钟，请保持窗口打开。',
+    exportYoutubeApiEnableHint:
+      '请在 Google Cloud Console 启用「YouTube Data API v3」（与 OAuth 客户端同一项目），然后重新绑定账号。',
+    exportYoutubeFailedIds: '未能添加的视频 ID：{ids}',
+    exportYoutubeShareMyPlaylist: '分享我的播放列表',
+    exportYoutubeShareInGmail: '在 Gmail 中打开',
+    exportYoutubeShareHint: '将打开你本机的邮件应用或浏览器，由你亲自发送给收件人。',
+    exportYoutubeShareOptions: '可选：预填收件人与附言',
+    exportYoutubeShareEmailOptional: '留空则在邮件应用中自行填写',
+    exportYoutubeMailSubject: '{sender} 分享了 YouTube 播放列表「{title}」',
+    exportYoutubeMailBodyIntro: '{sender} 与你分享了 YouTube 播放列表「{title}」（{count} 首）。',
+    exportYoutubeMailBodyLink: '在 YouTube 打开：{url}',
   },
   workflow: {
     search: '查找歌曲',
@@ -573,6 +584,9 @@ export default {
     youtube_insufficient_permissions: 'YouTube 账号无权创建播放列表，请重新绑定',
     youtube_export_no_items_added: '没有曲目成功写入 YouTube，请确认视频公开且 ID 有效',
     youtube_video_not_found: '部分 YouTube 视频不存在或无法加入播放列表',
+    youtube_api_not_enabled:
+      '未启用 YouTube Data API v3：打开 Google Cloud → API 库 → 搜索「YouTube Data API v3」→ 启用（须与 OAuth 客户端同一项目）',
+    youtube_channel_required: '该 Google 账号尚未创建 YouTube 频道，请先在 YouTube 创建频道后再导出',
   },
 } as const;
 

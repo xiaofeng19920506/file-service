@@ -8,6 +8,9 @@ import {
   type YoutubePrivacyStatus,
 } from '../api/youtube-oauth';
 import { friendlyError } from '../lib/error-messages';
+import { getCachedUser } from '../lib/auth-session';
+import { isValidEmail, openGmailCompose, openMailtoShare } from '../lib/mailto-share';
+import { formatUserDisplayName } from '../lib/user-name';
 import { useI18n } from '../i18n';
 
 type ExportYoutubePlaylistModalProps = {
@@ -36,7 +39,14 @@ export default function ExportYoutubePlaylistModal({
   const [privacyStatus, setPrivacyStatus] = useState<YoutubePrivacyStatus>('unlisted');
   const [error, setError] = useState<string | null>(null);
   const [exportUrl, setExportUrl] = useState<string | null>(null);
-  const [exportSummary, setExportSummary] = useState<{ added: number; failed: number } | null>(null);
+  const [exportSummary, setExportSummary] = useState<{
+    added: number;
+    failed: number;
+    failedVideoIds: string[];
+  } | null>(null);
+  const [shareEmail, setShareEmail] = useState('');
+  const [shareMessage, setShareMessage] = useState('');
+  const [shareEmailError, setShareEmailError] = useState<string | null>(null);
 
   const loadStatus = useCallback(async () => {
     setLoadingStatus(true);
@@ -93,13 +103,64 @@ export default function ExportYoutubePlaylistModal({
         title: playlistTitle,
       });
       setExportUrl(result.youtubePlaylistUrl);
-      setExportSummary({ added: result.itemsAdded, failed: result.itemsFailed });
+      setExportSummary({
+        added: result.itemsAdded,
+        failed: result.itemsFailed,
+        failedVideoIds: result.failedVideoIds ?? [],
+      });
       onExported(result.youtubePlaylistUrl);
     } catch (err) {
       setError(friendlyError(err instanceof Error ? err.message : 'youtube_export_failed', t));
     } finally {
       setExporting(false);
     }
+  };
+
+  const buildShareMail = () => {
+    const user = getCachedUser();
+    const senderName = user ? formatUserDisplayName(user) : t('playlists.exportYoutubeUnknownAccount');
+    const trackTotal = exportSummary?.added ?? trackCount;
+    const subject = t('playlists.exportYoutubeMailSubject', {
+      title: playlistTitle,
+      sender: senderName,
+    });
+    const bodyLines = [
+      t('playlists.exportYoutubeMailBodyIntro', {
+        sender: senderName,
+        title: playlistTitle,
+        count: trackTotal,
+      }),
+      shareMessage.trim() ? `\n${shareMessage.trim()}\n` : '',
+      exportUrl ? t('playlists.exportYoutubeMailBodyLink', { url: exportUrl }) : '',
+    ].filter((line) => line !== '');
+    return { subject, body: bodyLines.join('\n') };
+  };
+
+  const shareRecipient = () => {
+    const to = shareEmail.trim();
+    if (!to) return undefined;
+    if (!isValidEmail(to)) {
+      setShareEmailError(t('errors.invalid_email'));
+      return null;
+    }
+    setShareEmailError(null);
+    return to;
+  };
+
+  const handleShareMyPlaylist = () => {
+    if (!exportUrl) return;
+    const to = shareRecipient();
+    if (to === null) return;
+    const { subject, body } = buildShareMail();
+    openMailtoShare({ to, subject, body });
+  };
+
+  const handleShareInGmail = () => {
+    if (!exportUrl) return;
+    const to = shareRecipient();
+    if (to === null) return;
+    const { subject, body } = buildShareMail();
+    openGmailCompose({ to, subject, body });
   };
 
   const connected = status?.connected ?? false;
@@ -154,6 +215,14 @@ export default function ExportYoutubePlaylistModal({
                   <p className="export-youtube-channel">
                     {status?.channelTitle || status?.googleAccountEmail || t('playlists.exportYoutubeUnknownAccount')}
                   </p>
+                  {status?.dataApiReady === false && status.dataApiError && (
+                    <p className="form-error export-youtube-api-warning">
+                      {friendlyError(status.dataApiError, t)}
+                    </p>
+                  )}
+                  {status?.dataApiReady === false && (
+                    <p className="export-youtube-hint">{t('playlists.exportYoutubeApiEnableHint')}</p>
+                  )}
                   <button
                     type="button"
                     className="btn-secondary btn-danger-outline"
@@ -189,7 +258,7 @@ export default function ExportYoutubePlaylistModal({
                       <option value="public">{t('playlists.exportYoutubePrivacyPublic')}</option>
                     </select>
                   </label>
-                  <button type="submit" className="btn-primary" disabled={exporting}>
+                  <button type="submit" className="btn-primary" disabled={exporting || status?.dataApiReady === false}>
                     {exporting ? t('playlists.exportYoutubeExporting') : t('playlists.exportYoutubeExport')}
                   </button>
                 </form>
@@ -211,6 +280,60 @@ export default function ExportYoutubePlaylistModal({
                     {t('playlists.exportYoutubeOpenLink')}
                   </a>
                   <p className="export-youtube-hint">{t('playlists.exportYoutubeVisibilityHint')}</p>
+                  {exportSummary && exportSummary.failedVideoIds.length > 0 && (
+                    <p className="export-youtube-failed-ids">
+                      {t('playlists.exportYoutubeFailedIds', {
+                        ids: exportSummary.failedVideoIds.slice(0, 5).join(', '),
+                      })}
+                    </p>
+                  )}
+
+                  <div className="export-youtube-share">
+                    <button
+                      type="button"
+                      className="btn-primary export-youtube-share-btn"
+                      onClick={handleShareMyPlaylist}
+                    >
+                      {t('playlists.exportYoutubeShareMyPlaylist')}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={handleShareInGmail}
+                    >
+                      {t('playlists.exportYoutubeShareInGmail')}
+                    </button>
+                    <p className="export-youtube-hint">{t('playlists.exportYoutubeShareHint')}</p>
+
+                    <details className="export-youtube-share-options">
+                      <summary>{t('playlists.exportYoutubeShareOptions')}</summary>
+                      <label className="share-playlist-field">
+                        <span>{t('playlists.shareEmailLabel')}</span>
+                        <input
+                          type="email"
+                          className="playlists-text-input"
+                          value={shareEmail}
+                          onChange={(e) => {
+                            setShareEmail(e.target.value);
+                            setShareEmailError(null);
+                          }}
+                          placeholder={t('playlists.exportYoutubeShareEmailOptional')}
+                          autoComplete="email"
+                        />
+                      </label>
+                      <label className="share-playlist-field">
+                        <span>{t('playlists.shareMessageLabel')}</span>
+                        <textarea
+                          className="playlists-text-input share-playlist-message"
+                          value={shareMessage}
+                          onChange={(e) => setShareMessage(e.target.value)}
+                          placeholder={t('playlists.shareMessagePlaceholder')}
+                          rows={3}
+                        />
+                      </label>
+                      {shareEmailError && <p className="form-error">{shareEmailError}</p>}
+                    </details>
+                  </div>
                 </div>
               )}
             </>
