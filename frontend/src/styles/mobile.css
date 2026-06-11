@@ -1,0 +1,419 @@
+/**
+ * 手机 / 平板（≤900px）统一排版
+ * 分段切换、底栏导航、卡片化列表、滚动策略
+ */
+
+@media (max-width: 900px) {
+  :root {
+    --mobile-breakpoint-active: 1;
+    --page-gutter: 1rem;
+    --nav-height: 3.25rem;
+    --nav-padding-block: 0.5rem;
+    --bottom-nav-height: calc(3.75rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* ── 顶栏：当前页标题 + 紧凑操作 ── */
+  .nav-brand-app-name {
+    display: none;
+  }
+
+  .nav-brand-page-title {
+    display: block;
+    font-size: 1rem;
+  }
+
+  .nav-center-desktop,
+  .nav-actions-desktop {
+    display: none;
+  }
+
+  .nav-actions-compact {
+    display: flex;
+  }
+
+  .nav-bottom {
+    display: block;
+  }
+
+  .app {
+    padding-bottom: var(--bottom-nav-height);
+  }
+
+  .nav-inner {
+    height: var(--nav-height);
+    min-height: var(--nav-height);
+    gap: 0.65rem;
+  }
+
+  .nav-user {
+    display: none;
+  }
+
+  .nav-mobile-menu .nav-user {
+    display: inline;
+  }
+
+  /* ── 分段切换（Library / Merge） ── */
+  .mobile-segments {
+    display: flex;
+    gap: 0.25rem;
+    padding: 0.2rem;
+    margin-bottom: 0.75rem;
+    border-radius: 12px;
+    background: var(--surface-secondary);
+    border: 1px solid var(--border-light);
+  }
+
+  .mobile-segment {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 2.5rem;
+    padding: 0.4rem 0.65rem;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  }
+
+  .mobile-segment.active {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 1px 4px var(--shadow-sm);
+  }
+
+  .mobile-segment-badge {
+    min-width: 1.25rem;
+    height: 1.25rem;
+    padding: 0 0.35rem;
+    border-radius: 999px;
+    background: var(--blue-muted);
+    color: var(--blue);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1.25rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .mobile-segment.active .mobile-segment-badge {
+    background: var(--blue);
+    color: #fff;
+  }
+
+  .mobile-only {
+    display: block;
+  }
+
+  .desktop-only {
+    display: none !important;
+  }
+
+  /* ── 诗库：分段 + 自然滚动 ── */
+  .page-body-library .main-library {
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-block: 0.65rem;
+  }
+
+  .main-library .main {
+    padding: 0 var(--page-gutter) 1.25rem;
+  }
+
+  .library-workflow-grid[data-mobile-section='search'] .workflow-upload {
+    display: none;
+  }
+
+  .library-workflow-grid[data-mobile-section='upload'] .workflow-search {
+    display: none;
+  }
+
+  .library-workflow-grid .workflow-search .search-results {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .library-workflow-grid .workflow-section {
+    min-height: 0;
+  }
+
+  .search-result-item {
+    padding: 0.85rem 1rem;
+  }
+
+  .search-result-title {
+    font-size: 0.9375rem;
+  }
+
+  /* ── 合并：分段互斥 ── */
+  .page-body-merge {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .page-body-merge[data-mobile-panel='search'] .merge-panel-setlist {
+    display: none;
+  }
+
+  .page-body-merge[data-mobile-panel='setlist'] .merge-panel-search {
+    display: none;
+  }
+
+  .page-body-merge .merge-panel {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    border-right: none;
+    padding: 0.75rem var(--page-gutter) 1rem;
+  }
+
+  .merge-header-actions {
+    flex-wrap: wrap;
+    justify-content: stretch;
+    gap: 0.5rem;
+  }
+
+  .merge-header-actions .btn-sm {
+    flex: 1;
+    min-height: 2.5rem;
+  }
+
+  .merge-setlist-scroll {
+    overflow: visible;
+  }
+
+  /* ── 敬拜列表（延续 list/detail） ── */
+  .playlists-page {
+    padding: 0.5rem var(--page-gutter) 0.75rem;
+  }
+
+  .playlists-header {
+    margin-bottom: 0.5rem;
+  }
+
+  .playlists-header h1 {
+    font-size: 1.15rem;
+  }
+
+  .playlists-intro {
+    display: none;
+  }
+
+  .playlists-toolbar-primary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .playlists-toolbar-primary .btn-primary {
+    grid-column: 1 / -1;
+    min-height: 2.75rem;
+    font-size: 0.9375rem;
+  }
+
+  .playlists-toolbar-primary .playlists-playback-mode {
+    grid-column: 1 / -1;
+    display: flex;
+    width: 100%;
+  }
+
+  .playlists-toolbar-primary .playlists-playback-mode-btn {
+    flex: 1;
+  }
+
+  .playlists-toolbar-more {
+    width: 100%;
+  }
+
+  .playlists-toolbar-more-toggle {
+    width: 100%;
+    min-height: 2.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    background: var(--surface-secondary);
+    color: var(--text-secondary);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .playlists-toolbar-secondary {
+    display: none;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    width: 100%;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border-light);
+  }
+
+  .playlists-main-toolbar.is-expanded .playlists-toolbar-secondary {
+    display: grid;
+  }
+
+  .playlists-main-toolbar.is-expanded .playlists-toolbar-more-toggle-icon {
+    transform: rotate(180deg);
+  }
+
+  .playlists-toolbar-secondary .btn-secondary {
+    width: 100%;
+  }
+
+  .playlists-toolbar-secondary .btn-danger-outline {
+    grid-column: 1 / -1;
+  }
+
+  /* ── 管理：表格 → 卡片 ── */
+  .admin-page {
+    padding: 0.75rem var(--page-gutter) 1.5rem;
+  }
+
+  .admin-toolbar h1 {
+    font-size: 1.15rem;
+  }
+
+  .admin-tabs {
+    width: 100%;
+  }
+
+  .admin-tabs .page-tab {
+    flex: 1;
+    text-align: center;
+  }
+
+  .admin-table-wrap {
+    overflow-x: visible;
+    border: none;
+    background: transparent;
+  }
+
+  .admin-table-library thead {
+    display: none;
+  }
+
+  .admin-table-library tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .admin-table-library tr {
+    display: block;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--border-light);
+    border-radius: 14px;
+    background: var(--surface);
+  }
+
+  .admin-table-library td {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.3rem 0;
+    border: none;
+    font-size: 0.8125rem;
+  }
+
+  .admin-table-library td::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    font-size: 0.75rem;
+    min-width: 4.5rem;
+  }
+
+  .admin-table-library .admin-table-col-title {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25rem;
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.35rem;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .admin-table-library .admin-table-col-title::before {
+    display: none;
+  }
+
+  .admin-table-library .admin-table-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    white-space: normal;
+  }
+
+  .admin-table-library .admin-table-actions-col {
+    flex-direction: column;
+    align-items: stretch;
+    padding-top: 0.5rem;
+    margin-top: 0.25rem;
+    border-top: 1px solid var(--border-light);
+  }
+
+  .admin-table-library .admin-table-actions-col::before {
+    display: none;
+  }
+
+  .admin-table-library .admin-table-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .admin-table-library .admin-table-actions .btn-sm {
+    width: 100%;
+    min-height: 2.25rem;
+  }
+
+  .admin-table-empty-row td {
+    display: block;
+    border: none;
+    padding: 1rem;
+  }
+
+  .admin-table-empty-row td::before {
+    display: none;
+  }
+}
+
+@media (min-width: 901px) {
+  .nav-brand-page-title {
+    display: none;
+  }
+
+  .nav-brand-app-name {
+    display: block;
+  }
+
+  .mobile-only {
+    display: none !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .playlists-hero-play-icon {
+    width: 3.75rem;
+    height: 3.75rem;
+    font-size: 1.1rem;
+  }
+
+  .playlists-main-inner {
+    padding: 0.65rem;
+  }
+}

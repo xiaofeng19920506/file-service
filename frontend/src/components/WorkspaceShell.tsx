@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import MobileSegmentedControl from './MobileSegmentedControl';
 import type { MergeWorkspace } from '../hooks/useMergeWorkspace';
 import { useI18n } from '../i18n';
 
@@ -23,9 +24,30 @@ export default function WorkspaceShell({
     openEditMerged,
   } = workspace;
 
+  const [mobilePanel, setMobilePanel] = useState<'search' | 'setlist'>('search');
+  const itemCount = workspace.items.length;
+  const prevItemCount = useRef(itemCount);
+
+  useEffect(() => {
+    if (itemCount > prevItemCount.current) {
+      setMobilePanel('setlist');
+    }
+    prevItemCount.current = itemCount;
+  }, [itemCount]);
+
   if (leftColumn != null && centerColumn != null) {
     return (
-      <div className="page-body page-body-merge">
+      <div className="page-body page-body-merge" data-mobile-panel={mobilePanel}>
+        <MobileSegmentedControl
+          className="mobile-only merge-mobile-segments"
+          ariaLabel={t('merge.mobileSections')}
+          value={mobilePanel}
+          onChange={(id) => setMobilePanel(id as 'search' | 'setlist')}
+          segments={[
+            { id: 'search', label: t('merge.mobileSearch') },
+            { id: 'setlist', label: t('merge.mobileSetlist'), badge: itemCount },
+          ]}
+        />
         <aside className="merge-panel merge-panel-search">{leftColumn}</aside>
         <aside className="merge-panel merge-panel-setlist">
           <header className="merge-header-actions">

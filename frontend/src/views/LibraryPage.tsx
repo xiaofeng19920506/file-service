@@ -8,6 +8,7 @@ import type { useLibraryUpload } from '../hooks/useLibraryUpload';
 import { createPendingUploadEntries } from '../lib/pending-upload';
 import { setUploadDraft } from '../lib/upload-draft';
 import LibraryLayout from '../components/LibraryLayout';
+import MobileSegmentedControl from '../components/MobileSegmentedControl';
 import { SearchIcon, UploadIcon } from '../components/icons';
 import { sha256Hex } from '../lib/file-hash';
 import { friendlyError } from '../lib/error-messages';
@@ -36,6 +37,7 @@ export default function LibraryPage({ libraryUpload }: LibraryPageProps) {
     searchNow,
   } = useDebouncedBlobSearch();
 
+  const [mobileSection, setMobileSection] = useState<'search' | 'upload'>('search');
   const [selectedBlob, setSelectedBlob] = useState<BlobRecord | null>(null);
   const [downloading, setDownloading] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement>(null);
@@ -139,7 +141,22 @@ export default function LibraryPage({ libraryUpload }: LibraryPageProps) {
 
   return (
     <LibraryLayout>
-      <div className="library-workflow-grid">
+      {permissions.canUpload && (
+        <MobileSegmentedControl
+          className="mobile-only"
+          ariaLabel={t('library.mobileSections')}
+          value={mobileSection}
+          onChange={(id) => setMobileSection(id as 'search' | 'upload')}
+          segments={[
+            { id: 'search', label: t('library.mobileBrowse') },
+            { id: 'upload', label: t('library.mobileUpload') },
+          ]}
+        />
+      )}
+      <div
+        className="library-workflow-grid"
+        data-mobile-section={permissions.canUpload ? mobileSection : 'search'}
+      >
       <section className="workflow-section workflow-search">
         <div className="search-box">
           <div className="search-input-wrap">

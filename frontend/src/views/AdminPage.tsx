@@ -201,16 +201,28 @@ export default function AdminPage() {
                         );
                         return (
                           <tr key={blob.id}>
-                            <td className="admin-table-col-title">
+                            <td className="admin-table-col-title" data-label={t('admin.colTitle')}>
                               <span className="admin-table-title">{displayTitle}</span>
                             </td>
-                            <td className="admin-table-col-composer">{blob.composer || '—'}</td>
-                            <td className="admin-table-col-author">{blob.author || '—'}</td>
-                            <td className="admin-table-col-size">{formatSize(blob.sizeBytes)}</td>
-                            <td className="admin-table-col-updated">
+                            <td
+                              className="admin-table-col-composer"
+                              data-label={t('admin.colComposer')}
+                            >
+                              {blob.composer || '—'}
+                            </td>
+                            <td className="admin-table-col-author" data-label={t('admin.colAuthor')}>
+                              {blob.author || '—'}
+                            </td>
+                            <td className="admin-table-col-size" data-label={t('admin.colSize')}>
+                              {formatSize(blob.sizeBytes)}
+                            </td>
+                            <td
+                              className="admin-table-col-updated"
+                              data-label={t('admin.colUpdated')}
+                            >
                               {formatDateTime(blob.updatedAt ?? blob.createdAt, locale)}
                             </td>
-                            <td className="admin-table-actions-col">
+                            <td className="admin-table-actions-col" data-label={t('admin.colActions')}>
                               <div className="admin-table-actions">
                                 <button
                                   type="button"

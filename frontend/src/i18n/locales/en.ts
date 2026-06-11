@@ -4,6 +4,7 @@ const en: MessageTree = {
   common: {
     confirm: 'Confirm',
     cancel: 'Cancel',
+    more: 'More actions',
   },
   app: {
     title: 'Worship Library — Presentation Manager',

@@ -86,6 +86,7 @@ export default function PlaylistsPage({
   const [activeIndex, setActiveIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [playerEngaged, setPlayerEngaged] = useState(false);
+  const [toolbarExpanded, setToolbarExpanded] = useState(false);
   const [removingItemId, setRemovingItemId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
@@ -540,7 +541,7 @@ export default function PlaylistsPage({
   );
 
   const renderMainToolbar = (playlist: PlaylistDetail['playlist'], hasTracks: boolean) => (
-    <div className="playlists-main-toolbar">
+    <div className={`playlists-main-toolbar${toolbarExpanded ? ' is-expanded' : ''}`}>
       <button
         type="button"
         className="btn-secondary playlists-mobile-back"
@@ -548,52 +549,120 @@ export default function PlaylistsPage({
       >
         {t('playlists.backToList')}
       </button>
-      {hasTracks && (
-        <>
-          {renderPlaybackModeToggle()}
-          {renderShuffleToggle()}
-          <button type="button" className="btn-primary" onClick={startPlayback}>
-            {t('playlists.playAll')}
-          </button>
-        </>
-      )}
-      <button type="button" className="btn-secondary" onClick={() => setShowAddModal(true)}>
-        {t('playlists.addTitle')}
-      </button>
-      <button
-        type="button"
-        className="btn-secondary"
-        onClick={() =>
-          setShareTarget({
-            id: playlist.id,
-            title: playlist.title,
-          })
-        }
-      >
-        {t('playlists.share')}
-      </button>
-      {playlist.matchedCount > 0 && (
+
+      <div className="playlists-toolbar-primary desktop-only">
+        {hasTracks && (
+          <>
+            {renderPlaybackModeToggle()}
+            {renderShuffleToggle()}
+            <button type="button" className="btn-primary" onClick={startPlayback}>
+              {t('playlists.playAll')}
+            </button>
+          </>
+        )}
+        <button type="button" className="btn-secondary" onClick={() => setShowAddModal(true)}>
+          {t('playlists.addTitle')}
+        </button>
         <button
           type="button"
           className="btn-secondary"
-          onClick={() => onLoadToMerge(playlist.id)}
+          onClick={() =>
+            setShareTarget({
+              id: playlist.id,
+              title: playlist.title,
+            })
+          }
         >
-          {t('playlists.loadToMerge')}
+          {t('playlists.share')}
         </button>
-      )}
-      <button
-        type="button"
-        className="btn-secondary btn-danger-outline"
-        disabled={deletingId === playlist.id}
-        onClick={() =>
-          setDeleteTarget({
-            id: playlist.id,
-            title: playlist.title,
-          })
-        }
-      >
-        {deletingId === playlist.id ? t('playlists.deleting') : t('playlists.delete')}
-      </button>
+        {playlist.matchedCount > 0 && (
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => onLoadToMerge(playlist.id)}
+          >
+            {t('playlists.loadToMerge')}
+          </button>
+        )}
+        <button
+          type="button"
+          className="btn-secondary btn-danger-outline"
+          disabled={deletingId === playlist.id}
+          onClick={() =>
+            setDeleteTarget({
+              id: playlist.id,
+              title: playlist.title,
+            })
+          }
+        >
+          {deletingId === playlist.id ? t('playlists.deleting') : t('playlists.delete')}
+        </button>
+      </div>
+
+      <div className="playlists-toolbar-primary mobile-only">
+        {hasTracks && (
+          <>
+            {renderPlaybackModeToggle()}
+            <button type="button" className="btn-primary" onClick={startPlayback}>
+              {t('playlists.playAll')}
+            </button>
+            {renderShuffleToggle()}
+          </>
+        )}
+        <button type="button" className="btn-secondary" onClick={() => setShowAddModal(true)}>
+          {t('playlists.addTitle')}
+        </button>
+      </div>
+
+      <div className="playlists-toolbar-more mobile-only">
+        <button
+          type="button"
+          className="playlists-toolbar-more-toggle"
+          aria-expanded={toolbarExpanded}
+          onClick={() => setToolbarExpanded((open) => !open)}
+        >
+          <span>{t('common.more')}</span>
+          <span className="playlists-toolbar-more-toggle-icon" aria-hidden>
+            ▾
+          </span>
+        </button>
+        <div className="playlists-toolbar-secondary">
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() =>
+              setShareTarget({
+                id: playlist.id,
+                title: playlist.title,
+              })
+            }
+          >
+            {t('playlists.share')}
+          </button>
+          {playlist.matchedCount > 0 && (
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => onLoadToMerge(playlist.id)}
+            >
+              {t('playlists.loadToMerge')}
+            </button>
+          )}
+          <button
+            type="button"
+            className="btn-secondary btn-danger-outline"
+            disabled={deletingId === playlist.id}
+            onClick={() =>
+              setDeleteTarget({
+                id: playlist.id,
+                title: playlist.title,
+              })
+            }
+          >
+            {deletingId === playlist.id ? t('playlists.deleting') : t('playlists.delete')}
+          </button>
+        </div>
+      </div>
     </div>
   );
 

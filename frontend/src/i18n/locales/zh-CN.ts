@@ -2,6 +2,7 @@ export default {
   common: {
     confirm: '确定',
     cancel: '取消',
+    more: '更多操作',
   },
   app: {
     title: '敬拜诗库 — 演示文稿管理',
@@ -52,6 +53,9 @@ export default {
     savingMetadata: '保存中…',
     clearCompleted: '清除已完成',
     mergeHint: '需要合并多首歌曲时，请切换到「演示文稿合并」页面。',
+    mobileSections: '诗库分区',
+    mobileBrowse: '浏览诗库',
+    mobileUpload: '上传入库',
     edit: '编辑',
     editTitle: '编辑诗库条目',
     saveMetadata: '保存歌曲信息',
@@ -322,6 +326,9 @@ export default {
     remove: '移除',
   },
   merge: {
+    mobileSections: '合并工作区',
+    mobileSearch: '搜索添加',
+    mobileSetlist: '合并列表',
     description: '从诗库选取演示文稿，排列顺序后合并为一份完整的敬拜幻灯片。',
     fromLibrary: '从诗库添加歌曲',
     emptyHint: '请从上方诗库搜索并添加歌曲，新文件请先在「敬拜诗库」页面上传。',

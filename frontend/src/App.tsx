@@ -17,6 +17,7 @@ import { formatUserDisplayName } from './lib/user-name';
 import { useI18n } from './i18n';
 import './App.css';
 import './styles/apple-design.css';
+import './styles/mobile.css';
 
 export default function App() {
   const { t, locale, setLocale } = useI18n();
@@ -155,6 +156,15 @@ export default function App() {
     </button>
   );
 
+  const pageTitle =
+    page === 'merge'
+      ? t('nav.mergeShort')
+      : page === 'playlists'
+        ? t('nav.playlistsShort')
+        : page === 'admin'
+          ? t('nav.adminShort')
+          : t('nav.libraryShort');
+
   const accountActions = user ? (
     <>
       <span className="nav-user" title={user.email}>
@@ -176,7 +186,8 @@ export default function App() {
       <header className="nav" ref={navRef}>
         <div className="nav-inner">
           <div className="nav-brand">
-            <span className="nav-brand-name">{t('app.name')}</span>
+            <span className="nav-brand-name nav-brand-app-name">{t('app.name')}</span>
+            <span className="nav-brand-name nav-brand-page-title">{pageTitle}</span>
             <span className="nav-brand-tagline">{t('app.tagline')}</span>
           </div>
 
