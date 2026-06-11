@@ -6,22 +6,6 @@ export function isLegacyPowerPoint(name: string): boolean {
   return ['ppt', 'pps', 'pot'].includes(fileExtension(name));
 }
 
-export function needsManualPptxTip(name: string): boolean {
-  const ext = fileExtension(name);
-  return isLegacyPowerPoint(name) || ext === 'odp';
-}
-
-export const MANUAL_PPTX_UPLOAD_TIP = {
-  title: '推荐上传 .pptx',
-  summary:
-    '若文件是 .ppt / .odp 等旧格式，请先在 PowerPoint、Keynote 或 WPS 中「另存为 .pptx」，再上传。无需安装 LibreOffice，即可预览与编辑。',
-  steps: [
-    '用 PowerPoint / Keynote / WPS 打开原文件',
-    '选择「另存为」或「导出」，格式选 PowerPoint (.pptx)',
-    '上传转换后的 .pptx 文件',
-  ],
-};
-
 export type PreviewGuideContent = {
   fileName: string;
   title: string;

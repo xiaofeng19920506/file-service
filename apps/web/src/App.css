@@ -472,60 +472,6 @@
   font-size: 0.6875rem;
 }
 
-.metadata-conflict-modal {
-  width: min(720px, 100%);
-}
-
-.conflict-intro {
-  margin: 0 0 0.75rem;
-  font-size: 0.875rem;
-  line-height: 1.5;
-  color: var(--text-secondary);
-}
-
-.conflict-file-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1rem;
-  margin: 0 0 1rem;
-  font-size: 0.8125rem;
-  color: var(--text-tertiary);
-}
-
-.metadata-compare-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.85rem;
-}
-
-.metadata-compare-col h4 {
-  margin: 0 0 0.5rem;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.metadata-compare-row {
-  display: grid;
-  grid-template-columns: 4.5rem 1fr;
-  gap: 0.35rem;
-  margin-bottom: 0.45rem;
-  font-size: 0.8125rem;
-}
-
-.metadata-compare-label {
-  color: var(--text-tertiary);
-}
-
-.metadata-conflict-value {
-  color: var(--orange);
-  font-weight: 500;
-}
-
-.metadata-conflict-actions {
-  justify-content: space-between;
-}
-
 .edit-library-modal {
   width: min(640px, 100%);
 }
@@ -3212,69 +3158,6 @@
   padding: 0.875rem;
 }
 
-.manual-pptx-tip {
-  margin-top: 1rem;
-  padding: 0.875rem 1rem;
-  border-radius: 12px;
-  background: var(--blue-muted);
-  border: 1px solid var(--border-light);
-}
-
-.manual-pptx-tip.compact {
-  margin-top: 0.75rem;
-  padding: 0.75rem 0.875rem;
-}
-
-.manual-pptx-tip-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.manual-pptx-tip-title {
-  margin: 0 0 0.35rem;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.manual-pptx-tip-summary {
-  margin: 0;
-  font-size: 0.8125rem;
-  line-height: 1.45;
-  color: var(--text-secondary);
-}
-
-.manual-pptx-tip-steps {
-  margin: 0.65rem 0 0;
-  padding-left: 1.15rem;
-  font-size: 0.8125rem;
-  line-height: 1.5;
-  color: var(--text-secondary);
-}
-
-.manual-pptx-tip-steps li + li {
-  margin-top: 0.25rem;
-}
-
-.manual-pptx-tip-dismiss {
-  flex-shrink: 0;
-  width: 1.5rem;
-  height: 1.5rem;
-  border: none;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--text-tertiary);
-  font-size: 1.125rem;
-  line-height: 1;
-}
-
-.manual-pptx-tip-dismiss:hover {
-  background: var(--surface);
-  color: var(--text);
-}
-
 .upload-hint-sub {
   font-size: 0.8125rem;
   color: var(--text-tertiary);
@@ -3605,10 +3488,6 @@
   }
 
   .metadata-grid-titles {
-    grid-template-columns: 1fr;
-  }
-
-  .metadata-compare-grid {
     grid-template-columns: 1fr;
   }
 

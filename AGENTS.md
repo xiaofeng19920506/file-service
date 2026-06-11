@@ -1,5 +1,5 @@
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
+# file-service
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
-<!-- END:nextjs-agent-rules -->
+敬拜诗库 monorepo：Fastify API（`apps/api`）、BullMQ Worker（`apps/worker`）、Vite + React Web（`apps/web`）、共享包（`packages/shared`）。
+
+日常开发：`npm run dev:docker`（Docker 跑 Postgres + Redis，本机跑 API/Worker/Web）。

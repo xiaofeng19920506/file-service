@@ -1,6 +1,6 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# file-service · 敬拜诗库
 
-## Getting Started
+演示文稿上传、诗库管理、合并与编辑的 monorepo 应用。
 
 ## 存储后端
 
@@ -88,19 +88,10 @@ npm run dev:docker:full
 4. `POST /v1/jobs/:id/download-url` — 成功返回带 HMAC 的下载 URL（建议设置 `PUBLIC_BASE_URL` 生成绝对地址）
 5. `GET /v1/jobs/:id/download?token=...` — **`fs`**：直接返回文件流；**`s3`**：302 到预签名 GET
 
-## 限制说明
+## 生产部署
 
-## Learn More
+```bash
+npm run prod:docker
+```
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+使用 `docker-compose.prod.yml` 构建 API（含前端静态资源）与 Worker（含 LibreOffice）。
