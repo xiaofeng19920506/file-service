@@ -9,7 +9,6 @@ import PlaylistAudioPlayer, {
   type PlaylistAudioProgressHandle,
 } from '../components/PlaylistAudioPlayer';
 import PlaylistNowPlayingShell from '../components/PlaylistNowPlayingShell';
-import PlaylistPlayerBottomChrome from '../components/PlaylistPlayerBottomChrome';
 import PlaylistQueuePanel from '../components/PlaylistQueuePanel';
 import YoutubePlaylistPlayer from '../components/YoutubePlaylistPlayer';
 import { prioritizeYoutubeAudioCache, type YoutubeAudioStatus } from '../api/youtube-audio';
@@ -501,7 +500,7 @@ export default function PlaylistsPage({
   const audioMinimized = showPlayer && playbackMode === 'audio' && playerView === 'browse';
 
   useEffect(() => {
-    if (!audioNowPlaying) {
+    if (!audioNowPlaying || !isMobileViewport) {
       document.body.classList.remove('playlists-immersive-active');
       return;
     }
@@ -509,18 +508,7 @@ export default function PlaylistsPage({
     return () => {
       document.body.classList.remove('playlists-immersive-active');
     };
-  }, [audioNowPlaying]);
-
-  useEffect(() => {
-    if (!videoImmersive) {
-      document.body.classList.remove('playlists-video-immersive-active');
-      return;
-    }
-    document.body.classList.add('playlists-video-immersive-active');
-    return () => {
-      document.body.classList.remove('playlists-video-immersive-active');
-    };
-  }, [videoImmersive]);
+  }, [audioNowPlaying, isMobileViewport]);
 
   useEffect(() => {
     if (!mobileVideoImmersive) {
@@ -699,10 +687,86 @@ export default function PlaylistsPage({
       />
     ) : null;
 
-  const renderMainToolbar = (playlist: PlaylistDetail['playlist'], hasTracks: boolean) => (
-    <div
-      className={`playlists-main-toolbar${toolbarExpanded ? ' is-expanded' : ''}${showPlayer ? ' has-player' : ''}`}
-    >
+  const renderMainToolbar = (
+    playlist: PlaylistDetail['playlist'],
+    hasTracks: boolean,
+    trackCount: number,
+  ) => (
+    <>
+      <header className="playlists-detail-header desktop-only">
+        <div className="playlists-detail-header-main">
+          <h2 className="playlists-detail-title">{playlist.title}</h2>
+          <p className="playlists-detail-meta">{t('playlists.trackCount', { count: trackCount })}</p>
+        </div>
+        <div className="playlists-detail-actions">
+          {hasTracks && (
+            <div className="playlists-detail-actions-playback">
+              <button type="button" className="btn-primary playlists-play-all-btn" onClick={startPlayback}>
+                {t('playlists.playAll')}
+              </button>
+              {renderPlaybackModeToggle()}
+              <button
+                type="button"
+                className={`playlists-repeat-btn${repeatMode !== 'off' ? ' active' : ''}`}
+                onClick={cycleRepeat}
+                aria-label={
+                  repeatMode === 'one'
+                    ? t('playlists.repeatOne')
+                    : repeatMode === 'all'
+                      ? t('playlists.repeatAll')
+                      : t('playlists.repeatOff')
+                }
+              >
+                {repeatMode === 'one' ? '1' : repeatMode === 'all' ? '∞' : '↻'}
+              </button>
+              {renderShuffleToggle()}
+            </div>
+          )}
+          <div className="playlists-detail-actions-manage">
+            <button type="button" className="btn-secondary" onClick={() => setShowAddModal(true)}>
+              {t('playlists.addTitle')}
+            </button>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() =>
+                setShareTarget({
+                  id: playlist.id,
+                  title: playlist.title,
+                })
+              }
+            >
+              {t('playlists.share')}
+            </button>
+            {playlist.matchedCount > 0 && (
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => onLoadToMerge(playlist.id)}
+              >
+                {t('playlists.loadToMerge')}
+              </button>
+            )}
+            <button
+              type="button"
+              className="btn-secondary btn-danger-outline"
+              disabled={deletingId === playlist.id}
+              onClick={() =>
+                setDeleteTarget({
+                  id: playlist.id,
+                  title: playlist.title,
+                })
+              }
+            >
+              {deletingId === playlist.id ? t('playlists.deleting') : t('playlists.delete')}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div
+        className={`playlists-main-toolbar playlists-main-toolbar--mobile-only${toolbarExpanded ? ' is-expanded' : ''}${showPlayer ? ' has-player' : ''}`}
+      >
       <button
         type="button"
         className="btn-secondary playlists-mobile-back"
@@ -710,69 +774,6 @@ export default function PlaylistsPage({
       >
         {t('playlists.backToList')}
       </button>
-
-      <div className="playlists-toolbar-primary desktop-only">
-        {hasTracks && (
-          <>
-            {renderPlaybackModeToggle()}
-            <button
-              type="button"
-              className={`playlists-repeat-btn${repeatMode !== 'off' ? ' active' : ''}`}
-              onClick={cycleRepeat}
-              aria-label={
-                repeatMode === 'one'
-                  ? t('playlists.repeatOne')
-                  : repeatMode === 'all'
-                    ? t('playlists.repeatAll')
-                    : t('playlists.repeatOff')
-              }
-            >
-              {repeatMode === 'one' ? '1' : repeatMode === 'all' ? '∞' : '↻'}
-            </button>
-            {renderShuffleToggle()}
-            <button type="button" className="btn-primary" onClick={startPlayback}>
-              {t('playlists.playAll')}
-            </button>
-          </>
-        )}
-        <button type="button" className="btn-secondary" onClick={() => setShowAddModal(true)}>
-          {t('playlists.addTitle')}
-        </button>
-        <button
-          type="button"
-          className="btn-secondary"
-          onClick={() =>
-            setShareTarget({
-              id: playlist.id,
-              title: playlist.title,
-            })
-          }
-        >
-          {t('playlists.share')}
-        </button>
-        {playlist.matchedCount > 0 && (
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={() => onLoadToMerge(playlist.id)}
-          >
-            {t('playlists.loadToMerge')}
-          </button>
-        )}
-        <button
-          type="button"
-          className="btn-secondary btn-danger-outline"
-          disabled={deletingId === playlist.id}
-          onClick={() =>
-            setDeleteTarget({
-              id: playlist.id,
-              title: playlist.title,
-            })
-          }
-        >
-          {deletingId === playlist.id ? t('playlists.deleting') : t('playlists.delete')}
-        </button>
-      </div>
 
       <div className="playlists-toolbar-mobile mobile-only">
         {hasTracks && (
@@ -850,13 +851,13 @@ export default function PlaylistsPage({
         </div>
       </div>
     </div>
+    </>
   );
 
   return (
     <div className="page-body page-body-playlists">
       <main
         className="playlists-page"
-        data-video-immersive={videoImmersive ? 'true' : 'false'}
         data-mobile-video-immersive={mobileVideoImmersive ? 'true' : 'false'}
         data-audio-now-playing={audioNowPlaying ? 'true' : 'false'}
       >
@@ -1029,9 +1030,9 @@ export default function PlaylistsPage({
                 </div>
               ) : (
               <div
-                className={`playlists-main-inner${videoImmersive ? ' playlists-main-inner--video-immersive' : ''}${mobileVideoImmersive ? ' playlists-main-inner--mobile-video' : ''}`}
+                className={`playlists-main-inner${mobileVideoImmersive ? ' playlists-main-inner--mobile-video' : ''}`}
               >
-                {!videoImmersive && renderMainToolbar(detail.playlist, detail.items.length > 0)}
+                {!mobileVideoImmersive && renderMainToolbar(detail.playlist, detail.items.length > 0, detail.items.length)}
 
                 {detail.items.length === 0 ? (
                   <div className="playlists-empty-card playlists-empty-tracks">
@@ -1043,7 +1044,6 @@ export default function PlaylistsPage({
                     className="playlists-player-stage"
                     data-playback-mode={playbackMode}
                     data-player-engaged={showPlayer ? 'true' : 'false'}
-                    data-video-immersive={videoImmersive ? 'true' : 'false'}
                     data-mobile-video-immersive={mobileVideoImmersive ? 'true' : 'false'}
                     data-mobile-video-tracks-open="false"
                     data-queue-open={mobileVideoImmersive ? 'false' : queueOpen ? 'true' : 'false'}
@@ -1090,7 +1090,7 @@ export default function PlaylistsPage({
                           onPrevTrack={goToPrevTrack}
                           canGoNext={canGoNext}
                           canGoPrev={canGoPrev}
-                          immersive={videoImmersive}
+                          immersive={mobileVideoImmersive}
                           lockLandscape={isMobileViewport}
                           mobileChrome={
                             mobileVideoImmersive
@@ -1256,15 +1256,6 @@ export default function PlaylistsPage({
         />
       )}
 
-      {videoImmersive && !mobileVideoImmersive && (
-        <>
-          <PlaylistPlayerBottomChrome
-            className="playlist-video-chrome"
-            {...renderPlayerChromeProps()}
-          />
-          {renderQueuePanel()}
-        </>
-      )}
 
       {audioMinimized && currentItem && detail && (
         <div

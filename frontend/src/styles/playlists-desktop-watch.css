@@ -1,0 +1,207 @@
+/* 桌面端：YouTube 观看页布局（左播放器 / 右曲目列表） */
+
+@media (min-width: 901px) {
+  .playlists-main-inner {
+    padding: 1.25rem 1.5rem 1.5rem;
+  }
+
+  .playlists-detail-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.5rem;
+    margin-bottom: 1.15rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--border-light) 80%, transparent);
+  }
+
+  .playlists-detail-header-main {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .playlists-detail-title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.2;
+    color: var(--text);
+  }
+
+  .playlists-detail-meta {
+    margin: 0.35rem 0 0;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+  }
+
+  .playlists-detail-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.45rem;
+    flex-shrink: 0;
+  }
+
+  .playlists-detail-actions-playback {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+
+  .playlists-detail-actions-manage {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    padding-left: 0.65rem;
+    margin-left: 0.15rem;
+    border-left: 1px solid color-mix(in srgb, var(--border-light) 80%, transparent);
+  }
+
+  .playlists-play-all-btn {
+    min-width: 6.75rem;
+    font-weight: 600;
+  }
+
+  .playlists-repeat-btn {
+    width: 2.35rem;
+    height: 2.35rem;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid var(--border-light);
+    border-radius: 999px;
+    background: var(--surface-secondary);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      background 0.15s ease,
+      color 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  .playlists-repeat-btn:hover {
+    color: var(--text);
+    border-color: var(--border);
+  }
+
+  .playlists-repeat-btn.active {
+    color: var(--blue);
+    background: var(--blue-muted);
+    border-color: color-mix(in srgb, var(--blue) 35%, var(--border-light));
+  }
+
+  .playlists-main-toolbar--mobile-only {
+    display: none;
+  }
+
+  /* YouTube 双栏：播放器左、列表右 */
+  .playlists-player-stage {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 1.25rem;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .playlists-player-col {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .playlists-tracks-col {
+    flex: 0 0 400px;
+    width: 400px;
+    max-width: 400px;
+    min-width: 300px;
+    max-height: none;
+    align-self: stretch;
+  }
+
+  .playlists-tracks-head h3 {
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+  }
+
+  .playlists-tracks {
+    border: 1px solid color-mix(in srgb, var(--border-light) 85%, transparent);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--surface-secondary) 70%, var(--surface));
+    padding: 0.35rem;
+  }
+
+  .playlists-hero,
+  .youtube-player-frame-wrap {
+    max-height: min(56vh, 640px);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px color-mix(in srgb, var(--shadow-sm) 55%, transparent);
+  }
+
+  .playlists-player-stage[data-player-engaged='true'] {
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .playlists-player-stage[data-player-engaged='true'] .playlists-tracks-col {
+    order: 0;
+    flex: 0 0 400px;
+    width: 400px;
+    max-width: 400px;
+    min-width: 300px;
+    max-height: none;
+  }
+
+  .playlists-player-stage[data-player-engaged='true'] .playlists-player-col {
+    flex: 1 1 0;
+    min-width: 0;
+    max-height: none;
+    width: auto;
+  }
+
+  .playlists-player-stage[data-player-engaged='true'][data-playback-mode='video'] .playlists-player-col,
+  .playlists-player-stage[data-player-engaged='true'][data-playback-mode='audio'] .playlists-player-col {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .playlists-player-stage[data-player-engaged='true'][data-playback-mode='video'] .youtube-player-frame-wrap {
+    aspect-ratio: 16 / 9;
+    width: 100%;
+    max-height: min(56vh, 640px);
+  }
+
+  .playlists-player-stage[data-player-engaged='true'] .playlists-tracks-head {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding: 0.15rem 0.35rem 0.45rem;
+    background: transparent;
+  }
+
+  /* 桌面视频：控制条在播放器内，不依赖底部 chrome */
+  .playlists-player-stage[data-playback-mode='video'][data-player-engaged='true']
+    .youtube-player-overlay {
+    padding-bottom: 0.65rem;
+  }
+
+  .playlists-player-stage[data-playback-mode='video'][data-player-engaged='true']
+    .youtube-player-subtitles {
+    bottom: 4.5rem;
+  }
+
+  .playlists-player-stage[data-playback-mode='video'][data-player-engaged='true']
+    .youtube-player-frame-wrap.controls-idle
+    .youtube-player-subtitles {
+    bottom: 1.25rem;
+  }
+
+  .page-body-playlists .playlists-workspace[data-player-active='true'][data-playback-mode='video'] {
+    padding-bottom: 0;
+  }
+}

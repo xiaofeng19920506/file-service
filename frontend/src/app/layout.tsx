@@ -8,6 +8,7 @@ import '../styles/playlist-audio.css';
 import '../styles/playlist-now-playing.css';
 import '../styles/responsive.css';
 import '../styles/playlists-mobile-video.css';
+import '../styles/playlists-desktop-watch.css';
 
 export const metadata: Metadata = {
   title: '敬拜诗库',

@@ -1,8 +1,10 @@
 /* ── MP3 正在播放沉浸界面 + 通用播放底栏 ── */
 
-body.playlists-immersive-active .nav,
-body.playlists-immersive-active .nav-bottom {
-  display: none;
+@media (max-width: 900px) {
+  body.playlists-immersive-active .nav,
+  body.playlists-immersive-active .nav-bottom {
+    display: none;
+  }
 }
 
 .playlist-now-playing {
@@ -747,16 +749,40 @@ body.playlists-immersive-active .nav-bottom {
     min-height: 0;
     display: flex;
     flex-direction: column;
+    height: 100%;
+  }
+
+  .playlists-page[data-audio-now-playing='true'] .playlists-workspace {
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+  }
+
+  .playlists-page[data-audio-now-playing='true'] .playlists-main {
+    border-radius: 0;
+    background: var(--surface);
   }
 
   .playlists-main-inner--audio-now-playing {
+    width: 100%;
     height: 100%;
     min-height: 0;
+    flex: 1;
   }
 
   .playlist-now-playing {
+    width: 100%;
     height: 100%;
     min-height: 0;
+    flex: 1;
+  }
+
+  .playlist-now-playing--audio {
+    position: static;
+    inset: auto;
+    z-index: auto;
+    max-height: none;
+    background: var(--surface);
   }
 
   .playlist-now-playing-header {
@@ -1310,122 +1336,7 @@ body.playlists-immersive-active .nav-bottom {
   }
 }
 
-/* 视频沉浸：移动端 + 桌面端 */
-body.playlists-video-immersive-active .nav,
-body.playlists-video-immersive-active .nav-bottom {
-  display: none;
-}
-
-.playlists-page[data-video-immersive='true'] {
-  padding: 0;
-  min-height: 0;
-  height: 100%;
-}
-
-.playlists-page[data-video-immersive='true'] .playlists-header,
-.playlists-page[data-video-immersive='true'] .playlists-alerts,
-.playlists-page[data-video-immersive='true'] .playlists-sidebar {
-  display: none;
-}
-
-.playlists-page[data-video-immersive='true'] .playlists-workspace,
-.playlists-page[data-video-immersive='true'] .playlists-main {
-  border: none;
-  border-radius: 0;
-  background: #000;
-  min-height: 0;
-  flex: 1;
-}
-
-.playlists-main-inner--video-immersive {
-  padding: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  flex: 1;
-  height: 100%;
-}
-
-.playlists-main-inner--video-immersive .playlists-main-toolbar {
-  display: none;
-}
-
-.playlists-player-stage[data-video-immersive='true'] {
-  position: fixed;
-  inset: 0;
-  z-index: var(--z-modal);
-  flex: 1;
-  min-height: 0;
-  gap: 0;
-  background: #000;
-}
-
-.playlists-player-stage[data-video-immersive='true'] .playlists-player-col {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  max-height: none;
-  width: 100%;
-  height: 100%;
-}
-
-.playlists-player-stage[data-video-immersive='true']:not([data-queue-open='true']) .playlists-tracks-col {
-  display: none;
-}
-
-.playlists-player-stage[data-video-immersive='true'] .youtube-player-section--immersive {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  height: 100%;
-  margin: 0;
-}
-
-.playlists-player-stage[data-video-immersive='true'] .youtube-player-section--immersive .youtube-player-frame-wrap {
-  flex: 1;
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  max-height: none;
-  aspect-ratio: auto;
-  border: none;
-  border-radius: 0;
-}
-
-.playlists-player-stage[data-video-immersive='true'] .youtube-player-section--immersive .youtube-player-frame,
-.playlists-player-stage[data-video-immersive='true'] .youtube-player-section--immersive .youtube-player-frame iframe {
-  width: 100%;
-  height: 100%;
-}
-
-.playlists-player-stage[data-video-immersive='true'] .youtube-player-section--immersive .youtube-player-overlay {
-  padding: 2rem 0.85rem 0.75rem;
-  padding-bottom: max(0.75rem, var(--safe-bottom));
-}
-
-@media (min-width: 901px) {
-  .playlists-player-stage[data-video-immersive='true'] .youtube-player-section--immersive .youtube-player-overlay {
-    padding-left: 2rem;
-    padding-right: 2rem;
-    padding-bottom: 1.25rem;
-  }
-
-  .playlists-player-stage[data-video-immersive='true'] .youtube-player-section--immersive .youtube-player-bar {
-    max-width: 56rem;
-    margin: 0 auto;
-    width: 100%;
-  }
-}
-
-@media (min-width: 901px) {
-  .playlists-player-stage[data-video-immersive='true'] .youtube-player-section--immersive .youtube-player-overlay {
-    padding-bottom: calc(4.75rem + var(--safe-bottom));
-  }
-}
-
+/* 视频沉浸：仅手机端全屏 */
 .playlists-player-stage[data-mobile-video-immersive='true']
   .youtube-player-section--immersive
   .youtube-player-overlay {
@@ -1475,9 +1386,12 @@ body.playlists-video-immersive-active .nav-bottom {
 .playlists-page[data-audio-now-playing='true'] .playlists-workspace {
   min-height: 0;
   flex: 1;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .playlists-page[data-audio-now-playing='true'] .playlists-main {
+  grid-column: 1 / -1;
+  width: 100%;
   border: none;
   min-height: 0;
   flex: 1;

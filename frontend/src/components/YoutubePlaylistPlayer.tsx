@@ -885,7 +885,7 @@ export default function YoutubePlaylistPlayer({
               </button>
             </div>
 
-            {!immersive && (
+            {(!immersive || lockLandscape) && (
               <button
                 type="button"
                 className="youtube-player-icon-btn youtube-player-fullscreen-btn"
