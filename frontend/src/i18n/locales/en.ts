@@ -203,6 +203,7 @@ const en: MessageTree = {
     loading: 'Loading…',
     empty: 'Paste a YouTube URL above to create your first list.',
     selectPrompt: 'Pick a list on the left, or create a new one first.',
+    backToList: 'Back to lists',
     loadingDetail: 'Loading list…',
     trackCount: '{count} tracks',
     matchStats: 'Library matched {matched} / {total}',

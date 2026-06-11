@@ -541,6 +541,13 @@ export default function PlaylistsPage({
 
   const renderMainToolbar = (playlist: PlaylistDetail['playlist'], hasTracks: boolean) => (
     <div className="playlists-main-toolbar">
+      <button
+        type="button"
+        className="btn-secondary playlists-mobile-back"
+        onClick={() => onSelectId(undefined)}
+      >
+        {t('playlists.backToList')}
+      </button>
       {hasTracks && (
         <>
           {renderPlaybackModeToggle()}
@@ -605,7 +612,10 @@ export default function PlaylistsPage({
           </div>
         )}
 
-        <div className="playlists-workspace">
+        <div
+          className="playlists-workspace"
+          data-mobile-view={selectedId ? 'detail' : 'list'}
+        >
           <aside className="playlists-sidebar" aria-label={t('playlists.savedTitle')}>
             <form className="playlists-create-form" onSubmit={(e) => void handleImport(e)}>
               <label className="playlists-create-label" htmlFor="playlist-import-url">

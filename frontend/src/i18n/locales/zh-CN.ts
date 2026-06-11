@@ -195,6 +195,7 @@ export default {
     loading: '加载中…',
     empty: '在上方粘贴 YouTube 链接即可创建第一份列表。',
     selectPrompt: '从左侧选择列表，或先创建一个新列表。',
+    backToList: '返回列表',
     loadingDetail: '加载列表中…',
     trackCount: '{count} 首',
     matchStats: '已匹配诗库 {matched} / {total}',
