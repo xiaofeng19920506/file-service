@@ -1,0 +1,196 @@
+/* YouTube 式观看页：左/上播放器 + 右/下 Mix 列表 + 标题（视频用 YouTube 原生控制条，MP3 用浏览器原生 range） */
+
+.yt-native-audio-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.65rem 0 0;
+}
+
+.yt-native-audio-transport {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+}
+
+.yt-native-btn {
+  width: 2.25rem;
+  height: 2.25rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--surface-secondary);
+  color: var(--text);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.yt-native-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.yt-native-btn--primary {
+  width: 2.65rem;
+  height: 2.65rem;
+  background: var(--blue);
+  color: #fff;
+}
+
+.yt-native-seek {
+  width: 100%;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: #ff0033;
+  cursor: pointer;
+}
+
+.yt-native-seek:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.yt-native-time {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.yt-native-audio-options {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.youtube-player-section--audio-watch .youtube-player-audio-cover {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  overflow: hidden;
+}
+
+.youtube-player-audio-artwork {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.youtube-player-section--native .youtube-player-frame-wrap {
+  border-radius: 0;
+}
+
+@media (min-width: 901px) {
+  .playlists-player-stage[data-youtube-watch='true'] {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .playlists-player-stage[data-youtube-watch='true'] .playlists-player-col {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .playlists-player-stage[data-youtube-watch='true'] .playlists-tracks-col {
+    flex: 0 0 402px;
+    width: 402px;
+    max-width: 402px;
+    min-width: 280px;
+    max-height: calc(100vh - 12rem);
+    align-self: flex-start;
+  }
+
+  .playlists-player-stage[data-youtube-watch='true'] .playlists-tracks {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    padding: 0;
+  }
+
+  .playlists-player-stage[data-youtube-watch='true'] .playlists-track {
+    border-radius: 0;
+    border: none;
+  }
+
+  .playlists-player-stage[data-youtube-watch='true'] .playlists-track.active {
+    background: var(--surface-secondary);
+  }
+
+  .playlists-player-stage[data-youtube-watch='true'] .playlists-track-drag-handle {
+    display: none;
+  }
+
+  .playlists-player-stage[data-youtube-watch='true'] .playlists-track-thumb-wrap {
+    width: 7rem;
+    flex: 0 0 7rem;
+  }
+
+  .playlists-player-stage[data-youtube-watch='true'] .youtube-player-frame-wrap,
+  .playlists-player-stage[data-youtube-watch='true'] .playlists-hero {
+    max-height: none;
+    border-radius: 12px;
+    box-shadow: none;
+    border: none;
+  }
+
+  .playlists-youtube-meta {
+    margin-top: 0.85rem;
+    padding: 0 0.15rem;
+  }
+
+  .playlists-youtube-meta-title {
+    margin: 0 0 0.35rem;
+    font-size: 1.15rem;
+    font-weight: 650;
+    line-height: 1.35;
+  }
+
+  .playlists-youtube-meta-sub {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+  }
+
+  .playlists-main-inner--youtube-watch .playlists-detail-header {
+    margin-bottom: 0.75rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .playlists-player-stage[data-youtube-watch='true'] {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .playlists-player-stage[data-youtube-watch='true'] .playlists-tracks-col {
+    order: 1;
+    flex: 1 1 auto;
+    min-height: 8rem;
+    max-height: none;
+    border-top: 1px solid var(--border-light);
+  }
+
+  .playlists-player-stage[data-youtube-watch='true'] .playlists-track-drag-handle {
+    display: none;
+  }
+
+  .playlists-youtube-meta {
+    order: 2;
+    padding: 0.85rem var(--page-gutter) 1rem;
+    border-top: 1px solid var(--border-light);
+  }
+}
+
+.playlists-free-hint {
+  margin: 0 0 0.75rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--blue) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--blue) 22%, var(--border-light));
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}

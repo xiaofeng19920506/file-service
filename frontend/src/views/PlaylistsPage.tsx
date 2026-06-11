@@ -1,15 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import AcceptSharedPlaylistModal from '../components/AcceptSharedPlaylistModal';
 import AddPlaylistItemsModal from '../components/AddPlaylistItemsModal';
 import ConfirmModal from '../components/ConfirmModal';
 import SharePlaylistModal from '../components/SharePlaylistModal';
 import { DragHandleIcon, PencilIcon } from '../components/icons';
 import { useMediaQuery } from '../hooks/useMediaQuery';
-import PlaylistAudioPlayer, {
-  type PlaylistAudioProgressHandle,
-} from '../components/PlaylistAudioPlayer';
-import PlaylistNowPlayingShell from '../components/PlaylistNowPlayingShell';
-import PlaylistQueuePanel from '../components/PlaylistQueuePanel';
+import PlaylistAudioPlayer from '../components/PlaylistAudioPlayer';
 import YoutubePlaylistPlayer from '../components/YoutubePlaylistPlayer';
 import { prioritizeYoutubeAudioCache, type YoutubeAudioStatus } from '../api/youtube-audio';
 import {
@@ -96,10 +92,7 @@ export default function PlaylistsPage({
   const [notice, setNotice] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const audioProgressHandleRef = useRef<PlaylistAudioProgressHandle | null>(null);
   const [playerEngaged, setPlayerEngaged] = useState(false);
-  const [playerView, setPlayerView] = useState<'nowPlaying' | 'browse'>('browse');
-  const [queueOpen, setQueueOpen] = useState(false);
   const [repeatMode, setRepeatMode] = useState<PlaylistRepeatMode>(readPlaylistRepeatMode);
   const [toolbarExpanded, setToolbarExpanded] = useState(false);
   const isMobileViewport = useMediaQuery('(max-width: 900px)');
@@ -146,8 +139,6 @@ export default function PlaylistsPage({
         setActiveIndex(0);
         setPlaying(false);
         setPlayerEngaged(false);
-        setPlayerView('browse');
-        setQueueOpen(false);
       } catch (e) {
         setError(friendlyError(e instanceof Error ? e.message : 'load_playlist_failed', t));
         setDetail(null);
@@ -408,9 +399,6 @@ export default function PlaylistsPage({
     setActiveIndex(index);
     setPlaying(true);
     setPlayerEngaged(true);
-    if (playbackMode === 'audio') {
-      setPlayerView('nowPlaying');
-    }
   };
 
   const startPlayback = () => {
@@ -494,26 +482,8 @@ export default function PlaylistsPage({
 
   const currentItem = detail?.items[activeIndex];
   const showPlayer = playerEngaged && playerItems.length > 0;
-  const videoImmersive = showPlayer && playbackMode === 'video';
-  const mobileVideoImmersive = videoImmersive && isMobileViewport;
-  const audioNowPlaying = showPlayer && playbackMode === 'audio' && playerView === 'nowPlaying';
-  const audioMinimized = showPlayer && playbackMode === 'audio' && playerView === 'browse';
-
-  useEffect(() => {
-    if (!audioNowPlaying || !isMobileViewport) {
-      document.body.classList.remove('playlists-immersive-active');
-      return;
-    }
-    document.body.classList.add('playlists-immersive-active');
-    return () => {
-      document.body.classList.remove('playlists-immersive-active');
-    };
-  }, [audioNowPlaying, isMobileViewport]);
-
-  useEffect(() => {
-    if (!mobileVideoImmersive) return;
-    setQueueOpen(false);
-  }, [mobileVideoImmersive]);
+  const youtubeWatchActive = showPlayer;
+  const youtubeWatchMobile = showPlayer && isMobileViewport;
 
   const startRename = (id: string, title: string) => {
     setRenamingId(id);
@@ -558,14 +528,8 @@ export default function PlaylistsPage({
   const onPlaybackModeChange = (mode: PlaylistPlaybackMode) => {
     setPlaybackMode(mode);
     writePlaylistPlaybackMode(mode);
-    setQueueOpen(false);
-    if (mode === 'audio') {
-      setPlayerView('nowPlaying');
-    } else {
-      setPlayerView('browse');
-      if (playerEngaged) {
-        setPlaying(true);
-      }
+    if (mode === 'video' && playerEngaged) {
+      setPlaying(true);
     }
   };
 
@@ -614,47 +578,7 @@ export default function PlaylistsPage({
     </div>
   );
 
-  const renderPlayerChromeProps = () => ({
-    onToggleQueue: () => {
-      if (mobileVideoImmersive) return;
-      setQueueOpen((open) => !open);
-    },
-    showQueue: !mobileVideoImmersive,
-    showPlaybackOptions: !mobileVideoImmersive,
-    repeatMode,
-    onCycleRepeat: cycleRepeat,
-    shuffleEnabled,
-    onToggleShuffle: toggleShuffle,
-    playbackMode,
-    onPlaybackModeChange,
-  });
-
-  const renderQueuePanel = () =>
-    detail ? (
-      <PlaylistQueuePanel
-        open={queueOpen}
-        onClose={() => setQueueOpen(false)}
-        items={detail.items}
-        activeIndex={activeIndex}
-        playing={playing}
-        onSelectTrack={engageAndPlay}
-        onRemoveTrack={(id) => void handleRemoveItem(id)}
-        removingItemId={removingItemId}
-        savingOrder={savingOrder}
-        trackDragIndex={trackDragIndex}
-        trackDragOver={trackDragOver}
-        onDragStart={setTrackDragIndex}
-        onDragEnd={() => {
-          setTrackDragIndex(null);
-          setTrackDragOver(null);
-        }}
-        onDragOver={(index, after) => setTrackDragOver({ index, after })}
-        onDragLeave={() => setTrackDragOver(null)}
-        onDrop={(from, target) => void applyTrackReorder(from, target)}
-      />
-    ) : null;
-
-  const renderAudioPlayer = (variant: 'default' | 'nowPlaying') =>
+  const renderAudioPlayer = () =>
     showPlayer && playbackMode === 'audio' ? (
       <PlaylistAudioPlayer
         items={playerItems}
@@ -667,16 +591,13 @@ export default function PlaylistsPage({
         onPrevTrack={goToPrevTrack}
         canGoNext={canGoNext}
         canGoPrev={canGoPrev}
-        progressHandleRef={audioProgressHandleRef}
         playlistTitle={detail?.playlist.title}
-        variant={variant}
+        variant="youtubeWatch"
         repeatMode={repeatMode}
         onCycleRepeat={cycleRepeat}
         onRepeatModeChange={changeRepeatMode}
         shuffleEnabled={shuffleEnabled}
         onToggleShuffle={toggleShuffle}
-        onToggleQueue={() => setQueueOpen((open) => !open)}
-        queueOpen={queueOpen}
       />
     ) : null;
 
@@ -851,8 +772,8 @@ export default function PlaylistsPage({
     <div className="page-body page-body-playlists">
       <main
         className="playlists-page"
-        data-mobile-video-immersive={mobileVideoImmersive ? 'true' : 'false'}
-        data-audio-now-playing={audioNowPlaying ? 'true' : 'false'}
+        data-youtube-watch={youtubeWatchActive ? 'true' : 'false'}
+        data-mobile-video-immersive={youtubeWatchMobile ? 'true' : 'false'}
       >
         <header className="playlists-header">
           <h1>{t('playlists.title')}</h1>
@@ -870,8 +791,8 @@ export default function PlaylistsPage({
           className="playlists-workspace"
           data-mobile-view={selectedId ? 'detail' : 'list'}
           data-player-active={showPlayer ? 'true' : 'false'}
-          data-audio-now-playing={audioNowPlaying ? 'true' : 'false'}
-          data-mobile-video-immersive={mobileVideoImmersive ? 'true' : 'false'}
+          data-youtube-watch={youtubeWatchActive ? 'true' : 'false'}
+          data-mobile-video-immersive={youtubeWatchMobile ? 'true' : 'false'}
           data-playback-mode={playbackMode}
         >
           <aside className="playlists-sidebar" aria-label={t('playlists.savedTitle')}>
@@ -1007,27 +928,12 @@ export default function PlaylistsPage({
                 <p className="playlists-muted">{t('playlists.loadingDetail')}</p>
               </div>
             ) : detail ? (
-              audioNowPlaying ? (
-                <div className="playlists-main-inner playlists-main-inner--audio-now-playing">
-                  <PlaylistNowPlayingShell
-                    playlistTitle={detail.playlist.title}
-                    trackTitle={currentItem?.title ?? ''}
-                    trackCurrent={activeIndex + 1}
-                    trackTotal={detail.items.length}
-                    onMinimize={() => setPlayerView('browse')}
-                    {...renderPlayerChromeProps()}
-                  >
-                    {renderAudioPlayer('nowPlaying')}
-                  </PlaylistNowPlayingShell>
-                  {renderQueuePanel()}
-                </div>
-              ) : (
               <div
-                className={`playlists-main-inner${mobileVideoImmersive ? ' playlists-main-inner--mobile-video' : ''}`}
+                className={`playlists-main-inner${youtubeWatchActive ? ' playlists-main-inner--youtube-watch' : ''}${youtubeWatchMobile ? ' playlists-main-inner--mobile-video' : ''}`}
               >
-                {!mobileVideoImmersive && renderMainToolbar(detail.playlist, detail.items.length > 0, detail.items.length)}
+                {!youtubeWatchMobile && renderMainToolbar(detail.playlist, detail.items.length > 0, detail.items.length)}
 
-                {mobileVideoImmersive && (
+                {youtubeWatchMobile && (
                   <div className="playlists-mobile-watch-toolbar mobile-only">
                     <button
                       type="button"
@@ -1040,6 +946,10 @@ export default function PlaylistsPage({
                   </div>
                 )}
 
+                {!showPlayer && (
+                  <p className="playlists-free-hint">{t('playlists.freePlaybackHint')}</p>
+                )}
+
                 {detail.items.length === 0 ? (
                   <div className="playlists-empty-card playlists-empty-tracks">
                     <p className="playlists-empty-title">{t('playlists.noTracksTitle')}</p>
@@ -1050,9 +960,9 @@ export default function PlaylistsPage({
                     className="playlists-player-stage"
                     data-playback-mode={playbackMode}
                     data-player-engaged={showPlayer ? 'true' : 'false'}
-                    data-mobile-video-immersive={mobileVideoImmersive ? 'true' : 'false'}
-                    data-mobile-video-tracks-open={mobileVideoImmersive ? 'true' : 'false'}
-                    data-queue-open={mobileVideoImmersive ? 'false' : queueOpen ? 'true' : 'false'}
+                    data-youtube-watch={youtubeWatchActive ? 'true' : 'false'}
+                    data-mobile-video-immersive={youtubeWatchMobile ? 'true' : 'false'}
+                    data-mobile-video-tracks-open={youtubeWatchActive ? 'true' : 'false'}
                   >
                     <div className="playlists-player-col">
                       {!showPlayer && currentItem && (
@@ -1079,11 +989,7 @@ export default function PlaylistsPage({
                         </button>
                       )}
 
-                      {audioMinimized && (
-                        <div className="playlist-audio-player-headless-wrap" aria-hidden>
-                          {renderAudioPlayer('default')}
-                        </div>
-                      )}
+                      {showPlayer && playbackMode === 'audio' && renderAudioPlayer()}
 
                       {showPlayer && playbackMode === 'video' && (
                         <YoutubePlaylistPlayer
@@ -1096,17 +1002,23 @@ export default function PlaylistsPage({
                           onPrevTrack={goToPrevTrack}
                           canGoNext={canGoNext}
                           canGoPrev={canGoPrev}
-                          immersive={false}
-                          mobileInline={mobileVideoImmersive}
-                          lockLandscape={false}
+                          mobileInline={youtubeWatchMobile}
+                          nativeControls
                         />
+                      )}
+
+                      {showPlayer && currentItem && !youtubeWatchMobile && (
+                        <div className="playlists-youtube-meta desktop-only">
+                          <h2 className="playlists-youtube-meta-title">{currentItem.title}</h2>
+                          <p className="playlists-youtube-meta-sub">{detail.playlist.title}</p>
+                        </div>
                       )}
                     </div>
 
                     <aside className="playlists-tracks-col" aria-label={t('playlists.tracksTitle')}>
                       <div className="playlists-tracks-head">
                         <h3>
-                          {mobileVideoImmersive
+                          {youtubeWatchActive
                             ? t('playlists.mixLabel', { title: detail.playlist.title })
                             : t('playlists.tracksTitle')}
                         </h3>
@@ -1205,16 +1117,15 @@ export default function PlaylistsPage({
                       </ol>
                     </aside>
 
-                    {mobileVideoImmersive && currentItem && (
-                      <div className="playlists-mobile-video-meta mobile-only">
-                        <h2 className="playlists-mobile-video-meta-title">{currentItem.title}</h2>
-                        <p className="playlists-mobile-video-meta-playlist">{detail.playlist.title}</p>
+                    {youtubeWatchMobile && currentItem && (
+                      <div className="playlists-youtube-meta playlists-mobile-video-meta mobile-only">
+                        <h2 className="playlists-youtube-meta-title">{currentItem.title}</h2>
+                        <p className="playlists-youtube-meta-sub">{detail.playlist.title}</p>
                       </div>
                     )}
                   </div>
                 )}
               </div>
-              )
             ) : null}
           </section>
         </div>
@@ -1269,42 +1180,6 @@ export default function PlaylistsPage({
         />
       )}
 
-
-      {audioMinimized && currentItem && detail && (
-        <div
-          className="playlists-mini-player"
-          role="button"
-          tabIndex={0}
-          onClick={() => setPlayerView('nowPlaying')}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              setPlayerView('nowPlaying');
-            }
-          }}
-        >
-          <img
-            className="playlists-mini-player-thumb"
-            src={youtubeThumb(currentItem.youtubeVideoId)}
-            alt=""
-          />
-          <div className="playlists-mini-player-meta">
-            <div className="playlists-mini-player-title">{currentItem.title}</div>
-            <div className="playlists-mini-player-sub">{detail.playlist.title}</div>
-          </div>
-          <button
-            type="button"
-            className="playlists-mini-player-btn"
-            aria-label={playing ? t('playlists.pause') : t('playlists.play')}
-            onClick={(e) => {
-              e.stopPropagation();
-              setPlaying((was) => !was);
-            }}
-          >
-            {playing ? '▮▮' : '▶'}
-          </button>
-        </div>
-      )}
     </div>
   );
 }

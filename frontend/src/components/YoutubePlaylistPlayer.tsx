@@ -37,6 +37,8 @@ type YoutubePlaylistPlayerProps = {
   mobileImmersive?: boolean;
   /** 沉浸/页内模式 UI（菜单按钮等），渲染在视频层内 */
   mobileChrome?: ReactNode;
+  /** 使用 YouTube 自带控制条（免费托管，进度条由 YouTube 负责） */
+  nativeControls?: boolean;
 };
 
 type YtPlayer = {
@@ -54,8 +56,6 @@ type YtPlayer = {
   unMute: () => void;
   isMuted: () => boolean;
 };
-
-const SCRUB_DRIFT_HEAL_SEC = 1.25;
 
 declare global {
   interface Window {
@@ -143,9 +143,10 @@ export default function YoutubePlaylistPlayer({
   lockLandscape = false,
   mobileImmersive = false,
   mobileChrome,
+  nativeControls = true,
 }: YoutubePlaylistPlayerProps) {
   const immersive = immersiveProp ?? mobileImmersive;
-  const overlayMode = immersive || mobileInline;
+  const overlayMode = !nativeControls && (immersive || mobileInline);
   const { t } = useI18n();
   const elementId = useId().replace(/:/g, '');
   const playerRef = useRef<YtPlayer | null>(null);
@@ -167,8 +168,6 @@ export default function YoutubePlaylistPlayer({
   const [isLandscapeTheater, setIsLandscapeTheater] = useState(false);
   const [overlayVisible, setOverlayVisible] = useState(true);
   const scrubbingRef = useRef(false);
-  const [scrubActive, setScrubActive] = useState(false);
-  const [scrubPreview, setScrubPreview] = useState(0);
   const [captionCues, setCaptionCues] = useState<CaptionCue[]>([]);
   const [subtitleLang, setSubtitleLang] = useState<SubtitleLanguage>('en');
   const [volume, setVolume] = useState(readStoredVolume);
@@ -182,21 +181,8 @@ export default function YoutubePlaylistPlayer({
   onNextTrackRef.current = onNextTrack;
 
   const current = items[activeIndex];
-  const progressPct = scrubActive
-    ? scrubPreview * 100
-    : duration > 0
-      ? Math.min(100, (currentTime / duration) * 100)
-      : 0;
-
-  useEffect(() => {
-    if (!scrubActive || duration <= 0) return;
-    const expected = scrubPreview * duration;
-    if (Math.abs(currentTime - expected) > SCRUB_DRIFT_HEAL_SEC) {
-      scrubbingRef.current = false;
-      setScrubActive(false);
-      setScrubPreview(0);
-    }
-  }, [currentTime, scrubActive, scrubPreview, duration]);
+  const progressPct =
+    duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
 
   const volumePct = muted ? 0 : volume;
   const activeCaption = useMemo(
@@ -294,8 +280,6 @@ export default function YoutubePlaylistPlayer({
       lastLoadedIndexRef.current = index;
       setCurrentTime(0);
       setDuration(0);
-      setScrubActive(false);
-      setScrubPreview(0);
       scrubbingRef.current = false;
 
       if (autoplay) {
@@ -351,7 +335,6 @@ export default function YoutubePlaylistPlayer({
 
       const trackDuration = readPlayerDuration() || duration;
       const clamped = Math.min(1, Math.max(0, ratio));
-      setScrubPreview(clamped);
 
       if (trackDuration <= 0) return;
 
@@ -368,13 +351,9 @@ export default function YoutubePlaylistPlayer({
     onSeekRatio: seekProgressRatio,
     onScrubStart: () => {
       scrubbingRef.current = true;
-      setScrubActive(true);
-      setScrubPreview(duration > 0 ? currentTime / duration : 0);
     },
     onScrubEnd: () => {
       scrubbingRef.current = false;
-      setScrubActive(false);
-      setScrubPreview(0);
       syncProgress();
     },
   });
@@ -417,7 +396,7 @@ export default function YoutubePlaylistPlayer({
             rel: 0,
             modestbranding: 1,
             playsinline: 1,
-            controls: 0,
+            controls: nativeControls ? 1 : 0,
             iv_load_policy: 3,
           },
           events: {
@@ -565,8 +544,6 @@ export default function YoutubePlaylistPlayer({
   useEffect(
     () => () => {
       scrubbingRef.current = false;
-      setScrubActive(false);
-      setScrubPreview(0);
     },
     [],
   );
@@ -880,6 +857,27 @@ export default function YoutubePlaylistPlayer({
   }, []);
 
   if (!items.length || !current) return null;
+
+  if (nativeControls) {
+    return (
+      <section
+        className={`youtube-player-section youtube-player-section--native${mobileInline ? ' youtube-player-section--mobile-inline' : ''}`}
+        aria-label={t('playlists.playerSection')}
+      >
+        <div className="youtube-player-frame-wrap">
+          <div className="youtube-player-video-shell">
+            <div id={elementId} className="youtube-player-frame" />
+            {activeCaption && (
+              <div className="youtube-player-subtitles" aria-live="polite">
+                <p className="youtube-player-subtitle-text">{activeCaption}</p>
+              </div>
+            )}
+          </div>
+        </div>
+        {playerError && <p className="error-msg">{playerError}</p>}
+      </section>
+    );
+  }
 
   const controlBar = (
     <div className="youtube-player-bar">

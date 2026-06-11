@@ -218,6 +218,7 @@ const en: MessageTree = {
     playbackMode: 'Playback mode',
     playbackMp3: 'MP3',
     playbackVideo: 'Video',
+    freePlaybackHint: 'Paste a YouTube link to add tracks. Video mode is free (hosted by YouTube). MP3 mode uses your server cache.',
     playlistMenu: 'Playlist menu',
     showTracks: 'Show track list',
     hideTracks: 'Hide track list',

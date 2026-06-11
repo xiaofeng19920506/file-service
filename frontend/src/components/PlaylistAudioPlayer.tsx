@@ -44,7 +44,7 @@ type PlaylistAudioPlayerProps = {
   progressHandleRef?: RefObject<PlaylistAudioProgressHandle | null>;
   /** 用于车载 / 锁屏 Media Session 显示的列表名 */
   playlistTitle?: string;
-  variant?: 'default' | 'nowPlaying';
+  variant?: 'default' | 'nowPlaying' | 'youtubeWatch';
   repeatMode?: PlaylistRepeatMode;
   onCycleRepeat?: () => void;
   onRepeatModeChange?: (mode: PlaylistRepeatMode) => void;
@@ -153,6 +153,7 @@ export default function PlaylistAudioPlayer({
 }: PlaylistAudioPlayerProps) {
   const { t } = useI18n();
   const isNowPlaying = variant === 'nowPlaying';
+  const isYoutubeWatch = variant === 'youtubeWatch';
   const audioRef = useRef<HTMLAudioElement>(null);
   const volumeProgressRef = useRef<HTMLDivElement>(null);
   const mobileOptionsRef = useRef<HTMLDivElement>(null);
@@ -879,6 +880,102 @@ export default function PlaylistAudioPlayer({
   const totalDurationLabel =
     playbackDuration > 0 ? formatPlaybackTime(playbackDuration) : '--:--';
   const currentTimeLabel = formatPlaybackTime(currentTime);
+
+  if (isYoutubeWatch) {
+    const prevDisabled = canGoPrev !== undefined ? !canGoPrev : activeIndex <= 0;
+    const nextDisabled =
+      canGoNext !== undefined ? !canGoNext : activeIndex >= items.length - 1;
+
+    return (
+      <section
+        className="youtube-player-section youtube-player-section--native youtube-player-section--audio-watch"
+        aria-label={t('playlists.playerSectionAudio')}
+      >
+        <div className="youtube-player-frame-wrap">
+          <div className="youtube-player-video-shell youtube-player-audio-cover">
+            <img className="youtube-player-audio-artwork" src={artworkUrl} alt="" loading="lazy" />
+            {activeCaption && (
+              <div className="youtube-player-subtitles" aria-live="polite">
+                <p className="youtube-player-subtitle-text">{activeCaption}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <audio
+          ref={audioRef}
+          className="playlist-audio-element"
+          src={streamUrl ?? undefined}
+          preload="auto"
+          playsInline
+          loop={false}
+          onTimeUpdate={handleTimeUpdate}
+          onLoadedMetadata={(e) => syncDurationFromAudio(e.currentTarget)}
+          onDurationChange={(e) => syncDurationFromAudio(e.currentTarget)}
+          onEnded={handleEnded}
+          onPlay={() => {
+            skipPauseSyncRef.current = false;
+            onPlayingChange(true);
+          }}
+          onPause={handlePause}
+        />
+
+        {(isProcessing || playerError || audioStatus?.status === 'failed') && (
+          <p className={`playlist-audio-status${playerError || audioStatus?.status === 'failed' ? ' error-msg' : ' playlists-muted'}`}>
+            {playerError ??
+              (audioStatus?.status === 'failed'
+                ? friendlyError(audioStatus.errorCode ?? 'audio_extract_failed', t)
+                : usingPreview
+                  ? t('playlists.audioCachingWhilePlaying', { title: current.title })
+                  : t('playlists.audioCaching', { title: current.title }))}
+          </p>
+        )}
+
+        <div className="yt-native-audio-controls">
+          <div className="yt-native-audio-transport">
+            <button type="button" className="yt-native-btn" onClick={goPrev} disabled={prevDisabled} aria-label={t('playlists.prevTrack')}>‹</button>
+            <button
+              type="button"
+              className="yt-native-btn yt-native-btn--primary"
+              disabled={loadingStream && !streamUrl}
+              onClick={() => {
+                if (!streamUrl && loadingStream) return;
+                if (!streamUrl) {
+                  wantPlayRef.current = true;
+                  onPlayingChange(true);
+                  return;
+                }
+                onPlayingChange(!playing);
+              }}
+              aria-label={playing ? t('playlists.pause') : t('playlists.play')}
+            >
+              {playing ? '▮▮' : '▶'}
+            </button>
+            <button type="button" className="yt-native-btn" onClick={goNext} disabled={nextDisabled} aria-label={t('playlists.nextTrack')}>›</button>
+          </div>
+          <input
+            className="yt-native-seek"
+            type="range"
+            min={0}
+            max={playbackDuration > 0 ? playbackDuration : 0}
+            step={0.1}
+            value={Math.min(currentTime, playbackDuration > 0 ? playbackDuration : 0)}
+            disabled={!canSeek}
+            aria-label={t('playlists.seek')}
+            onChange={(e) => {
+              if (!canSeek || playbackDuration <= 0) return;
+              seekToRatio(Number(e.target.value) / playbackDuration);
+            }}
+          />
+          <div className="yt-native-time">
+            <span>{currentTimeLabel}</span>
+            <span>{totalDurationLabel}</span>
+          </div>
+          <div className="yt-native-audio-options">{langSwitch}</div>
+        </div>
+      </section>
+    );
+  }
 
   const seekBar = (
     <AudioSeekBar

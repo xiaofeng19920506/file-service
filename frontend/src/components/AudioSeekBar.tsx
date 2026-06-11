@@ -1,8 +1,6 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useRef, type KeyboardEvent } from 'react';
 import { useI18n } from '../i18n';
 import { useSeekBarDrag } from '../hooks/useSeekBarDrag';
-
-const SCRUB_DRIFT_HEAL_SEC = 1.25;
 
 type AudioSeekBarProps = {
   currentTime: number;
@@ -27,54 +25,19 @@ export default function AudioSeekBar({
 }: AudioSeekBarProps) {
   const { t } = useI18n();
   const barRef = useRef<HTMLDivElement>(null);
-  const [scrubActive, setScrubActive] = useState(false);
-  const [scrubPreview, setScrubPreview] = useState(0);
 
   const hasDuration = Number.isFinite(duration) && duration > 0;
   const showIndeterminate = usingPreview && !hasDuration;
-  const showProgress = hasDuration || scrubActive;
-
-  const progressPct = scrubActive
-    ? scrubPreview * 100
-    : hasDuration
-      ? Math.min(100, Math.max(0, (currentTime / duration) * 100))
-      : 0;
-
-  const clearScrubState = () => {
-    setScrubActive(false);
-    setScrubPreview(0);
-  };
-
-  useEffect(() => {
-    if (!scrubActive || !hasDuration) return;
-    const expected = scrubPreview * duration;
-    if (Math.abs(currentTime - expected) > SCRUB_DRIFT_HEAL_SEC) {
-      clearScrubState();
-      onScrubEnd?.();
-    }
-  }, [currentTime, scrubActive, scrubPreview, duration, hasDuration, onScrubEnd]);
-
-  useEffect(() => {
-    clearScrubState();
-  }, [duration]);
+  const progressPct = hasDuration
+    ? Math.min(100, Math.max(0, (currentTime / duration) * 100))
+    : 0;
 
   const { handleClick } = useSeekBarDrag({
     barRef,
     enabled: canSeek,
-    onSeekRatio: (ratio) => {
-      setScrubPreview(ratio);
-      onSeekRatio(ratio);
-    },
-    onScrubStart: () => {
-      const ratio = hasDuration ? currentTime / duration : 0;
-      setScrubActive(true);
-      setScrubPreview(ratio);
-      onScrubStart?.();
-    },
-    onScrubEnd: () => {
-      clearScrubState();
-      onScrubEnd?.();
-    },
+    onSeekRatio,
+    onScrubStart,
+    onScrubEnd,
   });
 
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
@@ -104,9 +67,9 @@ export default function AudioSeekBar({
       <div className="audio-progress-track">
         <div
           className={`audio-progress-fill${showIndeterminate ? ' audio-progress-fill--indeterminate' : ''}`}
-          style={showProgress && !showIndeterminate ? { width: `${progressPct}%` } : undefined}
+          style={hasDuration && !showIndeterminate ? { width: `${progressPct}%` } : undefined}
         />
-        {showProgress && !showIndeterminate && (
+        {hasDuration && !showIndeterminate && (
           <div className="audio-progress-thumb" style={{ left: `${progressPct}%` }} aria-hidden />
         )}
       </div>
