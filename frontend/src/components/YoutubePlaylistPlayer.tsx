@@ -151,6 +151,7 @@ export default function YoutubePlaylistPlayer({
   const progressRef = useRef<HTMLDivElement>(null);
   const volumeProgressRef = useRef<HTMLDivElement>(null);
   const frameWrapRef = useRef<HTMLDivElement>(null);
+  const landscapeStageRef = useRef<HTMLDivElement>(null);
   const lastLoadedIndexRef = useRef(-1);
   const ignorePauseUntilRef = useRef(0);
   const [playerError, setPlayerError] = useState<string | null>(null);
@@ -755,21 +756,54 @@ export default function YoutubePlaylistPlayer({
 
   useEffect(() => {
     if (!isLandscapeTheater) return;
-    const bumpLayout = () => window.dispatchEvent(new Event('resize'));
+
+    const stage = landscapeStageRef.current;
+    const clearStageInlineLayout = () => {
+      if (!stage) return;
+      stage.style.removeProperty('width');
+      stage.style.removeProperty('height');
+      stage.style.removeProperty('transform');
+      stage.style.removeProperty('top');
+      stage.style.removeProperty('left');
+      stage.style.removeProperty('position');
+    };
+
+    const applyTheaterLayout = () => {
+      if (!stage) return;
+      const portrait = window.matchMedia('(orientation: portrait)').matches;
+      if (!portrait) {
+        clearStageInlineLayout();
+        window.dispatchEvent(new Event('resize'));
+        return;
+      }
+
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      stage.style.position = 'fixed';
+      stage.style.top = '50%';
+      stage.style.left = '50%';
+      stage.style.width = `${vh}px`;
+      stage.style.height = `${vw}px`;
+      stage.style.transform = 'translate(-50%, -50%) rotate(90deg)';
+      window.dispatchEvent(new Event('resize'));
+    };
+
     const onOrientationChange = () => {
       bumpPlayerActivity();
-      bumpLayout();
+      applyTheaterLayout();
     };
-    bumpLayout();
-    const t1 = window.setTimeout(bumpLayout, 120);
-    const t2 = window.setTimeout(bumpLayout, 420);
+
+    applyTheaterLayout();
+    const t1 = window.setTimeout(applyTheaterLayout, 100);
+    const t2 = window.setTimeout(applyTheaterLayout, 400);
     window.addEventListener('orientationchange', onOrientationChange);
-    window.addEventListener('resize', bumpLayout);
+    window.addEventListener('resize', applyTheaterLayout);
     return () => {
       window.clearTimeout(t1);
       window.clearTimeout(t2);
       window.removeEventListener('orientationchange', onOrientationChange);
-      window.removeEventListener('resize', bumpLayout);
+      window.removeEventListener('resize', applyTheaterLayout);
+      clearStageInlineLayout();
     };
   }, [isLandscapeTheater, bumpPlayerActivity]);
 
@@ -983,6 +1017,7 @@ export default function YoutubePlaylistPlayer({
         onMouseMove={isFullscreen || isLandscapeTheater ? bumpPlayerActivity : undefined}
       >
         <div
+          ref={landscapeStageRef}
           className={`youtube-player-landscape-stage${
             isLandscapeTheater ? ' is-landscape-theater' : ''
           }`}
