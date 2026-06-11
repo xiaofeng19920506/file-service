@@ -13,6 +13,7 @@ import { useI18n } from '../i18n';
 type ExportYoutubePlaylistModalProps = {
   playlistId: string;
   playlistTitle: string;
+  trackCount: number;
   onClose: () => void;
   onExported: (url: string) => void;
   oauthJustConnected?: boolean;
@@ -21,6 +22,7 @@ type ExportYoutubePlaylistModalProps = {
 export default function ExportYoutubePlaylistModal({
   playlistId,
   playlistTitle,
+  trackCount,
   onClose,
   onExported,
   oauthJustConnected = false,
@@ -120,6 +122,14 @@ export default function ExportYoutubePlaylistModal({
           <p className="export-youtube-intro">
             {t('playlists.exportYoutubeIntro', { title: playlistTitle })}
           </p>
+          {trackCount > 0 && (
+            <p className="export-youtube-track-count">
+              {t('playlists.exportYoutubeTrackCount', { count: trackCount })}
+            </p>
+          )}
+          {trackCount > 10 && (
+            <p className="export-youtube-hint">{t('playlists.exportYoutubeSlowHint')}</p>
+          )}
 
           {oauthJustConnected && connected && (
             <p className="export-youtube-notice">{t('playlists.exportYoutubeConnected')}</p>

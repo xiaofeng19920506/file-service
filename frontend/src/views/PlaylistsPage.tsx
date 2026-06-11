@@ -118,8 +118,13 @@ export default function PlaylistsPage({
   const [showAddModal, setShowAddModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
   const [shareTarget, setShareTarget] = useState<{ id: string; title: string } | null>(null);
-  const [exportTarget, setExportTarget] = useState<{ id: string; title: string } | null>(null);
+  const [exportTarget, setExportTarget] = useState<{
+    id: string;
+    title: string;
+    trackCount: number;
+  } | null>(null);
   const [oauthJustConnected, setOauthJustConnected] = useState(false);
+  const oauthHandledRef = useRef(false);
   const [trackDragIndex, setTrackDragIndex] = useState<number | null>(null);
   const [trackDragOver, setTrackDragOver] = useState<TrackDragOver | null>(null);
   const [savingOrder, setSavingOrder] = useState(false);
@@ -138,6 +143,8 @@ export default function PlaylistsPage({
   });
 
   useEffect(() => {
+    if (oauthHandledRef.current) return;
+
     const hash = window.location.hash;
     const qIndex = hash.indexOf('?');
     if (qIndex === -1) return;
@@ -145,6 +152,8 @@ export default function PlaylistsPage({
     const params = new URLSearchParams(hash.slice(qIndex + 1));
     const oauth = params.get('youtube_oauth');
     if (!oauth) return;
+
+    oauthHandledRef.current = true;
 
     const playlistId = params.get('id')?.trim() || selectedId;
     const reason = params.get('reason')?.trim();
@@ -164,6 +173,7 @@ export default function PlaylistsPage({
       setExportTarget({
         id: playlistId,
         title: detail?.playlist.id === playlistId ? detail.playlist.title : '',
+        trackCount: detail?.playlist.id === playlistId ? detail.items.length : 0,
       });
       if (selectedId !== playlistId) {
         onSelectId(playlistId);
@@ -171,7 +181,22 @@ export default function PlaylistsPage({
     } else if (oauth === 'error') {
       setError(friendlyError(reason ?? 'youtube_oauth_failed', t));
     }
-  }, [detail?.playlist.id, detail?.playlist.title, onSelectId, selectedId, t]);
+  }, [detail?.items.length, detail?.playlist.id, detail?.playlist.title, onSelectId, selectedId, t]);
+
+  useEffect(() => {
+    if (!exportTarget || !detail || detail.playlist.id !== exportTarget.id) return;
+    if (
+      exportTarget.title === detail.playlist.title
+      && exportTarget.trackCount === detail.items.length
+    ) {
+      return;
+    }
+    setExportTarget({
+      id: exportTarget.id,
+      title: detail.playlist.title,
+      trackCount: detail.items.length,
+    });
+  }, [detail, exportTarget]);
 
   const loadList = useCallback(async () => {
     setLoadingList(true);
@@ -790,6 +815,7 @@ export default function PlaylistsPage({
                 setExportTarget({
                   id: playlist.id,
                   title: playlist.title,
+                  trackCount: detail?.items.length ?? playlist.itemCount ?? 0,
                 })
               }
             >
@@ -943,7 +969,11 @@ export default function PlaylistsPage({
             type="button"
             className="nav-mobile-menu-item btn-secondary"
             onClick={() => {
-              setExportTarget({ id: playlist.id, title: playlist.title });
+              setExportTarget({
+                id: playlist.id,
+                title: playlist.title,
+                trackCount: detail.items.length,
+              });
               closeMenu();
             }}
           >
@@ -1403,6 +1433,7 @@ export default function PlaylistsPage({
         <ExportYoutubePlaylistModal
           playlistId={exportTarget.id}
           playlistTitle={exportTarget.title || detail?.playlist.title || t('playlists.title')}
+          trackCount={exportTarget.trackCount || detail?.items.length || 0}
           oauthJustConnected={oauthJustConnected}
           onClose={() => {
             setExportTarget(null);

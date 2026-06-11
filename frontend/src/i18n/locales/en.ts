@@ -312,6 +312,8 @@ const en: MessageTree = {
     exportYoutubeSuccess: 'YouTube playlist created.',
     exportYoutubeOpenLink: 'Open on YouTube',
     exportYoutubeDone: 'YouTube playlist created — open it in a new tab from the dialog.',
+    exportYoutubeTrackCount: '{count} tracks will be exported',
+    exportYoutubeSlowHint: 'Large lists may take a minute — please keep this window open.',
   },
   workflow: {
     search: 'Find songs',
@@ -568,6 +570,8 @@ const en: MessageTree = {
     youtube_oauth_disconnect_failed: 'Failed to disconnect YouTube account',
     youtube_oauth_failed: 'YouTube authorization failed',
     invalid_privacy_status: 'Invalid playlist visibility',
+    youtube_quota_exceeded: 'YouTube API daily quota exceeded — try again tomorrow',
+    youtube_insufficient_permissions: 'YouTube account lacks permission to create playlists — reconnect',
   },
 };
 

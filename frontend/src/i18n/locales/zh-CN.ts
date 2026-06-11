@@ -304,6 +304,8 @@ export default {
     exportYoutubeSuccess: 'YouTube 播放列表已创建。',
     exportYoutubeOpenLink: '在 YouTube 打开',
     exportYoutubeDone: 'YouTube 播放列表已创建，可在对话框中打开链接。',
+    exportYoutubeTrackCount: '将导出 {count} 首曲目',
+    exportYoutubeSlowHint: '曲目较多时可能需要一分钟，请保持窗口打开。',
   },
   workflow: {
     search: '查找歌曲',
@@ -558,6 +560,8 @@ export default {
     youtube_oauth_disconnect_failed: '解除 YouTube 绑定失败',
     youtube_oauth_failed: 'YouTube 授权失败',
     invalid_privacy_status: '无效的播放列表可见性',
+    youtube_quota_exceeded: 'YouTube API 今日配额已用完，请明天再试',
+    youtube_insufficient_permissions: 'YouTube 账号无权创建播放列表，请重新绑定',
   },
 } as const;
 

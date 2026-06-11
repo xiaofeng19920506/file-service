@@ -33,6 +33,95 @@ bash "${ROOT}/scripts/cloudflared-install.sh"
 
 mkdir -p "$DATA_DIR"
 
+wait_for_tunnel_url() {
+  local url=""
+  for _ in $(seq 1 45); do
+    if [[ -f "$LOG_FILE" ]]; then
+      url="$(grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' "$LOG_FILE" 2>/dev/null | head -1 || true)"
+    fi
+    [[ -n "$url" ]] && break
+    sleep 1
+  done
+  if [[ -n "$url" ]]; then
+    echo "$url" > "${DATA_DIR}/cloudflared.url"
+  fi
+  echo "$url"
+}
+
+print_summary() {
+  local url="$1"
+  cat <<EOF
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+隧道已在服务器上运行
+
+HTTPS 地址：  ${url:-（见 ${LOG_FILE}）}
+
+请确认 API .env 与 Google OAuth 重定向 URI 一致：
+  PUBLIC_BASE_URL=${url}
+  GOOGLE_OAUTH_REDIRECT_URI=${url}/v1/youtube/oauth/callback
+  WEB_APP_URL=https://你的前端地址
+
+改完 .env 后重启 API，然后验证：
+  curl -s ${url}/health
+
+Google OAuth 只需改「已授权的重定向 URI」，不必改 JavaScript 来源。
+
+常用命令：
+  npm run tunnel:status
+  grep trycloudflare ${LOG_FILE}
+
+注意：Quick Tunnel 重启后 URL 会变，需同步更新 .env 和 Google Console。
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EOF
+}
+
+if [[ "${SKIP_SYSTEMD:-}" != "1" ]] && [[ "$(uname -s)" == "Darwin" ]]; then
+  PLIST_LABEL="com.fileservice.tunnel"
+  PLIST_PATH="${HOME}/Library/LaunchAgents/${PLIST_LABEL}.plist"
+  mkdir -p "${HOME}/Library/LaunchAgents"
+
+  cat > "$PLIST_PATH" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>${PLIST_LABEL}</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>$(command -v cloudflared)</string>
+    <string>tunnel</string>
+    <string>--no-autoupdate</string>
+    <string>--url</string>
+    <string>${TUNNEL_TARGET}</string>
+  </array>
+  <key>StandardOutPath</key>
+  <string>${LOG_FILE}</string>
+  <key>StandardErrorPath</key>
+  <string>${LOG_FILE}</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>WorkingDirectory</key>
+  <string>${REPO_DIR}</string>
+</dict>
+</plist>
+EOF
+
+  info "注册 macOS LaunchAgent ${PLIST_LABEL}…"
+  launchctl bootout "gui/$(id -u)" "$PLIST_PATH" 2>/dev/null || true
+  launchctl bootstrap "gui/$(id -u)" "$PLIST_PATH"
+  launchctl enable "gui/$(id -u)/${PLIST_LABEL}" 2>/dev/null || true
+  launchctl kickstart -k "gui/$(id -u)/${PLIST_LABEL}" 2>/dev/null || launchctl start "$PLIST_LABEL" 2>/dev/null || true
+
+  info "等待隧道 URL…"
+  url="$(wait_for_tunnel_url)"
+  print_summary "$url"
+  exit 0
+fi
+
 if [[ "${SKIP_SYSTEMD:-}" != "1" ]] && command -v systemctl >/dev/null; then
   UNIT_PATH="${HOME}/.config/systemd/user/${SERVICE_NAME}.service"
   mkdir -p "$(dirname "$UNIT_PATH")"
@@ -74,14 +163,7 @@ EOF
   fi
 
   info "等待隧道 URL…"
-  url=""
-  for _ in $(seq 1 45); do
-    if [[ -f "$LOG_FILE" ]]; then
-      url="$(grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' "$LOG_FILE" 2>/dev/null | head -1 || true)"
-    fi
-    [[ -n "$url" ]] && break
-    sleep 1
-  done
+  url="$(wait_for_tunnel_url)"
 
   if [[ -z "$url" ]]; then
     echo "暂未从日志解析到 URL，请稍后执行：" >&2
@@ -89,30 +171,10 @@ EOF
     exit 0
   fi
 
-  echo "$url" > "${DATA_DIR}/cloudflared.url"
+  print_summary "$url"
 else
   info "跳过 systemd，改用手动启动…"
   TUNNEL_TARGET="$TUNNEL_TARGET" bash "${ROOT}/scripts/cloudflared-tunnel.sh" start
   url="$(cat "${DATA_DIR}/cloudflared.url" 2>/dev/null || true)"
+  print_summary "$url"
 fi
-
-cat <<EOF
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-隧道已在服务器上运行
-
-HTTPS 地址：  ${url:-（见 ${LOG_FILE}）}
-
-请确认 API .env 与 Google OAuth 重定向 URI 一致：
-  PUBLIC_BASE_URL=${url}
-  GOOGLE_OAUTH_REDIRECT_URI=${url}/v1/youtube/oauth/callback
-
-常用命令：
-  systemctl --user status ${SERVICE_NAME}
-  systemctl --user restart ${SERVICE_NAME}
-  journalctl --user -u ${SERVICE_NAME} -f
-  grep trycloudflare ${LOG_FILE}
-
-注意：Quick Tunnel 重启后 URL 会变，需同步更新 .env 和 Google Console。
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-EOF

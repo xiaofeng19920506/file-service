@@ -1,4 +1,7 @@
-export const YOUTUBE_OAUTH_SCOPES = ['https://www.googleapis.com/auth/youtube.force-ssl'] as const;
+export const YOUTUBE_OAUTH_SCOPES = [
+  'https://www.googleapis.com/auth/youtube.force-ssl',
+  'https://www.googleapis.com/auth/userinfo.email',
+] as const;
 
 export type YoutubePrivacyStatus = 'public' | 'unlisted' | 'private';
 
@@ -116,18 +119,44 @@ async function youtubeApiRequest<T>(
   return data;
 }
 
-export async function fetchYoutubeChannelInfo(accessToken: string): Promise<YoutubeConnectionInfo> {
-  const data = await youtubeApiRequest<{
-    items?: Array<{
-      snippet?: { title?: string };
-    }>;
-  }>(accessToken, '/channels?part=snippet&mine=true', { method: 'GET' });
+export async function fetchGoogleUserEmail(accessToken: string): Promise<string | null> {
+  try {
+    const res = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { email?: string };
+    return data.email?.trim() || null;
+  } catch {
+    return null;
+  }
+}
 
-  const channel = data.items?.[0];
+export async function fetchYoutubeChannelInfo(accessToken: string): Promise<YoutubeConnectionInfo> {
+  const [channelData, googleAccountEmail] = await Promise.all([
+    youtubeApiRequest<{
+      items?: Array<{
+        snippet?: { title?: string };
+      }>;
+    }>(accessToken, '/channels?part=snippet&mine=true', { method: 'GET' }),
+    fetchGoogleUserEmail(accessToken),
+  ]);
+
+  const channel = channelData.items?.[0];
   return {
-    googleAccountEmail: null,
+    googleAccountEmail,
     channelTitle: channel?.snippet?.title?.trim() ?? null,
   };
+}
+
+export function mapYoutubeApiError(message: string): string {
+  const lower = message.toLowerCase();
+  if (lower.includes('quota') || lower.includes('dailylimitexceeded')) return 'youtube_quota_exceeded';
+  if (lower.includes('insufficientpermissions') || lower.includes('forbidden')) {
+    return 'youtube_insufficient_permissions';
+  }
+  if (lower.includes('playlistnotfound')) return 'youtube_playlist_not_found';
+  return 'youtube_export_failed';
 }
 
 export async function createYoutubePlaylist(opts: {

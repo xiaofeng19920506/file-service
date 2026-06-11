@@ -99,3 +99,43 @@ PUBLIC_BASE_URL=https://你的API.vercel.app
 3. 后端设置 `CORS_ORIGIN`、`WEB_APP_URL` 为前端域名
 
 环境变量见 [.env.example](.env.example)。
+
+### 导出到 YouTube（OAuth）
+
+仅 **worship_team / admin** 在视频模式下可用。API 需 HTTPS 回调地址（Google 不接受 `http://公网IP:3000`）。
+
+**1. Google Cloud Console**
+
+- 启用 YouTube Data API v3
+- 创建 OAuth Web 客户端
+- **已授权的重定向 URI**（必填）：`https://你的API域名/v1/youtube/oauth/callback`
+- JavaScript 来源可留空
+
+**2. API 环境变量**
+
+```env
+GOOGLE_OAUTH_CLIENT_ID=...
+GOOGLE_OAUTH_CLIENT_SECRET=...
+PUBLIC_BASE_URL=https://你的API HTTPS 地址
+GOOGLE_OAUTH_REDIRECT_URI=https://你的API HTTPS 地址/v1/youtube/oauth/callback
+WEB_APP_URL=https://你的前端地址
+```
+
+**3. 自建服务器无 HTTPS 域名时（Cloudflare Quick Tunnel）**
+
+在 **API 所在机器** 上：
+
+```bash
+npm run tunnel:setup-server   # Linux systemd 或 macOS LaunchAgent 开机自启
+npm run tunnel:status         # 查看 https://xxx.trycloudflare.com
+```
+
+将输出的 HTTPS 地址填入 `.env` 与 Google OAuth 重定向 URI，然后重启 API。
+
+**4. 验证**
+
+```bash
+curl -s https://你的API HTTPS 地址/health
+```
+
+登录敬拜团账号 → 播放列表 → 视频模式 →「导出到 YouTube」。

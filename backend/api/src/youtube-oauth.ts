@@ -4,6 +4,7 @@ import {
   exchangeGoogleOAuthCode,
   exportVideosToYoutubePlaylist,
   fetchYoutubeChannelInfo,
+  mapYoutubeApiError,
   playlistItems,
   playlists,
   refreshGoogleAccessToken,
@@ -323,12 +324,14 @@ export function registerYoutubeOAuthRoutes(
         itemsAdded: result.itemsAdded,
       };
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'youtube_export_failed';
+      const raw = e instanceof Error ? e.message : 'youtube_export_failed';
       request.log.error(e, 'youtube export failed');
-      if (msg === 'youtube_playlist_empty') {
+      if (raw === 'youtube_playlist_empty') {
         return reply.code(400).send({ error: 'youtube_playlist_empty' });
       }
-      return reply.code(502).send({ error: 'youtube_export_failed' });
+      const code = mapYoutubeApiError(raw);
+      const status = code === 'youtube_quota_exceeded' ? 429 : 502;
+      return reply.code(status).send({ error: code });
     }
   });
 }
