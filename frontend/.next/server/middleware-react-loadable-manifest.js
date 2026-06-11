@@ -1,1 +1,0 @@
-self.__REACT_LOADABLE_MANIFEST='{"app/page.tsx -> ../AppShell":{"id":7488,"files":["static/css/19a95ded1a54efd0.css","static/css/439e2badc6a433e9.css","static/chunks/966.cffe283d4f692904.js","static/chunks/488.177e6c54d9e5d785.js"]},"components/ImageCropModal.tsx -> ../lib/pptx-preview":{"id":157,"files":[]}}';
