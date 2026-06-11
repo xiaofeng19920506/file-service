@@ -198,7 +198,7 @@
     overflow: visible;
   }
 
-  /* ── 敬拜列表（延续 list/detail） ── */
+  /* ── 敬拜列表 ── */
   .playlists-page {
     padding: 0.5rem var(--page-gutter) 0.75rem;
   }
@@ -215,33 +215,94 @@
     display: none;
   }
 
+  .playlists-workspace[data-mobile-view='list'] .playlists-main {
+    display: none;
+  }
+
+  .playlists-workspace[data-mobile-view='detail'] .playlists-sidebar {
+    display: none;
+  }
+
+  .playlists-workspace[data-mobile-view='detail'] {
+    grid-template-rows: 1fr;
+  }
+
+  .playlists-workspace[data-mobile-view='list'] .playlists-sidebar {
+    max-height: none;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .playlists-workspace[data-mobile-view='detail'] .playlists-main {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .playlists-main-inner {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0.65rem;
+  }
+
   .playlists-main-toolbar {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    flex-shrink: 0;
+    margin-bottom: 0.65rem;
   }
 
-  .playlists-toolbar-primary {
+  .playlists-mobile-back {
+    display: inline-flex;
+    width: 100%;
+    min-height: 2.5rem;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .playlists-toolbar-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .playlists-toolbar-mobile .playlists-playback-mode {
+    display: flex;
+    width: 100%;
+  }
+
+  .playlists-toolbar-mobile .playlists-playback-mode-btn {
+    flex: 1;
+    min-height: 2.5rem;
+    padding: 0.5rem 0.65rem;
+  }
+
+  .playlists-btn-play-all {
+    width: 100%;
+    min-height: 2.875rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+  }
+
+  .playlists-toolbar-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0.5rem;
     width: 100%;
   }
 
-  .playlists-toolbar-primary .btn-primary {
-    grid-column: 1 / -1;
-    min-height: 2.75rem;
-    font-size: 0.9375rem;
-  }
-
-  .playlists-toolbar-primary .playlists-playback-mode {
-    grid-column: 1 / -1;
-    display: flex;
+  .playlists-toolbar-row .playlists-shuffle-btn,
+  .playlists-toolbar-row .btn-secondary {
     width: 100%;
-  }
-
-  .playlists-toolbar-primary .playlists-playback-mode-btn {
-    flex: 1;
+    min-height: 2.5rem;
+    margin: 0;
+    justify-content: center;
+    display: inline-flex;
+    align-items: center;
   }
 
   .playlists-toolbar-more {
@@ -255,7 +316,7 @@
 
   .playlists-toolbar-more-toggle {
     width: 100%;
-    min-height: 2.25rem;
+    min-height: 2.5rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -287,21 +348,46 @@
     transform: rotate(180deg);
   }
 
-  .playlists-toolbar-secondary .btn-secondary {
+  .playlists-toolbar-secondary .btn-secondary,
+  .playlists-toolbar-secondary .btn-danger-outline {
     width: 100%;
+    min-height: 2.5rem;
   }
 
   .playlists-toolbar-secondary .btn-danger-outline {
     grid-column: 1 / -1;
   }
 
-  /* ── 敬拜列表 · MP3 模式：歌词为主，无缩略图 ── */
+  .playlists-player-stage {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    gap: 0.65rem;
+  }
+
+  .playlists-player-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .playlists-tracks-col {
+    flex: 0 0 auto;
+    max-height: min(32vh, 260px);
+    min-height: 0;
+  }
+
+  /* MP3 模式：歌词区优先 */
   .playlists-player-stage[data-playback-mode='audio'] .playlists-track-thumb-wrap {
     display: none;
   }
 
   .playlists-player-stage[data-playback-mode='audio'] .playlists-track-main {
-    padding-left: 0.55rem;
+    padding: 0.5rem 0.55rem;
+    min-height: 2.5rem;
   }
 
   .playlists-player-stage[data-playback-mode='audio'] .playlists-hero-thumb {
@@ -310,46 +396,56 @@
 
   .playlists-player-stage[data-playback-mode='audio'] .playlists-hero {
     aspect-ratio: auto;
-    min-height: 3.25rem;
+    min-height: 3rem;
     max-height: none;
     background: var(--surface-secondary);
     border: 1px solid var(--border-light);
+    border-radius: 12px;
   }
 
   .playlists-player-stage[data-playback-mode='audio'] .playlists-hero-overlay {
     position: static;
     flex-direction: row;
+    align-items: center;
+    justify-content: center;
     gap: 0.65rem;
     background: transparent;
     color: var(--text);
-    padding: 0.85rem 1rem;
+    padding: 0.75rem 1rem;
   }
 
   .playlists-player-stage[data-playback-mode='audio'] .playlists-hero-play-icon {
-    width: 2.5rem;
-    height: 2.5rem;
+    width: 2.75rem;
+    height: 2.75rem;
     font-size: 0.85rem;
     background: var(--blue);
     color: #fff;
     box-shadow: none;
+    flex-shrink: 0;
   }
 
   .playlists-player-stage[data-playback-mode='audio'] .playlists-hero-play-label {
     color: var(--text);
     text-shadow: none;
     font-size: 0.9375rem;
+    font-weight: 600;
   }
 
-  .playlist-audio-artwork-wrap {
+  .playlists-player-stage[data-playback-mode='audio'] .playlists-tracks-col {
+    max-height: min(28vh, 220px);
+  }
+
+  .desktop-audio-artwork {
     display: none;
   }
 
   .playlist-audio-lyrics-panel {
     display: flex;
+    flex: 1;
     flex-direction: column;
     justify-content: center;
-    min-height: min(30vh, 240px);
-    max-height: min(40vh, 320px);
+    min-height: 6rem;
+    max-height: none;
     padding: 1rem 1.1rem;
     border-radius: 14px;
     background: var(--surface-secondary);
@@ -360,7 +456,7 @@
 
   .playlist-audio-lyrics-text {
     margin: 0;
-    font-size: clamp(1.0625rem, 4.5vw, 1.35rem);
+    font-size: clamp(1.0625rem, 4.2vw, 1.3rem);
     font-weight: 600;
     line-height: 1.55;
     letter-spacing: -0.02em;
@@ -378,6 +474,10 @@
   }
 
   .playlist-audio-player {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
     gap: 0.65rem;
   }
 
@@ -387,49 +487,60 @@
   }
 
   .playlist-audio-title {
-    font-size: 0.9375rem;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   .playlist-audio-controls {
-    padding: 0.65rem 0.75rem;
+    flex-shrink: 0;
+    padding: 0.85rem 0.9rem;
     border-radius: 14px;
     background: var(--surface);
     border: 1px solid var(--border-light);
+    box-shadow: 0 1px 3px var(--shadow-sm);
   }
 
-  .playlist-audio-bar .youtube-player-icon-btn {
-    background: var(--surface-secondary);
-    color: var(--text);
-    border: 1px solid var(--border-light);
+  .playlist-audio-player .audio-transport {
+    gap: 1.5rem;
   }
 
-  .playlist-audio-bar .youtube-player-icon-btn-primary {
-    background: var(--blue);
-    color: #fff;
-    border-color: transparent;
+  .playlist-audio-player .audio-transport-btn {
+    width: 2.875rem;
+    height: 2.875rem;
   }
 
-  .playlist-audio-bar .youtube-player-progress-track {
-    background: var(--border-light);
+  .playlist-audio-player .audio-transport-btn--primary {
+    width: 3.5rem;
+    height: 3.5rem;
   }
 
-  .playlist-audio-bar .youtube-player-progress-fill {
-    background: var(--blue);
+  .playlist-audio-player .audio-options {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
   }
 
-  .playlist-audio-bar .youtube-player-time {
-    color: var(--text-secondary);
-    align-self: center;
+  .playlist-audio-player .audio-lang-switch {
+    display: flex;
+    width: 100%;
   }
 
-  .playlist-audio-bar .youtube-player-subtitle-toggle-btn {
-    color: var(--text-secondary);
-    background: var(--surface-secondary);
+  .playlist-audio-player .audio-lang-btn {
+    flex: 1;
+    min-height: 2.5rem;
   }
 
-  .playlist-audio-bar .youtube-player-subtitle-toggle-btn.active {
-    color: var(--blue);
-    background: var(--blue-muted);
+  .playlist-audio-player .audio-volume {
+    width: 100%;
+    max-width: none;
+  }
+
+  .playlist-audio-player .audio-volume-btn {
+    width: 2.875rem;
+    height: 2.875rem;
   }
 
   /* ── 管理：表格 → 卡片 ── */
@@ -560,13 +671,30 @@
 }
 
 @media (max-width: 768px) {
-  .playlists-hero-play-icon {
-    width: 3.75rem;
-    height: 3.75rem;
-    font-size: 1.1rem;
+  .playlists-player-stage[data-playback-mode='video'] .playlists-hero-play-icon {
+    width: 3.5rem;
+    height: 3.5rem;
+    font-size: 1rem;
+  }
+}
+
+/* 超小屏（iPhone SE 等） */
+@media (max-width: 390px) {
+  .playlist-audio-lyrics-text {
+    font-size: 1rem;
   }
 
-  .playlists-main-inner {
-    padding: 0.65rem;
+  .playlist-audio-player .audio-transport {
+    gap: 1.15rem;
+  }
+
+  .playlist-audio-player .audio-transport-btn {
+    width: 2.625rem;
+    height: 2.625rem;
+  }
+
+  .playlist-audio-player .audio-transport-btn--primary {
+    width: 3.25rem;
+    height: 3.25rem;
   }
 }

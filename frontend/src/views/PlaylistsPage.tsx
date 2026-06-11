@@ -603,19 +603,30 @@ export default function PlaylistsPage({
         </button>
       </div>
 
-      <div className="playlists-toolbar-primary mobile-only">
+      <div className="playlists-toolbar-mobile mobile-only">
         {hasTracks && (
           <>
             {renderPlaybackModeToggle()}
-            <button type="button" className="btn-primary" onClick={startPlayback}>
+            <button
+              type="button"
+              className="btn-primary playlists-btn-play-all"
+              onClick={startPlayback}
+            >
               {t('playlists.playAll')}
             </button>
-            {renderShuffleToggle()}
+            <div className="playlists-toolbar-row">
+              {renderShuffleToggle()}
+              <button type="button" className="btn-secondary" onClick={() => setShowAddModal(true)}>
+                {t('playlists.addTitle')}
+              </button>
+            </div>
           </>
         )}
-        <button type="button" className="btn-secondary" onClick={() => setShowAddModal(true)}>
-          {t('playlists.addTitle')}
-        </button>
+        {!hasTracks && (
+          <button type="button" className="btn-secondary" onClick={() => setShowAddModal(true)}>
+            {t('playlists.addTitle')}
+          </button>
+        )}
       </div>
 
       <div className="playlists-toolbar-more mobile-only">

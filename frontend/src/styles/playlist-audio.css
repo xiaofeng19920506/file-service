@@ -1,0 +1,275 @@
+/* ── MP3 / 音频播放器（桌面 + 移动共用结构） ── */
+
+.playlist-audio-player {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.playlist-audio-artwork-wrap {
+  position: relative;
+  width: 100%;
+  max-width: min(40vh, 360px);
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: #111;
+}
+
+.playlist-audio-artwork {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.playlist-audio-subtitles-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0.75rem;
+  display: flex;
+  justify-content: center;
+  padding: 0 0.75rem;
+  pointer-events: none;
+}
+
+.playlist-audio-subtitles-overlay p {
+  margin: 0;
+  padding: 0.35rem 0.65rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font-size: 0.92rem;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.playlist-audio-lyrics-panel {
+  display: none;
+}
+
+.playlist-audio-element {
+  display: none;
+}
+
+.playlist-audio-status {
+  margin: 0;
+  font-size: 0.8125rem;
+}
+
+.playlist-audio-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.playlist-audio-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.playlist-audio-title {
+  font-weight: 600;
+  font-size: 0.98rem;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.playlist-audio-index {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+/* 传输控制：对称圆形按钮 */
+.audio-transport {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+}
+
+.audio-transport-btn {
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 1px solid var(--border-light);
+  border-radius: 50%;
+  background: var(--surface-secondary);
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.audio-transport-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.audio-transport-btn:hover:not(:disabled) {
+  background: var(--blue-muted);
+  border-color: color-mix(in srgb, var(--blue) 35%, var(--border-light));
+}
+
+.audio-transport-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.audio-transport-btn--primary {
+  width: 3.25rem;
+  height: 3.25rem;
+  font-size: 0.95rem;
+  background: var(--blue);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--blue) 35%, transparent);
+}
+
+.audio-transport-btn--primary:hover:not(:disabled) {
+  background: var(--blue-hover);
+  border-color: transparent;
+}
+
+.audio-transport-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  display: block;
+}
+
+.audio-transport-icon--play {
+  width: 1rem;
+  height: 1rem;
+  margin-left: 0.1rem;
+}
+
+/* 进度条 */
+.audio-progress {
+  width: 100%;
+  padding: 0.35rem 0;
+  cursor: pointer;
+}
+
+.audio-progress:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: 6px;
+}
+
+.audio-progress-track {
+  position: relative;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--border-light);
+}
+
+.audio-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--blue);
+  pointer-events: none;
+}
+
+.audio-time {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+/* 语言 + 音量 */
+.audio-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+}
+
+.audio-lang-switch {
+  display: inline-flex;
+  padding: 0.15rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-light);
+  background: var(--surface-secondary);
+}
+
+.audio-lang-btn {
+  min-width: 2.75rem;
+  min-height: 2rem;
+  padding: 0.35rem 0.75rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.audio-lang-btn.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 3px var(--shadow-sm);
+}
+
+.audio-volume {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 7.5rem;
+  flex: 1;
+  max-width: 11rem;
+}
+
+.audio-volume-slider {
+  flex: 1;
+  min-width: 0;
+  padding: 0.35rem 0;
+  cursor: pointer;
+}
+
+.audio-volume-slider:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: 6px;
+}
+
+.audio-volume-track {
+  position: relative;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border-light);
+}
+
+.audio-volume-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--blue);
+  pointer-events: none;
+}
+
+.audio-volume-btn {
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+.audio-volume-icon {
+  width: 1rem;
+  height: 1rem;
+  display: block;
+}
