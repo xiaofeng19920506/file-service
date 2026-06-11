@@ -19,7 +19,7 @@ import {
 } from '../lib/player-volume';
 import { useMediaSession } from '../hooks/useMediaSession';
 import type { PlaylistRepeatMode } from '../lib/playlist-repeat-mode';
-import { RepeatIcon, ShuffleIcon } from './icons';
+import { PlaybackMoreIcon, QueueIcon, RepeatIcon, ShuffleIcon } from './icons';
 import AudioSeekBar from './AudioSeekBar';
 import ScrollingTitle from './ScrollingTitle';
 
@@ -49,6 +49,8 @@ type PlaylistAudioPlayerProps = {
   onCycleRepeat?: () => void;
   shuffleEnabled?: boolean;
   onToggleShuffle?: () => void;
+  onToggleQueue?: () => void;
+  queueOpen?: boolean;
 };
 
 function youtubeThumb(videoId: string): string {
@@ -144,11 +146,15 @@ export default function PlaylistAudioPlayer({
   onCycleRepeat,
   shuffleEnabled = false,
   onToggleShuffle,
+  onToggleQueue,
+  queueOpen = false,
 }: PlaylistAudioPlayerProps) {
   const { t } = useI18n();
   const isNowPlaying = variant === 'nowPlaying';
   const audioRef = useRef<HTMLAudioElement>(null);
   const volumeProgressRef = useRef<HTMLDivElement>(null);
+  const mobileOptionsRef = useRef<HTMLDivElement>(null);
+  const [mobileOptionsOpen, setMobileOptionsOpen] = useState(false);
   const wantPlayRef = useRef(playing);
   const skipPauseSyncRef = useRef(false);
   const endedHandledRef = useRef(false);
@@ -188,6 +194,17 @@ export default function PlaylistAudioPlayer({
     const activeLine = panel.querySelector<HTMLElement>('[data-active="true"]');
     activeLine?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }, [currentTime, captionCues]);
+
+  useEffect(() => {
+    if (!mobileOptionsOpen) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!mobileOptionsRef.current?.contains(event.target as Node)) {
+        setMobileOptionsOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [mobileOptionsOpen]);
 
   const refreshAudioStatus = useCallback(
     async (videoId: string) => {
@@ -797,21 +814,28 @@ export default function PlaylistAudioPlayer({
     </div>
   );
 
+  const totalDurationLabel =
+    Number.isFinite(duration) && duration > 0 ? formatPlaybackTime(duration) : '--:--';
+
+  const seekBar = (
+    <AudioSeekBar
+      currentTime={currentTime}
+      duration={duration}
+      canSeek={canSeek}
+      usingPreview={usingPreview}
+      onSeekRatio={seekToRatio}
+      className="audio-player-bar-progress"
+    />
+  );
+
   const progressBlock = (
     <div className="playlist-np-progress">
-      <AudioSeekBar
-        currentTime={currentTime}
-        duration={duration}
-        canSeek={canSeek}
-        usingPreview={usingPreview}
-        onSeekRatio={seekToRatio}
-        className="audio-player-bar-progress"
-      />
+      {seekBar}
       <div className={`audio-time${isNowPlaying ? ' playlist-np-times' : ''}`}>
         {isNowPlaying ? (
           <>
-            <span>{formatPlaybackTime(currentTime)}</span>
-            <span>{formatPlaybackTime(duration)}</span>
+            <span className="playlist-np-time-current">{formatPlaybackTime(currentTime)}</span>
+            <span className="playlist-np-time-total">{totalDurationLabel}</span>
           </>
         ) : (
           formatPlaybackTimeRange(currentTime, duration)
@@ -819,6 +843,8 @@ export default function PlaylistAudioPlayer({
       </div>
     </div>
   );
+
+  const mobilePlaybackOptionsActive = shuffleEnabled || repeatMode !== 'off';
 
   const shuffleRepeatControls = isNowPlaying ? (
     <div
@@ -980,14 +1006,70 @@ export default function PlaylistAudioPlayer({
           </div>
 
           <div className="playlist-np-mobile-dock mobile-only">
-            {shuffleRepeatControls}
-            <div className="playlist-np-transport-block">
-              <div className="playlist-np-track">
-                <ScrollingTitle text={current.title} className="playlist-np-track-title" />
-                {playlistTitle && <p className="playlist-np-track-album">{playlistTitle}</p>}
+            <div className="playlist-np-track">
+              <ScrollingTitle text={current.title} className="playlist-np-track-title" />
+              {playlistTitle && <p className="playlist-np-track-album">{playlistTitle}</p>}
+            </div>
+
+            <div className="playlist-np-progress playlist-np-progress--seek-only">{seekBar}</div>
+
+            <div className="playlist-np-time-row" aria-hidden={false}>
+              <span className="playlist-np-time-current">{formatPlaybackTime(currentTime)}</span>
+              <span className="playlist-np-time-total">{totalDurationLabel}</span>
+            </div>
+
+            <div className="playlist-np-controls-row">
+              <button
+                type="button"
+                className={`playlist-np-dock-corner-btn${queueOpen ? ' active' : ''}`}
+                onClick={onToggleQueue}
+                aria-label={t('playlists.queueTitle')}
+                aria-pressed={queueOpen}
+              >
+                <QueueIcon />
+              </button>
+
+              <div className="playlist-np-transport-wrap">{transportControls}</div>
+
+              <div className="playlist-np-options-wrap" ref={mobileOptionsRef}>
+                <button
+                  type="button"
+                  className={`playlist-np-dock-corner-btn${mobilePlaybackOptionsActive ? ' active' : ''}`}
+                  onClick={() => setMobileOptionsOpen((open) => !open)}
+                  aria-label={t('playlists.playbackOptions')}
+                  aria-expanded={mobileOptionsOpen}
+                  aria-haspopup="menu"
+                >
+                  <PlaybackMoreIcon />
+                </button>
+                {mobileOptionsOpen && (
+                  <div className="playlist-np-options-menu" role="menu">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className={`playlist-np-options-item${shuffleEnabled ? ' active' : ''}`}
+                      onClick={() => {
+                        onToggleShuffle?.();
+                      }}
+                      aria-pressed={shuffleEnabled}
+                    >
+                      <ShuffleIcon />
+                      <span>{t('playlists.shuffle')}</span>
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className={`playlist-np-options-item${repeatMode !== 'off' ? ' active' : ''}`}
+                      onClick={() => {
+                        onCycleRepeat?.();
+                      }}
+                    >
+                      <RepeatIcon mode={repeatMode} />
+                      <span>{repeatLabel}</span>
+                    </button>
+                  </div>
+                )}
               </div>
-              {transportControls}
-              {progressBlock}
             </div>
           </div>
         </div>

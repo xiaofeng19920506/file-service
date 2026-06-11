@@ -151,6 +151,16 @@ export function QueueIcon() {
   );
 }
 
+export function PlaybackMoreIcon() {
+  return (
+    <svg className="player-chrome-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <circle cx="12" cy="5" r="1.75" />
+      <circle cx="12" cy="12" r="1.75" />
+      <circle cx="12" cy="19" r="1.75" />
+    </svg>
+  );
+}
+
 export function ShuffleIcon() {
   return (
     <svg className="player-chrome-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
