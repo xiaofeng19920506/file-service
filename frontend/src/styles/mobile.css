@@ -215,6 +215,12 @@
     display: none;
   }
 
+  .playlists-main-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
   .playlists-toolbar-primary {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -240,6 +246,11 @@
 
   .playlists-toolbar-more {
     width: 100%;
+  }
+
+  .playlists-toolbar-more-toggle-icon {
+    display: inline-block;
+    transition: transform 0.2s ease;
   }
 
   .playlists-toolbar-more-toggle {

@@ -87,6 +87,10 @@ export default function PlaylistsPage({
   const [playing, setPlaying] = useState(false);
   const [playerEngaged, setPlayerEngaged] = useState(false);
   const [toolbarExpanded, setToolbarExpanded] = useState(false);
+
+  useEffect(() => {
+    setToolbarExpanded(false);
+  }, [selectedId]);
   const [removingItemId, setRemovingItemId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
