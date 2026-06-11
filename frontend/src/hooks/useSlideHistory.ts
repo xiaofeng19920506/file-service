@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
-import { reindexSlides, type EditableSlide } from '../lib/pptx-preview.js';
-import { cloneSlides, SLIDE_HISTORY_MAX } from '../lib/slide-history.js';
+import { reindexSlides, type EditableSlide } from '../lib/pptx-preview';
+import { cloneSlides, SLIDE_HISTORY_MAX } from '../lib/slide-history';
 
 export function useSlideHistory() {
   const [slides, setSlidesState] = useState<EditableSlide[]>([]);

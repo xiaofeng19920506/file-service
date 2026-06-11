@@ -7,9 +7,9 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import en from './locales/en.js';
-import zhCN from './locales/zh-CN.js';
-import type { MessageTree } from './locales/zh-CN.js';
+import en from './locales/en';
+import zhCN from './locales/zh-CN';
+import type { MessageTree } from './locales/zh-CN';
 
 export type Locale = 'zh-CN' | 'en';
 

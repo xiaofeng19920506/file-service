@@ -6,7 +6,7 @@ export type UploadProgress = {
   percent: number;
 };
 
-const base = import.meta.env.VITE_API_URL ?? '';
+const base = process.env.NEXT_PUBLIC_API_URL ?? '';
 
 function resolveUrl(path: string): string {
   return path.startsWith('http') ? path : `${base}${path}`;

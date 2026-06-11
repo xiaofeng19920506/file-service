@@ -1,0 +1,14 @@
+{
+  "app/page.tsx -> ../AppShell": {
+    "id": 5673,
+    "files": [
+      "static/css/62eadb3c7408d2b4.css",
+      "static/chunks/966.cffe283d4f692904.js",
+      "static/chunks/673.a30d76b15e0d39e9.js"
+    ]
+  },
+  "components/ImageCropModal.tsx -> ../lib/pptx-preview": {
+    "id": 157,
+    "files": []
+  }
+}

@@ -1,7 +1,7 @@
 import { getAuthToken } from '../lib/auth-session';
 
-const base = import.meta.env.VITE_API_URL ?? '';
-const apiKey = import.meta.env.VITE_API_KEY?.trim() ?? '';
+const base = process.env.NEXT_PUBLIC_API_URL ?? '';
+const apiKey = process.env.NEXT_PUBLIC_API_KEY?.trim() ?? '';
 
 function resolveBearerToken(): string | undefined {
   const userToken = getAuthToken();

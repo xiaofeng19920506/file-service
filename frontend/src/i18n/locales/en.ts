@@ -1,4 +1,4 @@
-import type { MessageTree } from './zh-CN.js';
+import type { MessageTree } from './zh-CN';
 
 const en: MessageTree = {
   common: {

@@ -1,4 +1,4 @@
-import { reindexSlides, slideIdentity, type EditableSlide } from './pptx-preview.js';
+import { reindexSlides, slideIdentity, type EditableSlide } from './pptx-preview';
 
 export function cloneSlides(slides: EditableSlide[]): EditableSlide[] {
   return slides.map((s) => ({
