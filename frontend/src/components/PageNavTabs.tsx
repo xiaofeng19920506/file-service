@@ -12,6 +12,8 @@ type NavTarget = 'library' | 'playlists' | 'merge' | 'admin';
 type PageNavTabsProps = {
   page: AppPage;
   navigate: (page: NavTarget) => void;
+  canSearch: boolean;
+  canAccessPlaylists: boolean;
   canMerge: boolean;
   canEdit: boolean;
   variant: 'header' | 'bottom';
@@ -22,16 +24,24 @@ const NAV_ITEMS: {
   icon: typeof LibraryNavIcon;
   labelKey: 'nav.library' | 'nav.playlists' | 'nav.merge' | 'nav.admin';
   shortKey: 'nav.libraryShort' | 'nav.playlistsShort' | 'nav.mergeShort' | 'nav.adminShort';
+  requiresSearch?: boolean;
+  requiresPlaylists?: boolean;
   requiresMerge?: boolean;
   requiresEdit?: boolean;
 }[] = [
-  { id: 'library', icon: LibraryNavIcon, labelKey: 'nav.library', shortKey: 'nav.libraryShort' },
   {
     id: 'playlists',
     icon: PlaylistsNavIcon,
     labelKey: 'nav.playlists',
     shortKey: 'nav.playlistsShort',
-    requiresMerge: true,
+    requiresPlaylists: true,
+  },
+  {
+    id: 'library',
+    icon: LibraryNavIcon,
+    labelKey: 'nav.library',
+    shortKey: 'nav.libraryShort',
+    requiresSearch: true,
   },
   {
     id: 'merge',
@@ -52,6 +62,8 @@ const NAV_ITEMS: {
 export default function PageNavTabs({
   page,
   navigate,
+  canSearch,
+  canAccessPlaylists,
   canMerge,
   canEdit,
   variant,
@@ -60,6 +72,8 @@ export default function PageNavTabs({
   const isBottom = variant === 'bottom';
 
   const items = NAV_ITEMS.filter((item) => {
+    if (item.requiresSearch && !canSearch) return false;
+    if (item.requiresPlaylists && !canAccessPlaylists) return false;
     if (item.requiresMerge && !canMerge) return false;
     if (item.requiresEdit && !canEdit) return false;
     return true;

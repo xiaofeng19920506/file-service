@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { APP_HOME_PAGE } from '../lib/permissions';
 
 export type AppPage =
   | 'library'
@@ -20,7 +21,15 @@ export type AppRoute = {
   mergePlaylistId?: string;
 };
 
-function routeFromHash(hash: string): AppRoute {
+const HOME_HASH = '#/playlists';
+
+function normalizeHash(hash: string): string {
+  if (!hash || hash === '#' || hash === '#/') return HOME_HASH;
+  return hash;
+}
+
+function routeFromHash(rawHash: string): AppRoute {
+  const hash = normalizeHash(rawHash);
   if (hash.startsWith('#/merge/edit')) {
     const qIndex = hash.indexOf('?');
     const params =
@@ -56,15 +65,17 @@ function routeFromHash(hash: string): AppRoute {
   }
   if (hash === '#/admin') return { page: 'admin' };
   if (hash === '#/login') return { page: 'login' };
-  return { page: 'library' };
+  if (hash.startsWith('#/library')) return { page: 'library' };
+  return { page: APP_HOME_PAGE };
 }
 
 export function useAppPage() {
   const [route, setRoute] = useState<AppRoute>(() => {
-    if (!window.location.hash) {
-      window.location.replace('#/library');
+    const normalized = normalizeHash(window.location.hash);
+    if (window.location.hash !== normalized) {
+      window.location.replace(normalized);
     }
-    return routeFromHash(window.location.hash);
+    return routeFromHash(normalized);
   });
 
   useEffect(() => {
@@ -78,7 +89,7 @@ export function useAppPage() {
       next === 'merge'
         ? '#/merge'
         : next === 'playlists'
-          ? '#/playlists'
+          ? HOME_HASH
           : next === 'admin'
             ? '#/admin'
             : next === 'login'
@@ -91,7 +102,7 @@ export function useAppPage() {
   }, []);
 
   const navigateToPlaylist = useCallback((id?: string) => {
-    const hash = id ? `#/playlists?id=${encodeURIComponent(id)}` : '#/playlists';
+    const hash = id ? `#/playlists?id=${encodeURIComponent(id)}` : HOME_HASH;
     if (window.location.hash !== hash) {
       window.location.hash = hash;
     }

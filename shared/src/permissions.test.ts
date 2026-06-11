@@ -18,13 +18,14 @@ describe('resolvePathAccessLevel', () => {
     expect(resolvePathAccessLevel('POST', '/v1/auth/register')).toBe('public');
   });
 
-  it('marks guest blob search as guest_browse', () => {
-    expect(resolvePathAccessLevel('GET', '/v1/blobs')).toBe('guest_browse');
+  it('marks blob search as search (login + worship team)', () => {
+    expect(resolvePathAccessLevel('GET', '/v1/blobs')).toBe('search');
   });
 
   it('classifies protected routes', () => {
     expect(resolvePathAccessLevel('GET', '/v1/blobs/x/content')).toBe('download');
     expect(resolvePathAccessLevel('POST', '/v1/uploads')).toBe('upload');
+    expect(resolvePathAccessLevel('GET', '/v1/playlists')).toBe('playlist');
     expect(resolvePathAccessLevel('POST', '/v1/jobs')).toBe('merge');
     expect(resolvePathAccessLevel('DELETE', '/v1/blobs/x')).toBe('admin');
     expect(resolvePathAccessLevel('GET', '/v1/admin/users')).toBe('admin');
@@ -37,8 +38,15 @@ describe('resolvePathAccessLevel', () => {
 });
 
 describe('roleMeetsAccessLevel', () => {
-  it('allows guest browse without role', () => {
-    expect(roleMeetsAccessLevel('guest_browse', null)).toBe(true);
+  it('requires login for blob search', () => {
+    expect(roleMeetsAccessLevel('search', null)).toBe(false);
+    expect(roleMeetsAccessLevel('search', 'member')).toBe(false);
+    expect(roleMeetsAccessLevel('search', 'worship_team')).toBe(true);
+  });
+
+  it('allows playlists for all logged-in roles', () => {
+    expect(roleMeetsAccessLevel('playlist', 'member')).toBe(true);
+    expect(roleMeetsAccessLevel('playlist', 'worship_team')).toBe(true);
   });
 
   it('enforces member login', () => {
@@ -58,15 +66,16 @@ describe('roleMeetsAccessLevel', () => {
 });
 
 describe('isPublicApiPath', () => {
-  it('aligns with unauthenticated access', () => {
-    expect(isPublicApiPath('GET', '/v1/blobs')).toBe(true);
+  it('blob search requires authentication', () => {
+    expect(isPublicApiPath('GET', '/v1/blobs')).toBe(false);
+    expect(isUnauthenticatedAccessAllowed('GET', '/v1/blobs')).toBe(false);
     expect(isPublicApiPath('POST', '/v1/jobs')).toBe(false);
-    expect(isUnauthenticatedAccessAllowed('GET', '/v1/blobs')).toBe(true);
   });
 });
 
 describe('accessDeniedErrorCode', () => {
   it('maps levels to error codes', () => {
+    expect(accessDeniedErrorCode('search')).toBe('search_forbidden');
     expect(accessDeniedErrorCode('download')).toBe('download_forbidden');
     expect(accessDeniedErrorCode('admin')).toBe('admin_required');
     expect(accessDeniedErrorCode('member')).toBe('unauthorized');

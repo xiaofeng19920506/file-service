@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from './auth/AuthContext';
 import BlobPreviewPage from './views/BlobPreviewPage';
 import MergeEditPage from './views/MergeEditPage';
@@ -14,15 +14,25 @@ import { CloseIcon, MenuIcon, MoonIcon, SunIcon } from './components/icons';
 import { useAppPage } from './hooks/useAppPage';
 import { hasStoredSession } from './lib/auth-session';
 import { formatUserDisplayName } from './lib/user-name';
+import { homePageForPermissions } from './lib/permissions';
 import { useI18n } from './i18n';
-export default function App() {
+import {
+  PlaylistsMobileMenuProvider,
+  usePlaylistsMobileMenu,
+} from './contexts/PlaylistsMobileMenuContext';
+
+function AppShellInner({
+  mobileMenuOpen,
+  setMobileMenuOpen,
+}: {
+  mobileMenuOpen: boolean;
+  setMobileMenuOpen: React.Dispatch<React.SetStateAction<boolean>>;
+}) {
   const { t, locale, setLocale } = useI18n();
+  const { menuContent: playlistsMobileMenu } = usePlaylistsMobileMenu();
   const { user, loading, logout, permissions, isAdmin } = useAuth();
   const {
     page,
-    previewBlobId,
-    mergeEditBlobIds,
-    mergeEditTitle,
     playlistId,
     playlistShareToken,
     mergePlaylistId,
@@ -35,35 +45,43 @@ export default function App() {
   const [theme, setTheme] = useState<'light' | 'dark'>(() =>
     document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light',
   );
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (loading) return;
+    const home = homePageForPermissions(permissions);
     if (page === 'login') {
-      if (user || hasStoredSession()) navigate('library');
+      if (user || hasStoredSession()) navigate(home);
+      return;
+    }
+    if (page === 'library' && !permissions.canSearch) {
+      navigate(home);
       return;
     }
     if (page === 'preview' && !permissions.canDownload) {
-      navigate('library');
+      navigate(home);
       return;
     }
-    if ((page === 'merge' || page === 'merge-edit' || page === 'playlists') && !permissions.canMerge) {
-      navigate('library');
+    if (page === 'playlists' && !permissions.canAccessPlaylists) {
+      navigate(home);
+      return;
+    }
+    if ((page === 'merge' || page === 'merge-edit') && !permissions.canMerge) {
+      navigate(home);
       return;
     }
     if (page === 'library-upload' && !permissions.canUpload) {
-      navigate('library');
+      navigate(home);
       return;
     }
     if (page === 'admin' && !permissions.canEdit) {
-      navigate('library');
+      navigate(home);
     }
   }, [loading, user, page, navigate, permissions]);
 
   useEffect(() => {
     setMobileMenuOpen(false);
-  }, [page]);
+  }, [page, setMobileMenuOpen]);
 
   useEffect(() => {
     if (!mobileMenuOpen) return;
@@ -72,44 +90,22 @@ export default function App() {
     };
     document.addEventListener('pointerdown', onPointerDown);
     return () => document.removeEventListener('pointerdown', onPointerDown);
-  }, [mobileMenuOpen]);
+  }, [mobileMenuOpen, setMobileMenuOpen]);
 
   useEffect(() => {
     if (page === 'preview' || page === 'login' || page === 'merge-edit' || page === 'library-upload')
       return;
     document.title =
-      page === 'merge'
-        ? t('pages.mergeTitle')
-        : page === 'playlists'
-          ? t('pages.playlistsTitle')
+      page === 'playlists'
+        ? t('pages.playlistsTitle')
+        : page === 'merge'
+          ? t('pages.mergeTitle')
           : page === 'admin'
             ? t('pages.adminTitle')
-            : t('pages.libraryTitle');
+            : page === 'library'
+              ? t('pages.libraryTitle')
+              : t('pages.playlistsTitle');
   }, [page, t]);
-
-  if (loading) {
-    return (
-      <div className="auth-page">
-        <p className="auth-loading">{t('auth.checkingSession')}</p>
-      </div>
-    );
-  }
-
-  if (page === 'login' && !user) {
-    return <AuthPage />;
-  }
-
-  if (page === 'preview' && previewBlobId && permissions.canDownload) {
-    return <BlobPreviewPage blobId={previewBlobId} />;
-  }
-
-  if (page === 'merge-edit' && mergeEditBlobIds?.length && permissions.canMerge) {
-    return <MergeEditPage blobIds={mergeEditBlobIds} title={mergeEditTitle} />;
-  }
-
-  if (page === 'library-upload' && permissions.canUpload) {
-    return <UploadConfirmPage libraryUpload={libraryUpload} />;
-  }
 
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
@@ -153,13 +149,15 @@ export default function App() {
   );
 
   const pageTitle =
-    page === 'merge'
-      ? t('nav.mergeShort')
-      : page === 'playlists'
-        ? t('nav.playlistsShort')
+    page === 'playlists'
+      ? t('nav.playlistsShort')
+      : page === 'merge'
+        ? t('nav.mergeShort')
         : page === 'admin'
           ? t('nav.adminShort')
-          : t('nav.libraryShort');
+          : page === 'library'
+            ? t('nav.libraryShort')
+            : t('nav.playlistsShort');
 
   const accountActions = user ? (
     <>
@@ -191,6 +189,8 @@ export default function App() {
             <PageNavTabs
               page={page}
               navigate={navigate}
+              canSearch={permissions.canSearch}
+              canAccessPlaylists={permissions.canAccessPlaylists}
               canMerge={permissions.canMerge}
               canEdit={permissions.canEdit}
               variant="header"
@@ -220,18 +220,11 @@ export default function App() {
 
         {mobileMenuOpen && (
           <div className="nav-mobile-menu" id="nav-mobile-menu">
-            <div className="nav-mobile-menu-section nav-mobile-menu-nav mobile-only">
-              <PageNavTabs
-                page={page}
-                navigate={(p) => {
-                  navigate(p);
-                  setMobileMenuOpen(false);
-                }}
-                canMerge={permissions.canMerge}
-                canEdit={permissions.canEdit}
-                variant="header"
-              />
-            </div>
+            {page === 'playlists' && playlistsMobileMenu && (
+              <div className="nav-mobile-menu-section nav-mobile-menu-playlists mobile-only">
+                {playlistsMobileMenu}
+              </div>
+            )}
             <div className="nav-mobile-menu-section">{accountActions}</div>
             <div className="nav-mobile-menu-section nav-mobile-menu-tools">
               {langToggle}
@@ -241,8 +234,8 @@ export default function App() {
       </header>
 
       <div className="app-content">
-        {page === 'library' && <LibraryPage libraryUpload={libraryUpload} />}
-        {page === 'playlists' && permissions.canMerge && (
+        {page === 'library' && permissions.canSearch && <LibraryPage libraryUpload={libraryUpload} />}
+        {page === 'playlists' && permissions.canAccessPlaylists && (
           <PlaylistsPage
             selectedId={playlistId}
             shareToken={playlistShareToken}
@@ -251,9 +244,7 @@ export default function App() {
             onLoadToMerge={navigateToMergeWithPlaylist}
           />
         )}
-        {page === 'merge' && permissions.canMerge && (
-          <MergePage mergePlaylistId={mergePlaylistId} />
-        )}
+        {page === 'merge' && permissions.canMerge && <MergePage mergePlaylistId={mergePlaylistId} />}
         {page === 'admin' && permissions.canEdit && <AdminPage />}
       </div>
 
@@ -261,6 +252,8 @@ export default function App() {
         <PageNavTabs
           page={page}
           navigate={navigate}
+          canSearch={permissions.canSearch}
+          canAccessPlaylists={permissions.canAccessPlaylists}
           canMerge={permissions.canMerge}
           canEdit={permissions.canEdit}
           variant="bottom"
@@ -268,4 +261,48 @@ export default function App() {
       </nav>
     </div>
   );
+}
+
+function AppShellWithMenu() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const closeMenu = useCallback(() => setMobileMenuOpen(false), []);
+
+  return (
+    <PlaylistsMobileMenuProvider onCloseMenu={closeMenu}>
+      <AppShellInner mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
+    </PlaylistsMobileMenuProvider>
+  );
+}
+
+export default function App() {
+  const { user, loading, permissions } = useAuth();
+  const { page, previewBlobId, mergeEditBlobIds, mergeEditTitle } = useAppPage();
+  const libraryUpload = useLibraryUpload();
+  const { t } = useI18n();
+
+  if (loading) {
+    return (
+      <div className="auth-page">
+        <p className="auth-loading">{t('auth.checkingSession')}</p>
+      </div>
+    );
+  }
+
+  if (page === 'login' && !user) {
+    return <AuthPage />;
+  }
+
+  if (page === 'preview' && previewBlobId && permissions.canDownload) {
+    return <BlobPreviewPage blobId={previewBlobId} />;
+  }
+
+  if (page === 'merge-edit' && mergeEditBlobIds?.length && permissions.canMerge) {
+    return <MergeEditPage blobIds={mergeEditBlobIds} title={mergeEditTitle} />;
+  }
+
+  if (page === 'library-upload' && permissions.canUpload) {
+    return <UploadConfirmPage libraryUpload={libraryUpload} />;
+  }
+
+  return <AppShellWithMenu />;
 }

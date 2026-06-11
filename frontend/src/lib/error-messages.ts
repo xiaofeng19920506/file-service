@@ -19,6 +19,8 @@ const MESSAGES: Record<string, string> = {
   content_already_exists: '上传失败，诗库中已有相同内容的文件',
   admin_required: '仅管理员可修改诗库文件信息',
   merge_forbidden: '当前账号无法使用合并功能',
+  playlist_forbidden: '当前账号无法使用播放列表',
+  search_forbidden: '当前账号无法搜索诗库',
   upload_forbidden: '当前账号无法上传文件',
   download_forbidden: '请登录后再下载或预览',
   delete_failed: '删除失败，请稍后重试',

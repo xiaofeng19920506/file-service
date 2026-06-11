@@ -30,9 +30,9 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function goLibraryAfterAuth(): void {
-  if (window.location.hash === '#/login' || window.location.hash === '') {
-    window.location.hash = '#/library';
+function goHomeAfterAuth(): void {
+  if (window.location.hash === '#/login' || window.location.hash === '' || window.location.hash === '#/' || window.location.hash === '#') {
+    window.location.hash = '#/playlists';
   }
 }
 
@@ -61,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(verified ?? getCachedUser());
       setLoading(false);
       if ((verified ?? getCachedUser()) && window.location.hash === '#/login') {
-        goLibraryAfterAuth();
+        goHomeAfterAuth();
       }
     })();
 
@@ -73,14 +73,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const session = await loginUser({ email, password });
     setUser(session.user);
-    goLibraryAfterAuth();
+    goHomeAfterAuth();
   }, []);
 
   const register = useCallback(
     async (email: string, password: string, firstName: string, lastName: string) => {
       const session = await registerUser({ email, password, firstName, lastName });
       setUser(session.user);
-      goLibraryAfterAuth();
+      goHomeAfterAuth();
     },
     [],
   );
@@ -88,8 +88,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     logoutUser();
     setUser(null);
-    if (window.location.hash !== '#/library') {
-      window.location.hash = '#/library';
+    if (window.location.hash !== '#/playlists') {
+      window.location.hash = '#/playlists';
     }
   }, []);
 

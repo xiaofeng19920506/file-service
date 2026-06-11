@@ -13,12 +13,16 @@ export function isValidUserRole(raw: string): raw is UserRole {
   return VALID_ROLES.includes(raw as UserRole);
 }
 
-export function canSearch(_role: UserRole | null): boolean {
-  return true;
+export function canSearch(role: UserRole | null): boolean {
+  return role === 'worship_team' || role === 'admin';
+}
+
+export function canAccessPlaylists(role: UserRole | null): boolean {
+  return role === 'member' || role === 'worship_team' || role === 'admin';
 }
 
 export function canDownload(role: UserRole | null): boolean {
-  return role === 'member' || role === 'worship_team' || role === 'admin';
+  return role === 'worship_team' || role === 'admin';
 }
 
 export function canMerge(role: UserRole | null): boolean {
@@ -33,8 +37,21 @@ export function canEdit(role: UserRole | null): boolean {
   return role === 'admin';
 }
 
-export function isGuestBrowsePath(method: string, path: string): boolean {
+export function isSearchPath(method: string, path: string): boolean {
   return method === 'GET' && path === '/v1/blobs';
+}
+
+export function isPlaylistPath(method: string, path: string): boolean {
+  if (path.startsWith('/v1/playlists')) return true;
+  if (method === 'GET' && /^\/v1\/youtube\/videos\/[^/]+\/captions$/.test(path)) return true;
+  if (method === 'POST' && path === '/v1/youtube/audio/prioritize') return true;
+  if (/^\/v1\/youtube\/videos\/[^/]+\/audio/.test(path)) return true;
+  return false;
+}
+
+/** @deprecated use isSearchPath — kept for callers that still reference guest browse */
+export function isGuestBrowsePath(method: string, path: string): boolean {
+  return isSearchPath(method, path);
 }
 
 export function isDownloadPath(method: string, path: string): boolean {
@@ -53,10 +70,7 @@ export function isUploadPath(method: string, path: string): boolean {
 }
 
 export function isMergePath(method: string, path: string): boolean {
-  if (path.startsWith('/v1/playlists')) return true;
-  if (method === 'GET' && /^\/v1\/youtube\/videos\/[^/]+\/captions$/.test(path)) return true;
-  if (method === 'POST' && path === '/v1/youtube/audio/prioritize') return true;
-  if (/^\/v1\/youtube\/videos\/[^/]+\/audio/.test(path)) return true;
+  if (isPlaylistPath(method, path)) return false;
   if (!path.startsWith('/v1/jobs')) return false;
   if (method === 'GET' && /^\/v1\/jobs\/[^/]+\/download$/.test(path)) return false;
   return true;
@@ -87,10 +101,11 @@ export function isAdminWritePath(method: string, path: string): boolean {
 /** API 路径所需的最低权限级别 */
 export type PathAccessLevel =
   | 'public'
-  | 'guest_browse'
+  | 'search'
   | 'member'
   | 'download'
   | 'upload'
+  | 'playlist'
   | 'merge'
   | 'admin';
 
@@ -128,9 +143,10 @@ export function resolvePathAccessLevel(method: string, path: string): PathAccess
   if (isSignedAudioStreamPath(method, path)) return 'public';
   if (isSignedAudioPreviewPath(method, path)) return 'public';
   if (isAuthEntryPath(method, path)) return 'public';
-  if (isGuestBrowsePath(method, path)) return 'guest_browse';
+  if (isSearchPath(method, path)) return 'search';
   if (isAdminOnlyPath(method, path)) return 'admin';
   if (isUploadPath(method, path)) return 'upload';
+  if (isPlaylistPath(method, path)) return 'playlist';
   if (isMergePath(method, path)) return 'merge';
   if (isDownloadPath(method, path)) return 'download';
   if (isSessionPath(method, path)) return 'member';
@@ -141,7 +157,7 @@ export function resolvePathAccessLevel(method: string, path: string): PathAccess
 /** 是否可在无凭证情况下访问（健康检查、登录、游客浏览诗库等） */
 export function isUnauthenticatedAccessAllowed(method: string, path: string): boolean {
   const level = resolvePathAccessLevel(method, path);
-  return level === 'public' || level === 'guest_browse';
+  return level === 'public';
 }
 
 export function roleMeetsAccessLevel(
@@ -150,14 +166,17 @@ export function roleMeetsAccessLevel(
 ): boolean {
   switch (level) {
     case 'public':
-    case 'guest_browse':
       return true;
+    case 'search':
+      return canSearch(role);
     case 'member':
       return role === 'member' || role === 'worship_team' || role === 'admin';
     case 'download':
       return canDownload(role);
     case 'upload':
       return canUpload(role);
+    case 'playlist':
+      return canAccessPlaylists(role);
     case 'merge':
       return canMerge(role);
     case 'admin':
@@ -169,10 +188,14 @@ export function roleMeetsAccessLevel(
 
 export function accessDeniedErrorCode(level: PathAccessLevel): string {
   switch (level) {
+    case 'search':
+      return 'search_forbidden';
     case 'download':
       return 'download_forbidden';
     case 'upload':
       return 'upload_forbidden';
+    case 'playlist':
+      return 'playlist_forbidden';
     case 'merge':
       return 'merge_forbidden';
     case 'admin':

@@ -7,12 +7,16 @@ export function normalizeUserRole(raw: string | null | undefined): UserRole {
   return 'member';
 }
 
-export function canSearch(_role: UserRole | null): boolean {
-  return true;
+export function canSearch(role: UserRole | null): boolean {
+  return role === 'worship_team' || role === 'admin';
+}
+
+export function canAccessPlaylists(role: UserRole | null): boolean {
+  return role === 'member' || role === 'worship_team' || role === 'admin';
 }
 
 export function canDownload(role: UserRole | null): boolean {
-  return role === 'member' || role === 'worship_team' || role === 'admin';
+  return role === 'worship_team' || role === 'admin';
 }
 
 export function canMerge(role: UserRole | null): boolean {
@@ -34,10 +38,23 @@ export function roleLabelKey(role: UserRole): string {
 export function permissionsForRole(role: UserRole | null) {
   const normalized = role ? normalizeUserRole(role) : null;
   return {
-    canSearch: true,
+    canSearch: canSearch(normalized),
+    canAccessPlaylists: canAccessPlaylists(normalized),
     canDownload: canDownload(normalized),
     canMerge: canMerge(normalized),
     canUpload: canUpload(normalized),
     canEdit: canEdit(normalized),
   };
+}
+
+export type AppPermissions = ReturnType<typeof permissionsForRole>;
+
+export const APP_HOME_PAGE = 'playlists' as const;
+
+export function homePageForPermissions(
+  permissions: AppPermissions,
+): typeof APP_HOME_PAGE | 'library' {
+  if (permissions.canAccessPlaylists) return APP_HOME_PAGE;
+  if (permissions.canSearch) return 'library';
+  return APP_HOME_PAGE;
 }

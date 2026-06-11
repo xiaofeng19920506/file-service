@@ -104,8 +104,8 @@ const en: MessageTree = {
     submitting: 'Submitting…',
     logout: 'Sign out',
     checkingSession: 'Checking session…',
-    registerHint: 'New accounts are created as members. An admin can change roles later.',
-    continueAsGuest: 'Continue without signing in (browse only)',
+    registerHint: 'New accounts are created as members with setlist access only. An admin can promote roles later.',
+    continueAsGuest: 'Continue without signing in (setlists only)',
     adminBadge: 'Admin',
     role: {
       member: 'Member',

@@ -7,6 +7,7 @@ import AdminTablePagination from '../components/AdminTablePagination';
 import EditLibraryEntryModal from '../components/EditLibraryEntryModal';
 import { useAuth } from '../auth/AuthContext';
 import { formatContentFingerprint } from '../lib/content-fingerprint';
+import { homePageForPermissions } from '../lib/permissions';
 import { matchesAdminFilter } from '../lib/admin-filter';
 import { paginateItems, type AdminTablePageSize } from '../lib/admin-table-pagination';
 import { formatSize } from '../lib/file-accept';
@@ -41,8 +42,8 @@ export default function AdminPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!permissions.canEdit) navigate('library');
-  }, [permissions.canEdit, navigate]);
+    if (!permissions.canEdit) navigate(homePageForPermissions(permissions));
+  }, [permissions, navigate]);
 
   const loadLibrary = useCallback(async () => {
     setLoading(true);

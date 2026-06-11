@@ -305,6 +305,10 @@
     margin-bottom: 0.5rem;
   }
 
+  .playlists-header.mobile-only-hidden {
+    display: none;
+  }
+
   .playlists-header h1 {
     display: none;
   }

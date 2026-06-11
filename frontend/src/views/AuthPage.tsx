@@ -149,7 +149,7 @@ export default function AuthPage() {
             type="button"
             className="link-btn"
             onClick={() => {
-              window.location.hash = '#/library';
+              window.location.hash = '#/playlists';
             }}
           >
             {t('auth.continueAsGuest')}
