@@ -76,6 +76,37 @@ export const mergeJobInputs = pgTable(
   }),
 );
 
+export const playlists = pgTable('playlists', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  title: text('title').notNull(),
+  sourceUrl: text('source_url').notNull(),
+  youtubePlaylistId: text('youtube_playlist_id'),
+  createdByUserId: uuid('created_by_user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }),
+});
+
+export const playlistItems = pgTable('playlist_items', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  playlistId: uuid('playlist_id')
+    .notNull()
+    .references(() => playlists.id, { onDelete: 'cascade' }),
+  sortOrder: integer('sort_order').notNull(),
+  title: text('title').notNull(),
+  youtubeVideoId: text('youtube_video_id').notNull(),
+  youtubeUrl: text('youtube_url').notNull(),
+  blobId: uuid('blob_id').references(() => blobs.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export type UserRow = typeof users.$inferSelect;
 export type BlobRow = typeof blobs.$inferSelect;
 export type MergeJobRow = typeof mergeJobs.$inferSelect;
+export type PlaylistRow = typeof playlists.$inferSelect;
+export type PlaylistItemRow = typeof playlistItems.$inferSelect;

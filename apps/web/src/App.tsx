@@ -6,6 +6,9 @@ import AdminPage from './pages/AdminPage';
 import AuthPage from './pages/AuthPage';
 import LibraryPage from './pages/LibraryPage';
 import MergePage from './pages/MergePage';
+import PlaylistsPage from './pages/PlaylistsPage';
+import UploadConfirmPage from './pages/UploadConfirmPage';
+import { useLibraryUpload } from './hooks/useLibraryUpload';
 import { MoonIcon, SunIcon } from './components/icons';
 import { useAppPage } from './hooks/useAppPage';
 import { hasStoredSession } from './lib/auth-session';
@@ -17,7 +20,20 @@ import './styles/apple-design.css';
 export default function App() {
   const { t, locale, setLocale } = useI18n();
   const { user, loading, logout, permissions, isAdmin } = useAuth();
-  const { page, previewBlobId, mergeEditBlobIds, mergeEditTitle, navigate } = useAppPage();
+  const {
+    page,
+    previewBlobId,
+    mergeEditBlobIds,
+    mergeEditTitle,
+    playlistId,
+    playlistShareToken,
+    mergePlaylistId,
+    navigate,
+    navigateToPlaylist,
+    navigateClearPlaylistShare,
+    navigateToMergeWithPlaylist,
+  } = useAppPage();
+  const libraryUpload = useLibraryUpload();
   const [theme, setTheme] = useState<'light' | 'dark'>(() =>
     document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light',
   );
@@ -32,7 +48,11 @@ export default function App() {
       navigate('library');
       return;
     }
-    if ((page === 'merge' || page === 'merge-edit') && !permissions.canMerge) {
+    if ((page === 'merge' || page === 'merge-edit' || page === 'playlists') && !permissions.canMerge) {
+      navigate('library');
+      return;
+    }
+    if (page === 'library-upload' && !permissions.canUpload) {
       navigate('library');
       return;
     }
@@ -42,13 +62,16 @@ export default function App() {
   }, [loading, user, page, navigate, permissions]);
 
   useEffect(() => {
-    if (page === 'preview' || page === 'login' || page === 'merge-edit') return;
+    if (page === 'preview' || page === 'login' || page === 'merge-edit' || page === 'library-upload')
+      return;
     document.title =
       page === 'merge'
         ? t('pages.mergeTitle')
-        : page === 'admin'
-          ? t('pages.adminTitle')
-          : t('pages.libraryTitle');
+        : page === 'playlists'
+          ? t('pages.playlistsTitle')
+          : page === 'admin'
+            ? t('pages.adminTitle')
+            : t('pages.libraryTitle');
   }, [page, t]);
 
   if (loading) {
@@ -71,6 +94,10 @@ export default function App() {
     return <MergeEditPage blobIds={mergeEditBlobIds} title={mergeEditTitle} />;
   }
 
+  if (page === 'library-upload' && permissions.canUpload) {
+    return <UploadConfirmPage libraryUpload={libraryUpload} />;
+  }
+
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
     setTheme(next);
@@ -83,7 +110,7 @@ export default function App() {
   };
 
   return (
-    <div className="app">
+    <div className={`app${page === 'playlists' ? ' app-playlists' : ''}`}>
       <nav className="nav">
         <div className="nav-inner">
         <div className="nav-brand">
@@ -103,15 +130,26 @@ export default function App() {
               {t('nav.library')}
             </button>
             {permissions.canMerge && (
-              <button
-                type="button"
-                role="tab"
-                aria-selected={page === 'merge'}
-                className={`page-tab${page === 'merge' ? ' active' : ''}`}
-                onClick={() => navigate('merge')}
-              >
-                {t('nav.merge')}
-              </button>
+              <>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={page === 'playlists'}
+                  className={`page-tab${page === 'playlists' ? ' active' : ''}`}
+                  onClick={() => navigate('playlists')}
+                >
+                  {t('nav.playlists')}
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={page === 'merge'}
+                  className={`page-tab${page === 'merge' ? ' active' : ''}`}
+                  onClick={() => navigate('merge')}
+                >
+                  {t('nav.merge')}
+                </button>
+              </>
             )}
             {permissions.canEdit && (
               <button
@@ -171,8 +209,19 @@ export default function App() {
         </div>
       </nav>
 
-      {page === 'library' && <LibraryPage />}
-      {page === 'merge' && permissions.canMerge && <MergePage />}
+      {page === 'library' && <LibraryPage libraryUpload={libraryUpload} />}
+      {page === 'playlists' && permissions.canMerge && (
+        <PlaylistsPage
+          selectedId={playlistId}
+          shareToken={playlistShareToken}
+          onSelectId={navigateToPlaylist}
+          onClearShareToken={() => navigateClearPlaylistShare(playlistId)}
+          onLoadToMerge={navigateToMergeWithPlaylist}
+        />
+      )}
+      {page === 'merge' && permissions.canMerge && (
+        <MergePage mergePlaylistId={mergePlaylistId} />
+      )}
       {page === 'admin' && permissions.canEdit && <AdminPage />}
     </div>
   );

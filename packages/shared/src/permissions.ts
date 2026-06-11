@@ -53,6 +53,8 @@ export function isUploadPath(method: string, path: string): boolean {
 }
 
 export function isMergePath(method: string, path: string): boolean {
+  if (path.startsWith('/v1/playlists')) return true;
+  if (method === 'GET' && /^\/v1\/youtube\/videos\/[^/]+\/captions$/.test(path)) return true;
   if (!path.startsWith('/v1/jobs')) return false;
   if (method === 'GET' && /^\/v1\/jobs\/[^/]+\/download$/.test(path)) return false;
   return true;

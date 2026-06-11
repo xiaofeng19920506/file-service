@@ -1,12 +1,23 @@
 import { useCallback, useEffect, useState } from 'react';
 
-export type AppPage = 'library' | 'merge' | 'merge-edit' | 'admin' | 'login' | 'preview';
+export type AppPage =
+  | 'library'
+  | 'library-upload'
+  | 'merge'
+  | 'merge-edit'
+  | 'playlists'
+  | 'admin'
+  | 'login'
+  | 'preview';
 
 export type AppRoute = {
   page: AppPage;
   previewBlobId?: string;
   mergeEditBlobIds?: string[];
   mergeEditTitle?: string;
+  playlistId?: string;
+  playlistShareToken?: string;
+  mergePlaylistId?: string;
 };
 
 function routeFromHash(hash: string): AppRoute {
@@ -27,7 +38,22 @@ function routeFromHash(hash: string): AppRoute {
     const blobId = hash.slice('#/preview/'.length).split('?')[0]?.trim();
     if (blobId) return { page: 'preview', previewBlobId: blobId };
   }
-  if (hash === '#/merge') return { page: 'merge' };
+  if (hash === '#/library/upload') return { page: 'library-upload' };
+  if (hash.startsWith('#/merge')) {
+    const qIndex = hash.indexOf('?');
+    const params =
+      qIndex === -1 ? new URLSearchParams() : new URLSearchParams(hash.slice(qIndex + 1));
+    const mergePlaylistId = params.get('playlist')?.trim() || undefined;
+    return { page: 'merge', mergePlaylistId };
+  }
+  if (hash.startsWith('#/playlists')) {
+    const qIndex = hash.indexOf('?');
+    const params =
+      qIndex === -1 ? new URLSearchParams() : new URLSearchParams(hash.slice(qIndex + 1));
+    const playlistId = params.get('id')?.trim() || undefined;
+    const playlistShareToken = params.get('share')?.trim() || undefined;
+    return { page: 'playlists', playlistId, playlistShareToken };
+  }
   if (hash === '#/admin') return { page: 'admin' };
   if (hash === '#/login') return { page: 'login' };
   return { page: 'library' };
@@ -47,15 +73,37 @@ export function useAppPage() {
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
-  const navigate = useCallback((next: Exclude<AppPage, 'preview' | 'merge-edit'>) => {
+  const navigate = useCallback((next: Exclude<AppPage, 'preview' | 'merge-edit' | 'library-upload'>) => {
     const hash =
       next === 'merge'
         ? '#/merge'
-        : next === 'admin'
-          ? '#/admin'
-          : next === 'login'
-            ? '#/login'
-            : '#/library';
+        : next === 'playlists'
+          ? '#/playlists'
+          : next === 'admin'
+            ? '#/admin'
+            : next === 'login'
+              ? '#/login'
+              : '#/library';
+    if (window.location.hash !== hash) {
+      window.location.hash = hash;
+    }
+    setRoute(routeFromHash(hash));
+  }, []);
+
+  const navigateToPlaylist = useCallback((id?: string) => {
+    const hash = id ? `#/playlists?id=${encodeURIComponent(id)}` : '#/playlists';
+    if (window.location.hash !== hash) {
+      window.location.hash = hash;
+    }
+    setRoute(routeFromHash(hash));
+  }, []);
+
+  const navigateClearPlaylistShare = useCallback((id?: string) => {
+    navigateToPlaylist(id);
+  }, [navigateToPlaylist]);
+
+  const navigateToMergeWithPlaylist = useCallback((playlistId: string) => {
+    const hash = `#/merge?playlist=${encodeURIComponent(playlistId)}`;
     if (window.location.hash !== hash) {
       window.location.hash = hash;
     }
@@ -67,6 +115,12 @@ export function useAppPage() {
     previewBlobId: route.previewBlobId,
     mergeEditBlobIds: route.mergeEditBlobIds,
     mergeEditTitle: route.mergeEditTitle,
+    playlistId: route.playlistId,
+    playlistShareToken: route.playlistShareToken,
+    mergePlaylistId: route.mergePlaylistId,
     navigate,
+    navigateToPlaylist,
+    navigateClearPlaylistShare,
+    navigateToMergeWithPlaylist,
   };
 }

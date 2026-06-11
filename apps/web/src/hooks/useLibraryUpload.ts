@@ -132,28 +132,31 @@ export function useLibraryUpload() {
   );
 
   const uploadFiles = useCallback(
-    async (files: FileList | File[], metadata: UploadMetadata) => {
-      const all = Array.from(files).filter((f) => f.size > 0);
-      const accepted = all.filter(isAcceptedFile);
-      const rejected = all.filter((f) => !isAcceptedFile(f));
+    async (uploads: { file: File; metadata: UploadMetadata }[]) => {
+      const all = uploads.filter(({ file }) => file.size > 0);
+      const accepted = all.filter(({ file }) => isAcceptedFile(file));
+      const rejected = all.filter(({ file }) => !isAcceptedFile(file));
 
       if (rejected.length) {
         setError(
           t('errors.skipped_files', {
             count: rejected.length,
-            names: rejected.map((f) => f.name).join('、'),
+            names: rejected.map(({ file }) => file.name).join('、'),
           }),
         );
       }
       if (!accepted.length) return;
 
       setError(null);
-      const pending = accepted.map((file) => newUploadItem(file, metadata));
-      setItems((prev) => [...pending, ...prev]);
+      const pending = accepted.map(({ file, metadata }) => ({
+        item: newUploadItem(file, metadata),
+        metadata,
+      }));
+      setItems((prev) => [...pending.map((row) => row.item), ...prev]);
 
       const gen = ++uploadGenRef.current;
       await runWithConcurrency(
-        pending.map((item) => () => uploadOne(item, gen, metadata)),
+        pending.map(({ item, metadata }) => () => uploadOne(item, gen, metadata)),
         UPLOAD_CONCURRENCY,
       );
     },

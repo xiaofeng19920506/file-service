@@ -28,8 +28,7 @@ export default function WorkspaceShell({
       <div className="page-body page-body-merge">
         <aside className="merge-panel merge-panel-search">{leftColumn}</aside>
         <aside className="merge-panel merge-panel-setlist">
-          {centerColumn}
-          <footer className="merge-footer-actions">
+          <header className="merge-header-actions">
             <button
               type="button"
               className="btn-secondary btn-sm"
@@ -46,7 +45,8 @@ export default function WorkspaceShell({
             >
               {downloading ? t('status.running') : t('slides.download')}
             </button>
-          </footer>
+          </header>
+          <div className="merge-setlist-scroll">{centerColumn}</div>
         </aside>
       </div>
     );

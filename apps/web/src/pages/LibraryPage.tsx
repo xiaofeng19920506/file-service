@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { checkBlobExists, downloadBlobContent, openBlobPreviewTab } from '../api/client';
 import BlobActionModal from '../components/BlobActionModal';
-import UploadConfirmModal from '../components/UploadConfirmModal';
 import { formatContentFingerprint } from '../lib/content-fingerprint';
 import { ACCEPT, formatSize, isAcceptedFile } from '../lib/file-accept';
 import { useDebouncedBlobSearch } from '../hooks/useDebouncedBlobSearch';
-import { DEFAULT_METADATA, type UploadMetadata } from '../hooks/useMergeWorkspace';
-import { useLibraryUpload } from '../hooks/useLibraryUpload';
+import type { useLibraryUpload } from '../hooks/useLibraryUpload';
+import { createPendingUploadEntries } from '../lib/pending-upload';
+import { setUploadDraft } from '../lib/upload-draft';
 import LibraryLayout from '../components/LibraryLayout';
 import { SearchIcon, UploadIcon } from '../components/icons';
 import { sha256Hex } from '../lib/file-hash';
@@ -16,11 +16,13 @@ import { useAuth } from '../auth/AuthContext';
 import { useI18n } from '../i18n';
 import type { BlobRecord } from '../types';
 
-export default function LibraryPage() {
+type LibraryPageProps = {
+  libraryUpload: ReturnType<typeof useLibraryUpload>;
+};
+
+export default function LibraryPage({ libraryUpload }: LibraryPageProps) {
   const { t, locale } = useI18n();
   const { permissions } = useAuth();
-  const [pendingFiles, setPendingFiles] = useState<File[] | null>(null);
-  const [confirmMetadata, setConfirmMetadata] = useState<UploadMetadata>(DEFAULT_METADATA);
   const [uploadDragging, setUploadDragging] = useState(false);
   const [checkingDuplicate, setCheckingDuplicate] = useState(false);
   const {
@@ -37,11 +39,7 @@ export default function LibraryPage() {
   const [selectedBlob, setSelectedBlob] = useState<BlobRecord | null>(null);
   const [downloading, setDownloading] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement>(null);
-  const { items, error, uploadSummary, uploadFiles, clearCompleted, setError } = useLibraryUpload();
-
-  const updateConfirmMetadata = useCallback((field: keyof UploadMetadata, value: string) => {
-    setConfirmMetadata((prev) => ({ ...prev, [field]: value }));
-  }, []);
+  const { items, error, uploadSummary, clearCompleted, setError } = libraryUpload;
 
   const stageFiles = useCallback(
     async (raw: FileList | File[]) => {
@@ -80,8 +78,8 @@ export default function LibraryPage() {
           return;
         }
 
-        setPendingFiles(accepted);
-        setConfirmMetadata(DEFAULT_METADATA);
+        setUploadDraft(createPendingUploadEntries(accepted));
+        window.location.hash = '#/library/upload';
       } catch (e) {
         setError(friendlyError(e instanceof Error ? e.message : 'upload_failed', t));
       } finally {
@@ -100,21 +98,6 @@ export default function LibraryPage() {
     e.preventDefault();
     setUploadDragging(false);
     if (e.dataTransfer.files.length) void stageFiles(e.dataTransfer.files);
-  };
-
-  const cancelUploadConfirm = () => {
-    setPendingFiles(null);
-    setConfirmMetadata(DEFAULT_METADATA);
-  };
-
-  const confirmUpload = () => {
-    if (!pendingFiles?.length) return;
-    const files = pendingFiles;
-    const metadata = confirmMetadata;
-    setPendingFiles(null);
-    setConfirmMetadata(DEFAULT_METADATA);
-    if (uploadInputRef.current) uploadInputRef.current.value = '';
-    void uploadFiles(files, metadata);
   };
 
   useEffect(() => {
@@ -281,16 +264,6 @@ export default function LibraryPage() {
           onDownload={() => void handleDownloadBlob()}
           onPreview={handlePreviewBlob}
           onClose={() => setSelectedBlob(null)}
-        />
-      )}
-
-      {permissions.canUpload && pendingFiles && pendingFiles.length > 0 && (
-        <UploadConfirmModal
-          files={pendingFiles}
-          metadata={confirmMetadata}
-          onMetadataChange={updateConfirmMetadata}
-          onConfirm={confirmUpload}
-          onCancel={cancelUploadConfirm}
         />
       )}
 

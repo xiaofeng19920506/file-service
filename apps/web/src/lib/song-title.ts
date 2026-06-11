@@ -27,16 +27,6 @@ export function primarySongTitle(fields: SongTitleFields): string | null {
   );
 }
 
-export function formatSongTitleDisplay(fields: SongTitleFields): string {
-  const parts = [
-    fields.titleZhCn?.trim(),
-    fields.titleZhTw?.trim(),
-    fields.titleEn?.trim(),
-  ].filter(Boolean) as string[];
-  if (parts.length) return parts.join(' · ');
-  return fields.title?.trim() ?? '';
-}
-
 export function hasAnySongTitle(input: SongTitleInput): boolean {
   return Object.values(input).some((v) => v.trim().length > 0);
 }

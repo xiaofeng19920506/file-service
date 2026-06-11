@@ -1,6 +1,6 @@
 import type { UserRole } from './permissions';
 import { normalizeUserRole } from './permissions';
-import { formatUserDisplayName, splitLegacyDisplayName } from './user-name';
+import { splitLegacyDisplayName } from './user-name';
 
 const TOKEN_KEY = 'file-service-auth-token';
 const EXPIRES_KEY = 'file-service-auth-expires';
@@ -81,5 +81,3 @@ export function clearAuthSession(): void {
   localStorage.removeItem(EXPIRES_KEY);
   localStorage.removeItem(USER_KEY);
 }
-
-export { formatUserDisplayName };

@@ -13,30 +13,6 @@ export function UploadIcon() {
   );
 }
 
-export function CheckIcon() {
-  return (
-    <svg className="result-icon success" viewBox="0 0 56 56" fill="none" aria-hidden>
-      <circle cx="28" cy="28" r="26" stroke="currentColor" strokeWidth="2" />
-      <path
-        d="M18 28l7 7 13-14"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-export function AlertIcon() {
-  return (
-    <svg className="result-icon error" viewBox="0 0 56 56" fill="none" aria-hidden>
-      <circle cx="28" cy="28" r="26" stroke="currentColor" strokeWidth="2" />
-      <path d="M28 18v14M28 40h.02" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 export function DragHandleIcon() {
   return (
     <svg className="drag-handle-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
@@ -72,6 +48,25 @@ export function SearchIcon() {
     <svg className="search-icon" viewBox="0 0 20 20" fill="none" aria-hidden>
       <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" strokeWidth="1.75" />
       <path d="M13 13l4 4" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function PencilIcon() {
+  return (
+    <svg className="pencil-icon" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path
+        d="M11.1 2.2a1.2 1.2 0 0 1 1.7 1.7l-7.2 7.2-1.8.5.5-1.8 7.2-7.2z"
+        stroke="currentColor"
+        strokeWidth="1.35"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M2.5 13h11"
+        stroke="currentColor"
+        strokeWidth="1.35"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }

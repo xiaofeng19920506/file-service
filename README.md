@@ -20,6 +20,25 @@ API 与 Worker **必须使用同一种后端**，并访问**同一份**存储根
 - `apps/worker`：BullMQ — 读存储、LibreOffice 转换、合并、写回存储、定时清理过期导出
 - `apps/web`：React 前端 — 文件上传、排序、合并任务与下载
 
+## 拆分为两个 Repo（独立托管）
+
+前后端可导出为两个独立仓库分别部署：
+
+```bash
+npm run export:repos
+# 生成 ../file-service-backend 与 ../file-service-frontend
+```
+
+详见 [docs/SPLIT-REPOS.md](docs/SPLIT-REPOS.md)。也可在 monorepo 内用 `docker-compose.backend.prod.yml` / `docker-compose.frontend.prod.yml` 分开启动。
+
+## 生产部署（Vercel 前端 + 家里服务器后端）
+
+- **Vercel**：`apps/web`，设置 `VITE_API_URL` 指向家里 API
+- **家里**：`docker compose -f docker-compose.backend.prod.yml up -d`（API + Worker + Postgres + Redis）
+- 建议用 **Cloudflare Tunnel** 把家里 `:3000` 暴露为 `https://api.你的域名.com`
+
+完整步骤见 [docs/DEPLOY-VERCEL-HOME.md](docs/DEPLOY-VERCEL-HOME.md)。
+
 ## 日常开发（推荐·轻量）
 
 Docker **只跑 Postgres + Redis**（约几十 MB），API / Worker / Web 在本机运行。**直接上传 `.pptx` 即可**，无需 LibreOffice、不会卡死。

@@ -5,6 +5,7 @@ type ConfirmModalProps = {
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
+  danger?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 };
@@ -14,6 +15,7 @@ export default function ConfirmModal({
   message,
   confirmLabel,
   cancelLabel,
+  danger = false,
   onConfirm,
   onCancel,
 }: ConfirmModalProps) {
@@ -40,7 +42,11 @@ export default function ConfirmModal({
           <button type="button" className="btn-secondary" onClick={onCancel}>
             {cancelLabel ?? t('common.cancel')}
           </button>
-          <button type="button" className="btn-primary" onClick={onConfirm}>
+          <button
+            type="button"
+            className={danger ? 'btn-danger' : 'btn-primary'}
+            onClick={onConfirm}
+          >
             {confirmLabel ?? t('common.confirm')}
           </button>
         </div>

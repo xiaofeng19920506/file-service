@@ -1,0 +1,104 @@
+import { useEffect, useState } from 'react';
+import { addPlaylistItems } from '../api/playlists';
+import { friendlyError } from '../lib/error-messages';
+import { useI18n } from '../i18n';
+import type { PlaylistDetail } from '../api/playlists';
+
+type AddPlaylistItemsModalProps = {
+  playlistId: string;
+  onClose: () => void;
+  onAdded: (detail: PlaylistDetail, meta: { addedCount: number; skippedCount: number }) => void;
+};
+
+export default function AddPlaylistItemsModal({
+  playlistId,
+  onClose,
+  onAdded,
+}: AddPlaylistItemsModalProps) {
+  const { t } = useI18n();
+  const [url, setUrl] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleCancel = () => {
+    if (adding) return;
+    onClose();
+  };
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !adding) onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [adding, onClose]);
+
+  const handleConfirm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = url.trim();
+    if (!trimmed || adding) return;
+
+    setAdding(true);
+    setError(null);
+    try {
+      const data = await addPlaylistItems(playlistId, trimmed);
+      onAdded(data, { addedCount: data.addedCount, skippedCount: data.skippedCount });
+      onClose();
+    } catch (err) {
+      setError(friendlyError(err instanceof Error ? err.message : 'add_playlist_item_failed', t));
+      setAdding(false);
+    }
+  };
+
+  return (
+    <div
+      className="metadata-modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="add-playlist-items-title"
+      onClick={handleCancel}
+    >
+      <div
+        className="metadata-modal add-playlist-items-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="metadata-modal-header">
+          <h3 id="add-playlist-items-title">{t('playlists.addTitle')}</h3>
+          <button
+            type="button"
+            className="modal-close-btn"
+            onClick={handleCancel}
+            aria-label={t('metadata.close')}
+            disabled={adding}
+          >
+            ×
+          </button>
+        </div>
+        <form className="metadata-modal-body" onSubmit={(e) => void handleConfirm(e)}>
+          <label className="share-playlist-field">
+            <span>{t('playlists.addUrlLabel')}</span>
+            <input
+              type="url"
+              className="playlists-text-input"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder={t('playlists.addPlaceholder')}
+              autoFocus
+              disabled={adding}
+            />
+          </label>
+          <p className="playlists-muted playlists-add-modal-hint">{t('playlists.addHint')}</p>
+          {error && <p className="error-msg">{error}</p>}
+          <div className="metadata-modal-actions">
+            <button type="button" className="btn-secondary" onClick={handleCancel} disabled={adding}>
+              {t('common.cancel')}
+            </button>
+            <button type="submit" className="btn-primary" disabled={adding || !url.trim()}>
+              {adding ? t('playlists.adding') : t('playlists.addConfirm')}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

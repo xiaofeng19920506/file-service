@@ -40,7 +40,6 @@ usage() {
 npm 快捷命令：
   npm run dev:docker       轻量模式（推荐）
   npm run dev:docker:full  全 Docker（高内存）
-  npm run dev:local        同 dev:docker
 EOF
 }
 

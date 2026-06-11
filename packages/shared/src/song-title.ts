@@ -20,13 +20,3 @@ export function primarySongTitle(fields: SongTitleFields): string | null {
 export function canonicalSongTitle(fields: SongTitleFields): string | null {
   return primarySongTitle(fields);
 }
-
-export function formatSongTitleDisplay(fields: SongTitleFields): string {
-  const parts = [
-    fields.titleZhCn?.trim(),
-    fields.titleZhTw?.trim(),
-    fields.titleEn?.trim(),
-  ].filter(Boolean) as string[];
-  if (parts.length) return parts.join(' · ');
-  return fields.title?.trim() ?? '';
-}

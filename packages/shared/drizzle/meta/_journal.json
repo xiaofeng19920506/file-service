@@ -57,6 +57,13 @@
       "when": 1749571200000,
       "tag": "0007_user_first_last_name",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1749657600000,
+      "tag": "0008_playlists",
+      "breakpoints": true
     }
   ]
 }

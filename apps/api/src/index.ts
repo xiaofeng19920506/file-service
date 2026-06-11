@@ -45,6 +45,8 @@ import { registerHealthRoutes } from './health.js';
 import { registerOpenApi } from './openapi.js';
 import { registerAuthRoutes } from './auth.js';
 import { registerAdminUserRoutes } from './admin-users.js';
+import { registerPlaylistRoutes } from './playlists.js';
+import { registerYoutubeCaptionRoutes } from './youtube-captions.js';
 import { resolveRequestActor } from './request-actor.js';
 
 async function main() {
@@ -64,7 +66,9 @@ async function main() {
 
   const app = Fastify({ logger: true });
 
-  await registerOpenApi(app);
+  if (process.env.ENABLE_OPENAPI === '1' || process.env.NODE_ENV !== 'production') {
+    await registerOpenApi(app);
+  }
 
   const corsOrigins = process.env.CORS_ORIGIN?.split(',').map((o) => o.trim()).filter(Boolean) ?? [
     'http://localhost:5173',
@@ -86,6 +90,8 @@ async function main() {
   const apiKeyConfig = loadApiKeyConfig(env.API_KEY);
   registerAuthRoutes(app, { db, env, apiKeyConfig });
   registerAdminUserRoutes(app, { db });
+  registerPlaylistRoutes(app, { db, env });
+  registerYoutubeCaptionRoutes(app);
 
   const maxUploadBytes = env.MAX_UPLOAD_MB * 1024 * 1024;
   const getActor = (request: import('fastify').FastifyRequest) =>

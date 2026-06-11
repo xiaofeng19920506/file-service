@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Pool } from 'pg';
+import { pgPoolConfig } from './pg-pool.js';
 
 function resolveMigrationsFolder(): string {
   const here = dirname(fileURLToPath(import.meta.url));
@@ -19,7 +20,7 @@ function resolveMigrationsFolder(): string {
 
 /** 应用 pending 的数据库迁移（幂等，可重复执行） */
 export async function runMigrations(databaseUrl: string): Promise<void> {
-  const pool = new Pool({ connectionString: databaseUrl });
+  const pool = new Pool(pgPoolConfig(databaseUrl));
   try {
     const db = drizzle(pool);
     await migrate(db, { migrationsFolder: resolveMigrationsFolder() });

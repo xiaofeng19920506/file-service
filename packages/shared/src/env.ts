@@ -35,6 +35,18 @@ const apiFs = z.object({
   ADMIN_EMAILS: z.string().optional(),
   WORSHIP_TEAM_EMAILS: z.string().optional(),
   WEBHOOK_SECRET: z.string().min(8).optional(),
+  YOUTUBE_API_KEY: z.string().min(10).optional(),
+  WEB_APP_URL: z.string().url().optional(),
+  SHARE_LINK_TTL_SECONDS: z.coerce.number().int().positive().default(604_800),
+  SMTP_HOST: z.string().min(1).optional(),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_SECURE: z
+    .enum(['true', 'false', '1', '0'])
+    .default('false')
+    .transform((v) => v === 'true' || v === '1'),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().min(3).optional(),
 });
 
 const apiS3 = z.object({
@@ -69,6 +81,18 @@ const apiS3 = z.object({
   ADMIN_EMAILS: z.string().optional(),
   WORSHIP_TEAM_EMAILS: z.string().optional(),
   WEBHOOK_SECRET: z.string().min(8).optional(),
+  YOUTUBE_API_KEY: z.string().min(10).optional(),
+  WEB_APP_URL: z.string().url().optional(),
+  SHARE_LINK_TTL_SECONDS: z.coerce.number().int().positive().default(604_800),
+  SMTP_HOST: z.string().min(1).optional(),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_SECURE: z
+    .enum(['true', 'false', '1', '0'])
+    .default('false')
+    .transform((v) => v === 'true' || v === '1'),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().min(3).optional(),
 });
 
 export const apiSchema = z.discriminatedUnion('STORAGE_BACKEND', [

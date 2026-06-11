@@ -27,10 +27,7 @@ export function createS3Client(opts: {
   });
 }
 
-export async function ensureBucket(
-  client: S3Client,
-  bucket: string,
-): Promise<void> {
+export async function ensureBucket(client: S3Client, bucket: string): Promise<void> {
   try {
     await client.send(new HeadBucketCommand({ Bucket: bucket }));
   } catch {
