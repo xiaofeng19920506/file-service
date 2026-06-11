@@ -612,11 +612,11 @@ export default function PlaylistsPage({
     </button>
   );
 
-  const renderPlaybackModeToggle = () => (
-    <div className="playlists-playback-mode" role="group" aria-label={t('playlists.playbackMode')}>
+  const renderPlaybackModeToggle = (className = 'playlists-playback-mode') => (
+    <div className={className} role="group" aria-label={t('playlists.playbackMode')}>
       <button
         type="button"
-        className={`playlists-playback-mode-btn${playbackMode === 'audio' ? ' active' : ''}`}
+        className={`${className}-btn${playbackMode === 'audio' ? ' active' : ''}`}
         aria-pressed={playbackMode === 'audio'}
         onClick={() => onPlaybackModeChange('audio')}
       >
@@ -624,7 +624,7 @@ export default function PlaylistsPage({
       </button>
       <button
         type="button"
-        className={`playlists-playback-mode-btn${playbackMode === 'video' ? ' active' : ''}`}
+        className={`${className}-btn${playbackMode === 'video' ? ' active' : ''}`}
         aria-pressed={playbackMode === 'video'}
         onClick={() => onPlaybackModeChange('video')}
       >
@@ -1092,6 +1092,11 @@ export default function PlaylistsPage({
                           canGoPrev={canGoPrev}
                           immersive={videoImmersive}
                           lockLandscape={isMobileViewport}
+                          mobileChrome={
+                            mobileVideoImmersive
+                              ? renderPlaybackModeToggle('youtube-player-overlay-mode')
+                              : undefined
+                          }
                         />
                       )}
                     </div>
@@ -1251,13 +1256,13 @@ export default function PlaylistsPage({
         />
       )}
 
-      {videoImmersive && (
+      {videoImmersive && !mobileVideoImmersive && (
         <>
           <PlaylistPlayerBottomChrome
             className="playlist-video-chrome"
             {...renderPlayerChromeProps()}
           />
-          {!mobileVideoImmersive && renderQueuePanel()}
+          {renderQueuePanel()}
         </>
       )}
 

@@ -41,7 +41,9 @@ body.playlists-mobile-video-active .nav-bottom {
   }
 
   .playlists-player-stage[data-mobile-video-immersive='true'] {
-    position: relative;
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-modal);
     flex: 1;
     min-height: 0;
     gap: 0;
@@ -49,28 +51,8 @@ body.playlists-mobile-video-active .nav-bottom {
     overflow: hidden;
   }
 
-  @media (orientation: portrait) {
-    .playlists-player-stage[data-mobile-video-immersive='true'] .playlists-player-col {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 100dvh;
-      height: 100dvw;
-      max-width: 100dvh;
-      max-height: 100dvw;
-      transform: translate(-50%, -50%) rotate(90deg);
-      transform-origin: center center;
-    }
-  }
-
   body.playlists-mobile-video-active .playlist-video-chrome {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: calc(var(--z-modal) + 2);
-    justify-content: center;
-    padding-bottom: max(0.55rem, var(--safe-bottom));
+    display: none;
   }
 
   body.playlists-mobile-video-active .playlists-page[data-mobile-video-immersive='true'] {
@@ -85,11 +67,6 @@ body.playlists-mobile-video-active .nav-bottom {
     min-height: 0;
     display: flex;
     flex-direction: column;
-  }
-
-  body.playlists-mobile-video-active .playlist-video-chrome .playlist-chrome-actions {
-    justify-content: center;
-    width: 100%;
   }
 
   .playlists-player-stage[data-mobile-video-immersive='true'] .playlists-player-col {
@@ -157,7 +134,7 @@ body.playlists-mobile-video-active .nav-bottom {
   .youtube-player-section--mobile-immersive .youtube-player-overlay {
     padding:
       2rem 0.65rem
-      calc(4.25rem + max(0.55rem, var(--safe-bottom)));
+      max(0.65rem, var(--safe-bottom));
   }
 
   .youtube-player-section--mobile-immersive .youtube-player-bar {
@@ -199,11 +176,42 @@ body.playlists-mobile-video-active .nav-bottom {
   }
 
   .youtube-player-section--mobile-immersive .youtube-player-subtitles {
-    bottom: 4.5rem;
+    bottom: 5.5rem;
   }
 
   .youtube-player-section--mobile-immersive .youtube-player-frame-wrap.controls-idle .youtube-player-subtitles {
-    bottom: 1.25rem;
+    bottom: 1.5rem;
+  }
+
+  .youtube-player-overlay-mode {
+    position: absolute;
+    top: max(0.5rem, var(--safe-top));
+    right: max(0.5rem, var(--safe-right));
+    z-index: 2;
+    display: inline-flex;
+    padding: 0.12rem;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .youtube-player-overlay-mode-btn {
+    min-height: 1.85rem;
+    padding: 0 0.6rem;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .youtube-player-overlay-mode-btn.active {
+    background: #fff;
+    color: #111;
   }
 
   .playlists-player-stage[data-mobile-video-immersive='true'] .playlists-tracks-col {

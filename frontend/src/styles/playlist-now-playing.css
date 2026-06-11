@@ -214,9 +214,26 @@ body.playlists-immersive-active .nav-bottom {
 
 /* ── 手机端：全屏封面 + 底部悬浮控制栏 ── */
 @media (max-width: 900px) {
-  body.playlists-immersive-active {
+  body.playlists-immersive-active,
+  body.playlists-mobile-video-active {
     height: 100dvh;
     max-height: 100dvh;
+    overflow: hidden;
+  }
+
+  body.playlists-immersive-active .app,
+  body.playlists-mobile-video-active .app {
+    height: 100dvh;
+    max-height: 100dvh;
+    padding-bottom: 0;
+    overflow: hidden;
+  }
+
+  body.playlists-immersive-active .app-content,
+  body.playlists-mobile-video-active .app-content {
+    flex: 1;
+    min-height: 0;
+    height: 100%;
     overflow: hidden;
   }
 
@@ -224,7 +241,7 @@ body.playlists-immersive-active .nav-bottom {
     flex: 1;
     min-height: 0;
     height: 100%;
-    padding: 0;
+    padding: 0 !important;
     display: flex;
     flex-direction: column;
   }
@@ -235,10 +252,13 @@ body.playlists-immersive-active .nav-bottom {
     min-height: 0;
     height: 100%;
     padding: 0;
+    gap: 0;
     border: none;
-    border-radius: 0;
+    border-radius: 0 !important;
+    background: #0a0a0a;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
   }
 
   .playlists-main-inner--audio-now-playing {
@@ -250,14 +270,17 @@ body.playlists-immersive-active .nav-bottom {
   }
 
   .playlist-now-playing--audio {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-modal);
     flex: 1;
     min-height: 0;
-    height: 100%;
-    max-height: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    background: var(--surface);
+    background: #0a0a0a;
   }
 
   .playlist-now-playing--audio .playlist-now-playing-header {
@@ -269,10 +292,35 @@ body.playlists-immersive-active .nav-bottom {
       max(0.5rem, var(--safe-top))
       max(0.75rem, var(--page-gutter))
       0.5rem;
-    border-bottom: 1px solid var(--border-light);
-    background: var(--surface);
+    border-bottom: none;
+    background: transparent;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
+  }
+
+  .playlist-now-playing--audio .playlist-now-playing-minimize {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+  }
+
+  .playlist-now-playing--audio .playlist-np-mobile-playlist {
+    color: rgba(255, 255, 255, 0.88);
+  }
+
+  .playlist-now-playing--audio .playlist-np-mode-switch {
+    background: rgba(0, 0, 0, 0.45);
+    border-color: rgba(255, 255, 255, 0.16);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .playlist-now-playing--audio .playlist-np-mode-btn {
+    color: rgba(255, 255, 255, 0.78);
+  }
+
+  .playlist-now-playing--audio .playlist-np-mode-btn.active {
+    background: #fff;
+    color: #111;
   }
 
   .playlist-np-mobile-playlist {
@@ -337,6 +385,7 @@ body.playlists-immersive-active .nav-bottom {
     min-height: 0;
     display: flex;
     flex-direction: column;
+    justify-content: flex-start;
     padding: 0;
     overflow: hidden;
     background: #0a0a0a;
@@ -1371,8 +1420,16 @@ body.playlists-video-immersive-active .nav-bottom {
   }
 }
 
-.playlists-player-stage[data-video-immersive='true'] .youtube-player-section--immersive .youtube-player-overlay {
-  padding-bottom: calc(4.75rem + var(--safe-bottom));
+@media (min-width: 901px) {
+  .playlists-player-stage[data-video-immersive='true'] .youtube-player-section--immersive .youtube-player-overlay {
+    padding-bottom: calc(4.75rem + var(--safe-bottom));
+  }
+}
+
+.playlists-player-stage[data-mobile-video-immersive='true']
+  .youtube-player-section--immersive
+  .youtube-player-overlay {
+  padding-bottom: max(0.65rem, var(--safe-bottom));
 }
 
 .playlist-video-chrome {

@@ -931,7 +931,7 @@ export default function YoutubePlaylistPlayer({
 
   return (
     <section
-      className={`youtube-player-section${immersive ? ' youtube-player-section--mobile-immersive youtube-player-section--immersive' : ''}`}
+      className={`youtube-player-section${immersive ? ' youtube-player-section--immersive' : ''}${immersive && lockLandscape ? ' youtube-player-section--mobile-immersive' : ''}`}
       aria-label={t('playlists.playerSection')}
     >
       <div
