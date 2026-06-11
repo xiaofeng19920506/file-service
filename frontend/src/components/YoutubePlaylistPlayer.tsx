@@ -10,7 +10,6 @@ import {
   writeSubtitleLanguageForVideo,
   type SubtitleLanguage,
 } from '../lib/subtitle-preference';
-
 export type YoutubePlayerItem = {
   youtubeVideoId: string;
   title: string;
@@ -22,6 +21,10 @@ type YoutubePlaylistPlayerProps = {
   onActiveIndexChange: (index: number) => void;
   playing: boolean;
   onPlayingChange: (playing: boolean) => void;
+  onNextTrack?: () => void;
+  onPrevTrack?: () => void;
+  canGoNext?: boolean;
+  canGoPrev?: boolean;
 };
 
 type YtPlayer = {
@@ -117,6 +120,10 @@ export default function YoutubePlaylistPlayer({
   onActiveIndexChange,
   playing,
   onPlayingChange,
+  onNextTrack,
+  onPrevTrack,
+  canGoNext,
+  canGoPrev,
 }: YoutubePlaylistPlayerProps) {
   const { t } = useI18n();
   const elementId = useId().replace(/:/g, '');
@@ -125,6 +132,7 @@ export default function YoutubePlaylistPlayer({
   const activeIndexRef = useRef(activeIndex);
   const itemsRef = useRef(items);
   const playingRef = useRef(playing);
+  const onNextTrackRef = useRef(onNextTrack);
   const progressRef = useRef<HTMLDivElement>(null);
   const volumeProgressRef = useRef<HTMLDivElement>(null);
   const frameWrapRef = useRef<HTMLDivElement>(null);
@@ -145,6 +153,7 @@ export default function YoutubePlaylistPlayer({
   activeIndexRef.current = activeIndex;
   itemsRef.current = items;
   playingRef.current = playing;
+  onNextTrackRef.current = onNextTrack;
 
   const current = items[activeIndex];
   const progressPct = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
@@ -247,6 +256,10 @@ export default function YoutubePlaylistPlayer({
   );
 
   const goNext = useCallback(() => {
+    if (onNextTrack) {
+      onNextTrack();
+      return;
+    }
     if (activeIndexRef.current < itemsRef.current.length - 1) {
       const nextIndex = activeIndexRef.current + 1;
       onActiveIndexChange(nextIndex);
@@ -254,15 +267,26 @@ export default function YoutubePlaylistPlayer({
     } else {
       onPlayingChange(false);
     }
-  }, [loadTrack, onActiveIndexChange, onPlayingChange]);
+  }, [loadTrack, onActiveIndexChange, onPlayingChange, onNextTrack]);
 
   const goPrev = useCallback(() => {
+    if (onPrevTrack) {
+      onPrevTrack();
+      return;
+    }
     if (activeIndexRef.current > 0) {
       const prevIndex = activeIndexRef.current - 1;
       onActiveIndexChange(prevIndex);
       loadTrack(prevIndex, true);
     }
-  }, [loadTrack, onActiveIndexChange]);
+  }, [loadTrack, onActiveIndexChange, onPrevTrack]);
+
+  const nextDisabled =
+    canGoNext !== undefined
+      ? !canGoNext
+      : activeIndex >= items.length - 1 && !onNextTrack;
+  const prevDisabled =
+    canGoPrev !== undefined ? !canGoPrev : activeIndex <= 0;
 
   const seekFromClientX = useCallback((clientX: number) => {
     const bar = progressRef.current;
@@ -344,6 +368,10 @@ export default function YoutubePlaylistPlayer({
               const bufferingState = YTState?.BUFFERING ?? 3;
 
               if (event.data === ended) {
+                if (onNextTrackRef.current) {
+                  onNextTrackRef.current();
+                  return;
+                }
                 if (activeIndexRef.current < itemsRef.current.length - 1) {
                   const nextIndex = activeIndexRef.current + 1;
                   const nextId = itemsRef.current[nextIndex]?.youtubeVideoId;
@@ -630,7 +658,7 @@ export default function YoutubePlaylistPlayer({
                 type="button"
                 className="youtube-player-icon-btn"
                 onClick={goPrev}
-                disabled={activeIndex <= 0}
+                disabled={prevDisabled}
                 aria-label={t('playlists.prevTrack')}
               >
                 ‹
@@ -647,7 +675,7 @@ export default function YoutubePlaylistPlayer({
                 type="button"
                 className="youtube-player-icon-btn"
                 onClick={goNext}
-                disabled={activeIndex >= items.length - 1}
+                disabled={nextDisabled}
                 aria-label={t('playlists.nextTrack')}
               >
                 ›

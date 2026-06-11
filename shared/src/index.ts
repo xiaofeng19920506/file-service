@@ -17,3 +17,7 @@ export * from './song-title.js';
 export * from './user-name.js';
 export * from './youtube.js';
 export * from './youtube-captions.js';
+export * from './audio-stream-token.js';
+export * from './youtube-audio-extract.js';
+export * from './youtube-audio-cache.js';
+export * from './persist-raw-blob.js';

@@ -4,7 +4,9 @@ import AddPlaylistItemsModal from '../components/AddPlaylistItemsModal';
 import ConfirmModal from '../components/ConfirmModal';
 import SharePlaylistModal from '../components/SharePlaylistModal';
 import { DragHandleIcon, PencilIcon } from '../components/icons';
+import PlaylistAudioPlayer from '../components/PlaylistAudioPlayer';
 import YoutubePlaylistPlayer from '../components/YoutubePlaylistPlayer';
+import type { YoutubeAudioStatus } from '../api/youtube-audio';
 import {
   deletePlaylist,
   getPlaylist,
@@ -18,6 +20,16 @@ import {
   type PlaylistSummary,
 } from '../api/playlists';
 import { friendlyError } from '../lib/error-messages';
+import {
+  readPlaylistPlaybackMode,
+  writePlaylistPlaybackMode,
+  type PlaylistPlaybackMode,
+} from '../lib/playlist-playback-mode';
+import {
+  buildShuffleOrder,
+  readPlaylistShuffleEnabled,
+  writePlaylistShuffleEnabled,
+} from '../lib/playlist-shuffle';
 import { useI18n } from '../i18n';
 
 type PlaylistsPageProps = {
@@ -84,6 +96,10 @@ export default function PlaylistsPage({
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState('');
   const [savingRename, setSavingRename] = useState(false);
+  const [playbackMode, setPlaybackMode] = useState<PlaylistPlaybackMode>(readPlaylistPlaybackMode);
+  const [shuffleEnabled, setShuffleEnabled] = useState(readPlaylistShuffleEnabled);
+  const [shuffleOrder, setShuffleOrder] = useState<number[]>([]);
+  const [shuffleCursor, setShuffleCursor] = useState(0);
 
   const loadList = useCallback(async () => {
     setLoadingList(true);
@@ -132,6 +148,8 @@ export default function PlaylistsPage({
       setPlayerEngaged(false);
       setActiveIndex(0);
     }
+    setShuffleOrder([]);
+    setShuffleCursor(0);
     setTrackDragIndex(null);
     setTrackDragOver(null);
   }, [selectedId, loadDetail]);
@@ -248,13 +266,136 @@ export default function PlaylistsPage({
     }
   };
 
+  const itemCount = detail?.items.length ?? 0;
+
+  const syncShuffleCursorForIndex = useCallback(
+    (index: number, order: number[]) => {
+      const cursor = order.indexOf(index);
+      setShuffleCursor(cursor >= 0 ? cursor : 0);
+    },
+    [],
+  );
+
+  const beginShuffleRound = useCallback(
+    (length: number, startIndex?: number) => {
+      if (length <= 0) {
+        setShuffleOrder([]);
+        setShuffleCursor(0);
+        return [] as number[];
+      }
+      const order = buildShuffleOrder(length);
+      setShuffleOrder(order);
+      if (startIndex !== undefined) {
+        syncShuffleCursorForIndex(startIndex, order);
+      } else {
+        setShuffleCursor(0);
+      }
+      return order;
+    },
+    [syncShuffleCursorForIndex],
+  );
+
+  useEffect(() => {
+    if (!shuffleEnabled) {
+      setShuffleOrder([]);
+      setShuffleCursor(0);
+      return;
+    }
+    if (itemCount > 0 && shuffleOrder.length !== itemCount) {
+      beginShuffleRound(itemCount);
+    }
+  }, [shuffleEnabled, itemCount, shuffleOrder.length, beginShuffleRound]);
+
+  const goToNextTrack = useCallback(() => {
+    if (!detail?.items.length) return;
+
+    if (shuffleEnabled) {
+      const order =
+        shuffleOrder.length === detail.items.length
+          ? shuffleOrder
+          : beginShuffleRound(detail.items.length, activeIndex);
+      let nextCursor = shuffleCursor + 1;
+      if (nextCursor >= detail.items.length) {
+        const nextOrder = buildShuffleOrder(detail.items.length);
+        setShuffleOrder(nextOrder);
+        setShuffleCursor(0);
+        setActiveIndex(nextOrder[0]!);
+      } else {
+        setShuffleCursor(nextCursor);
+        setActiveIndex(order[nextCursor]!);
+      }
+      setPlaying(true);
+      return;
+    }
+
+    if (activeIndex < detail.items.length - 1) {
+      setActiveIndex(activeIndex + 1);
+      setPlaying(true);
+    } else {
+      setPlaying(false);
+    }
+  }, [
+    detail?.items.length,
+    shuffleEnabled,
+    shuffleOrder,
+    shuffleCursor,
+    activeIndex,
+    beginShuffleRound,
+  ]);
+
+  const goToPrevTrack = useCallback(() => {
+    if (!detail?.items.length) return;
+
+    if (shuffleEnabled && shuffleOrder.length === detail.items.length) {
+      if (shuffleCursor > 0) {
+        const prevCursor = shuffleCursor - 1;
+        setShuffleCursor(prevCursor);
+        setActiveIndex(shuffleOrder[prevCursor]!);
+        setPlaying(true);
+      }
+      return;
+    }
+
+    if (activeIndex > 0) {
+      setActiveIndex(activeIndex - 1);
+      setPlaying(true);
+    }
+  }, [detail?.items.length, shuffleEnabled, shuffleOrder, shuffleCursor, activeIndex]);
+
+  const canGoPrev = shuffleEnabled ? shuffleCursor > 0 : activeIndex > 0;
+  const canGoNext = shuffleEnabled ? itemCount > 0 : activeIndex < itemCount - 1;
+
   const engageAndPlay = (index: number) => {
+    if (shuffleEnabled && detail?.items.length) {
+      if (shuffleOrder.length !== detail.items.length) {
+        beginShuffleRound(detail.items.length, index);
+      } else {
+        syncShuffleCursorForIndex(index, shuffleOrder);
+      }
+    }
     setActiveIndex(index);
     setPlaying(true);
     setPlayerEngaged(true);
   };
 
-  const startPlayback = () => engageAndPlay(0);
+  const startPlayback = () => {
+    if (!detail?.items.length) return;
+    if (shuffleEnabled) {
+      const order = beginShuffleRound(detail.items.length);
+      engageAndPlay(order[0]!);
+      return;
+    }
+    engageAndPlay(0);
+  };
+
+  const toggleShuffle = () => {
+    const next = !shuffleEnabled;
+    setShuffleEnabled(next);
+    writePlaylistShuffleEnabled(next);
+    if (next && detail?.items.length) {
+      beginShuffleRound(detail.items.length, activeIndex);
+    }
+  };
 
   const formatDate = (iso: string) => {
     try {
@@ -271,7 +412,20 @@ export default function PlaylistsPage({
     detail?.items.map((item) => ({
       youtubeVideoId: item.youtubeVideoId,
       title: item.title,
+      audio: item.audio,
     })) ?? [];
+
+  const handleAudioStatusChange = useCallback((videoId: string, status: YoutubeAudioStatus) => {
+    setDetail((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        items: prev.items.map((item) =>
+          item.youtubeVideoId === videoId ? { ...item, audio: status } : item,
+        ),
+      };
+    });
+  }, []);
 
   const currentItem = detail?.items[activeIndex];
   const showPlayer = playerEngaged && playerItems.length > 0;
@@ -316,12 +470,55 @@ export default function PlaylistsPage({
     }
   };
 
+  const onPlaybackModeChange = (mode: PlaylistPlaybackMode) => {
+    setPlaybackMode(mode);
+    writePlaylistPlaybackMode(mode);
+  };
+
+  const renderShuffleToggle = () => (
+    <button
+      type="button"
+      className={`playlists-shuffle-btn${shuffleEnabled ? ' active' : ''}`}
+      aria-pressed={shuffleEnabled}
+      aria-label={t('playlists.shuffle')}
+      title={t('playlists.shuffle')}
+      onClick={toggleShuffle}
+    >
+      {t('playlists.shuffleShort')}
+    </button>
+  );
+
+  const renderPlaybackModeToggle = () => (
+    <div className="playlists-playback-mode" role="group" aria-label={t('playlists.playbackMode')}>
+      <button
+        type="button"
+        className={`playlists-playback-mode-btn${playbackMode === 'audio' ? ' active' : ''}`}
+        aria-pressed={playbackMode === 'audio'}
+        onClick={() => onPlaybackModeChange('audio')}
+      >
+        {t('playlists.playbackMp3')}
+      </button>
+      <button
+        type="button"
+        className={`playlists-playback-mode-btn${playbackMode === 'video' ? ' active' : ''}`}
+        aria-pressed={playbackMode === 'video'}
+        onClick={() => onPlaybackModeChange('video')}
+      >
+        {t('playlists.playbackVideo')}
+      </button>
+    </div>
+  );
+
   const renderMainToolbar = (playlist: PlaylistDetail['playlist'], hasTracks: boolean) => (
     <div className="playlists-main-toolbar">
       {hasTracks && (
-        <button type="button" className="btn-primary" onClick={startPlayback}>
-          {t('playlists.playAll')}
-        </button>
+        <>
+          {renderPlaybackModeToggle()}
+          {renderShuffleToggle()}
+          <button type="button" className="btn-primary" onClick={startPlayback}>
+            {t('playlists.playAll')}
+          </button>
+        </>
       )}
       <button type="button" className="btn-secondary" onClick={() => setShowAddModal(true)}>
         {t('playlists.addTitle')}
@@ -547,13 +744,32 @@ export default function PlaylistsPage({
                         </button>
                       )}
 
-                      {showPlayer && (
+                      {showPlayer && playbackMode === 'audio' && (
+                        <PlaylistAudioPlayer
+                          items={playerItems}
+                          activeIndex={activeIndex}
+                          onActiveIndexChange={setActiveIndex}
+                          playing={playing}
+                          onPlayingChange={setPlaying}
+                          onAudioStatusChange={handleAudioStatusChange}
+                          onNextTrack={goToNextTrack}
+                          onPrevTrack={goToPrevTrack}
+                          canGoNext={canGoNext}
+                          canGoPrev={canGoPrev}
+                        />
+                      )}
+
+                      {showPlayer && playbackMode === 'video' && (
                         <YoutubePlaylistPlayer
                           items={playerItems}
                           activeIndex={activeIndex}
                           onActiveIndexChange={setActiveIndex}
                           playing={playing}
                           onPlayingChange={setPlaying}
+                          onNextTrack={goToNextTrack}
+                          onPrevTrack={goToPrevTrack}
+                          canGoNext={canGoNext}
+                          canGoPrev={canGoPrev}
                         />
                       )}
                     </div>

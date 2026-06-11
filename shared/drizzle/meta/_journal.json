@@ -64,6 +64,13 @@
       "when": 1749657600000,
       "tag": "0008_playlists",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1749744000000,
+      "tag": "0009_youtube_audio_cache",
+      "breakpoints": true
     }
   ]
 }

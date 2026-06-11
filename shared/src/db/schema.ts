@@ -105,8 +105,23 @@ export const playlistItems = pgTable('playlist_items', {
     .defaultNow(),
 });
 
+export type YoutubeAudioCacheStatus = 'pending' | 'processing' | 'ready' | 'failed';
+
+export const youtubeAudioCache = pgTable('youtube_audio_cache', {
+  youtubeVideoId: text('youtube_video_id').primaryKey(),
+  status: text('status').notNull().default('pending'),
+  blobId: uuid('blob_id').references(() => blobs.id, { onDelete: 'set null' }),
+  title: text('title'),
+  errorCode: text('error_code'),
+  errorDetail: text('error_detail'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+});
+
 export type UserRow = typeof users.$inferSelect;
 export type BlobRow = typeof blobs.$inferSelect;
 export type MergeJobRow = typeof mergeJobs.$inferSelect;
 export type PlaylistRow = typeof playlists.$inferSelect;
 export type PlaylistItemRow = typeof playlistItems.$inferSelect;
+export type YoutubeAudioCacheRow = typeof youtubeAudioCache.$inferSelect;

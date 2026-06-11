@@ -24,6 +24,7 @@
     "dev:status": "bash scripts/dev-mode.sh status",
     "dev:api": "tsx watch backend/api/src/index.ts",
     "dev:api-only": "docker compose -f shared/docker-compose.yml up -d postgres redis && npm run dev:api",
+    "dev:api-audio": "docker compose -f shared/docker-compose.yml up -d postgres redis && concurrently -k -n api,worker -c blue,green \"npm run dev:api\" \"npm run dev:worker\"",
     "dev:worker": "tsx watch backend/worker/src/index.ts",
     "dev:web": "npm run dev -w @file-service/web",
     "start": "node backend/api/dist/index.js",

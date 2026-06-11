@@ -21,6 +21,7 @@ import { mergePresentations } from './merge.js';
 import { convertToPptx, needsLibreofficeConversion } from '@file-service/shared';
 import { sweepExpiredExports } from './cleanup.js';
 import { notifyJobWebhook } from './notify-webhook.js';
+import { startYoutubeAudioWorker } from './youtube-audio-worker.js';
 
 async function main() {
   const env = loadWorkerEnv();
@@ -150,6 +151,7 @@ async function main() {
   }, 30_000);
 
   console.log('worker listening', MERGE_QUEUE_NAME, 'concurrency=', env.WORKER_CONCURRENCY);
+  await startYoutubeAudioWorker();
 }
 
 main().catch((err) => {

@@ -1,14 +1,18 @@
 import { and, asc, desc, eq, inArray, max, or, sql } from 'drizzle-orm';
+import type { Queue } from 'bullmq';
 import {
   blobs,
+  ensureYoutubeAudioJobs,
   fetchYoutubePlaylistData,
   formatUserDisplayName,
+  getAudioCacheMap,
   playlistItems,
   playlists,
   signPlaylistShareToken,
   verifyPlaylistShareToken,
   type ApiEnv,
   type Db,
+  type YoutubeAudioCachePublic,
 } from '@file-service/shared';
 import type { FastifyInstance } from 'fastify';
 import { expandSearchQuery } from './chinese-search.js';
@@ -117,12 +121,29 @@ async function clonePlaylistForUser(
   return newPlaylist!;
 }
 
-async function buildPlaylistDetail(db: Db, playlist: typeof playlists.$inferSelect) {
+async function buildPlaylistDetail(
+  db: Db,
+  playlist: typeof playlists.$inferSelect,
+  audioQueue?: Queue,
+) {
   const items = await db
     .select()
     .from(playlistItems)
     .where(eq(playlistItems.playlistId, playlist.id))
     .orderBy(asc(playlistItems.sortOrder));
+
+  if (audioQueue && items.length > 0) {
+    await ensureYoutubeAudioJobs(
+      db,
+      audioQueue,
+      items.map((item) => ({ videoId: item.youtubeVideoId, title: item.title })),
+    );
+  }
+
+  const audioMap = await getAudioCacheMap(
+    db,
+    items.map((item) => item.youtubeVideoId),
+  );
 
   const blobIds = [...new Set(items.map((i) => i.blobId).filter(Boolean))] as string[];
   const blobRows =
@@ -142,7 +163,11 @@ async function buildPlaylistDetail(db: Db, playlist: typeof playlists.$inferSele
       createdAt: playlist.createdAt.toISOString(),
     },
     items: items.map((item) =>
-      serializePlaylistItem(item, item.blobId ? blobMap.get(item.blobId) : null),
+      serializePlaylistItem(
+        item,
+        item.blobId ? blobMap.get(item.blobId) : null,
+        audioMap.get(item.youtubeVideoId),
+      ),
     ),
   };
 }
@@ -150,6 +175,7 @@ async function buildPlaylistDetail(db: Db, playlist: typeof playlists.$inferSele
 function serializePlaylistItem(
   item: typeof playlistItems.$inferSelect,
   blob?: typeof blobs.$inferSelect | null,
+  audio?: YoutubeAudioCachePublic,
 ) {
   return {
     id: item.id,
@@ -158,6 +184,12 @@ function serializePlaylistItem(
     youtubeVideoId: item.youtubeVideoId,
     youtubeUrl: item.youtubeUrl,
     blobId: item.blobId,
+    audio: audio ?? {
+      videoId: item.youtubeVideoId,
+      status: 'pending' as const,
+      blobId: null,
+      errorCode: null,
+    },
     blob: blob
       ? {
           id: blob.id,
@@ -175,9 +207,9 @@ function serializePlaylistItem(
 
 export function registerPlaylistRoutes(
   app: FastifyInstance,
-  opts: { db: Db; env: ApiEnv },
+  opts: { db: Db; env: ApiEnv; audioQueue: Queue },
 ) {
-  const { db, env } = opts;
+  const { db, env, audioQueue } = opts;
 
   app.post<{ Body: { title?: string } }>('/v1/playlists', async (request, reply) => {
     const user = request.authUser;
@@ -195,7 +227,7 @@ export function registerPlaylistRoutes(
       })
       .returning();
 
-    return buildPlaylistDetail(db, playlist!);
+    return buildPlaylistDetail(db, playlist!, audioQueue);
   });
 
   app.post<{ Body: { url?: string } }>('/v1/playlists/import', async (request, reply) => {
@@ -249,27 +281,13 @@ export function registerPlaylistRoutes(
 
     const insertedItems = await db.insert(playlistItems).values(itemRows).returning();
 
-    const blobIds = [...new Set(insertedItems.map((i) => i.blobId).filter(Boolean))] as string[];
-    const blobRows =
-      blobIds.length > 0
-        ? await db.select().from(blobs).where(inArray(blobs.id, blobIds))
-        : [];
-    const blobMap = new Map(blobRows.map((b) => [b.id, b]));
+    await ensureYoutubeAudioJobs(
+      db,
+      audioQueue,
+      insertedItems.map((item) => ({ videoId: item.youtubeVideoId, title: item.title })),
+    );
 
-    return {
-      playlist: {
-        id: playlist!.id,
-        title: playlist!.title,
-        sourceUrl: playlist!.sourceUrl,
-        youtubePlaylistId: playlist!.youtubePlaylistId,
-        itemCount: insertedItems.length,
-        matchedCount: insertedItems.filter((i) => i.blobId).length,
-        createdAt: playlist!.createdAt.toISOString(),
-      },
-      items: insertedItems.map((item) =>
-        serializePlaylistItem(item, item.blobId ? blobMap.get(item.blobId) : null),
-      ),
-    };
+    return buildPlaylistDetail(db, playlist!, audioQueue);
   });
 
   app.get('/v1/playlists', async (request) => {
@@ -317,7 +335,7 @@ export function registerPlaylistRoutes(
       return reply.code(403).send({ error: 'forbidden' });
     }
 
-    return buildPlaylistDetail(db, playlist);
+    return buildPlaylistDetail(db, playlist, audioQueue);
   });
 
   app.post<{ Params: { id: string }; Body: { url?: string } }>(
@@ -392,7 +410,7 @@ export function registerPlaylistRoutes(
         .where(eq(playlists.id, id));
 
       const [updated] = await db.select().from(playlists).where(eq(playlists.id, id));
-      const detail = await buildPlaylistDetail(db, updated!);
+      const detail = await buildPlaylistDetail(db, updated!, audioQueue);
 
       return { ...detail, addedCount: itemRows.length, skippedCount: skipped };
     },
@@ -419,7 +437,7 @@ export function registerPlaylistRoutes(
         .where(eq(playlists.id, id));
 
       const [updated] = await db.select().from(playlists).where(eq(playlists.id, id));
-      return buildPlaylistDetail(db, updated!);
+      return buildPlaylistDetail(db, updated!, audioQueue);
     },
   );
 
@@ -489,7 +507,7 @@ export function registerPlaylistRoutes(
         .where(eq(playlists.id, id));
 
       const [updated] = await db.select().from(playlists).where(eq(playlists.id, id));
-      return buildPlaylistDetail(db, updated!);
+      return buildPlaylistDetail(db, updated!, audioQueue);
     },
   );
 
@@ -577,7 +595,7 @@ export function registerPlaylistRoutes(
       }
 
       const playlist = access.playlist!;
-      const detail = await buildPlaylistDetail(db, playlist);
+      const detail = await buildPlaylistDetail(db, playlist, audioQueue);
       const expiresAtUnix = Math.floor(Date.now() / 1000) + env.SHARE_LINK_TTL_SECONDS;
       const token = signPlaylistShareToken({
         secret: env.DOWNLOAD_HMAC_SECRET,
@@ -645,7 +663,7 @@ export function registerPlaylistRoutes(
         .where(eq(playlists.id, claims.playlistId));
       if (!playlist) return reply.code(404).send({ error: 'not_found' });
 
-      const detail = await buildPlaylistDetail(db, playlist);
+      const detail = await buildPlaylistDetail(db, playlist, audioQueue);
 
       return {
         ...detail,
@@ -674,13 +692,13 @@ export function registerPlaylistRoutes(
       if (!playlist) return reply.code(404).send({ error: 'not_found' });
 
       if (playlist.createdByUserId === user.id) {
-        return buildPlaylistDetail(db, playlist);
+        return buildPlaylistDetail(db, playlist, audioQueue);
       }
 
       const cloned = await clonePlaylistForUser(db, playlist.id, user.id);
       if (!cloned) return reply.code(404).send({ error: 'not_found' });
 
-      return buildPlaylistDetail(db, cloned);
+      return buildPlaylistDetail(db, cloned, audioQueue);
     },
   );
 }

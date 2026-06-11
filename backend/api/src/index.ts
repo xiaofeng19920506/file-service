@@ -17,6 +17,7 @@ import {
   runMigrations,
   createObjectStorage,
   MERGE_QUEUE_NAME,
+  YOUTUBE_AUDIO_QUEUE_NAME,
   signDownloadToken,
   verifyDownloadToken,
   bullmqConnection,
@@ -47,6 +48,7 @@ import { registerAuthRoutes } from './auth.js';
 import { registerAdminUserRoutes } from './admin-users.js';
 import { registerPlaylistRoutes } from './playlists.js';
 import { registerYoutubeCaptionRoutes } from './youtube-captions.js';
+import { registerYoutubeAudioRoutes } from './youtube-audio.js';
 import { resolveRequestActor } from './request-actor.js';
 
 async function buildApp() {
@@ -61,6 +63,9 @@ async function buildApp() {
   await storage.ensureReady();
 
   const mergeQueue = new Queue(MERGE_QUEUE_NAME, {
+    connection: bullmqConnection(env.REDIS_URL),
+  });
+  const audioQueue = new Queue(YOUTUBE_AUDIO_QUEUE_NAME, {
     connection: bullmqConnection(env.REDIS_URL),
   });
 
@@ -90,8 +95,9 @@ async function buildApp() {
   const apiKeyConfig = loadApiKeyConfig(env.API_KEY);
   registerAuthRoutes(app, { db, env, apiKeyConfig });
   registerAdminUserRoutes(app, { db });
-  registerPlaylistRoutes(app, { db, env });
+  registerPlaylistRoutes(app, { db, env, audioQueue });
   registerYoutubeCaptionRoutes(app);
+  registerYoutubeAudioRoutes(app, { db, env, storage, audioQueue });
 
   const maxUploadBytes = env.MAX_UPLOAD_MB * 1024 * 1024;
   const getActor = (request: import('fastify').FastifyRequest) =>

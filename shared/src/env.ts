@@ -118,6 +118,8 @@ const workerFs = z.object({
   EXPORT_RETENTION_DAYS: retention,
   SOFFICE_PATH: z.string().default('soffice'),
   WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
+  YOUTUBE_AUDIO_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
+  YT_DLP_PATH: z.string().default('yt-dlp'),
   WEBHOOK_SECRET: z.string().min(8).optional(),
 });
 
@@ -133,6 +135,8 @@ const workerS3 = z.object({
   EXPORT_RETENTION_DAYS: retention,
   SOFFICE_PATH: z.string().default('soffice'),
   WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
+  YOUTUBE_AUDIO_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
+  YT_DLP_PATH: z.string().default('yt-dlp'),
   WEBHOOK_SECRET: z.string().min(8).optional(),
 });
 
@@ -154,3 +158,4 @@ export function loadWorkerEnv(
 }
 
 export const MERGE_QUEUE_NAME = 'merge-presentation';
+export { YOUTUBE_AUDIO_QUEUE_NAME } from './youtube-audio-cache.js';

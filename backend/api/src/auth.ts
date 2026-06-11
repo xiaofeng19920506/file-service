@@ -1,5 +1,5 @@
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import {
   extractApiKeyFromHeaders,
   formatUserDisplayName,
@@ -53,27 +53,6 @@ export function verifyPassword(password: string, stored: string): boolean {
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
-}
-
-function parseEmailSet(raw: string | undefined): Set<string> {
-  if (!raw?.trim()) return new Set();
-  return new Set(
-    raw
-      .split(',')
-      .map((e) => normalizeEmail(e))
-      .filter(Boolean),
-  );
-}
-
-function resolveRegisterRole(
-  email: string,
-  userCount: number,
-  adminEmails: Set<string>,
-  worshipTeamEmails: Set<string>,
-): UserRole {
-  if (userCount === 0 || adminEmails.has(email)) return 'admin';
-  if (worshipTeamEmails.has(email)) return 'worship_team';
-  return 'member';
 }
 
 function userPayload(row: UserRow): AuthUser {
@@ -134,8 +113,6 @@ export function registerAuthRoutes(
   },
 ): void {
   const { db, env, apiKeyConfig } = deps;
-  const adminEmails = parseEmailSet(env.ADMIN_EMAILS);
-  const worshipTeamEmails = parseEmailSet(env.WORSHIP_TEAM_EMAILS);
   const sessionSecret = env.DOWNLOAD_HMAC_SECRET;
 
   registerApiAuthHooks(app, {
@@ -169,11 +146,6 @@ export function registerAuthRoutes(
       return reply.code(400).send({ error: 'invalid_last_name' });
     }
 
-    const [{ count }] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(users);
-    const role = resolveRegisterRole(email, count, adminEmails, worshipTeamEmails);
-
     try {
       const [row] = await db
         .insert(users)
@@ -182,7 +154,7 @@ export function registerAuthRoutes(
           passwordHash: hashPassword(password),
           firstName,
           lastName,
-          role,
+          role: 'member',
         })
         .returning();
 

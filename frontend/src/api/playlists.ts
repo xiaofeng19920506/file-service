@@ -21,6 +21,15 @@ export type PlaylistSummary = {
   createdAt: string;
 };
 
+export type PlaylistAudioRef = {
+  videoId: string;
+  status: 'pending' | 'processing' | 'ready' | 'failed';
+  blobId: string | null;
+  errorCode: string | null;
+  streamUrl?: string;
+  expiresAt?: string;
+};
+
 export type PlaylistItem = {
   id: string;
   sortOrder: number;
@@ -28,6 +37,7 @@ export type PlaylistItem = {
   youtubeVideoId: string;
   youtubeUrl: string;
   blobId: string | null;
+  audio?: PlaylistAudioRef;
   blob: PlaylistBlobRef | null;
 };
 
