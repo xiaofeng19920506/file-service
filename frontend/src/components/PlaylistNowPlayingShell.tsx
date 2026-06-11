@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ChevronDownIcon } from './icons';
+import { ChevronDownIcon, QueueIcon } from './icons';
 import PlaylistPlayerBottomChrome from './PlaylistPlayerBottomChrome';
 import ScrollingTitle from './ScrollingTitle';
 import { useI18n } from '../i18n';
@@ -50,19 +50,56 @@ export default function PlaylistNowPlayingShell({
         >
           <ChevronDownIcon />
         </button>
-        <div className="playlist-now-playing-header-text">
+
+        <div className="playlist-now-playing-header-text desktop-only">
           <span className="playlist-now-playing-eyebrow">{t('playlists.nowPlaying')}</span>
           <ScrollingTitle text={trackTitle} className="playlist-now-playing-title" />
           <span className="playlist-now-playing-subtitle">{playlistTitle}</span>
         </div>
-        <span className="playlist-now-playing-counter">
-          {t('playlists.trackCounter', { current: trackCurrent, total: trackTotal })}
-        </span>
+
+        <p className="playlist-np-mobile-playlist mobile-only">{playlistTitle}</p>
+
+        <div className="playlist-now-playing-header-end">
+          <span className="playlist-now-playing-counter desktop-only">
+            {t('playlists.trackCounter', { current: trackCurrent, total: trackTotal })}
+          </span>
+          <div
+            className="playlist-np-mode-switch mobile-only"
+            role="group"
+            aria-label={t('playlists.playbackMode')}
+          >
+            <button
+              type="button"
+              className={`playlist-np-mode-btn${playbackMode === 'audio' ? ' active' : ''}`}
+              aria-pressed={playbackMode === 'audio'}
+              onClick={() => onPlaybackModeChange('audio')}
+            >
+              {t('playlists.playbackMp3')}
+            </button>
+            <button
+              type="button"
+              className={`playlist-np-mode-btn${playbackMode === 'video' ? ' active' : ''}`}
+              aria-pressed={playbackMode === 'video'}
+              onClick={() => onPlaybackModeChange('video')}
+            >
+              {t('playlists.playbackVideo')}
+            </button>
+          </div>
+          <button
+            type="button"
+            className="playlist-np-queue-btn mobile-only"
+            onClick={onToggleQueue}
+            aria-label={t('playlists.queueTitle')}
+          >
+            <QueueIcon />
+          </button>
+        </div>
       </header>
 
       <div className="playlist-now-playing-body">{children}</div>
 
       <PlaylistPlayerBottomChrome
+        className="desktop-only"
         onToggleQueue={onToggleQueue}
         repeatMode={repeatMode}
         onCycleRepeat={onCycleRepeat}

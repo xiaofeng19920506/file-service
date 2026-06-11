@@ -19,6 +19,7 @@ import {
 } from '../lib/player-volume';
 import { useMediaSession } from '../hooks/useMediaSession';
 import type { PlaylistRepeatMode } from '../lib/playlist-repeat-mode';
+import { RepeatIcon, ShuffleIcon } from './icons';
 import AudioSeekBar from './AudioSeekBar';
 import ScrollingTitle from './ScrollingTitle';
 
@@ -45,6 +46,9 @@ type PlaylistAudioPlayerProps = {
   playlistTitle?: string;
   variant?: 'default' | 'nowPlaying';
   repeatMode?: PlaylistRepeatMode;
+  onCycleRepeat?: () => void;
+  shuffleEnabled?: boolean;
+  onToggleShuffle?: () => void;
 };
 
 function youtubeThumb(videoId: string): string {
@@ -137,8 +141,12 @@ export default function PlaylistAudioPlayer({
   playlistTitle,
   variant = 'default',
   repeatMode = 'off',
+  onCycleRepeat,
+  shuffleEnabled = false,
+  onToggleShuffle,
 }: PlaylistAudioPlayerProps) {
   const { t } = useI18n();
+  const isNowPlaying = variant === 'nowPlaying';
   const audioRef = useRef<HTMLAudioElement>(null);
   const volumeProgressRef = useRef<HTMLDivElement>(null);
   const wantPlayRef = useRef(playing);
@@ -657,34 +665,46 @@ export default function PlaylistAudioPlayer({
 
   if (!current) return null;
 
+  const artworkUrl = youtubeThumb(current.youtubeVideoId);
+  const repeatLabel =
+    repeatMode === 'one'
+      ? t('playlists.repeatOne')
+      : repeatMode === 'all'
+        ? t('playlists.repeatAll')
+        : t('playlists.repeatOff');
+
   return (
     <section
-      className={`playlist-audio-player${variant === 'nowPlaying' ? ' playlist-audio-player--now-playing' : ''}`}
+      className={`playlist-audio-player${isNowPlaying ? ' playlist-audio-player--now-playing' : ''}`}
       aria-label={t('playlists.playerSectionAudio')}
     >
-      <div
-        className={`playlist-audio-artwork-wrap${variant === 'nowPlaying' ? '' : ' desktop-audio-artwork'}`}
-      >
-        <img
-          className="playlist-audio-artwork"
-          src={youtubeThumb(current.youtubeVideoId)}
-          alt=""
-          loading="lazy"
-        />
-        {activeCaption && (
-          <div className="playlist-audio-subtitles-overlay" aria-live="polite">
-            <p>{activeCaption}</p>
+      <div className="playlist-np-stage">
+        <div
+          className={`playlist-audio-artwork-wrap${isNowPlaying ? ' playlist-np-artwork' : ' desktop-audio-artwork'}`}
+        >
+          <img className="playlist-audio-artwork" src={artworkUrl} alt="" loading="lazy" />
+          {activeCaption && !isNowPlaying && (
+            <div className="playlist-audio-subtitles-overlay" aria-live="polite">
+              <p>{activeCaption}</p>
+            </div>
+          )}
+        </div>
+
+        {isNowPlaying && activeCaption && (
+          <p className="playlist-np-caption mobile-only" aria-live="polite">
+            {activeCaption}
+          </p>
+        )}
+
+        {!isNowPlaying && (
+          <div className="playlist-audio-lyrics-panel mobile-only" aria-live="polite">
+            {activeCaption ? (
+              <p className="playlist-audio-lyrics-text">{activeCaption}</p>
+            ) : (
+              <p className="playlist-audio-lyrics-empty">{t('playlists.noLyricsYet')}</p>
+            )}
           </div>
         )}
-      </div>
-
-      <div className="playlist-audio-lyrics-panel mobile-only" aria-live="polite">
-        {activeCaption ? (
-          <p className="playlist-audio-lyrics-text">{activeCaption}</p>
-        ) : (
-          <p className="playlist-audio-lyrics-empty">{t('playlists.noLyricsYet')}</p>
-        )}
-      </div>
 
       {isProcessing && (
         <p className="playlists-muted playlist-audio-status">
@@ -720,14 +740,43 @@ export default function PlaylistAudioPlayer({
       />
 
       <div className="playlist-audio-controls">
-        <header className="playlist-audio-meta">
+        <header className={`playlist-audio-meta${isNowPlaying ? ' desktop-only' : ''}`}>
           <ScrollingTitle text={current.title} className="playlist-audio-title" />
           <span className="playlist-audio-index">
             {t('playlists.trackCounter', { current: activeIndex + 1, total: items.length })}
           </span>
         </header>
 
-        <div className="audio-player-bar">
+        <div className={isNowPlaying ? 'playlist-np-dock' : undefined}>
+        {isNowPlaying && (
+          <div
+            className="playlist-np-secondary"
+            role="group"
+            aria-label={t('playlists.playbackOptions')}
+          >
+            <button
+              type="button"
+              className={`playlist-np-icon-btn${shuffleEnabled ? ' active' : ''}`}
+              onClick={onToggleShuffle}
+              aria-pressed={shuffleEnabled}
+              aria-label={t('playlists.shuffle')}
+              title={t('playlists.shuffle')}
+            >
+              <ShuffleIcon />
+            </button>
+            <button
+              type="button"
+              className={`playlist-np-icon-btn${repeatMode !== 'off' ? ' active' : ''}`}
+              onClick={onCycleRepeat}
+              aria-label={repeatLabel}
+              title={repeatLabel}
+            >
+              <RepeatIcon mode={repeatMode} />
+            </button>
+          </div>
+        )}
+
+        <div className={`audio-player-bar${isNowPlaying ? ' playlist-np-transport-block' : ''}`}>
           <div className="audio-transport" role="group" aria-label={t('playlists.playerSectionAudio')}>
             <button
               type="button"
@@ -783,19 +832,37 @@ export default function PlaylistAudioPlayer({
             </button>
           </div>
 
-          <AudioSeekBar
-            currentTime={currentTime}
-            duration={duration}
-            canSeek={canSeek}
-            usingPreview={usingPreview}
-            onSeekRatio={seekToRatio}
-            className="audio-player-bar-progress"
-          />
+          {isNowPlaying && (
+            <div className="playlist-np-track">
+              <ScrollingTitle text={current.title} className="playlist-np-track-title" />
+              {playlistTitle && <p className="playlist-np-track-album">{playlistTitle}</p>}
+            </div>
+          )}
 
-          <div className="audio-time">{formatPlaybackTimeRange(currentTime, duration)}</div>
+          <div className="playlist-np-progress">
+            <AudioSeekBar
+              currentTime={currentTime}
+              duration={duration}
+              canSeek={canSeek}
+              usingPreview={usingPreview}
+              onSeekRatio={seekToRatio}
+              className="audio-player-bar-progress"
+            />
+            <div className={`audio-time${isNowPlaying ? ' playlist-np-times' : ''}`}>
+              {isNowPlaying ? (
+                <>
+                  <span>{formatPlaybackTime(currentTime)}</span>
+                  <span>{formatPlaybackTime(duration)}</span>
+                </>
+              ) : (
+                formatPlaybackTimeRange(currentTime, duration)
+              )}
+            </div>
+          </div>
+        </div>
         </div>
 
-        <div className="audio-options">
+        <div className={`audio-options${isNowPlaying ? ' desktop-only' : ''}`}>
           <div className="audio-lang-switch" role="group" aria-label={t('playlists.subtitleLanguage')}>
             <button
               type="button"
@@ -851,6 +918,7 @@ export default function PlaylistAudioPlayer({
             </button>
           </div>
         </div>
+      </div>
       </div>
     </section>
   );

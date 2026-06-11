@@ -160,7 +160,10 @@ body {
     padding-bottom: max(0.65rem, var(--safe-bottom));
   }
 
-  .page-body-playlists .playlists-workspace[data-mobile-view='detail'][data-player-active='true'] {
+  .page-body-playlists
+    .playlists-workspace[data-mobile-view='detail'][data-player-active='true']:not(
+      [data-audio-now-playing='true']
+    ) {
     padding-bottom: calc(
       var(--playlists-mobile-dock-height) + var(--bottom-nav-height) + var(--safe-bottom) + 0.75rem
     );

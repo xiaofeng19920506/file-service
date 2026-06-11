@@ -664,6 +664,9 @@ export default function PlaylistsPage({
         playlistTitle={detail?.playlist.title}
         variant={variant}
         repeatMode={repeatMode}
+        onCycleRepeat={cycleRepeat}
+        shuffleEnabled={shuffleEnabled}
+        onToggleShuffle={toggleShuffle}
       />
     ) : null;
 
@@ -843,6 +846,7 @@ export default function PlaylistsPage({
           className="playlists-workspace"
           data-mobile-view={selectedId ? 'detail' : 'list'}
           data-player-active={showPlayer ? 'true' : 'false'}
+          data-audio-now-playing={audioNowPlaying ? 'true' : 'false'}
           data-playback-mode={playbackMode}
         >
           <aside className="playlists-sidebar" aria-label={t('playlists.savedTitle')}>
