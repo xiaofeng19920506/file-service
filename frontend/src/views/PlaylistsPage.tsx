@@ -3,7 +3,7 @@ import AcceptSharedPlaylistModal from '../components/AcceptSharedPlaylistModal';
 import AddPlaylistItemsModal from '../components/AddPlaylistItemsModal';
 import ConfirmModal from '../components/ConfirmModal';
 import SharePlaylistModal from '../components/SharePlaylistModal';
-import { DragHandleIcon, PencilIcon } from '../components/icons';
+import { DragHandleIcon, PencilIcon, QueueIcon } from '../components/icons';
 import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 import PlaylistAudioPlayer, {
   type PlaylistAudioProgressState,
@@ -545,13 +545,14 @@ export default function PlaylistsPage({
   const showPlayer = playerEngaged && playerItems.length > 0;
   const youtubeWatchActive = showPlayer && playbackMode === 'video';
   const youtubeWatchMobile = youtubeWatchActive && isMobileViewport;
+  const youtubeWatchDesktop = youtubeWatchActive && !isMobileViewport;
   const audioWatchActive = showPlayer && playbackMode === 'audio';
   const audioWatchDesktop = audioWatchActive && !isMobileViewport;
   const audioWatchMobile = audioWatchActive && isMobileViewport;
 
   useEffect(() => {
-    if (!audioWatchDesktop) setQueueOpen(false);
-  }, [audioWatchDesktop]);
+    if (!audioWatchDesktop && !youtubeWatchDesktop) setQueueOpen(false);
+  }, [audioWatchDesktop, youtubeWatchDesktop]);
 
   useEffect(() => {
     if (!youtubeWatchMobile && !audioWatchMobile) return;
@@ -736,6 +737,18 @@ export default function PlaylistsPage({
                 {repeatMode === 'one' ? '1' : repeatMode === 'all' ? '∞' : '↻'}
               </button>
               {renderShuffleToggle()}
+              {youtubeWatchDesktop && (
+                <button
+                  type="button"
+                  className={`playlists-queue-toolbar-btn${queueOpen ? ' active' : ''}`}
+                  aria-pressed={queueOpen}
+                  aria-label={t('playlists.queueTitle')}
+                  title={t('playlists.queueTitle')}
+                  onClick={() => setQueueOpen((open) => !open)}
+                >
+                  <QueueIcon />
+                </button>
+              )}
             </>
           )}
           <button type="button" className="btn-secondary" onClick={() => setShowAddModal(true)}>
@@ -918,6 +931,7 @@ export default function PlaylistsPage({
       <main
         className="playlists-page"
         data-youtube-watch={youtubeWatchActive ? 'true' : 'false'}
+        data-youtube-desktop-watch={youtubeWatchDesktop ? 'true' : 'false'}
         data-mobile-video-immersive={youtubeWatchMobile ? 'true' : 'false'}
         data-audio-now-playing={audioWatchActive ? 'true' : 'false'}
         data-audio-desktop-dock={audioWatchDesktop ? 'true' : 'false'}
@@ -940,6 +954,7 @@ export default function PlaylistsPage({
           data-mobile-view={selectedId ? 'detail' : 'list'}
           data-player-active={showPlayer ? 'true' : 'false'}
           data-youtube-watch={youtubeWatchActive ? 'true' : 'false'}
+          data-youtube-desktop-watch={youtubeWatchDesktop ? 'true' : 'false'}
           data-mobile-video-immersive={youtubeWatchMobile ? 'true' : 'false'}
           data-audio-now-playing={audioWatchActive ? 'true' : 'false'}
           data-audio-desktop-dock={audioWatchDesktop ? 'true' : 'false'}
@@ -1084,7 +1099,7 @@ export default function PlaylistsPage({
               </div>
             ) : detail ? (
               <div
-                className={`playlists-main-inner${youtubeWatchActive ? ' playlists-main-inner--youtube-watch' : ''}${youtubeWatchMobile ? ' playlists-main-inner--mobile-video' : ''}${audioWatchMobile ? ' playlists-main-inner--mobile-audio' : ''}${audioWatchDesktop ? ' playlists-main-inner--desktop-audio' : ''}`}
+                className={`playlists-main-inner${youtubeWatchActive ? ' playlists-main-inner--youtube-watch' : ''}${youtubeWatchDesktop ? ' playlists-main-inner--desktop-video' : ''}${youtubeWatchMobile ? ' playlists-main-inner--mobile-video' : ''}${audioWatchMobile ? ' playlists-main-inner--mobile-audio' : ''}${audioWatchDesktop ? ' playlists-main-inner--desktop-audio' : ''}`}
               >
                 {renderMainToolbar(detail.playlist, detail.items.length > 0)}
 
@@ -1110,6 +1125,7 @@ export default function PlaylistsPage({
                     data-playback-mode={playbackMode}
                     data-player-engaged={showPlayer ? 'true' : 'false'}
                     data-youtube-watch={youtubeWatchActive ? 'true' : 'false'}
+                    data-youtube-desktop-watch={youtubeWatchDesktop ? 'true' : 'false'}
                     data-mobile-video-immersive={youtubeWatchMobile ? 'true' : 'false'}
                     data-mobile-video-tracks-open={youtubeWatchActive ? 'true' : 'false'}
                     data-audio-desktop-dock={audioWatchDesktop ? 'true' : 'false'}
@@ -1168,7 +1184,7 @@ export default function PlaylistsPage({
                     </div>
 
                     <aside
-                      className={`playlists-tracks-col${audioWatchMobile || audioWatchDesktop ? ' playlists-tracks-col--hidden-audio-watch' : ''}`}
+                      className={`playlists-tracks-col${audioWatchMobile || audioWatchDesktop || youtubeWatchDesktop ? ' playlists-tracks-col--hidden-audio-watch' : ''}`}
                       aria-label={t('playlists.tracksTitle')}
                     >
                       <div className="playlists-tracks-head">
@@ -1292,7 +1308,7 @@ export default function PlaylistsPage({
                   </div>
                 )}
                 {audioWatchDesktop && renderAudioPlayer('dock')}
-                {(audioWatchMobile || audioWatchDesktop) && detail && (
+                {(audioWatchMobile || audioWatchDesktop || youtubeWatchDesktop) && detail && (
                   <PlaylistQueuePanel
                     open={queueOpen}
                     onClose={() => setQueueOpen(false)}
@@ -1300,7 +1316,7 @@ export default function PlaylistsPage({
                     activeIndex={activeIndex}
                     playing={playing}
                     onSelectTrack={(index) => engageAndPlay(index)}
-                    variant={audioWatchDesktop ? 'desktopDock' : 'mobile'}
+                    variant={audioWatchDesktop || youtubeWatchDesktop ? 'desktopDock' : 'mobile'}
                   />
                 )}
               </div>

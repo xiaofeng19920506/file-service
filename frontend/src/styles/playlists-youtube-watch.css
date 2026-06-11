@@ -286,6 +286,103 @@
   .playlists-main-inner--youtube-watch .playlists-detail-header {
     margin-bottom: 0.75rem;
   }
+
+  /* 桌面 Video 沉浸：隐藏左侧歌单栏，视频居中，曲目走弹窗 */
+  .playlists-page[data-youtube-desktop-watch='true'] .playlists-header,
+  .playlists-page[data-youtube-desktop-watch='true'] .playlists-alerts,
+  .playlists-page[data-youtube-desktop-watch='true'] .playlists-sidebar {
+    display: none;
+  }
+
+  .playlists-page[data-youtube-desktop-watch='true'] .playlists-workspace {
+    min-height: 0;
+    flex: 1;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .playlists-page[data-youtube-desktop-watch='true'] .playlists-main {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-height: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .playlists-main-inner--desktop-video {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .playlists-page[data-youtube-desktop-watch='true'] .playlists-player-stage {
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 0;
+    gap: 0;
+  }
+
+  .playlists-page[data-youtube-desktop-watch='true'] .playlists-player-col {
+    flex: 1 1 auto;
+    width: 100%;
+    max-width: min(56rem, 100%);
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .playlists-page[data-youtube-desktop-watch='true']
+    .youtube-player-section--desktop-watch
+    .youtube-player-frame-wrap {
+    max-height: min(calc(100vh - 13rem), 72vh);
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .playlists-page[data-youtube-desktop-watch='true'] .playlists-youtube-meta {
+    flex-shrink: 0;
+    margin-top: 0.85rem;
+  }
+
+  .playlists-queue-toolbar-btn {
+    width: 2.35rem;
+    height: 2.35rem;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid var(--border-light);
+    border-radius: 999px;
+    background: var(--surface-secondary);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition:
+      background 0.15s ease,
+      color 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  .playlists-queue-toolbar-btn:hover {
+    color: var(--text);
+    border-color: var(--border);
+  }
+
+  .playlists-queue-toolbar-btn.active {
+    color: var(--blue);
+    background: var(--blue-muted);
+    border-color: color-mix(in srgb, var(--blue) 35%, var(--border-light));
+  }
+
+  .playlists-queue-toolbar-btn svg {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+
+  .playlists-page[data-youtube-desktop-watch='true'] .playlist-queue-panel--desktop-dock {
+    bottom: 1.35rem;
+  }
 }
 
 @media (max-width: 900px) {
