@@ -49,7 +49,7 @@ import { registerPlaylistRoutes } from './playlists.js';
 import { registerYoutubeCaptionRoutes } from './youtube-captions.js';
 import { resolveRequestActor } from './request-actor.js';
 
-async function main() {
+async function buildApp() {
   const env = loadApiEnv();
 
   if (process.env.RUN_MIGRATIONS !== '0') {
@@ -614,10 +614,20 @@ async function main() {
 
   await registerStaticAssets(app);
 
+  return app;
+}
+
+async function main() {
+  const app = await buildApp();
+  const env = loadApiEnv();
   await app.listen({ port: env.PORT, host: '0.0.0.0' });
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+export default buildApp;
+
+if (!process.env.VERCEL) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

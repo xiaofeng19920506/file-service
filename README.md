@@ -62,6 +62,37 @@ npm run dev
 
 ## 生产部署
 
+### 前端（Vercel）
+
+- **Root Directory**：`frontend`
+- **Output Directory**：`dist`（由 `frontend/vercel.json` 配置）
+- 环境变量：`VITE_API_URL` = 后端 API 地址
+
+### 后端（Vercel）
+
+- **Root Directory**：`backend/api`（不是 `backend`，也不是仓库根目录）
+- **不要**设置 Output Directory（后端是 Fastify，不是静态站点；若 Dashboard 里填了 `dist` 会报错）
+- **Framework Preset**：Other（`backend/api/vercel.json` 已设 `framework: null`）
+- 构建与安装由 `backend/api/vercel.json` 从 monorepo 根目录执行 `npm run build:api`
+
+**Vercel 环境变量（必填示例）**：
+
+```env
+DATABASE_URL=postgresql://...
+REDIS_URL=redis://...
+STORAGE_BACKEND=s3          # Vercel 上不要用 fs，文件系统是临时的
+S3_BUCKET=...
+S3_ACCESS_KEY=...
+S3_SECRET_KEY=...
+DOWNLOAD_HMAC_SECRET=...
+CORS_ORIGIN=https://你的前端.vercel.app
+PUBLIC_BASE_URL=https://你的API.vercel.app
+```
+
+**注意**：Vercel 只跑 API；**Worker（合并任务）和 LibreOffice 需另部署**（本机、Railway、家里 Docker 等），并共用同一 `DATABASE_URL`、`REDIS_URL`、S3。
+
+### 本机 / 自建服务器
+
 1. **后端**：`npm run build:backend`，运行 API + Worker；数据库可用 `docker compose -f shared/docker-compose.yml up -d postgres redis`
 2. **前端**：`VITE_API_URL=https://api.example.com npm run build:web`，部署 `frontend/dist`
 3. 后端设置 `CORS_ORIGIN`、`WEB_APP_URL` 为前端域名
