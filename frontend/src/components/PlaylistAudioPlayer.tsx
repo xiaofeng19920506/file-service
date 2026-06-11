@@ -572,16 +572,19 @@ export default function PlaylistAudioPlayer({
   const seekToRatio = useCallback(
     (ratio: number) => {
       if (usingPreview) return;
-      const el = audioRef.current;
-      if (!el) return;
-      const trackDuration =
-        Number.isFinite(el.duration) && el.duration > 0 && el.duration !== Infinity
-          ? el.duration
-          : playbackDuration;
+      const trackDuration = playbackDuration;
       if (!Number.isFinite(trackDuration) || trackDuration <= 0) return;
       const clamped = Math.min(1, Math.max(0, ratio));
-      el.currentTime = clamped * trackDuration;
-      setCurrentTime(el.currentTime);
+      const targetTime = clamped * trackDuration;
+      setCurrentTime(targetTime);
+      const el = audioRef.current;
+      if (el) {
+        try {
+          el.currentTime = targetTime;
+        } catch {
+          /* 部分浏览器在 metadata 未就绪时会抛错，UI 仍按 targetTime 显示 */
+        }
+      }
     },
     [playbackDuration, usingPreview],
   );
