@@ -375,7 +375,18 @@ export default function YoutubePlaylistPlayer({
                 // ignore
               }
               syncProgress();
-              if (playingRef.current) event.target.playVideo();
+              if (playingRef.current) {
+                event.target.playVideo();
+                window.setTimeout(() => {
+                  if (playingRef.current) {
+                    try {
+                      event.target.playVideo();
+                    } catch {
+                      /* ignore */
+                    }
+                  }
+                }, 350);
+              }
             },
             onStateChange: (event) => {
               const YTState = window.YT?.PlayerState;
@@ -443,9 +454,41 @@ export default function YoutubePlaylistPlayer({
       return;
     }
 
-    if (playing) player.playVideo();
-    else player.pauseVideo();
+    if (playing) {
+      try {
+        player.playVideo();
+      } catch {
+        /* ignore */
+      }
+      window.setTimeout(() => {
+        if (!playingRef.current || !playerRef.current) return;
+        try {
+          playerRef.current.playVideo();
+        } catch {
+          /* ignore */
+        }
+      }, 300);
+    } else {
+      player.pauseVideo();
+    }
   }, [activeIndex, items, playing, loadTrack]);
+
+  useEffect(() => {
+    if (!immersive || !playing || !readyRef.current) return;
+    const retryPlay = () => {
+      try {
+        playerRef.current?.playVideo();
+      } catch {
+        /* ignore */
+      }
+    };
+    const t1 = window.setTimeout(retryPlay, 500);
+    const t2 = window.setTimeout(retryPlay, 1200);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [immersive, playing, activeIndex]);
 
   useEffect(() => {
     if (!playing) return;
@@ -638,6 +681,21 @@ export default function YoutubePlaylistPlayer({
     let cancelled = false;
 
     void (async () => {
+      try {
+        playerRef.current?.playVideo();
+      } catch {
+        /* ignore */
+      }
+
+      if (cancelled) return;
+
+      if (lockLandscape) {
+        unlockOrientationRef.current = await lockLandscapeOrientation();
+      }
+
+      await new Promise((resolve) => window.setTimeout(resolve, 450));
+      if (cancelled) return;
+
       const el = frameWrapRef.current;
       if (!el) return;
 
@@ -654,8 +712,13 @@ export default function YoutubePlaylistPlayer({
         /* 用户拒绝或无全屏 API，继续用 CSS 沉浸 */
       }
 
-      if (cancelled || !lockLandscape) return;
-      unlockOrientationRef.current = await lockLandscapeOrientation();
+      if (!cancelled && playingRef.current) {
+        try {
+          playerRef.current?.playVideo();
+        } catch {
+          /* ignore */
+        }
+      }
     })();
 
     return () => {

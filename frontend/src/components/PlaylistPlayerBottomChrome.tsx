@@ -6,6 +6,7 @@ import type { PlaylistRepeatMode } from '../lib/playlist-repeat-mode';
 type PlaylistPlayerBottomChromeProps = {
   className?: string;
   showQueue?: boolean;
+  showPlaybackOptions?: boolean;
   onToggleQueue: () => void;
   repeatMode: PlaylistRepeatMode;
   onCycleRepeat: () => void;
@@ -18,6 +19,7 @@ type PlaylistPlayerBottomChromeProps = {
 export default function PlaylistPlayerBottomChrome({
   className = '',
   showQueue = true,
+  showPlaybackOptions = true,
   onToggleQueue,
   repeatMode,
   onCycleRepeat,
@@ -53,25 +55,29 @@ export default function PlaylistPlayerBottomChrome({
       )}
 
       <div className="playlist-chrome-actions" role="group" aria-label={t('playlists.playbackOptions')}>
-        <button
-          type="button"
-          className={`playlist-chrome-btn${repeatMode !== 'off' ? ' active' : ''}`}
-          onClick={onCycleRepeat}
-          aria-label={repeatLabel}
-          title={repeatLabel}
-        >
-          <RepeatIcon mode={repeatMode} />
-        </button>
-        <button
-          type="button"
-          className={`playlist-chrome-btn${shuffleEnabled ? ' active' : ''}`}
-          onClick={onToggleShuffle}
-          aria-pressed={shuffleEnabled}
-          aria-label={t('playlists.shuffle')}
-          title={t('playlists.shuffle')}
-        >
-          <ShuffleIcon />
-        </button>
+        {showPlaybackOptions && (
+          <>
+            <button
+              type="button"
+              className={`playlist-chrome-btn${repeatMode !== 'off' ? ' active' : ''}`}
+              onClick={onCycleRepeat}
+              aria-label={repeatLabel}
+              title={repeatLabel}
+            >
+              <RepeatIcon mode={repeatMode} />
+            </button>
+            <button
+              type="button"
+              className={`playlist-chrome-btn${shuffleEnabled ? ' active' : ''}`}
+              onClick={onToggleShuffle}
+              aria-pressed={shuffleEnabled}
+              aria-label={t('playlists.shuffle')}
+              title={t('playlists.shuffle')}
+            >
+              <ShuffleIcon />
+            </button>
+          </>
+        )}
         <div className="playlist-chrome-mode" role="group" aria-label={t('playlists.playbackMode')}>
           <button
             type="button"

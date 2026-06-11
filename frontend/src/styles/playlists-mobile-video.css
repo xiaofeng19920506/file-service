@@ -41,13 +41,55 @@ body.playlists-mobile-video-active .nav-bottom {
   }
 
   .playlists-player-stage[data-mobile-video-immersive='true'] {
-    position: fixed;
-    inset: 0;
-    z-index: var(--z-modal);
+    position: relative;
     flex: 1;
     min-height: 0;
     gap: 0;
     background: #000;
+    overflow: hidden;
+  }
+
+  @media (orientation: portrait) {
+    .playlists-player-stage[data-mobile-video-immersive='true'] .playlists-player-col {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 100dvh;
+      height: 100dvw;
+      max-width: 100dvh;
+      max-height: 100dvw;
+      transform: translate(-50%, -50%) rotate(90deg);
+      transform-origin: center center;
+    }
+  }
+
+  body.playlists-mobile-video-active .playlist-video-chrome {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: calc(var(--z-modal) + 2);
+    justify-content: center;
+    padding-bottom: max(0.55rem, var(--safe-bottom));
+  }
+
+  body.playlists-mobile-video-active .playlists-page[data-mobile-video-immersive='true'] {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-height: 100dvh;
+  }
+
+  body.playlists-mobile-video-active .playlists-page[data-mobile-video-immersive='true'] .playlists-workspace {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  body.playlists-mobile-video-active .playlist-video-chrome .playlist-chrome-actions {
+    justify-content: center;
+    width: 100%;
   }
 
   .playlists-player-stage[data-mobile-video-immersive='true'] .playlists-player-col {

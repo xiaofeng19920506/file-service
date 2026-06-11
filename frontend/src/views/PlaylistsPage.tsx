@@ -582,6 +582,9 @@ export default function PlaylistsPage({
       setPlayerView('nowPlaying');
     } else {
       setPlayerView('browse');
+      if (playerEngaged) {
+        setPlaying(true);
+      }
     }
   };
 
@@ -636,6 +639,7 @@ export default function PlaylistsPage({
       setQueueOpen((open) => !open);
     },
     showQueue: !mobileVideoImmersive,
+    showPlaybackOptions: !mobileVideoImmersive,
     repeatMode,
     onCycleRepeat: cycleRepeat,
     shuffleEnabled,
