@@ -43,21 +43,32 @@ export default function PlaylistDesktopAudioCenter({
     };
   }, [videoId, subtitleLang]);
 
-  useEffect(() => {
-    const panel = lyricsRef.current;
-    if (!panel) return;
-    const activeLine = panel.querySelector<HTMLElement>('[data-active="true"]');
-    activeLine?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  }, [currentTime, captionCues]);
-
-  const hasLyrics = captionCues.length > 0;
-
   const activeIndex = useMemo(() => {
     if (!captionCues.length) return -1;
-    return captionCues.findIndex(
+    const exact = captionCues.findIndex(
       (cue) => currentTime >= cue.start - 0.05 && currentTime < cue.end + 0.05,
     );
+    if (exact >= 0) return exact;
+    for (let i = captionCues.length - 1; i >= 0; i--) {
+      if (currentTime >= captionCues[i]!.start - 0.05) return i;
+    }
+    return -1;
   }, [captionCues, currentTime]);
+
+  useEffect(() => {
+    const panel = lyricsRef.current;
+    if (!panel || activeIndex < 0) return;
+    const activeLine = panel.querySelector<HTMLElement>('[data-active="true"]');
+    if (!activeLine) return;
+
+    const panelHeight = panel.clientHeight;
+    const lineTop = activeLine.offsetTop;
+    const lineHeight = activeLine.offsetHeight;
+    const targetScroll = lineTop - panelHeight / 2 + lineHeight / 2;
+    panel.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
+  }, [activeIndex, captionCues.length]);
+
+  const hasLyrics = captionCues.length > 0;
 
   if (hasLyrics) {
     return (
