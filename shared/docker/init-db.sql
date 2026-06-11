@@ -1,14 +1,4 @@
-CREATE TABLE IF NOT EXISTS users (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-  email text NOT NULL UNIQUE,
-  password_hash text NOT NULL,
-  first_name text NOT NULL,
-  last_name text NOT NULL DEFAULT '',
-  role text NOT NULL DEFAULT 'user',
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE INDEX IF NOT EXISTS users_email_idx ON users (lower(email));
+-- users 表由 Drizzle 迁移 0005–0007 创建，勿在此预建（避免与 display_name 迁移冲突）
 
 CREATE TABLE IF NOT EXISTS blobs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
