@@ -1,10 +1,15 @@
+# 本地基础设施：Postgres + Redis；可选 Worker（含 LibreOffice，profile: libre）
+# 用法（在仓库根目录）：
+#   docker compose -f shared/docker-compose.yml up -d postgres redis
+#   docker compose -f shared/docker-compose.yml --profile libre up --build -d worker
+
 services:
   postgres:
     image: postgres:16-alpine
     container_name: file-service-db
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - '5432:5432'
     environment:
       POSTGRES_USER: fileservice
       POSTGRES_PASSWORD: fileservice
@@ -18,44 +23,24 @@ services:
     ports:
       - '6379:6379'
 
-  api:
-    profiles: [full]
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.api
-    depends_on:
-      - postgres
-      - redis
-    environment:
-      STORAGE_BACKEND: fs
-      LOCAL_STORAGE_DIR: /data/storage
-      DATABASE_URL: postgresql://fileservice:fileservice@postgres:5432/fileservice
-      REDIS_URL: redis://redis:6379
-      DOWNLOAD_HMAC_SECRET: change-this-to-a-long-random-string
-      PUBLIC_BASE_URL: http://localhost:3000
-      PORT: '3000'
-    ports:
-      - '3000:3000'
-    volumes:
-      - file_storage:/data/storage
-
   worker:
-    profiles: [full]
+    profiles: [libre]
     build:
-      context: .
-      dockerfile: docker/Dockerfile.worker
+      context: ..
+      dockerfile: shared/docker/Dockerfile.worker
     depends_on:
       - postgres
       - redis
+    env_file:
+      - ../.env
     environment:
-      STORAGE_BACKEND: fs
-      LOCAL_STORAGE_DIR: /data/storage
       DATABASE_URL: postgresql://fileservice:fileservice@postgres:5432/fileservice
       REDIS_URL: redis://redis:6379
-      WORKER_CONCURRENCY: '1'
+      STORAGE_BACKEND: fs
+      LOCAL_STORAGE_DIR: /data/storage
       SOFFICE_PATH: soffice
     volumes:
-      - file_storage:/data/storage
+      - ../data/storage:/data/storage
     deploy:
       resources:
         limits:

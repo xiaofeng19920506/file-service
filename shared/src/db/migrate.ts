@@ -10,7 +10,7 @@ function resolveMigrationsFolder(): string {
   const here = dirname(fileURLToPath(import.meta.url));
   const candidates = [
     join(here, '../../drizzle'),
-    join(process.cwd(), 'packages/shared/drizzle'),
+    join(process.cwd(), 'shared/drizzle'),
   ];
   for (const folder of candidates) {
     if (existsSync(join(folder, 'meta', '_journal.json'))) return folder;

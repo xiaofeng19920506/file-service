@@ -1,116 +1,69 @@
 # file-service · 敬拜诗库
 
-演示文稿上传、诗库管理、合并与编辑的 monorepo 应用。
+演示文稿上传、诗库管理、合并与编辑（前后端分离 monorepo）。
+
+## 目录结构
+
+```
+frontend/          React 前端（:5173）
+backend/
+  api/             Fastify API（:3000）
+  worker/          BullMQ 合并任务
+shared/            共享库 + Docker（Postgres / Redis / LibreOffice Worker）
+  docker/
+  docker-compose.yml
+```
 
 ## 存储后端
 
-通过 `STORAGE_BACKEND` 选择：
-
 | 值 | 说明 |
 |----|------|
-| **`fs`** | **纯本地目录**（默认 Docker 编排）。设置 `LOCAL_STORAGE_DIR`，blob 与导出文件以相对路径键写入该根目录。API 下载时直接流式输出文件，不经过预签名 URL。 |
-| **`s3`** | S3 兼容协议（AWS S3、**MinIO** 等）。需配置 `S3_ENDPOINT`、`S3_ACCESS_KEY`、`S3_SECRET_KEY`、`S3_BUCKET` 等；下载走临时预签名链接重定向。 |
+| **`fs`** | 本地目录，`LOCAL_STORAGE_DIR`（默认 `./data/storage`） |
+| **`s3`** | S3 兼容存储，需配置 `S3_*` 环境变量 |
 
-API 与 Worker **必须使用同一种后端**，并访问**同一份**存储根（本机目录需路径一致；Docker 下请挂载同一 volume）。
+API 与 Worker 须使用同一存储后端。
 
-## 结构
-
-- `packages/shared`：Postgres（Drizzle）、**统一对象存储抽象**（`FsObjectStorage` / `S3ObjectStorage`）、环境变量、下载令牌
-- `apps/api`：Fastify 后端 — 上传、`POST /v1/jobs`、任务状态、下载（fs 为流式响应，s3 为 302）
-- `apps/worker`：BullMQ — 读存储、LibreOffice 转换、合并、写回存储、定时清理过期导出
-- `apps/web`：React 前端 — 文件上传、排序、合并任务与下载
-
-## 拆分为两个 Repo（独立托管）
-
-前后端可导出为两个独立仓库分别部署：
+### 单独构建
 
 ```bash
-npm run export:repos
-# 生成 ../file-service-backend 与 ../file-service-frontend
+npm run build:web       # 仅 frontend
+npm run build:api       # backend/api（自动先编 shared）
+npm run build:worker    # backend/worker
+npm run build:backend   # shared + api + worker
+npm run build           # 全部
 ```
 
-详见 [docs/SPLIT-REPOS.md](docs/SPLIT-REPOS.md)。也可在 monorepo 内用 `docker-compose.backend.prod.yml` / `docker-compose.frontend.prod.yml` 分开启动。
+## 日常开发
 
-## 生产部署（Vercel 前端 + 家里服务器后端）
-
-- **Vercel**：`apps/web`，设置 `VITE_API_URL` 指向家里 API
-- **家里**：`docker compose -f docker-compose.backend.prod.yml up -d`（API + Worker + Postgres + Redis）
-- 建议用 **Cloudflare Tunnel** 把家里 `:3000` 暴露为 `https://api.你的域名.com`
-
-完整步骤见 [docs/DEPLOY-VERCEL-HOME.md](docs/DEPLOY-VERCEL-HOME.md)。
-
-## 日常开发（推荐·轻量）
-
-Docker **只跑 Postgres + Redis**（约几十 MB），API / Worker / Web 在本机运行。**直接上传 `.pptx` 即可**，无需 LibreOffice、不会卡死。
+Docker **只跑 Postgres + Redis**（配置在 `shared/docker-compose.yml`），其余本机运行：
 
 ```bash
 npm run dev:docker
-# 等价于：docker compose up -d postgres redis && npm run dev
 ```
 
 浏览器打开 **http://localhost:5173**。
 
-| 格式 | 轻量模式 |
-|------|----------|
-| `.pptx` | 预览、编辑、合并均可 |
-| `.ppt` / `.odp` | 需本机安装 LibreOffice，或先转为 `.pptx` |
+无法本机安装 LibreOffice 时：
 
 ```bash
-npm run dev:status   # 查看状态
-npm run dev:stop     # 停止 Docker full 栈（若曾启用）
+npm run dev:docker:libre
 ```
 
-### 高内存全 Docker（不推荐）
-
-仅在机器内存充足（建议 16GB+）且无法本机安装 LibreOffice 时使用：
-
-```bash
-npm run dev:docker:full
-```
-
-会构建含 LibreOffice 的 Worker 容器（约 1.5GB+ 内存），低配置 Mac 容易卡死。
+Docker 跑 Postgres + Redis + Worker；本机只跑 API + Web。
 
 ## 手动启动
 
-1. 启动 Postgres + Redis：
-
-   ```bash
-   docker compose up -d postgres redis
-   ```
-
-2. 安装与构建：
-
-   ```bash
-   npm install
-   npm run build
-   ```
-
-3. 配置环境：复制 `.env.example`，设置 `STORAGE_BACKEND=fs` 与 `LOCAL_STORAGE_DIR`（例如 `./data/storage`）。API 与 Worker 的 `LOCAL_STORAGE_DIR` 必须指向同一目录。
-
-4. 本机安装 LibreOffice（API 预览与 Worker 合并均调 `soffice`）。macOS：`brew install --cask libreoffice`，必要时设置 `SOFFICE_PATH`。
-
-5. 一键启动前后端（需已配置 `.env`）：
-
-   ```bash
-   npm run dev
-   ```
-
-   或分别在三个终端启动 `npm run dev:api`、`npm run dev:worker`、`npm run dev:web`。
-
-   浏览器打开 **http://localhost:5173** 使用前端界面。API 在 `http://localhost:3000`，开发时 Vite 会将 `/v1` 代理到 API。
-
-## HTTP 流程（摘要）
-
-1. `POST /v1/uploads` — `multipart` 单文件；响应 `blobId`、`sha256`、`deduplicated`
-2. `POST /v1/jobs` — `{ "inputs": [{ "blobId": "...", "order": 0 }] }`；响应 `jobId`
-3. `GET /v1/jobs/:id` — `queued` → `running` → `succeeded` / `failed`
-4. `POST /v1/jobs/:id/download-url` — 成功返回带 HMAC 的下载 URL（建议设置 `PUBLIC_BASE_URL` 生成绝对地址）
-5. `GET /v1/jobs/:id/download?token=...` — **`fs`**：直接返回文件流；**`s3`**：302 到预签名 GET
+```bash
+docker compose -f shared/docker-compose.yml up -d postgres redis
+npm install && npm run build
+cp .env.example .env   # 按需修改
+npm run dev
+```
 
 ## 生产部署
 
-```bash
-npm run prod:docker
-```
+1. **后端**：`npm run build:backend`，运行 API + Worker；数据库可用 `docker compose -f shared/docker-compose.yml up -d postgres redis`
+2. **前端**：`VITE_API_URL=https://api.example.com npm run build:web`，部署 `frontend/dist`
+3. 后端设置 `CORS_ORIGIN`、`WEB_APP_URL` 为前端域名
 
-使用 `docker-compose.prod.yml` 构建 API（含前端静态资源）与 Worker（含 LibreOffice）。
+环境变量见 [.env.example](.env.example)。

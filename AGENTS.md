@@ -1,5 +1,12 @@
 # file-service
 
-敬拜诗库 monorepo：Fastify API（`apps/api`）、BullMQ Worker（`apps/worker`）、Vite + React Web（`apps/web`）、共享包（`packages/shared`）。
+敬拜诗库 monorepo：
 
-日常开发：`npm run dev:docker`（Docker 跑 Postgres + Redis，本机跑 API/Worker/Web）。
+- `frontend/` — React Web（`:5173`）
+- `backend/api/` — Fastify API（`:3000`）
+- `backend/worker/` — BullMQ Worker
+- `shared/` — 共享库 + Docker（Postgres / Redis / LibreOffice Worker）
+
+日常开发：`npm run dev:docker`（`shared/docker-compose.yml` 起 DB + Redis，本机跑前后端）。
+
+单独构建：`npm run build:web` / `build:api` / `build:backend` / `build`。

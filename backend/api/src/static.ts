@@ -4,13 +4,9 @@ import { join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
 
 function resolveStaticRoot(): string | null {
-  const candidates = [
-    process.env.STATIC_DIR?.trim(),
-    join(process.cwd(), 'public'),
-    join(process.cwd(), 'apps/web/dist'),
-  ].filter((p): p is string => !!p);
-
-  return candidates.find((p) => existsSync(join(p, 'index.html'))) ?? null;
+  const staticDir = process.env.STATIC_DIR?.trim();
+  if (!staticDir) return null;
+  return existsSync(join(staticDir, 'index.html')) ? staticDir : null;
 }
 
 /** 生产环境：托管前端构建产物，非 API 路径回退到 SPA index.html */
