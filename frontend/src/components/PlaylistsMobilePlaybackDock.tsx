@@ -1,4 +1,5 @@
 import { useI18n } from '../i18n';
+import ScrollingTitle from './ScrollingTitle';
 
 type PlaylistsMobilePlaybackDockProps = {
   title: string;
@@ -30,7 +31,7 @@ export default function PlaylistsMobilePlaybackDock({
       aria-label={t('playlists.playerSectionAudio')}
     >
       <div className="playlists-playback-dock-meta">
-        <span className="playlists-playback-dock-title">{title}</span>
+        <ScrollingTitle text={title} className="playlists-playback-dock-title" />
         <span className="playlists-playback-dock-index">{trackLabel}</span>
       </div>
 

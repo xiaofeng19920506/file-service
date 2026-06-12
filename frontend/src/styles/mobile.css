@@ -433,23 +433,31 @@
     z-index: var(--z-dock, 15);
     display: flex;
     flex-direction: column;
-    gap: 0.45rem;
-    padding: 0.55rem var(--page-gutter) 0.65rem;
+    gap: 0.35rem;
+    box-sizing: border-box;
+    height: var(--playlists-mobile-dock-height);
+    min-height: var(--playlists-mobile-dock-height);
+    max-height: var(--playlists-mobile-dock-height);
+    padding: 0.5rem var(--page-gutter) 0.55rem;
     background: color-mix(in srgb, var(--surface) 92%, transparent);
     backdrop-filter: saturate(180%) blur(16px);
     -webkit-backdrop-filter: saturate(180%) blur(16px);
     border-top: 1px solid var(--border-light);
     box-shadow: 0 -6px 24px color-mix(in srgb, var(--shadow-sm) 80%, transparent);
     pointer-events: auto;
+    overflow: hidden;
   }
 
   .playlists-playback-dock-meta {
     display: flex;
-    align-items: baseline;
+    flex: 0 0 2.125rem;
+    align-items: center;
     justify-content: space-between;
     gap: 0.65rem;
     min-width: 0;
+    height: 2.125rem;
     padding: 0 0.15rem;
+    overflow: hidden;
   }
 
   .playlists-playback-dock-title {
@@ -457,14 +465,21 @@
     min-width: 0;
     font-size: 0.8125rem;
     font-weight: 600;
+    line-height: 1.25;
     color: var(--text);
+  }
+
+  .playlists-playback-dock-title.scrolling-title.is-scrolling .scrolling-title-track {
+    animation-duration: 12s;
   }
 
   .playlists-playback-dock-index {
     flex-shrink: 0;
     font-size: 0.75rem;
+    line-height: 1.25;
     color: var(--text-tertiary);
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
 
   .playlists-playback-dock--audio {
@@ -513,7 +528,13 @@
   }
 
   .playlists-mobile-transport--dock {
-    padding: 0.25rem 0.35rem;
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    max-height: 3.75rem;
+    padding: 0;
     background: transparent;
     border: none;
     box-shadow: none;
