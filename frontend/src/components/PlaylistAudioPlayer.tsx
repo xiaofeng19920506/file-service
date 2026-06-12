@@ -1187,10 +1187,6 @@ export default function PlaylistAudioPlayer({
         className="playlist-audio-player playlist-audio-player--mobile-record"
         aria-label={t('playlists.playerSectionAudio')}
       >
-        <header className="playlist-audio-record-header">
-          <ScrollingTitle text={current.title} className="playlist-audio-record-header-title" />
-        </header>
-
         <div className="playlist-audio-record-stage">
           <div className={`playlist-audio-record-disc${playing ? ' is-playing' : ''}`}>
             <div className="playlist-audio-record-disc-ring" aria-hidden />
@@ -1199,7 +1195,6 @@ export default function PlaylistAudioPlayer({
         </div>
 
         <div className="playlist-audio-record-meta">
-          <p className="playlist-audio-record-song">{current.title}</p>
           <p className="playlist-audio-record-detail">
             {playlistTitle && <span>{playlistTitle}</span>}
             {playlistTitle && lyricLine && <span className="playlist-audio-record-dot"> · </span>}
@@ -1211,14 +1206,6 @@ export default function PlaylistAudioPlayer({
               </span>
             )}
           </p>
-        </div>
-
-        <div className="playlist-audio-record-progress">
-          {seekBar}
-          <div className="playlist-audio-record-times">
-            <span>{currentTimeLabel}</span>
-            <span>{totalDurationLabel}</span>
-          </div>
         </div>
 
         <div className="playlist-audio-record-transport">{transportControls}</div>

@@ -7,6 +7,7 @@ import ExportYoutubePlaylistModal from '../components/ExportYoutubePlaylistModal
 import { DragHandleIcon, PencilIcon } from '../components/icons';
 import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 import PlaylistAudioPlayer, {
+  type PlaylistAudioProgressHandle,
   type PlaylistAudioProgressState,
 } from '../components/PlaylistAudioPlayer';
 import PlaylistDesktopAudioCenter from '../components/PlaylistDesktopAudioCenter';
@@ -142,6 +143,7 @@ export default function PlaylistsPage({
     duration: 0,
     canSeek: false,
   });
+  const audioProgressHandleRef = useRef<PlaylistAudioProgressHandle | null>(null);
 
   useEffect(() => {
     if (oauthHandledRef.current) return;
@@ -811,6 +813,7 @@ export default function PlaylistsPage({
         onToggleQueue={() => setQueueOpen((open) => !open)}
         queueOpen={queueOpen}
         onProgressUpdate={setAudioProgress}
+        progressHandleRef={audioProgressHandleRef}
       />
     );
   };
@@ -1533,6 +1536,11 @@ export default function PlaylistsPage({
           playing={playing && playerEngaged}
           canGoPrev={mobileDockCanGoPrev}
           canGoNext={mobileDockCanGoNext}
+          showProgress={playerEngaged}
+          currentTime={audioProgress.currentTime}
+          duration={audioProgress.duration}
+          canSeek={audioProgress.canSeek}
+          onSeekRatio={(ratio) => audioProgressHandleRef.current?.seekToRatio(ratio)}
           onPlayToggle={handleMobileDockPlayToggle}
           onPrev={handleMobileDockPrev}
           onNext={handleMobileDockNext}

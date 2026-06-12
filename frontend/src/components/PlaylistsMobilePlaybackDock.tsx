@@ -1,3 +1,5 @@
+import AudioSeekBar from './AudioSeekBar';
+import { formatPlaybackTime } from './PlaylistAudioPlayer';
 import { useI18n } from '../i18n';
 import ScrollingTitle from './ScrollingTitle';
 
@@ -7,6 +9,11 @@ type PlaylistsMobilePlaybackDockProps = {
   playing: boolean;
   canGoPrev: boolean;
   canGoNext: boolean;
+  showProgress?: boolean;
+  currentTime?: number;
+  duration?: number;
+  canSeek?: boolean;
+  onSeekRatio?: (ratio: number) => void;
   onPlayToggle: () => void;
   onPrev: () => void;
   onNext: () => void;
@@ -18,15 +25,21 @@ export default function PlaylistsMobilePlaybackDock({
   playing,
   canGoPrev,
   canGoNext,
+  showProgress = false,
+  currentTime = 0,
+  duration = 0,
+  canSeek = false,
+  onSeekRatio,
   onPlayToggle,
   onPrev,
   onNext,
 }: PlaylistsMobilePlaybackDockProps) {
   const { t } = useI18n();
+  const totalDurationLabel = duration > 0 ? formatPlaybackTime(duration) : '--:--';
 
   return (
     <div
-      className="playlists-playback-dock playlists-playback-dock--mobile playlists-playback-dock--audio mobile-only"
+      className={`playlists-playback-dock playlists-playback-dock--mobile playlists-playback-dock--audio mobile-only${showProgress ? ' playlists-playback-dock--with-progress' : ''}`}
       role="group"
       aria-label={t('playlists.playerSectionAudio')}
     >
@@ -34,6 +47,22 @@ export default function PlaylistsMobilePlaybackDock({
         <ScrollingTitle text={title} className="playlists-playback-dock-title" />
         <span className="playlists-playback-dock-index">{trackLabel}</span>
       </div>
+
+      {showProgress && onSeekRatio ? (
+        <div className="playlists-playback-dock-progress-wrap">
+          <AudioSeekBar
+            currentTime={currentTime}
+            duration={duration}
+            canSeek={canSeek}
+            onSeekRatio={onSeekRatio}
+            className="playlists-playback-dock-progress"
+          />
+          <div className="playlists-playback-dock-times">
+            <span>{formatPlaybackTime(currentTime)}</span>
+            <span>{totalDurationLabel}</span>
+          </div>
+        </div>
+      ) : null}
 
       <div className="playlists-mobile-transport playlists-mobile-transport--dock">
         <button

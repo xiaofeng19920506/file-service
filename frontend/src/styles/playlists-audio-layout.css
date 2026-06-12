@@ -276,26 +276,14 @@
     background: var(--surface);
   }
 
-  .playlist-audio-record-header {
-    flex-shrink: 0;
-    padding: 0.35rem 0 0.75rem;
-    text-align: center;
-  }
-
-  .playlist-audio-record-header-title {
-    font-size: 1.05rem;
-    font-weight: 650;
-    justify-content: center;
-  }
-
   .playlist-audio-record-stage {
     flex: 1 1 auto;
     display: flex;
     align-items: center;
     justify-content: center;
     min-height: 0;
-    max-height: min(42vh, 320px);
-    padding: 0.5rem 0 0.75rem;
+    max-height: min(36vh, 280px);
+    padding: 0.25rem 0 0.5rem;
   }
 
   .playlist-audio-record-disc {
@@ -343,7 +331,7 @@
 
   .playlist-audio-record-meta {
     flex-shrink: 0;
-    padding: 0 0 0.85rem;
+    padding: 0 0 0.35rem;
     min-width: 0;
   }
 
@@ -374,7 +362,7 @@
 
   .playlist-audio-record-progress {
     flex-shrink: 0;
-    padding-bottom: 0.65rem;
+    padding-bottom: 0.35rem;
   }
 
   .playlist-audio-record-progress .audio-player-bar-progress {

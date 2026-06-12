@@ -18,6 +18,7 @@
   --z-modal: 200;
 
   --playlists-mobile-dock-height: 7.5rem;
+  --playlists-mobile-dock-height-active: 9.5rem;
   --playlist-np-mobile-dock-height: 11.5rem;
   --playlists-desktop-dock-height: 5.5rem;
   --touch-target: 2.75rem;
@@ -167,9 +168,24 @@ body {
     );
   }
 
+  .playlists-workspace[data-mobile-view='detail'][data-mobile-audio-dock='true'][data-player-active='true']
+    .playlists-main-inner {
+    padding-bottom: calc(
+      var(--playlists-mobile-dock-height-active) + var(--bottom-nav-height) + var(--safe-bottom) + 0.5rem
+    );
+  }
+
   body.playlists-mobile-audio-active .playlists-main-inner--mobile-audio {
     padding-bottom: calc(
       var(--playlists-mobile-dock-height) + var(--bottom-nav-height) + var(--safe-bottom) + 0.5rem
+    ) !important;
+  }
+
+  body.playlists-mobile-audio-active
+    .playlists-workspace[data-player-active='true']
+    .playlists-main-inner--mobile-audio {
+    padding-bottom: calc(
+      var(--playlists-mobile-dock-height-active) + var(--bottom-nav-height) + var(--safe-bottom) + 0.5rem
     ) !important;
   }
 
