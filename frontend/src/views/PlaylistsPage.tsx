@@ -1541,6 +1541,10 @@ export default function PlaylistsPage({
           duration={audioProgress.duration}
           canSeek={audioProgress.canSeek}
           onSeekRatio={(ratio) => audioProgressHandleRef.current?.seekToRatio(ratio)}
+          shuffleEnabled={shuffleEnabled}
+          queueOpen={queueOpen}
+          onToggleShuffle={toggleShuffle}
+          onToggleQueue={() => setQueueOpen((open) => !open)}
           onPlayToggle={handleMobileDockPlayToggle}
           onPrev={handleMobileDockPrev}
           onNext={handleMobileDockNext}

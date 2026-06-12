@@ -272,8 +272,12 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
-    padding: 0.35rem var(--page-gutter) calc(0.5rem + var(--bottom-nav-height));
+    padding: 0.2rem var(--page-gutter) 0.15rem;
     background: var(--surface);
+  }
+
+  .playlists-page[data-mobile-audio-dock='true'] .playlist-audio-player--mobile-record {
+    padding-bottom: 0;
   }
 
   .playlist-audio-record-stage {
@@ -282,8 +286,8 @@
     align-items: center;
     justify-content: center;
     min-height: 0;
-    max-height: min(36vh, 280px);
-    padding: 0.25rem 0 0.5rem;
+    max-height: min(40vh, 300px);
+    padding: 0.15rem 0 0.35rem;
   }
 
   .playlist-audio-record-disc {
@@ -331,7 +335,7 @@
 
   .playlist-audio-record-meta {
     flex-shrink: 0;
-    padding: 0 0 0.35rem;
+    padding: 0;
     min-width: 0;
   }
 

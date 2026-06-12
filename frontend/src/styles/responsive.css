@@ -17,8 +17,8 @@
   --z-overlay: 100;
   --z-modal: 200;
 
-  --playlists-mobile-dock-height: 7.5rem;
-  --playlists-mobile-dock-height-active: 9.5rem;
+  --playlists-mobile-dock-height: 7.25rem;
+  --playlists-mobile-dock-height-active: 10.25rem;
   --playlist-np-mobile-dock-height: 11.5rem;
   --playlists-desktop-dock-height: 5.5rem;
   --touch-target: 2.75rem;

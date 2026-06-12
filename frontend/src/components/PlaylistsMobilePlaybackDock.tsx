@@ -1,4 +1,5 @@
 import AudioSeekBar from './AudioSeekBar';
+import { QueueIcon, ShuffleIcon } from './icons';
 import { formatPlaybackTime } from './PlaylistAudioPlayer';
 import { useI18n } from '../i18n';
 import ScrollingTitle from './ScrollingTitle';
@@ -13,7 +14,11 @@ type PlaylistsMobilePlaybackDockProps = {
   currentTime?: number;
   duration?: number;
   canSeek?: boolean;
+  shuffleEnabled?: boolean;
+  queueOpen?: boolean;
   onSeekRatio?: (ratio: number) => void;
+  onToggleShuffle?: () => void;
+  onToggleQueue?: () => void;
   onPlayToggle: () => void;
   onPrev: () => void;
   onNext: () => void;
@@ -29,7 +34,11 @@ export default function PlaylistsMobilePlaybackDock({
   currentTime = 0,
   duration = 0,
   canSeek = false,
+  shuffleEnabled = false,
+  queueOpen = false,
   onSeekRatio,
+  onToggleShuffle,
+  onToggleQueue,
   onPlayToggle,
   onPrev,
   onNext,
@@ -64,45 +73,68 @@ export default function PlaylistsMobilePlaybackDock({
         </div>
       ) : null}
 
-      <div className="playlists-mobile-transport playlists-mobile-transport--dock">
-        <button
-          type="button"
-          className="playlists-mobile-transport-btn"
-          onClick={onPrev}
-          disabled={!canGoPrev}
-          aria-label={t('playlists.prevTrack')}
-        >
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-            <path d="M14 6l-6 6 6 6V6z" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          className="playlists-mobile-transport-btn playlists-mobile-transport-btn--primary"
-          onClick={onPlayToggle}
-          aria-label={playing ? t('playlists.pause') : t('playlists.play')}
-        >
-          {playing ? (
+      <div className="playlists-playback-dock-controls">
+        <div className="playlists-mobile-transport playlists-mobile-transport--dock">
+          <button
+            type="button"
+            className="playlists-mobile-transport-btn"
+            onClick={onPrev}
+            disabled={!canGoPrev}
+            aria-label={t('playlists.prevTrack')}
+          >
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-              <path d="M7 6h3v12H7V6zm7 0h3v12h-3V6z" />
+              <path d="M14 6l-6 6 6 6V6z" />
             </svg>
-          ) : (
+          </button>
+          <button
+            type="button"
+            className="playlists-mobile-transport-btn playlists-mobile-transport-btn--primary"
+            onClick={onPlayToggle}
+            aria-label={playing ? t('playlists.pause') : t('playlists.play')}
+          >
+            {playing ? (
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                <path d="M7 6h3v12H7V6zm7 0h3v12h-3V6z" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                <path d="M8 5v14l11-7L8 5z" />
+              </svg>
+            )}
+          </button>
+          <button
+            type="button"
+            className="playlists-mobile-transport-btn"
+            onClick={onNext}
+            disabled={!canGoNext}
+            aria-label={t('playlists.nextTrack')}
+          >
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-              <path d="M8 5v14l11-7L8 5z" />
+              <path d="M10 6l6 6-6 6V6z" />
             </svg>
-          )}
-        </button>
-        <button
-          type="button"
-          className="playlists-mobile-transport-btn"
-          onClick={onNext}
-          disabled={!canGoNext}
-          aria-label={t('playlists.nextTrack')}
-        >
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-            <path d="M10 6l6 6-6 6V6z" />
-          </svg>
-        </button>
+          </button>
+        </div>
+
+        <div className="playlists-playback-dock-secondary">
+          <button
+            type="button"
+            className={`playlists-playback-dock-secondary-btn${shuffleEnabled ? ' active' : ''}`}
+            aria-label={t('playlists.shuffle')}
+            aria-pressed={shuffleEnabled}
+            onClick={onToggleShuffle}
+          >
+            <ShuffleIcon />
+          </button>
+          <button
+            type="button"
+            className={`playlists-playback-dock-secondary-btn${queueOpen ? ' active' : ''}`}
+            aria-label={t('playlists.queueTitle')}
+            aria-pressed={queueOpen}
+            onClick={onToggleQueue}
+          >
+            <QueueIcon />
+          </button>
+        </div>
       </div>
     </div>
   );
