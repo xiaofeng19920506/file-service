@@ -175,6 +175,11 @@ body {
     );
   }
 
+  body.playlists-mobile-audio-active .page-body-playlists,
+  body.playlists-mobile-audio-active .playlists-page[data-audio-mobile-record='true'] {
+    background: var(--surface);
+  }
+
   body.playlists-mobile-audio-active .playlists-main-inner--mobile-audio {
     padding-bottom: calc(
       var(--playlists-mobile-dock-height) + var(--bottom-nav-height) + var(--safe-bottom) + 0.5rem
@@ -185,7 +190,7 @@ body {
     .playlists-workspace[data-player-active='true']
     .playlists-main-inner--mobile-audio {
     padding-bottom: calc(
-      var(--playlists-mobile-dock-height-active) + var(--bottom-nav-height) + var(--safe-bottom) + 0.5rem
+      var(--playlists-mobile-dock-height-active) + var(--bottom-nav-height) + var(--safe-bottom)
     ) !important;
   }
 

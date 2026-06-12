@@ -231,6 +231,13 @@
 @media (max-width: 900px) {
   .playlists-page[data-audio-mobile-record='true'] {
     padding: 0;
+    background: var(--surface);
+  }
+
+  .playlists-page[data-audio-mobile-record='true'] .playlists-workspace,
+  .playlists-page[data-audio-mobile-record='true'] .playlists-main,
+  .playlists-main-inner--mobile-audio {
+    background: var(--surface) !important;
   }
 
   .playlists-page[data-audio-mobile-record='true'] .playlists-workspace[data-mobile-view='detail'] .playlists-main {
@@ -272,12 +279,20 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
-    padding: 0.2rem var(--page-gutter) 0.15rem;
+    padding: 0.2rem var(--page-gutter) 0;
     background: var(--surface);
   }
 
   .playlists-page[data-mobile-audio-dock='true'] .playlist-audio-player--mobile-record {
-    padding-bottom: 0;
+    flex: 1;
+    min-height: 100%;
+    padding-bottom: 0.75rem;
+    margin-bottom: 0;
+  }
+
+  .playlists-page[data-mobile-audio-dock='true'][data-player-active='true']
+    .playlist-audio-player--mobile-record {
+    padding-bottom: 1rem;
   }
 
   .playlist-audio-record-stage {
@@ -285,9 +300,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 0;
-    max-height: min(40vh, 300px);
-    padding: 0.15rem 0 0.35rem;
+    min-height: min(46vh, 360px);
+    max-height: none;
+    padding: 0.15rem 0 1.25rem;
   }
 
   .playlist-audio-record-disc {

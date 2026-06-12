@@ -1180,8 +1180,6 @@ export default function PlaylistAudioPlayer({
   }
 
   if (isMobileRecord) {
-    const lyricLine = activeCaption ?? captionCues[0]?.text ?? null;
-
     return (
       <section
         className="playlist-audio-player playlist-audio-player--mobile-record"
@@ -1192,20 +1190,6 @@ export default function PlaylistAudioPlayer({
             <div className="playlist-audio-record-disc-ring" aria-hidden />
             <img className="playlist-audio-record-art" src={artworkUrl} alt="" loading="lazy" />
           </div>
-        </div>
-
-        <div className="playlist-audio-record-meta">
-          <p className="playlist-audio-record-detail">
-            {playlistTitle && <span>{playlistTitle}</span>}
-            {playlistTitle && lyricLine && <span className="playlist-audio-record-dot"> · </span>}
-            {lyricLine ? (
-              <span className="playlist-audio-record-lyric">{lyricLine}</span>
-            ) : (
-              <span className="playlist-audio-record-lyric">
-                {t('playlists.trackCounter', { current: activeIndex + 1, total: items.length })}
-              </span>
-            )}
-          </p>
         </div>
 
         {statusMessages}
