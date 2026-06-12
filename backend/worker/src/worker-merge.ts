@@ -2,11 +2,9 @@ import { loadEnvFile } from '@file-service/shared';
 loadEnvFile();
 
 import { startMergeWorker } from './merge-worker.js';
-import { startYoutubeAudioWorker } from './youtube-audio-worker.js';
 
 async function main() {
   await startMergeWorker();
-  await startYoutubeAudioWorker();
 }
 
 main().catch((err) => {
