@@ -10,6 +10,7 @@ import PlaylistAudioPlayer, {
   type PlaylistAudioProgressState,
 } from '../components/PlaylistAudioPlayer';
 import PlaylistDesktopAudioCenter from '../components/PlaylistDesktopAudioCenter';
+import PlaylistsMobilePlaybackDock from '../components/PlaylistsMobilePlaybackDock';
 import PlaylistQueuePanel from '../components/PlaylistQueuePanel';
 import YoutubePlaylistPlayer from '../components/YoutubePlaylistPlayer';
 import { prioritizeYoutubeAudioCache, type YoutubeAudioStatus } from '../api/youtube-audio';
@@ -613,6 +614,47 @@ export default function PlaylistsPage({
   const audioWatchActive = showPlayer && playbackMode === 'audio';
   const audioWatchDesktop = audioWatchActive && !isMobileViewport;
   const audioWatchMobile = audioWatchActive && isMobileViewport;
+  const showMobileAudioDock =
+    isMobileViewport &&
+    Boolean(selectedId && detail?.items.length) &&
+    playbackMode === 'audio' &&
+    !youtubeWatchMobile;
+  const mobileDockCanGoPrev = playerEngaged ? canGoPrev : activeIndex > 0;
+  const mobileDockCanGoNext = playerEngaged ? canGoNext : itemCount > 1 || shuffleEnabled;
+
+  const handleMobileDockPlayToggle = () => {
+    if (!detail?.items.length) return;
+    if (!playerEngaged) {
+      startPlayback();
+      return;
+    }
+    setPlaying((wasPlaying) => !wasPlaying);
+  };
+
+  const handleMobileDockPrev = () => {
+    if (!detail?.items.length) return;
+    if (!playerEngaged) {
+      if (activeIndex > 0) engageAndPlay(activeIndex - 1);
+      return;
+    }
+    goToPrevTrack();
+  };
+
+  const handleMobileDockNext = () => {
+    if (!detail?.items.length) return;
+    if (!playerEngaged) {
+      if (shuffleEnabled) {
+        const order = beginShuffleRound(detail.items.length);
+        engageAndPlay(order[1] ?? order[0]!);
+      } else if (detail.items.length > 1) {
+        engageAndPlay(Math.min(activeIndex + 1, detail.items.length - 1));
+      } else {
+        startPlayback();
+      }
+      return;
+    }
+    goToNextTrack();
+  };
 
   useEffect(() => {
     if (!audioWatchDesktop) setQueueOpen(false);
@@ -768,7 +810,7 @@ export default function PlaylistsPage({
         onToggleShuffle={toggleShuffle}
         onToggleQueue={() => setQueueOpen((open) => !open)}
         queueOpen={queueOpen}
-        onProgressUpdate={placement === 'dock' ? setAudioProgress : undefined}
+        onProgressUpdate={setAudioProgress}
       />
     );
   };
@@ -1024,6 +1066,7 @@ export default function PlaylistsPage({
         data-audio-now-playing={audioWatchActive ? 'true' : 'false'}
         data-audio-desktop-dock={audioWatchDesktop ? 'true' : 'false'}
         data-audio-mobile-record={audioWatchMobile ? 'true' : 'false'}
+        data-mobile-audio-dock={showMobileAudioDock ? 'true' : 'false'}
       >
         <header className={`playlists-header${selectedId ? ' mobile-only-hidden' : ''}`}>
           <h1>{t('playlists.title')}</h1>
@@ -1048,6 +1091,7 @@ export default function PlaylistsPage({
           data-audio-desktop-dock={audioWatchDesktop ? 'true' : 'false'}
           data-audio-mobile-record={audioWatchMobile ? 'true' : 'false'}
           data-playback-mode={playbackMode}
+          data-mobile-audio-dock={showMobileAudioDock ? 'true' : 'false'}
         >
           <aside className="playlists-sidebar" aria-label={t('playlists.savedTitle')}>
             <form className="playlists-create-form" onSubmit={(e) => void handleImport(e)}>
@@ -1476,6 +1520,22 @@ export default function PlaylistsPage({
             setDeleteTarget(null);
             void performDelete(id);
           }}
+        />
+      )}
+
+      {showMobileAudioDock && currentItem && detail && (
+        <PlaylistsMobilePlaybackDock
+          title={currentItem.title}
+          trackLabel={t('playlists.trackCounter', {
+            current: activeIndex + 1,
+            total: detail.items.length,
+          })}
+          playing={playing && playerEngaged}
+          canGoPrev={mobileDockCanGoPrev}
+          canGoNext={mobileDockCanGoNext}
+          onPlayToggle={handleMobileDockPlayToggle}
+          onPrev={handleMobileDockPrev}
+          onNext={handleMobileDockNext}
         />
       )}
 

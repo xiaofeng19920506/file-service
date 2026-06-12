@@ -161,6 +161,18 @@ body {
     padding-bottom: max(0.65rem, var(--safe-bottom));
   }
 
+  .playlists-workspace[data-mobile-view='detail'][data-mobile-audio-dock='true'] .playlists-main-inner {
+    padding-bottom: calc(
+      var(--playlists-mobile-dock-height) + var(--bottom-nav-height) + var(--safe-bottom) + 0.5rem
+    );
+  }
+
+  body.playlists-mobile-audio-active .playlists-main-inner--mobile-audio {
+    padding-bottom: calc(
+      var(--playlists-mobile-dock-height) + var(--bottom-nav-height) + var(--safe-bottom) + 0.5rem
+    ) !important;
+  }
+
   .page-body-playlists
     .playlists-workspace[data-mobile-view='detail'][data-player-active='true']:not(
       [data-audio-now-playing='true']

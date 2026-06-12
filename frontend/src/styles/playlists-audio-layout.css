@@ -414,6 +414,10 @@
     font-variant-numeric: tabular-nums;
   }
 
+  .playlists-page[data-mobile-audio-dock='true'] .playlist-audio-record-transport {
+    display: none !important;
+  }
+
   .playlist-audio-record-transport {
     flex-shrink: 0;
     display: flex;
