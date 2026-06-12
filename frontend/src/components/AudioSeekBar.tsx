@@ -28,7 +28,7 @@ export default function AudioSeekBar({
   const [scrubRatio, setScrubRatio] = useState<number | null>(null);
 
   const hasDuration = Number.isFinite(duration) && duration > 0;
-  const showIndeterminate = usingPreview && !hasDuration;
+  const showIndeterminate = usingPreview && !hasDuration && currentTime <= 0;
   const progressPct =
     scrubRatio !== null
       ? scrubRatio * 100

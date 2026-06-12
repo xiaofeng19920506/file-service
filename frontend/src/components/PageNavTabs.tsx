@@ -23,7 +23,6 @@ const NAV_ITEMS: {
   id: NavTarget;
   icon: typeof LibraryNavIcon;
   labelKey: 'nav.library' | 'nav.playlists' | 'nav.merge' | 'nav.admin';
-  shortKey: 'nav.libraryShort' | 'nav.playlistsShort' | 'nav.mergeShort' | 'nav.adminShort';
   requiresSearch?: boolean;
   requiresPlaylists?: boolean;
   requiresMerge?: boolean;
@@ -33,28 +32,24 @@ const NAV_ITEMS: {
     id: 'playlists',
     icon: PlaylistsNavIcon,
     labelKey: 'nav.playlists',
-    shortKey: 'nav.playlistsShort',
     requiresPlaylists: true,
   },
   {
     id: 'library',
     icon: LibraryNavIcon,
     labelKey: 'nav.library',
-    shortKey: 'nav.libraryShort',
     requiresSearch: true,
   },
   {
     id: 'merge',
     icon: MergeNavIcon,
     labelKey: 'nav.merge',
-    shortKey: 'nav.mergeShort',
     requiresMerge: true,
   },
   {
     id: 'admin',
     icon: AdminNavIcon,
     labelKey: 'nav.admin',
-    shortKey: 'nav.adminShort',
     requiresEdit: true,
   },
 ];
@@ -88,7 +83,7 @@ export default function PageNavTabs({
       {items.map((item) => {
         const Icon = item.icon;
         const active = page === item.id;
-        const label = isBottom ? t(item.shortKey) : t(item.labelKey);
+        const label = t(item.labelKey);
 
         return (
           <button
@@ -96,11 +91,12 @@ export default function PageNavTabs({
             type="button"
             role="tab"
             aria-selected={active}
+            aria-label={isBottom ? label : undefined}
+            title={isBottom ? label : undefined}
             className={`page-tab page-tab-${variant}${active ? ' active' : ''}`}
             onClick={() => navigate(item.id)}
           >
-            {isBottom && <Icon />}
-            <span className="page-tab-label">{label}</span>
+            {isBottom ? <Icon /> : <span className="page-tab-label">{label}</span>}
           </button>
         );
       })}

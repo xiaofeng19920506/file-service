@@ -197,7 +197,7 @@ export default function PlaylistAudioPlayer({
     if (lastCue && lastCue.end > 0) return lastCue.end;
     return 0;
   }, [duration, durationHint, captionCues]);
-  const canSeek = !usingPreview && playbackDuration > 0;
+  const canSeek = playbackDuration > 0 && Boolean(streamUrl);
   const scrubbingRef = useRef(false);
   const volumePct = muted ? 0 : volume;
   const activeCaption = useMemo(
@@ -320,7 +320,13 @@ export default function PlaylistAudioPlayer({
     setUsingPreview(false);
     setCurrentTime(0);
     setDuration(0);
-    setDurationHint(0);
+    const hintedDuration =
+      typeof audioStatus?.durationSeconds === 'number' &&
+      Number.isFinite(audioStatus.durationSeconds) &&
+      audioStatus.durationSeconds > 0
+        ? audioStatus.durationSeconds
+        : 0;
+    setDurationHint(hintedDuration);
 
     void (async () => {
       try {
@@ -571,7 +577,6 @@ export default function PlaylistAudioPlayer({
 
   const seekToRatio = useCallback(
     (ratio: number) => {
-      if (usingPreview) return;
       const trackDuration = playbackDuration;
       if (!Number.isFinite(trackDuration) || trackDuration <= 0) return;
       const clamped = Math.min(1, Math.max(0, ratio));
@@ -582,11 +587,11 @@ export default function PlaylistAudioPlayer({
         try {
           el.currentTime = targetTime;
         } catch {
-          /* 部分浏览器在 metadata 未就绪时会抛错，UI 仍按 targetTime 显示 */
+          /* 预览流或 metadata 未就绪时可能失败，UI 仍按 targetTime 显示 */
         }
       }
     },
-    [playbackDuration, usingPreview],
+    [playbackDuration],
   );
 
   useEffect(() => {

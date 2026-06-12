@@ -219,10 +219,10 @@
 
 .page-tabs-bottom {
   width: 100%;
-  max-width: var(--shell-max);
-  margin-inline: auto;
-  padding: 0.35rem var(--page-gutter);
-  gap: 0.15rem;
+  max-width: none;
+  margin-inline: 0;
+  padding: 0;
+  gap: 0;
   border: none;
   background: transparent;
   border-radius: 0;
@@ -231,36 +231,41 @@
 .page-tab-bottom {
   flex: 1;
   min-width: 0;
-  min-height: 3rem;
+  min-height: 2.75rem;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 0.15rem;
-  padding: 0.35rem 0.25rem;
-  border-radius: 10px;
+  gap: 0;
+  padding: 0.45rem 0;
+  border-radius: 0;
   font-size: 0.625rem;
   font-weight: 600;
-  line-height: 1.1;
+  line-height: 1;
 }
 
 .page-tab-bottom .nav-tab-icon {
-  width: 1.35rem;
-  height: 1.35rem;
+  width: 1.45rem;
+  height: 1.45rem;
   flex-shrink: 0;
-}
-
-.page-tab-bottom .page-tab-label {
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .page-tab-bottom.active {
   color: var(--blue);
-  background: var(--blue-muted);
+  background: transparent;
   box-shadow: none;
+  position: relative;
+}
+
+.page-tab-bottom.active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 25%;
+  right: 25%;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--blue);
 }
 
 .lang-toggle {
