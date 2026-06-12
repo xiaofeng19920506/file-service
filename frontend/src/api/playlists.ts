@@ -68,11 +68,11 @@ export async function getPlaylist(id: string): Promise<PlaylistDetail> {
   return parseJson<PlaylistDetail>(res);
 }
 
-export async function createPlaylist(title?: string): Promise<PlaylistDetail> {
+export async function createPlaylist(title: string): Promise<PlaylistDetail> {
   const res = await apiFetch('/v1/playlists', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(title ? { title } : {}),
+    body: JSON.stringify({ title: title.trim() }),
   });
   return parseJson<PlaylistDetail>(res);
 }

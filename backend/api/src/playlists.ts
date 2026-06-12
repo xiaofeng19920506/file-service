@@ -215,7 +215,9 @@ export function registerPlaylistRoutes(
     const user = request.authUser;
     if (!user) return reply.code(401).send({ error: 'unauthorized' });
 
-    const title = request.body?.title?.trim() || '我的列表';
+    const title = request.body?.title?.trim();
+    if (!title) return reply.code(400).send({ error: 'title_required' });
+
     const now = new Date();
     const [playlist] = await db
       .insert(playlists)

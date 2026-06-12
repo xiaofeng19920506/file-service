@@ -4131,10 +4131,8 @@
   overflow: hidden;
 }
 
-.playlists-create-form {
-  padding: 0.85rem;
-  border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--bg) 55%, var(--surface));
+.playlists-create-inline {
+  padding: 0 0.4rem 0.55rem;
 }
 
 .playlists-create-label,

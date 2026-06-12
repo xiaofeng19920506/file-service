@@ -223,7 +223,10 @@
     max-width: 402px;
     min-width: 280px;
     max-height: calc(100vh - 12rem);
-    align-self: flex-start;
+    align-self: stretch;
+    display: flex !important;
+    flex-direction: column;
+    min-height: 12rem;
   }
 
   .playlists-player-stage[data-youtube-watch='true'] .playlists-tracks {
@@ -287,27 +290,28 @@
     margin-bottom: 0.75rem;
   }
 
-  /* 桌面 Video 沉浸：保留左侧导入，隐藏歌单列表；左视频 + 右曲目列表（YouTube 式） */
+  /* 桌面 Video 沉浸：隐藏左侧歌单栏，左视频 + 右曲目列表（YouTube 式） */
   .playlists-page[data-youtube-desktop-watch='true'] .playlists-header,
   .playlists-page[data-youtube-desktop-watch='true'] .playlists-alerts,
-  .playlists-page[data-youtube-desktop-watch='true'] .playlists-sidebar-head,
-  .playlists-page[data-youtube-desktop-watch='true'] .playlists-sidebar-list {
+  .playlists-page[data-youtube-desktop-watch='true'] .playlists-sidebar {
     display: none;
   }
 
   .playlists-page[data-youtube-desktop-watch='true'] .playlists-workspace {
     min-height: 0;
     flex: 1;
-    grid-template-columns: minmax(240px, 17rem) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .playlists-page[data-youtube-desktop-watch='true'] .playlists-main {
-    grid-column: 1 / -1;
+    grid-column: 1;
     width: 100%;
+    min-width: 0;
     min-height: 0;
     flex: 1;
     display: flex;
     flex-direction: column;
+    overflow: visible;
   }
 
   .playlists-main-inner--desktop-video {
@@ -315,14 +319,17 @@
     flex-direction: column;
     flex: 1;
     min-height: 0;
+    min-width: 0;
   }
 
   .playlists-page[data-youtube-desktop-watch='true'] .playlists-player-stage {
     flex: 1;
     flex-direction: row;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 1rem;
     min-height: 0;
+    min-width: 0;
+    overflow: visible;
   }
 
   .playlists-page[data-youtube-desktop-watch='true'] .playlists-player-col {
@@ -334,15 +341,15 @@
   }
 
   .playlists-page[data-youtube-desktop-watch='true'] .playlists-tracks-col {
-    flex: 0 0 380px;
-    width: 380px;
-    max-width: 380px;
-    min-width: 280px;
+    display: flex !important;
+    flex: 0 0 min(380px, 34vw);
+    width: min(380px, 34vw);
+    max-width: min(380px, 34vw);
+    min-width: 260px;
     max-height: calc(100vh - 10rem);
     align-self: stretch;
-    display: flex;
     flex-direction: column;
-    min-height: 0;
+    min-height: 12rem;
     border: 1px solid var(--border-light);
     border-radius: 12px;
     background: var(--surface);

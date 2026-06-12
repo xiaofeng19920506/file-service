@@ -18,6 +18,7 @@ import {
   writeStoredPlayerVolume,
 } from '../lib/player-volume';
 import { useMediaSession } from '../hooks/useMediaSession';
+import { useSwipeTrackNavigation } from '../hooks/useSwipeTrackNavigation';
 import type { PlaylistRepeatMode } from '../lib/playlist-repeat-mode';
 import { PlaybackMoreIcon, QueueIcon, RepeatIcon, ShuffleIcon } from './icons';
 import AudioSeekBar from './AudioSeekBar';
@@ -160,6 +161,7 @@ export default function PlaylistAudioPlayer({
   const isDesktopDock = variant === 'desktopDock';
   const isMobileRecord = variant === 'mobileRecord';
   const audioRef = useRef<HTMLAudioElement>(null);
+  const mobileSwipeRef = useRef<HTMLElement>(null);
   const volumeProgressRef = useRef<HTMLDivElement>(null);
   const mobileOptionsRef = useRef<HTMLDivElement>(null);
   const [mobileOptionsOpen, setMobileOptionsOpen] = useState(false);
@@ -761,6 +763,15 @@ export default function PlaylistAudioPlayer({
     canGoNext !== undefined ? !canGoNext : activeIndex >= items.length - 1 && !onNextTrack;
   const prevDisabled = canGoPrev !== undefined ? !canGoPrev : activeIndex <= 0;
 
+  useSwipeTrackNavigation({
+    targetRef: mobileSwipeRef,
+    enabled: isMobileRecord && items.length > 0,
+    onNext: goNext,
+    onPrev: goPrev,
+    canGoNext: !nextDisabled,
+    canGoPrev: !prevDisabled,
+  });
+
   const handleMediaPlay = useCallback(() => {
     if (!streamUrl && loadingStream) return;
     if (!streamUrl) {
@@ -1182,7 +1193,8 @@ export default function PlaylistAudioPlayer({
   if (isMobileRecord) {
     return (
       <section
-        className="playlist-audio-player playlist-audio-player--mobile-record"
+        ref={mobileSwipeRef}
+        className="playlist-audio-player playlist-audio-player--mobile-record playlist-audio-player--swipe-nav"
         aria-label={t('playlists.playerSectionAudio')}
       >
         <div className="playlist-audio-record-stage">

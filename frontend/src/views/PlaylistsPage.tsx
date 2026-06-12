@@ -17,8 +17,8 @@ import YoutubePlaylistPlayer from '../components/YoutubePlaylistPlayer';
 import { prioritizeYoutubeAudioCache, type YoutubeAudioStatus } from '../api/youtube-audio';
 import {
   deletePlaylist,
+  createPlaylist,
   getPlaylist,
-  importPlaylist,
   listPlaylists,
   reorderPlaylistItems,
   removePlaylistItem,
@@ -94,10 +94,10 @@ export default function PlaylistsPage({
   const { permissions } = useAuth();
   const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
   const [detail, setDetail] = useState<PlaylistDetail | null>(null);
-  const [importUrl, setImportUrl] = useState('');
+  const [newListTitle, setNewListTitle] = useState('');
   const [loadingList, setLoadingList] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
-  const [importing, setImporting] = useState(false);
+  const [creatingList, setCreatingList] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -278,30 +278,28 @@ export default function PlaylistsPage({
     onSelectId(undefined);
   };
 
-  const handleImport = async (e: React.FormEvent) => {
+  const handleCreateList = async (e: React.FormEvent) => {
     e.preventDefault();
-    const url = importUrl.trim();
-    if (!url || importing) return;
+    const title = newListTitle.trim();
+    if (!title || creatingList) return;
 
-    setImporting(true);
+    setCreatingList(true);
     setError(null);
     setNotice(null);
     try {
-      const data = await importPlaylist(url);
-      setImportUrl('');
+      const data = await createPlaylist(title);
+      setNewListTitle('');
       await loadList();
-      if (data.items.length > 0) {
-        autoPlayOnLoadRef.current = data.playlist.id;
-      }
       onSelectId(data.playlist.id);
       setDetail(data);
       setActiveIndex(0);
       setPlaying(false);
       setPlayerEngaged(false);
+      setNotice(t('playlists.createSuccess', { title: data.playlist.title }));
     } catch (err) {
-      setError(friendlyError(err instanceof Error ? err.message : 'youtube_import_failed', t));
+      setError(friendlyError(err instanceof Error ? err.message : 'create_playlist_failed', t));
     } finally {
-      setImporting(false);
+      setCreatingList(false);
     }
   };
 
@@ -1097,30 +1095,6 @@ export default function PlaylistsPage({
           data-mobile-audio-dock={showMobileAudioDock ? 'true' : 'false'}
         >
           <aside className="playlists-sidebar" aria-label={t('playlists.savedTitle')}>
-            <form className="playlists-create-form" onSubmit={(e) => void handleImport(e)}>
-              <label className="playlists-create-label" htmlFor="playlist-import-url">
-                {t('playlists.importTitle')}
-              </label>
-              <div className="playlists-create-row">
-                <input
-                  id="playlist-import-url"
-                  type="url"
-                  className="playlists-text-input"
-                  placeholder={t('playlists.importPlaceholder')}
-                  value={importUrl}
-                  onChange={(e) => setImportUrl(e.target.value)}
-                  disabled={importing}
-                />
-                <button
-                  type="submit"
-                  className="btn-primary playlists-create-btn"
-                  disabled={importing || !importUrl.trim()}
-                >
-                  {importing ? t('playlists.importing') : t('playlists.importButton')}
-                </button>
-              </div>
-            </form>
-
             <div className="playlists-sidebar-head">
               <h2>{t('playlists.savedTitle')}</h2>
               {!loadingList && playlists.length > 0 && (
@@ -1129,6 +1103,34 @@ export default function PlaylistsPage({
             </div>
 
             <div className="playlists-sidebar-list">
+              <form
+                className="playlists-create-inline"
+                onSubmit={(e) => void handleCreateList(e)}
+                aria-label={t('playlists.importTitle')}
+              >
+                <div className="playlists-create-row">
+                  <input
+                    id="playlist-create-title"
+                    type="text"
+                    className="playlists-text-input"
+                    placeholder={t('playlists.createPlaceholder')}
+                    value={newListTitle}
+                    onChange={(e) => setNewListTitle(e.target.value)}
+                    disabled={creatingList}
+                    maxLength={200}
+                    autoComplete="off"
+                    aria-label={t('playlists.createPlaceholder')}
+                  />
+                  <button
+                    type="submit"
+                    className="btn-primary playlists-create-btn"
+                    disabled={creatingList || !newListTitle.trim()}
+                  >
+                    {creatingList ? t('playlists.creating') : t('playlists.importButton')}
+                  </button>
+                </div>
+              </form>
+
               {loadingList ? (
                 <p className="playlists-muted">{t('playlists.loading')}</p>
               ) : playlists.length === 0 ? (

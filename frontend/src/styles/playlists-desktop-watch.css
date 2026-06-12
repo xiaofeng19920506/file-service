@@ -83,13 +83,22 @@
     align-self: flex-start;
   }
 
-  .playlists-tracks-col {
-    flex: 0 0 400px;
-    width: 400px;
-    max-width: 400px;
-    min-width: 300px;
+  /* 桌面 Video：左播放器 / 右曲目，播放前后都保留列表 */
+  .playlists-player-stage[data-playback-mode='video'] .playlists-tracks-col {
+    display: flex !important;
+    flex: 0 0 min(400px, 34vw);
+    width: min(400px, 34vw);
+    max-width: min(400px, 34vw);
+    min-width: 260px;
     max-height: none;
     align-self: stretch;
+  }
+
+  .playlists-player-stage[data-playback-mode='video'] .playlists-tracks {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: min(56vh, 640px);
+    overflow-y: auto;
   }
 
   .playlists-tracks-head h3 {
@@ -116,7 +125,17 @@
     align-items: flex-start;
   }
 
-  .playlists-player-stage[data-player-engaged='true'] .playlists-tracks-col {
+  .playlists-player-stage[data-player-engaged='true'][data-playback-mode='video'] .playlists-tracks-col {
+    display: flex !important;
+    order: 0;
+    flex: 0 0 min(400px, 34vw);
+    width: min(400px, 34vw);
+    max-width: min(400px, 34vw);
+    min-width: 260px;
+    max-height: calc(100vh - 10rem);
+  }
+
+  .playlists-player-stage[data-player-engaged='true']:not([data-playback-mode='video']) .playlists-tracks-col {
     order: 0;
     flex: 0 0 400px;
     width: 400px;
