@@ -20,6 +20,18 @@ export const users = pgTable('users', {
     .defaultNow(),
 });
 
+export const userLoginDevices = pgTable('user_login_devices', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  deviceKeyHash: text('device_key_hash').notNull().unique(),
+  deviceName: text('device_name').notNull(),
+  platform: text('platform').notNull(),
+  lastLoginAt: timestamp('last_login_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 export type UserRole = 'member' | 'worship_team' | 'admin';
 
 export const blobs = pgTable('blobs', {
@@ -134,6 +146,7 @@ export const youtubeAudioCache = pgTable('youtube_audio_cache', {
 });
 
 export type UserRow = typeof users.$inferSelect;
+export type UserLoginDeviceRow = typeof userLoginDevices.$inferSelect;
 export type BlobRow = typeof blobs.$inferSelect;
 export type MergeJobRow = typeof mergeJobs.$inferSelect;
 export type PlaylistRow = typeof playlists.$inferSelect;

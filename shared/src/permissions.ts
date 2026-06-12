@@ -145,6 +145,8 @@ function isAuthEntryPath(method: string, path: string): boolean {
   return (
     (method === 'POST' && path === '/v1/auth/register')
     || (method === 'POST' && path === '/v1/auth/login')
+    || (method === 'POST' && path === '/v1/auth/login/check-device')
+    || (method === 'POST' && path === '/v1/auth/device-login')
   );
 }
 

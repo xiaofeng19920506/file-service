@@ -36,7 +36,8 @@
     "tunnel:start": "bash scripts/cloudflared-tunnel.sh start",
     "tunnel:status": "bash scripts/cloudflared-tunnel.sh status",
     "tunnel:stop": "bash scripts/cloudflared-tunnel.sh stop",
-    "tunnel:setup-server": "bash scripts/setup-cloudflared-server.sh"
+    "tunnel:setup-server": "bash scripts/setup-cloudflared-server.sh",
+    "seed:app-store-review": "tsx scripts/seed-app-store-review.ts"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
