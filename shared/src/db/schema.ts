@@ -15,6 +15,7 @@ export const users = pgTable('users', {
   firstName: text('first_name').notNull(),
   lastName: text('last_name').notNull().default(''),
   role: text('role').notNull().default('member'),
+  premiumTrialEndsAt: timestamp('premium_trial_ends_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -145,6 +146,18 @@ export const youtubeAudioCache = pgTable('youtube_audio_cache', {
   completedAt: timestamp('completed_at', { withTimezone: true }),
 });
 
+export const userSubscriptions = pgTable('user_subscriptions', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  provider: text('provider').notNull().default('apple'),
+  productId: text('product_id').notNull(),
+  originalTransactionId: text('original_transaction_id').notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
+  environment: text('environment').notNull().default('production'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 export type UserRow = typeof users.$inferSelect;
 export type UserLoginDeviceRow = typeof userLoginDevices.$inferSelect;
 export type BlobRow = typeof blobs.$inferSelect;
@@ -153,3 +166,4 @@ export type PlaylistRow = typeof playlists.$inferSelect;
 export type PlaylistItemRow = typeof playlistItems.$inferSelect;
 export type YoutubeAudioCacheRow = typeof youtubeAudioCache.$inferSelect;
 export type YoutubeOAuthConnectionRow = typeof youtubeOAuthConnections.$inferSelect;
+export type UserSubscriptionRow = typeof userSubscriptions.$inferSelect;

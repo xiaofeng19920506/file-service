@@ -6,6 +6,8 @@ import {
   fetchYoutubePlaylistData,
   formatUserDisplayName,
   getAudioCacheMap,
+  isValidYoutubeVideoId,
+  assertPremiumPlaybackAccess,
   playlistItems,
   playlists,
   signPlaylistShareToken,
@@ -65,6 +67,8 @@ async function matchBlobIdForTitle(db: Db, title: string): Promise<string | null
 }
 
 const MANUAL_PLAYLIST_SOURCE = 'manual://playlist';
+const LIBRARY_PLAYLIST_SOURCE = 'manual://library';
+const LIBRARY_PLAYLIST_TITLE = '我的音乐';
 
 async function assertPlaylistAccess(
   db: Db,
@@ -77,6 +81,85 @@ async function assertPlaylistAccess(
     return { error: 'forbidden' as const, playlist: null };
   }
   return { error: null, playlist };
+}
+
+function youtubeWatchUrl(videoId: string): string {
+  return `https://www.youtube.com/watch?v=${videoId}`;
+}
+
+async function appendVideosToPlaylist(
+  db: Db,
+  playlistId: string,
+  videos: { videoId: string; title: string }[],
+  audioQueue: Queue,
+) {
+  const existing = await db
+    .select({ youtubeVideoId: playlistItems.youtubeVideoId })
+    .from(playlistItems)
+    .where(eq(playlistItems.playlistId, playlistId));
+  const existingIds = new Set(existing.map((row) => row.youtubeVideoId));
+
+  const [maxOrderRow] = await db
+    .select({ value: max(playlistItems.sortOrder) })
+    .from(playlistItems)
+    .where(eq(playlistItems.playlistId, playlistId));
+  let nextOrder = (maxOrderRow?.value ?? -1) + 1;
+
+  const itemRows = [];
+  let skipped = 0;
+  for (const video of videos) {
+    const videoId = video.videoId.trim();
+    const title = video.title.trim();
+    if (!isValidYoutubeVideoId(videoId) || !title) continue;
+    if (existingIds.has(videoId)) {
+      skipped++;
+      continue;
+    }
+    existingIds.add(videoId);
+    const blobId = await matchBlobIdForTitle(db, title);
+    itemRows.push({
+      playlistId,
+      sortOrder: nextOrder++,
+      title,
+      youtubeVideoId: videoId,
+      youtubeUrl: youtubeWatchUrl(videoId),
+      blobId,
+    });
+  }
+
+  if (itemRows.length > 0) {
+    await db.insert(playlistItems).values(itemRows);
+    await db
+      .update(playlists)
+      .set({ updatedAt: new Date() })
+      .where(eq(playlists.id, playlistId));
+  }
+
+  const [updated] = await db.select().from(playlists).where(eq(playlists.id, playlistId));
+  const detail = await buildPlaylistDetail(db, updated!, audioQueue);
+  return { detail, addedCount: itemRows.length, skippedCount: skipped };
+}
+
+async function getOrCreateLibraryPlaylist(db: Db, userId: string) {
+  const [existing] = await db
+    .select()
+    .from(playlists)
+    .where(
+      and(eq(playlists.createdByUserId, userId), eq(playlists.sourceUrl, LIBRARY_PLAYLIST_SOURCE)),
+    );
+  if (existing) return existing;
+
+  const now = new Date();
+  const [created] = await db
+    .insert(playlists)
+    .values({
+      title: LIBRARY_PLAYLIST_TITLE,
+      sourceUrl: LIBRARY_PLAYLIST_SOURCE,
+      createdByUserId: userId,
+      updatedAt: now,
+    })
+    .returning();
+  return created!;
 }
 
 async function clonePlaylistForUser(
@@ -232,6 +315,14 @@ export function registerPlaylistRoutes(
     return buildPlaylistDetail(db, playlist!, audioQueue);
   });
 
+  app.get('/v1/playlists/library', async (request, reply) => {
+    const user = request.authUser;
+    if (!user) return reply.code(401).send({ error: 'unauthorized' });
+
+    const playlist = await getOrCreateLibraryPlaylist(db, user.id);
+    return buildPlaylistDetail(db, playlist, audioQueue);
+  });
+
   app.post<{ Body: { url?: string } }>('/v1/playlists/import', async (request, reply) => {
     const user = request.authUser;
     if (!user) return reply.code(401).send({ error: 'unauthorized' });
@@ -340,7 +431,10 @@ export function registerPlaylistRoutes(
     return buildPlaylistDetail(db, playlist, audioQueue);
   });
 
-  app.post<{ Params: { id: string }; Body: { url?: string } }>(
+  app.post<{
+    Params: { id: string };
+    Body: { url?: string; items?: { videoId?: string; title?: string }[] };
+  }>(
     '/v1/playlists/:id/items',
     async (request, reply) => {
       const user = request.authUser;
@@ -350,6 +444,31 @@ export function registerPlaylistRoutes(
       const access = await assertPlaylistAccess(db, id, user);
       if (access.error === 'not_found') return reply.code(404).send({ error: 'not_found' });
       if (access.error === 'forbidden') return reply.code(403).send({ error: 'forbidden' });
+
+      const premiumAccess = await assertPremiumPlaybackAccess(db, user.id, request.headers);
+      if (!premiumAccess.ok) {
+        return reply.code(403).send({ error: premiumAccess.error });
+      }
+
+      const bodyItems = request.body?.items;
+      if (Array.isArray(bodyItems) && bodyItems.length > 0) {
+        const videos = bodyItems
+          .map((row) => ({
+            videoId: row.videoId?.trim() ?? '',
+            title: row.title?.trim() ?? '',
+          }))
+          .filter((row) => row.videoId && row.title);
+        if (!videos.length) return reply.code(400).send({ error: 'invalid_request' });
+
+        const result = await appendVideosToPlaylist(db, id, videos, audioQueue);
+        if (!result.addedCount) {
+          return reply.code(409).send({
+            error: 'playlist_items_duplicate',
+            skipped: result.skippedCount,
+          });
+        }
+        return { ...result.detail, addedCount: result.addedCount, skippedCount: result.skippedCount };
+      }
 
       const url = request.body?.url?.trim();
       if (!url) return reply.code(400).send({ error: 'url_required' });
@@ -370,51 +489,19 @@ export function registerPlaylistRoutes(
         return reply.code(400).send({ error: 'youtube_playlist_empty' });
       }
 
-      const existing = await db
-        .select({ youtubeVideoId: playlistItems.youtubeVideoId })
-        .from(playlistItems)
-        .where(eq(playlistItems.playlistId, id));
-      const existingIds = new Set(existing.map((row) => row.youtubeVideoId));
-
-      const [maxOrderRow] = await db
-        .select({ value: max(playlistItems.sortOrder) })
-        .from(playlistItems)
-        .where(eq(playlistItems.playlistId, id));
-      let nextOrder = (maxOrderRow?.value ?? -1) + 1;
-
-      const itemRows = [];
-      let skipped = 0;
-      for (const video of imported.items) {
-        if (existingIds.has(video.videoId)) {
-          skipped++;
-          continue;
-        }
-        existingIds.add(video.videoId);
-        const blobId = await matchBlobIdForTitle(db, video.title);
-        itemRows.push({
-          playlistId: id,
-          sortOrder: nextOrder++,
-          title: video.title,
-          youtubeVideoId: video.videoId,
-          youtubeUrl: video.videoUrl,
-          blobId,
+      const result = await appendVideosToPlaylist(
+        db,
+        id,
+        imported.items.map((video) => ({ videoId: video.videoId, title: video.title })),
+        audioQueue,
+      );
+      if (!result.addedCount) {
+        return reply.code(409).send({
+          error: 'playlist_items_duplicate',
+          skipped: result.skippedCount,
         });
       }
-
-      if (!itemRows.length) {
-        return reply.code(409).send({ error: 'playlist_items_duplicate', skipped });
-      }
-
-      await db.insert(playlistItems).values(itemRows);
-      await db
-        .update(playlists)
-        .set({ updatedAt: new Date() })
-        .where(eq(playlists.id, id));
-
-      const [updated] = await db.select().from(playlists).where(eq(playlists.id, id));
-      const detail = await buildPlaylistDetail(db, updated!, audioQueue);
-
-      return { ...detail, addedCount: itemRows.length, skippedCount: skipped };
+      return { ...result.detail, addedCount: result.addedCount, skippedCount: result.skippedCount };
     },
   );
 

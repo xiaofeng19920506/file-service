@@ -3,8 +3,11 @@ import { and, eq } from 'drizzle-orm';
 import {
   extractApiKeyFromHeaders,
   formatUserDisplayName,
+  getSubscriptionStatusForClient,
+  readRequestClientId,
   isValidPersonName,
   normalizeUserRole,
+  computeRegistrationTrialEndsAt,
   signUserToken,
   users,
   userLoginDevices,
@@ -199,6 +202,7 @@ export function registerAuthRoutes(
     }
 
     try {
+      const premiumTrialEndsAt = computeRegistrationTrialEndsAt(env);
       const [row] = await db
         .insert(users)
         .values({
@@ -207,6 +211,7 @@ export function registerAuthRoutes(
           firstName,
           lastName,
           role: 'member',
+          premiumTrialEndsAt,
         })
         .returning();
 
@@ -465,9 +470,12 @@ export function registerAuthRoutes(
         ? verifyUserToken({ secret: sessionSecret, token: provided })
         : null;
       if (!claims) return reply.code(401).send({ error: 'session_invalid' });
+      const clientId = readRequestClientId(request.headers);
+      const subscription = await getSubscriptionStatusForClient(db, request.authUser.id, clientId);
       return {
         expiresAt: new Date(claims.expiresAtUnix * 1000).toISOString(),
         user: request.authUser,
+        subscription,
       };
     }
     return reply.code(401).send({ error: 'session_invalid' });

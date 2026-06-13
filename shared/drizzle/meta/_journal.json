@@ -85,6 +85,20 @@
       "when": 1749916800000,
       "tag": "0011_user_login_devices",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1750003200000,
+      "tag": "0012_user_subscriptions",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1750089600000,
+      "tag": "0013_user_premium_trial",
+      "breakpoints": true
     }
   ]
 }

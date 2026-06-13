@@ -2,8 +2,11 @@ import { eq } from 'drizzle-orm';
 import type { Queue } from 'bullmq';
 import {
   blobs,
+  assertPremiumPlaybackAccess,
+  canAccessPremiumPlayback,
   ensureYoutubeAudioJobs,
   prioritizeYoutubeAudioJobs,
+  readRequestClientId,
   getAudioCacheMap,
   isValidYoutubeVideoId,
   serializeAudioCache,
@@ -96,8 +99,22 @@ export function registerYoutubeAudioRoutes(
 
       const { token, expiresAt } = signMediaToken(env, videoId);
       const durationSeconds = await getCachedVideoDurationSeconds(videoId);
+      const clientId = readRequestClientId(request.headers);
+      const premium =
+        request.authUser != null
+          ? await canAccessPremiumPlayback(db, request.authUser.id, clientId)
+          : false;
 
       if (status.status !== 'ready' || !status.blobId) {
+        return {
+          ...status,
+          durationSeconds: durationSeconds ?? undefined,
+          previewStreamUrl: buildPreviewUrl(env, videoId, token),
+          previewExpiresAt: expiresAt,
+        };
+      }
+
+      if (!premium) {
         return {
           ...status,
           durationSeconds: durationSeconds ?? undefined,
@@ -155,6 +172,13 @@ export function registerYoutubeAudioRoutes(
   app.post<{ Params: { videoId: string } }>(
     '/v1/youtube/videos/:videoId/audio/stream-url',
     async (request, reply) => {
+      const user = request.authUser;
+      if (!user) return reply.code(401).send({ error: 'unauthorized' });
+      const access = await assertPremiumPlaybackAccess(db, user.id, request.headers);
+      if (!access.ok) {
+        return reply.code(403).send({ error: access.error });
+      }
+
       const videoId = request.params.videoId;
       if (!isValidYoutubeVideoId(videoId)) {
         return reply.code(400).send({ error: 'invalid_video_id' });
