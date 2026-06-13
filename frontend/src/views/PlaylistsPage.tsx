@@ -106,7 +106,6 @@ export default function PlaylistsPage({
   const [playerEngaged, setPlayerEngaged] = useState(false);
   const [repeatMode, setRepeatMode] = useState<PlaylistRepeatMode>(readPlaylistRepeatMode);
   const [tracksEditMode, setTracksEditMode] = useState(false);
-  const autoPlayOnLoadRef = useRef<string | null>(null);
   const homeResumeDoneRef = useRef(false);
   const userDismissedHomeResumeRef = useRef(false);
   const isMobileViewport = useMediaQuery(MOBILE_MEDIA_QUERY);
@@ -248,7 +247,6 @@ export default function PlaylistsPage({
       setPlaying(false);
       setPlayerEngaged(false);
       setActiveIndex(0);
-      autoPlayOnLoadRef.current = null;
     }
     setShuffleOrder([]);
     setShuffleCursor(0);
@@ -267,9 +265,6 @@ export default function PlaylistsPage({
     if (!target) return;
 
     homeResumeDoneRef.current = true;
-    if (target.itemCount > 0) {
-      autoPlayOnLoadRef.current = target.id;
-    }
     onSelectId(target.id);
   }, [selectedId, shareToken, loadingList, playlists, onSelectId]);
 
@@ -499,7 +494,7 @@ export default function PlaylistsPage({
   const canGoPrev = shuffleEnabled ? shuffleCursor > 0 : activeIndex > 0;
   const canGoNext = shuffleEnabled ? itemCount > 0 : activeIndex < itemCount - 1;
 
-  const engageAndPlay = (index: number) => {
+  const engageAtIndex = (index: number, shouldPlay: boolean) => {
     if (shuffleEnabled && detail?.items.length) {
       if (shuffleOrder.length !== detail.items.length) {
         beginShuffleRound(detail.items.length, index);
@@ -508,9 +503,13 @@ export default function PlaylistsPage({
       }
     }
     setActiveIndex(index);
-    setPlaying(true);
+    setPlaying(shouldPlay);
     setPlayerEngaged(true);
   };
+
+  const engageAndPlay = (index: number) => engageAtIndex(index, true);
+
+  const openPlayerPaused = (index: number) => engageAtIndex(index, false);
 
   const startPlayback = () => {
     if (!detail?.items.length) return;
@@ -522,20 +521,15 @@ export default function PlaylistsPage({
     engageAndPlay(0);
   };
 
-  useEffect(() => {
-    if (loadingDetail || !selectedId || !detail) return;
-    if (detail.items.length === 0) return;
-    if (playerEngaged) return;
-
-    const shouldAutoPlay =
-      autoPlayOnLoadRef.current === selectedId
-      || (isMobileViewport && !userDismissedHomeResumeRef.current);
-
-    if (!shouldAutoPlay) return;
-
-    autoPlayOnLoadRef.current = null;
-    startPlayback();
-  }, [loadingDetail, selectedId, detail, playerEngaged, isMobileViewport, shuffleEnabled, detail?.items.length]);
+  const openPlaybackPaused = () => {
+    if (!detail?.items.length) return;
+    if (shuffleEnabled) {
+      const order = beginShuffleRound(detail.items.length);
+      openPlayerPaused(order[0]!);
+      return;
+    }
+    openPlayerPaused(0);
+  };
 
   const toggleShuffle = () => {
     const next = !shuffleEnabled;
@@ -716,9 +710,9 @@ export default function PlaylistsPage({
     if (!detail?.items.length) return;
     if (mode === 'audio') {
       if (!playerEngaged) {
-        startPlayback();
+        openPlaybackPaused();
       } else {
-        setPlaying(true);
+        setPlaying(false);
       }
       return;
     }
@@ -1206,9 +1200,6 @@ export default function PlaylistsPage({
                                 cancelRename();
                               }
                               userDismissedHomeResumeRef.current = false;
-                              if (row.itemCount > 0) {
-                                autoPlayOnLoadRef.current = row.id;
-                              }
                               onSelectId(row.id);
                             }}
                           >
@@ -1512,9 +1503,6 @@ export default function PlaylistsPage({
           onClose={onClearShareToken}
           onAccepted={(data) => {
             void loadList();
-            if (isMobileViewport && data.items.length > 0) {
-              autoPlayOnLoadRef.current = data.playlist.id;
-            }
             onSelectId(data.playlist.id);
             setDetail(data);
             setNotice(t('playlists.shareAccepted'));
