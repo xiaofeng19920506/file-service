@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { APP_HOME_PAGE } from '../lib/permissions';
+import { isMobileViewport } from './useMediaQuery';
 
 export type AppPage =
   | 'library'
@@ -59,7 +60,10 @@ function routeFromHash(rawHash: string): AppRoute {
     const qIndex = hash.indexOf('?');
     const params =
       qIndex === -1 ? new URLSearchParams() : new URLSearchParams(hash.slice(qIndex + 1));
-    const playlistId = params.get('id')?.trim() || undefined;
+    const hasShare = Boolean(params.get('share')?.trim());
+    const hasYoutubeOauth = Boolean(params.get('youtube_oauth')?.trim());
+    const keepIdInUrl = !isMobileViewport() || hasShare || hasYoutubeOauth;
+    const playlistId = keepIdInUrl ? params.get('id')?.trim() || undefined : undefined;
     const playlistShareToken = params.get('share')?.trim() || undefined;
     return { page: 'playlists', playlistId, playlistShareToken };
   }
@@ -102,11 +106,17 @@ export function useAppPage() {
   }, []);
 
   const navigateToPlaylist = useCallback((id?: string) => {
-    const hash = id ? `#/playlists?id=${encodeURIComponent(id)}` : HOME_HASH;
+    const isMobile = isMobileViewport();
+    const keepIdInUrl = Boolean(id) && !isMobile;
+    const hash = keepIdInUrl ? `#/playlists?id=${encodeURIComponent(id!)}` : HOME_HASH;
     if (window.location.hash !== hash) {
       window.location.hash = hash;
     }
-    setRoute(routeFromHash(hash));
+    const next = routeFromHash(hash);
+    if (isMobile) {
+      next.playlistId = id;
+    }
+    setRoute(next);
   }, []);
 
   const navigateClearPlaylistShare = useCallback((id?: string) => {

@@ -47,7 +47,7 @@ import {
 import { useI18n } from '../i18n';
 import { usePlaylistsMobileMenu, PlaylistsMobileMenuPortal } from '../contexts/PlaylistsMobileMenuContext';
 import { useAuth } from '../auth/AuthContext';
-import { readLastPlaylistId, writeLastPlaylistId } from '../lib/playlist-last-open';
+import { writeLastPlaylistId } from '../lib/playlist-last-open';
 
 type PlaylistsPageProps = {
   selectedId?: string;
@@ -106,8 +106,6 @@ export default function PlaylistsPage({
   const [playerEngaged, setPlayerEngaged] = useState(false);
   const [repeatMode, setRepeatMode] = useState<PlaylistRepeatMode>(readPlaylistRepeatMode);
   const [tracksEditMode, setTracksEditMode] = useState(false);
-  const homeResumeDoneRef = useRef(false);
-  const userDismissedHomeResumeRef = useRef(false);
   const isMobileViewport = useMediaQuery(MOBILE_MEDIA_QUERY);
   const { closeMenu } = usePlaylistsMobileMenu();
 
@@ -254,22 +252,7 @@ export default function PlaylistsPage({
     setTrackDragOver(null);
   }, [selectedId, loadDetail]);
 
-  useEffect(() => {
-    if (selectedId || shareToken || loadingList || playlists.length === 0) return;
-    if (userDismissedHomeResumeRef.current || homeResumeDoneRef.current) return;
-
-    const lastId = readLastPlaylistId();
-    const lastRow = lastId ? playlists.find((row) => row.id === lastId) : undefined;
-    const withTracks = playlists.find((row) => row.itemCount > 0);
-    const target = (lastRow && lastRow.itemCount > 0 ? lastRow : withTracks) ?? playlists[0];
-    if (!target) return;
-
-    homeResumeDoneRef.current = true;
-    onSelectId(target.id);
-  }, [selectedId, shareToken, loadingList, playlists, onSelectId]);
-
   const backToList = () => {
-    userDismissedHomeResumeRef.current = true;
     onSelectId(undefined);
   };
 
@@ -909,7 +892,6 @@ export default function PlaylistsPage({
 
   const focusImportField = () => {
     closeMenu();
-    userDismissedHomeResumeRef.current = true;
     setPlayerEngaged(false);
     setPlaying(false);
     onSelectId(undefined);
@@ -1199,7 +1181,6 @@ export default function PlaylistsPage({
                               if (renamingId !== null && renamingId !== row.id) {
                                 cancelRename();
                               }
-                              userDismissedHomeResumeRef.current = false;
                               onSelectId(row.id);
                             }}
                           >
