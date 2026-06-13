@@ -713,6 +713,15 @@ export default function PlaylistsPage({
   const onPlaybackModeChange = (mode: PlaylistPlaybackMode) => {
     setPlaybackMode(mode);
     writePlaylistPlaybackMode(mode);
+    if (!detail?.items.length) return;
+    if (mode === 'audio') {
+      if (!playerEngaged) {
+        startPlayback();
+      } else {
+        setPlaying(true);
+      }
+      return;
+    }
     if (mode === 'video' && playerEngaged) {
       setPlaying(true);
     }

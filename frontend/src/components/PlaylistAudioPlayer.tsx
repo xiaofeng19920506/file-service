@@ -522,18 +522,18 @@ export default function PlaylistAudioPlayer({
 
     const trackKey = `${activeIndex}:${current?.youtubeVideoId ?? ''}`;
     const isNewTrack = trackKey !== playbackTrackKeyRef.current;
-    playbackTrackKeyRef.current = trackKey;
-
-    skipPauseSyncRef.current = true;
     if (isNewTrack) {
+      playbackTrackKeyRef.current = trackKey;
+      skipPauseSyncRef.current = true;
       el.load();
+    } else {
+      skipPauseSyncRef.current = true;
     }
     attemptPlay();
   }, [streamUrl, playing, attemptPlay, activeIndex, current?.youtubeVideoId]);
 
   useEffect(() => {
     endedHandledRef.current = false;
-    playbackTrackKeyRef.current = '';
   }, [activeIndex, current?.youtubeVideoId]);
 
   useEffect(() => {
@@ -657,6 +657,9 @@ export default function PlaylistAudioPlayer({
   const handleAudioReady = useCallback(
     (e: React.SyntheticEvent<HTMLAudioElement>) => {
       syncDurationFromAudio(e.currentTarget);
+      if (!wantPlayRef.current) return;
+      skipPauseSyncRef.current = true;
+      void e.currentTarget.play().catch(() => {});
     },
     [syncDurationFromAudio],
   );
