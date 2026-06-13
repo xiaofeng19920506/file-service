@@ -171,6 +171,7 @@ export default function PlaylistAudioPlayer({
   const playbackTrackKeyRef = useRef('');
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [usingPreview, setUsingPreview] = useState(false);
+  const usingPreviewRef = useRef(false);
   const [loadingStream, setLoadingStream] = useState(false);
   const [playerError, setPlayerError] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
@@ -210,6 +211,10 @@ export default function PlaylistAudioPlayer({
   useEffect(() => {
     wantPlayRef.current = playing;
   }, [playing]);
+
+  useEffect(() => {
+    usingPreviewRef.current = usingPreview;
+  }, [usingPreview]);
 
   useEffect(() => {
     const panel = lyricsPanelRef.current;
@@ -258,8 +263,12 @@ export default function PlaylistAudioPlayer({
       if (status.streamUrl) {
         return { url: status.streamUrl, preview: false };
       }
-      const streamed = await getYoutubeAudioStreamUrl(videoId);
-      return { url: streamed.url, preview: false };
+      try {
+        const streamed = await getYoutubeAudioStreamUrl(videoId);
+        return { url: streamed.url, preview: false };
+      } catch {
+        /* 无 premium 权限时回退 preview */
+      }
     }
     if (status.previewStreamUrl) {
       return { url: status.previewStreamUrl, preview: true };
@@ -270,9 +279,35 @@ export default function PlaylistAudioPlayer({
   const applyStreamUrl = useCallback((url: string, preview: boolean) => {
     setStreamUrl(resolveStreamSrc(url));
     setUsingPreview(preview);
+    usingPreviewRef.current = preview;
     setLoadingStream(false);
     setPlayerError(null);
   }, []);
+
+  const replayCurrentTrackStream = useCallback(async () => {
+    const videoId = current?.youtubeVideoId;
+    if (!videoId) return;
+
+    endedHandledRef.current = false;
+    skipPauseSyncRef.current = true;
+    playbackTrackKeyRef.current = '';
+
+    try {
+      const status = (await refreshAudioStatus(videoId)) ?? audioStatus;
+      if (!status) return;
+      const picked = await pickStreamFromStatus(videoId, status);
+      if (!picked) return;
+      applyStreamUrl(picked.url, picked.preview);
+    } catch {
+      /* 保持当前流，用户可手动重试 */
+    }
+  }, [
+    current?.youtubeVideoId,
+    audioStatus,
+    refreshAudioStatus,
+    pickStreamFromStatus,
+    applyStreamUrl,
+  ]);
 
   useEffect(() => {
     if (!current?.youtubeVideoId) return;
@@ -413,7 +448,7 @@ export default function PlaylistAudioPlayer({
     t,
   ]);
 
-  // 后台缓存完成后从 preview 切到完整 MP3，避免直播流结束误触「单曲循环」
+  // 后台缓存完成后从 preview 切到完整 MP3
   useEffect(() => {
     const videoId = current?.youtubeVideoId;
     if (!videoId || !usingPreview || !isReady) return;
@@ -430,32 +465,13 @@ export default function PlaylistAudioPlayer({
         const el = audioRef.current;
         const savedTime = el?.currentTime ?? 0;
         const wasPlaying = wantPlayRef.current;
-        const trackDuration = el?.duration;
-        const trackFinished =
-          el?.ended === true ||
-          (typeof trackDuration === 'number' &&
-            Number.isFinite(trackDuration) &&
-            trackDuration > 0 &&
-            savedTime >= trackDuration - 0.5);
-
-        if (trackFinished) {
-          if (wasPlaying) {
-            if (onNextTrack) onNextTrack();
-            else if (activeIndex < items.length - 1) {
-              onActiveIndexChange(activeIndex + 1);
-              onPlayingChange(true);
-            } else {
-              onPlayingChange(false);
-            }
-          }
-          return;
-        }
 
         if (!cancelled) applyStreamUrl(picked.url, false);
 
-        if (el && savedTime > 0.5) {
+        if (el) {
+          skipPauseSyncRef.current = true;
           const restore = () => {
-            el.currentTime = savedTime;
+            if (savedTime > 0.5) el.currentTime = savedTime;
             el.removeEventListener('loadedmetadata', restore);
             if (wasPlaying) void el.play().catch(() => {});
           };
@@ -477,11 +493,6 @@ export default function PlaylistAudioPlayer({
     pickStreamFromStatus,
     refreshAudioStatus,
     applyStreamUrl,
-    onNextTrack,
-    onActiveIndexChange,
-    onPlayingChange,
-    activeIndex,
-    items.length,
   ]);
 
   const attemptPlay = useCallback(() => {
@@ -722,19 +733,31 @@ export default function PlaylistAudioPlayer({
   );
 
   const handleEnded = useCallback(() => {
+    if (usingPreviewRef.current) {
+      if (wantPlayRef.current) {
+        void replayCurrentTrackStream();
+      } else {
+        onPlayingChange(false);
+      }
+      return;
+    }
     advanceToNextTrack();
-  }, [advanceToNextTrack]);
+  }, [advanceToNextTrack, replayCurrentTrackStream, onPlayingChange]);
 
   const handlePause = useCallback(
     (e: React.SyntheticEvent<HTMLAudioElement>) => {
       if (skipPauseSyncRef.current) return;
       if (e.currentTarget.ended) {
+        if (usingPreviewRef.current) {
+          if (wantPlayRef.current) void replayCurrentTrackStream();
+          return;
+        }
         advanceToNextTrack();
         return;
       }
       onPlayingChange(false);
     },
-    [advanceToNextTrack, onPlayingChange],
+    [advanceToNextTrack, replayCurrentTrackStream, onPlayingChange],
   );
 
   const goNext = useCallback(() => {
