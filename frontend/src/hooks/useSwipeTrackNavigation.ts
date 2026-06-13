@@ -12,7 +12,7 @@ type UseSwipeTrackNavigationOptions = {
 };
 
 /**
- * 手机端滑动切歌：右滑 / 下滑 → 下一首，左滑 / 上滑 → 上一首。
+ * 手机端滑动切歌：左滑 / 上滑 → 下一首，右滑 / 下滑 → 上一首。
  */
 export function useSwipeTrackNavigation({
   targetRef,
@@ -68,11 +68,11 @@ export function useSwipeTrackNavigation({
       if (Math.max(absDx, absDy) < thresholdPx) return;
 
       if (absDx >= absDy) {
-        if (dx >= thresholdPx && canGoNextRef.current) onNextRef.current?.();
-        else if (dx <= -thresholdPx && canGoPrevRef.current) onPrevRef.current?.();
+        if (dx <= -thresholdPx && canGoNextRef.current) onNextRef.current?.();
+        else if (dx >= thresholdPx && canGoPrevRef.current) onPrevRef.current?.();
       } else {
-        if (dy >= thresholdPx && canGoNextRef.current) onNextRef.current?.();
-        else if (dy <= -thresholdPx && canGoPrevRef.current) onPrevRef.current?.();
+        if (dy <= -thresholdPx && canGoNextRef.current) onNextRef.current?.();
+        else if (dy >= thresholdPx && canGoPrevRef.current) onPrevRef.current?.();
       }
     };
 
