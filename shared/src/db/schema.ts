@@ -16,6 +16,13 @@ export const users = pgTable('users', {
   lastName: text('last_name').notNull().default(''),
   role: text('role').notNull().default('member'),
   premiumTrialEndsAt: timestamp('premium_trial_ends_at', { withTimezone: true }),
+  phone: text('phone').notNull().default(''),
+  addressLine1: text('address_line1').notNull().default(''),
+  addressLine2: text('address_line2').notNull().default(''),
+  city: text('city').notNull().default(''),
+  stateProvince: text('state_province').notNull().default(''),
+  postalCode: text('postal_code').notNull().default(''),
+  country: text('country').notNull().default(''),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),

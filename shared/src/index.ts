@@ -15,6 +15,7 @@ export * from './permissions.js';
 export * from './storage/index.js';
 export * from './song-title.js';
 export * from './user-name.js';
+export * from './user-contact.js';
 export * from './youtube.js';
 export * from './youtube-search.js';
 export * from './youtube-captions.js';

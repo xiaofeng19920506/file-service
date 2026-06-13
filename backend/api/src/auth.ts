@@ -6,7 +6,9 @@ import {
   getSubscriptionStatusForClient,
   readRequestClientId,
   isValidPersonName,
+  normalizeUserContact,
   normalizeUserRole,
+  validateUserContact,
   computeRegistrationTrialEndsAt,
   signUserToken,
   users,
@@ -28,6 +30,13 @@ export type AuthUser = {
   firstName: string;
   lastName: string;
   role: UserRole;
+  phone: string;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  stateProvince: string;
+  postalCode: string;
+  country: string;
 };
 
 declare module 'fastify' {
@@ -66,6 +75,13 @@ function userPayload(row: UserRow): AuthUser {
     firstName: row.firstName,
     lastName: row.lastName,
     role: normalizeUserRole(row.role),
+    phone: row.phone,
+    addressLine1: row.addressLine1,
+    addressLine2: row.addressLine2,
+    city: row.city,
+    stateProvince: row.stateProvince,
+    postalCode: row.postalCode,
+    country: row.country,
   };
 }
 
@@ -148,6 +164,13 @@ export function resolveAuthUser(
     firstName: localPart,
     lastName: '',
     role: claims.role,
+    phone: '',
+    addressLine1: '',
+    addressLine2: '',
+    city: '',
+    stateProvince: '',
+    postalCode: '',
+    country: '',
   };
 }
 
@@ -178,6 +201,13 @@ export function registerAuthRoutes(
       password?: string;
       firstName?: string;
       lastName?: string;
+      phone?: string;
+      addressLine1?: string;
+      addressLine2?: string;
+      city?: string;
+      stateProvince?: string;
+      postalCode?: string;
+      country?: string;
       deviceKey?: string;
       deviceName?: string;
       platform?: string;
@@ -201,6 +231,20 @@ export function registerAuthRoutes(
       return reply.code(400).send({ error: 'invalid_last_name' });
     }
 
+    const contact = normalizeUserContact({
+      phone: request.body?.phone,
+      addressLine1: request.body?.addressLine1,
+      addressLine2: request.body?.addressLine2,
+      city: request.body?.city,
+      stateProvince: request.body?.stateProvince,
+      postalCode: request.body?.postalCode,
+      country: request.body?.country,
+    });
+    const contactError = validateUserContact(contact);
+    if (contactError) {
+      return reply.code(400).send({ error: contactError });
+    }
+
     try {
       const premiumTrialEndsAt = computeRegistrationTrialEndsAt(env);
       const [row] = await db
@@ -212,6 +256,7 @@ export function registerAuthRoutes(
           lastName,
           role: 'member',
           premiumTrialEndsAt,
+          ...contact,
         })
         .returning();
 
@@ -344,7 +389,19 @@ export function registerAuthRoutes(
     };
   });
 
-  app.patch<{ Body: { firstName?: string; lastName?: string } }>(
+  app.patch<{
+    Body: {
+      firstName?: string;
+      lastName?: string;
+      phone?: string;
+      addressLine1?: string;
+      addressLine2?: string;
+      city?: string;
+      stateProvince?: string;
+      postalCode?: string;
+      country?: string;
+    };
+  }>(
     '/v1/auth/profile',
     async (request, reply) => {
       const user = request.authUser;
@@ -359,9 +416,23 @@ export function registerAuthRoutes(
         return reply.code(400).send({ error: 'invalid_last_name' });
       }
 
+      const contact = normalizeUserContact({
+        phone: request.body?.phone,
+        addressLine1: request.body?.addressLine1,
+        addressLine2: request.body?.addressLine2,
+        city: request.body?.city,
+        stateProvince: request.body?.stateProvince,
+        postalCode: request.body?.postalCode,
+        country: request.body?.country,
+      });
+      const contactError = validateUserContact(contact);
+      if (contactError) {
+        return reply.code(400).send({ error: contactError });
+      }
+
       const [row] = await db
         .update(users)
-        .set({ firstName, lastName })
+        .set({ firstName, lastName, ...contact })
         .where(eq(users.id, user.id))
         .returning();
       if (!row) return reply.code(404).send({ error: 'not_found' });

@@ -23,6 +23,13 @@ export type AuthUser = {
   firstName: string;
   lastName: string;
   role: UserRole;
+  phone: string;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  stateProvince: string;
+  postalCode: string;
+  country: string;
 };
 
 type StoredUser = Partial<AuthUser> & {
@@ -45,6 +52,13 @@ function normalizeStoredUser(raw: StoredUser): AuthUser | null {
     firstName,
     lastName,
     role: normalizeUserRole(raw.role),
+    phone: raw.phone?.trim() ?? '',
+    addressLine1: raw.addressLine1?.trim() ?? '',
+    addressLine2: raw.addressLine2?.trim() ?? '',
+    city: raw.city?.trim() ?? '',
+    stateProvince: raw.stateProvince?.trim() ?? '',
+    postalCode: raw.postalCode?.trim() ?? '',
+    country: raw.country?.trim() ?? '',
   };
 }
 

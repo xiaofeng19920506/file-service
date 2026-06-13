@@ -99,6 +99,13 @@
       "when": 1750089600000,
       "tag": "0013_user_premium_trial",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1750176000000,
+      "tag": "0014_user_contact",
+      "breakpoints": true
     }
   ]
 }
