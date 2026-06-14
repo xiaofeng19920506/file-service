@@ -4329,9 +4329,11 @@
 
 .playlists-list-swipe {
   position: relative;
+  width: 100%;
   overflow: hidden;
   border-radius: 10px;
   touch-action: pan-y;
+  isolation: isolate;
 }
 
 .playlists-list-swipe-action {
@@ -4378,9 +4380,16 @@
 .playlists-list-swipe-panel {
   position: relative;
   z-index: 1;
+  width: 100%;
+  background: var(--surface);
   will-change: transform;
   transition: transform 0.22s ease;
   touch-action: pan-y;
+}
+
+.playlists-list-swipe-panel .playlists-list-item {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .playlists-list-swipe-panel.is-dragging {
@@ -4393,9 +4402,18 @@
 }
 
 .playlists-sidebar-head--mobile-toolbar {
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   min-height: var(--touch-target);
   padding-block: 0.35rem;
+}
+
+.playlists-sidebar-head--mobile-toolbar h2 {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 .playlists-list-row-inner {

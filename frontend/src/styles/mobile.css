@@ -520,6 +520,10 @@
     padding-inline: var(--page-gutter);
   }
 
+  .playlists-sidebar--lists-only .playlists-sidebar-head--mobile-toolbar h2 {
+    margin: 0;
+  }
+
   .playlists-sidebar--lists-only .playlists-sidebar-add-btn {
     width: var(--touch-target);
     height: var(--touch-target);

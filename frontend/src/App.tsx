@@ -197,7 +197,9 @@ function AppShellInner({
         <div className="nav-inner">
           <div className="nav-brand">
             <span className="nav-brand-name nav-brand-app-name">{t('app.name')}</span>
-            <span className="nav-brand-name nav-brand-page-title">{pageTitle}</span>
+            {page !== 'playlist-lists' && (
+              <span className="nav-brand-name nav-brand-page-title">{pageTitle}</span>
+            )}
             <span className="nav-brand-tagline">{t('app.tagline')}</span>
           </div>
 

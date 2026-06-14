@@ -1125,7 +1125,7 @@ export default function PlaylistsPage({
       <div
         className={`playlists-sidebar-head${isMobileLists ? ' playlists-sidebar-head--mobile-toolbar' : ''}`}
       >
-        {!isMobileLists && <h2>{t('playlists.savedTitle')}</h2>}
+        <h2>{isMobileLists ? t('nav.playlistListsShort') : t('playlists.savedTitle')}</h2>
         {isMobileLists ? (
           <button
             type="button"
