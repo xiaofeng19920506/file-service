@@ -54,9 +54,9 @@
     font-size: 0.78rem;
   }
 
-  .playlists-track--swipe {
-    border-radius: 10px;
-    overflow: hidden;
+  .playlists-track-swipe-action-btn {
+    min-height: 100%;
+    font-size: 0.78rem;
   }
 
   .playlists-page[data-mobile-home-preview='true'] {
@@ -98,10 +98,6 @@
     padding-bottom: calc(
       var(--playlists-mobile-dock-height-active) + var(--bottom-nav-height) + 0.75rem
     );
-  }
-
-  .playlists-track-swipe .playlists-track-main {
-    border-radius: 10px;
   }
 
   .playlists-list-rename-btn,

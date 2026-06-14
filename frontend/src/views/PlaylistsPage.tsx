@@ -1628,7 +1628,7 @@ export default function PlaylistsPage({
                           return (
                             <li
                               key={item.id}
-                              className={`playlists-track${isActive ? ' active' : ''}${isPlaying ? ' playing' : ''}${isDragging ? ' dragging' : ''}${isDragOverBefore ? ' drag-over-before' : ''}${isDragOverAfter ? ' drag-over-after' : ''}${useTrackSwipe ? ' playlists-track--swipe' : ''}`}
+                              className={`playlists-track${isActive ? ' active' : ''}${isPlaying ? ' playing' : ''}${isDragging ? ' dragging' : ''}${isDragOverBefore ? ' drag-over-before' : ''}${isDragOverAfter ? ' drag-over-after' : ''}`}
                               onDragOver={(e) => {
                                 if (!tracksEditMode || trackDragIndex === null || savingOrder) return;
                                 e.preventDefault();
@@ -1656,7 +1656,6 @@ export default function PlaylistsPage({
                                 <PlaylistTrackSwipeRow
                                   title={item.title}
                                   thumbUrl={youtubeThumb(item.youtubeVideoId)}
-                                  isActive={isActive}
                                   isPlaying={isPlaying}
                                   opened={trackSwipeOpenId === item.id}
                                   onOpenedChange={(open) => {

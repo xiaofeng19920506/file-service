@@ -8,7 +8,6 @@ const SUPPRESS_CLICK_MS = 700;
 type PlaylistTrackSwipeRowProps = {
   title: string;
   thumbUrl: string;
-  isActive: boolean;
   isPlaying: boolean;
   opened: boolean;
   onOpenedChange: (open: boolean) => void;
@@ -20,7 +19,6 @@ type PlaylistTrackSwipeRowProps = {
 export default function PlaylistTrackSwipeRow({
   title,
   thumbUrl,
-  isActive,
   isPlaying,
   opened,
   onOpenedChange,
@@ -53,7 +51,7 @@ export default function PlaylistTrackSwipeRow({
   }, []);
 
   useEffect(() => {
-    setOffset(opened ? ACTION_WIDTH_PX : 0);
+    setOffset(opened ? -ACTION_WIDTH_PX : 0);
   }, [opened]);
 
   const suppressClicks = () => {
@@ -68,8 +66,8 @@ export default function PlaylistTrackSwipeRow({
   };
 
   const snapOffset = (value: number): { offset: number; open: boolean } => {
-    if (value >= ACTION_WIDTH_PX / 2) {
-      return { offset: ACTION_WIDTH_PX, open: true };
+    if (value <= -ACTION_WIDTH_PX / 2) {
+      return { offset: -ACTION_WIDTH_PX, open: true };
     }
     return { offset: 0, open: false };
   };
@@ -95,8 +93,8 @@ export default function PlaylistTrackSwipeRow({
     }
 
     const next = Math.max(
-      0,
-      Math.min(ACTION_WIDTH_PX, dragRef.current.startOffset + delta),
+      -ACTION_WIDTH_PX,
+      Math.min(0, dragRef.current.startOffset + delta),
     );
     setOffset(next);
   };
@@ -148,28 +146,16 @@ export default function PlaylistTrackSwipeRow({
   };
 
   return (
-    <div className="playlists-list-swipe playlists-track-swipe" ref={rootRef}>
+    <div className="playlists-track-swipe" ref={rootRef}>
       <div
-        className={`playlists-list-swipe-track${dragging ? ' is-dragging' : ''}`}
+        className={`playlists-track-swipe-track${dragging ? ' is-dragging' : ''}`}
         style={{
-          transform: `translateX(${-ACTION_WIDTH_PX + offset}px)`,
+          transform: `translateX(${offset}px)`,
           width: contentWidth > 0 ? contentWidth + ACTION_WIDTH_PX : undefined,
         }}
       >
-        <div className="playlists-list-swipe-action playlists-list-swipe-action--delete">
-          <button
-            type="button"
-            className="playlists-list-swipe-action-btn"
-            disabled={deleteBusy}
-            onPointerDown={stopActionPointer}
-            onPointerUp={handleDeletePointerUp}
-          >
-            {deleteBusy ? t('playlists.removingTrack') : t('playlists.removeTrackShort')}
-          </button>
-        </div>
-
         <div
-          className={`playlists-list-swipe-content${isActive ? ' active' : ''}`}
+          className="playlists-track-swipe-content"
           style={{ width: contentWidth > 0 ? contentWidth : undefined }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
@@ -178,7 +164,7 @@ export default function PlaylistTrackSwipeRow({
         >
           <button
             type="button"
-            className={`playlists-track-main${isActive ? ' active' : ''}${isPlaying ? ' playing' : ''}`}
+            className={`playlists-track-main${isPlaying ? ' playing' : ''}`}
             onClick={handlePlay}
             title={title}
           >
@@ -189,6 +175,18 @@ export default function PlaylistTrackSwipeRow({
               </span>
             </span>
             <span className="playlists-track-title">{title}</span>
+          </button>
+        </div>
+
+        <div className="playlists-track-swipe-action playlists-track-swipe-action--delete">
+          <button
+            type="button"
+            className="playlists-track-swipe-action-btn"
+            disabled={deleteBusy}
+            onPointerDown={stopActionPointer}
+            onPointerUp={handleDeletePointerUp}
+          >
+            {deleteBusy ? t('playlists.removingTrack') : t('playlists.removeTrackShort')}
           </button>
         </div>
       </div>
