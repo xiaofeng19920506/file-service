@@ -5,7 +5,7 @@ import PlaylistYoutubeSearchPanel from '../components/PlaylistYoutubeSearchPanel
 import ConfirmModal from '../components/ConfirmModal';
 import SharePlaylistModal from '../components/SharePlaylistModal';
 import ExportYoutubePlaylistModal from '../components/ExportYoutubePlaylistModal';
-import { DragHandleIcon, PencilIcon } from '../components/icons';
+import { DragHandleIcon, PencilIcon, PlusIcon } from '../components/icons';
 import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 import PlaylistAudioPlayer, {
   type PlaylistAudioProgressHandle,
@@ -101,6 +101,8 @@ export default function PlaylistsPage({
   const [libraryVideoIds, setLibraryVideoIds] = useState<Set<string>>(() => new Set());
   const [detail, setDetail] = useState<PlaylistDetail | null>(null);
   const [newListTitle, setNewListTitle] = useState('');
+  const [showMobileCreateList, setShowMobileCreateList] = useState(false);
+  const createListInputRef = useRef<HTMLInputElement>(null);
   const [loadingList, setLoadingList] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [creatingList, setCreatingList] = useState(false);
@@ -299,6 +301,9 @@ export default function PlaylistsPage({
       setPlaying(false);
       setPlayerEngaged(false);
       setNotice(t('playlists.createSuccess', { title: data.playlist.title }));
+      if (isMobileViewport && mobileHome === 'lists' && !selectedId) {
+        setShowMobileCreateList(false);
+      }
     } catch (err) {
       setError(friendlyError(err instanceof Error ? err.message : 'create_playlist_failed', t));
     } finally {
@@ -1096,16 +1101,38 @@ export default function PlaylistsPage({
     );
   };
 
-  const renderPlaylistLibrary = () => (
+  const renderPlaylistLibrary = () => {
+    const isMobileLists = isMobileViewport && !selectedId && mobileHome === 'lists';
+    const showCreateForm = !isMobileLists || showMobileCreateList;
+
+    return (
     <>
       <div className="playlists-sidebar-head">
-        <h2>{t('playlists.savedTitle')}</h2>
-        {!loadingList && playlists.length > 0 && (
-          <span className="playlists-sidebar-count">{playlists.length}</span>
+        <h2>{isMobileLists ? t('nav.playlistListsShort') : t('playlists.savedTitle')}</h2>
+        {isMobileLists ? (
+          <button
+            type="button"
+            className="playlists-sidebar-add-btn"
+            onClick={() => {
+              setShowMobileCreateList(true);
+              requestAnimationFrame(() => createListInputRef.current?.focus());
+            }}
+            disabled={creatingList}
+            aria-label={t('playlists.importTitle')}
+            title={t('playlists.importTitle')}
+          >
+            <PlusIcon />
+          </button>
+        ) : (
+          !loadingList &&
+          playlists.length > 0 && (
+            <span className="playlists-sidebar-count">{playlists.length}</span>
+          )
         )}
       </div>
 
       <div className="playlists-sidebar-list">
+        {showCreateForm && (
         <form
           className="playlists-create-inline"
           onSubmit={(e) => void handleCreateList(e)}
@@ -1113,6 +1140,7 @@ export default function PlaylistsPage({
         >
           <div className="playlists-create-row">
             <input
+              ref={createListInputRef}
               id="playlist-create-title"
               type="text"
               className="playlists-text-input"
@@ -1133,6 +1161,7 @@ export default function PlaylistsPage({
             </button>
           </div>
         </form>
+        )}
 
         {loadingList ? (
           <p className="playlists-muted">{t('playlists.loading')}</p>
@@ -1216,7 +1245,12 @@ export default function PlaylistsPage({
         )}
       </div>
     </>
-  );
+    );
+  };
+
+  useEffect(() => {
+    if (mobileHome !== 'lists') setShowMobileCreateList(false);
+  }, [mobileHome]);
 
   const mobileHomeView =
     isMobileViewport && !selectedId ? mobileHome : undefined;

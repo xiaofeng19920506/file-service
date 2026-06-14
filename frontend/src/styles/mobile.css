@@ -515,6 +515,24 @@
     padding-inline: var(--page-gutter);
   }
 
+  .playlists-sidebar--lists-only .playlists-sidebar-head h2 {
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .playlists-sidebar--lists-only .playlists-sidebar-add-btn {
+    width: var(--touch-target);
+    height: var(--touch-target);
+  }
+
+  .playlists-sidebar--lists-only .playlists-sidebar-add-btn svg {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+
   .playlists-sidebar--lists-only .playlists-sidebar-list {
     flex: 1;
     min-height: 0;

@@ -4255,6 +4255,37 @@
   font-variant-numeric: tabular-nums;
 }
 
+.playlists-sidebar-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid var(--border-light);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--blue);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.playlists-sidebar-add-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--blue) 8%, var(--surface));
+  border-color: color-mix(in srgb, var(--blue) 35%, var(--border-light));
+}
+
+.playlists-sidebar-add-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.playlists-sidebar-add-btn svg {
+  width: 1rem;
+  height: 1rem;
+}
+
 .playlists-sidebar-list {
   flex: 1;
   overflow: auto;
