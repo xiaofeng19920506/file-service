@@ -7,9 +7,9 @@ const en: MessageTree = {
     more: 'More actions',
   },
   app: {
-    title: 'Worship Library — Presentation Manager',
-    name: 'Worship Library',
-    tagline: 'Manage your worship song presentation library',
+    title: 'Music Playlist Player',
+    name: 'Music Playlist Player',
+    tagline: 'Search, organize, and play music playlists',
   },
   library: {
     description:
@@ -179,7 +179,7 @@ const en: MessageTree = {
     lang: 'Language',
     pages: 'Pages',
     menu: 'Menu',
-    library: 'Worship Library',
+    library: 'Library',
     playlists: 'Home',
     merge: 'Presentation Merge',
     admin: 'Admin',
@@ -191,11 +191,11 @@ const en: MessageTree = {
     adminShort: 'Admin',
   },
   pages: {
-    libraryTitle: 'Worship Library — Presentation Manager',
-    playlistsTitle: 'Home — Worship Library',
-    playlistListsTitle: 'My lists — Worship Library',
-    mergeTitle: 'Merge — Presentation Merger',
-    adminTitle: 'Library admin — Worship Library',
+    libraryTitle: 'Library — Music Playlist Player',
+    playlistsTitle: 'Home — Music Playlist Player',
+    playlistListsTitle: 'My lists — Music Playlist Player',
+    mergeTitle: 'Merge — Music Playlist Player',
+    adminTitle: 'Admin — Music Playlist Player',
   },
   playlists: {
     title: 'Setlists',

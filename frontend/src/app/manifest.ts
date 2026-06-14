@@ -2,9 +2,9 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: '敬拜诗库',
-    short_name: '敬拜诗库',
-    description: '敬拜歌曲列表与播放 — 支持 YouTube 搜索、MP3 与视频播放',
+    name: 'Music Playlist Player',
+    short_name: 'Playlist Player',
+    description: 'Search, organize, and play music playlists',
     start_url: '/',
     scope: '/',
     display: 'standalone',

@@ -5,9 +5,9 @@ export default {
     more: '更多操作',
   },
   app: {
-    title: '敬拜诗库 — 演示文稿管理',
-    name: '敬拜诗库',
-    tagline: '管理敬拜歌曲演示文稿库',
+    title: 'Music Playlist Player',
+    name: 'Music Playlist Player',
+    tagline: '搜索、整理并播放音乐列表',
   },
   library: {
     description: '浏览诗库中的歌曲，或将新的演示文稿上传入库。上传时确认歌曲信息，日后可通过关键词快速找到。',
@@ -183,11 +183,11 @@ export default {
     adminShort: '管理',
   },
   pages: {
-    libraryTitle: '敬拜诗库 — 演示文稿管理',
-    playlistsTitle: '首页 — 敬拜诗库',
-    playlistListsTitle: '我的列表 — 敬拜诗库',
-    mergeTitle: 'Merge — 演示文稿合并',
-    adminTitle: '诗库管理 — 敬拜诗库',
+    libraryTitle: '诗库 — Music Playlist Player',
+    playlistsTitle: '首页 — Music Playlist Player',
+    playlistListsTitle: '我的列表 — Music Playlist Player',
+    mergeTitle: '合并 — Music Playlist Player',
+    adminTitle: '管理 — Music Playlist Player',
   },
   playlists: {
     title: '敬拜列表',

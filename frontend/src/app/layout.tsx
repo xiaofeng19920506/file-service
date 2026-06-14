@@ -13,13 +13,13 @@ import '../styles/playlists-youtube-watch.css';
 import '../styles/playlists-audio-layout.css';
 
 export const metadata: Metadata = {
-  title: '敬拜诗库',
-  description: '敬拜歌曲列表与播放 — 支持 YouTube 搜索、MP3 与视频播放',
-  applicationName: '敬拜诗库',
+  title: 'Music Playlist Player',
+  description: 'Search, organize, and play music playlists — YouTube search, MP3 and video playback',
+  applicationName: 'Music Playlist Player',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: '敬拜诗库',
+    title: 'Music Playlist Player',
   },
   icons: {
     icon: [
