@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { addPlaylistItemsByVideos, type PlaylistDetail } from '../api/playlists';
+import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 import { useDebouncedYoutubeSearch } from '../hooks/useDebouncedYoutubeSearch';
 import { friendlyError } from '../lib/error-messages';
 import { SearchIcon } from './icons';
@@ -21,6 +22,7 @@ export default function PlaylistYoutubeSearchPanel({
   className = '',
 }: PlaylistYoutubeSearchPanelProps) {
   const { t } = useI18n();
+  const isMobileViewport = useMediaQuery(MOBILE_MEDIA_QUERY);
   const [addingVideoId, setAddingVideoId] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
 
@@ -32,7 +34,11 @@ export default function PlaylistYoutubeSearchPanel({
     searchError,
     hasSearched,
     searchNow,
-  } = useDebouncedYoutubeSearch();
+  } = useDebouncedYoutubeSearch({ debounceEnabled: !isMobileViewport });
+
+  const submitSearch = () => {
+    if (searchQuery.trim()) searchNow();
+  };
 
   const handleAddSearchResult = async (videoId: string, title: string) => {
     if (addingVideoId || existingVideoIds.has(videoId)) return;
@@ -54,7 +60,7 @@ export default function PlaylistYoutubeSearchPanel({
       className={`playlists-youtube-search${className ? ` ${className}` : ''}`}
       aria-label={t('playlists.searchSection')}
     >
-      <div className="search-box">
+      <div className={`search-box${isMobileViewport ? ' search-box--submit-only' : ''}`}>
         <div className="search-input-wrap">
           <SearchIcon />
           <input
@@ -65,8 +71,11 @@ export default function PlaylistYoutubeSearchPanel({
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
-                searchNow();
+                submitSearch();
               }
+            }}
+            onBlur={() => {
+              if (isMobileViewport) submitSearch();
             }}
             placeholder={t('playlists.searchPlaceholder')}
             enterKeyHint="search"
@@ -74,15 +83,21 @@ export default function PlaylistYoutubeSearchPanel({
             disabled={addingVideoId !== null}
           />
         </div>
-        <button
-          type="button"
-          className="btn-secondary btn-search"
-          onClick={searchNow}
-          disabled={searchLoading || addingVideoId !== null}
-        >
-          {searchLoading ? t('search.searching') : t('search.button')}
-        </button>
+        {!isMobileViewport && (
+          <button
+            type="button"
+            className="btn-secondary btn-search"
+            onClick={submitSearch}
+            disabled={searchLoading || addingVideoId !== null}
+          >
+            {searchLoading ? t('search.searching') : t('search.button')}
+          </button>
+        )}
       </div>
+
+      {isMobileViewport && searchLoading && (
+        <p className="playlists-muted playlists-youtube-search-loading">{t('search.searching')}</p>
+      )}
 
       {showHint && (
         <p className="playlists-muted playlists-youtube-search-hint">{t('playlists.searchHint')}</p>

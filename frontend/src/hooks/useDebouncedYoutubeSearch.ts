@@ -5,7 +5,13 @@ import { useI18n } from '../i18n';
 
 export const YOUTUBE_SEARCH_DEBOUNCE_MS = 450;
 
-export function useDebouncedYoutubeSearch(debounceMs = YOUTUBE_SEARCH_DEBOUNCE_MS) {
+type UseDebouncedYoutubeSearchOptions = {
+  debounceMs?: number;
+  debounceEnabled?: boolean;
+};
+
+export function useDebouncedYoutubeSearch(options: UseDebouncedYoutubeSearchOptions = {}) {
+  const { debounceMs = YOUTUBE_SEARCH_DEBOUNCE_MS, debounceEnabled = true } = options;
   const { t } = useI18n();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<YoutubeSearchResult[]>([]);
@@ -60,6 +66,11 @@ export function useDebouncedYoutubeSearch(debounceMs = YOUTUBE_SEARCH_DEBOUNCE_M
   }, [searchQuery, runSearch]);
 
   useEffect(() => {
+    if (!debounceEnabled) {
+      if (!searchQuery.trim()) clearSearchState();
+      return;
+    }
+
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     const trimmed = searchQuery.trim();
@@ -75,7 +86,7 @@ export function useDebouncedYoutubeSearch(debounceMs = YOUTUBE_SEARCH_DEBOUNCE_M
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [searchQuery, runSearch, debounceMs, clearSearchState]);
+  }, [searchQuery, runSearch, debounceMs, debounceEnabled, clearSearchState]);
 
   return {
     searchQuery,

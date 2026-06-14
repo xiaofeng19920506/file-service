@@ -487,8 +487,18 @@
     font-size: 0.82rem;
   }
 
-  .playlists-youtube-search--mobile-list .search-box {
+  .playlists-youtube-search--mobile-list .search-box,
+  .search-box--submit-only {
     margin-bottom: 0;
+  }
+
+  .search-box--submit-only .search-input-wrap {
+    width: 100%;
+  }
+
+  .playlists-youtube-search-loading {
+    margin: 0.45rem 0 0;
+    font-size: 0.78rem;
   }
 
   .playlists-youtube-search--mobile-list .playlists-youtube-search-results {
