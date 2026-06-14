@@ -5,6 +5,7 @@ export type TrendingSong = {
   title: string;
   channelTitle: string | null;
   playCount: number;
+  inLibrary: boolean;
 };
 
 export type TrendingScope = 'today' | 'all_time' | 'popular';

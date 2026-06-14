@@ -15,7 +15,7 @@ export function registerYoutubeTrendingRoutes(app: FastifyInstance, opts: { db: 
     const limitRaw = Number.parseInt(request.query.limit ?? '10', 10);
     const limit = Number.isFinite(limitRaw) ? limitRaw : 10;
 
-    const data = await getTrendingYoutubeSongs(db, limit);
+    const data = await getTrendingYoutubeSongs(db, limit, user.id);
     return data;
   });
 

@@ -52,8 +52,10 @@ export default function PlaylistYoutubeSearchPanel({
     searchQuery,
     setSearchQuery,
     searchResults,
+    searchPending,
     searchLoading,
     loadMoreLoading,
+    isSearchBusy,
     searchError,
     hasSearched,
     hasMore,
@@ -68,7 +70,7 @@ export default function PlaylistYoutubeSearchPanel({
   useEffect(() => {
     const root = resultsListRef.current;
     const target = loadMoreRef.current;
-    if (!root || !target || !hasMore || searchLoading || loadMoreLoading) return;
+    if (!root || !target || !hasMore || isSearchBusy || loadMoreLoading) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -81,13 +83,13 @@ export default function PlaylistYoutubeSearchPanel({
 
     observer.observe(target);
     return () => observer.disconnect();
-  }, [hasMore, loadMore, loadMoreLoading, searchLoading, searchResults.length]);
+  }, [hasMore, isSearchBusy, loadMore, loadMoreLoading, searchResults.length]);
 
   const submitSearch = () => {
     if (searchQuery.trim()) searchNow();
   };
 
-  const showClearSearch = searchResults.length > 0;
+  const showClearSearch = searchQuery.trim().length > 0;
 
   const handleClearSearch = () => {
     resetSearch();
@@ -131,17 +133,25 @@ export default function PlaylistYoutubeSearchPanel({
 
   const isInCurrentPlaylist = (videoId: string) => existingVideoIds.has(videoId);
 
-  const isInAnyPlaylist = (videoId: string) => libraryVideoIds.has(videoId);
+  const isInAnyPlaylist = (videoId: string, inLibrary?: boolean) =>
+    inLibrary === true || libraryVideoIds.has(videoId);
+
+  const showTrending = searchResults.length === 0 && !isSearchBusy && !searchQuery.trim();
 
   return (
     <>
       <section
         className={`playlists-youtube-search${className ? ` ${className}` : ''}`}
         aria-label={t('playlists.searchSection')}
+        aria-busy={isSearchBusy || loadMoreLoading}
       >
         <div className={`search-box${isMobileViewport ? ' search-box--submit-only' : ''}`}>
-          <div className="search-input-wrap">
-            <SearchIcon />
+          <div className={`search-input-wrap${isSearchBusy ? ' search-input-wrap--busy' : ''}`}>
+            {isSearchBusy ? (
+              <span className="search-input-spinner" aria-hidden />
+            ) : (
+              <SearchIcon />
+            )}
             <input
               ref={searchInputRef}
               type="search"
@@ -165,8 +175,9 @@ export default function PlaylistYoutubeSearchPanel({
               enterKeyHint="search"
               autoComplete="off"
               disabled={addingVideoId !== null}
+              aria-busy={isSearchBusy}
             />
-            {showClearSearch && (
+            {showClearSearch && !isSearchBusy && (
               <button
                 type="button"
                 className="search-clear-btn"
@@ -184,14 +195,27 @@ export default function PlaylistYoutubeSearchPanel({
               type="button"
               className="btn-secondary btn-search"
               onClick={submitSearch}
-              disabled={searchLoading || addingVideoId !== null}
+              disabled={isSearchBusy || addingVideoId !== null}
             >
-              {searchLoading ? t('search.searching') : t('search.button')}
+              {isSearchBusy ? t('search.searching') : t('search.button')}
             </button>
           )}
         </div>
 
-        {searchResults.length === 0 && !searchLoading && (
+        {isSearchBusy && searchQuery.trim() && (
+          <div
+            className={`youtube-search-loading-state${mobileListOnly ? ' youtube-search-loading-state--mobile-home' : ''}`}
+            role="status"
+            aria-live="polite"
+          >
+            <span className="youtube-search-loading-spinner" aria-hidden />
+            <span className="youtube-search-loading-label">
+              {searchPending && !searchLoading ? t('search.preparing') : t('search.searching')}
+            </span>
+          </div>
+        )}
+
+        {showTrending && (
           <YoutubeTrendingSongs
             className={mobileListOnly ? 'youtube-trending--mobile-home' : ''}
             pickPlaylistOnAdd={pickPlaylistOnAdd}
@@ -205,10 +229,6 @@ export default function PlaylistYoutubeSearchPanel({
           />
         )}
 
-        {isMobileViewport && searchLoading && !mobileListOnly && (
-          <p className="playlists-muted playlists-youtube-search-loading">{t('search.searching')}</p>
-        )}
-
         {showHint && !mobileListOnly && (
           <p className="playlists-muted playlists-youtube-search-hint">{t('playlists.searchHint')}</p>
         )}
@@ -217,7 +237,7 @@ export default function PlaylistYoutubeSearchPanel({
           <p className="error-msg playlists-youtube-search-error">{searchError ?? addError}</p>
         )}
 
-        {!searchLoading && hasSearched && searchResults.length === 0 && !searchError && (
+        {!isSearchBusy && hasSearched && searchResults.length === 0 && !searchError && (
           <p className="search-empty">{t('playlists.searchNoResults')}</p>
         )}
 
@@ -228,7 +248,7 @@ export default function PlaylistYoutubeSearchPanel({
           >
             {searchResults.map((row) => {
               const inCurrentPlaylist = !pickPlaylistOnAdd && isInCurrentPlaylist(row.videoId);
-              const alreadyAdded = pickPlaylistOnAdd && isInAnyPlaylist(row.videoId);
+              const alreadyAdded = pickPlaylistOnAdd && isInAnyPlaylist(row.videoId, row.inLibrary);
               const adding = addingVideoId === row.videoId;
               return (
                 <li key={row.videoId} className="search-result-item youtube-search-result">
@@ -290,7 +310,10 @@ export default function PlaylistYoutubeSearchPanel({
               <li className="youtube-search-load-more" aria-hidden={!loadMoreLoading}>
                 <div ref={loadMoreRef} className="youtube-search-load-more-sentinel">
                   {loadMoreLoading && (
-                    <span className="youtube-search-load-more-label">{t('search.loadingMore')}</span>
+                    <>
+                      <span className="youtube-search-load-more-spinner" aria-hidden />
+                      <span className="youtube-search-load-more-label">{t('search.loadingMore')}</span>
+                    </>
                   )}
                 </div>
               </li>

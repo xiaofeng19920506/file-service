@@ -33,6 +33,7 @@ export function useDebouncedYoutubeSearch(options: UseDebouncedYoutubeSearchOpti
   const { t } = useI18n();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<YoutubeSearchResult[]>([]);
+  const [searchPending, setSearchPending] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
   const [loadMoreLoading, setLoadMoreLoading] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -43,6 +44,8 @@ export function useDebouncedYoutubeSearch(options: UseDebouncedYoutubeSearchOpti
   const requestIdRef = useRef(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeQueryRef = useRef('');
+
+  const isSearchBusy = searchPending || searchLoading;
 
   const resetPagination = useCallback(() => {
     setHasMore(false);
@@ -55,6 +58,7 @@ export function useDebouncedYoutubeSearch(options: UseDebouncedYoutubeSearchOpti
     activeQueryRef.current = '';
     setSearchResults([]);
     setSearchError(null);
+    setSearchPending(false);
     setSearchLoading(false);
     setLoadMoreLoading(false);
     setHasSearched(false);
@@ -92,9 +96,11 @@ export function useDebouncedYoutubeSearch(options: UseDebouncedYoutubeSearchOpti
 
       const id = ++requestIdRef.current;
       activeQueryRef.current = trimmed;
+      setSearchPending(false);
       setSearchError(null);
       setSearchLoading(true);
       setLoadMoreLoading(false);
+      setSearchResults([]);
       resetPagination();
       try {
         const data = await searchYoutubeVideos(trimmed, { limit: YOUTUBE_SEARCH_PAGE_SIZE });
@@ -145,11 +151,13 @@ export function useDebouncedYoutubeSearch(options: UseDebouncedYoutubeSearchOpti
       clearTimeout(debounceRef.current);
       debounceRef.current = null;
     }
+    setSearchPending(false);
     void runSearch(searchQuery);
   }, [searchQuery, runSearch]);
 
   useEffect(() => {
     if (!debounceEnabled) {
+      setSearchPending(false);
       if (!searchQuery.trim()) clearSearchState();
       return;
     }
@@ -162,6 +170,7 @@ export function useDebouncedYoutubeSearch(options: UseDebouncedYoutubeSearchOpti
       return;
     }
 
+    setSearchPending(true);
     debounceRef.current = setTimeout(() => {
       void runSearch(trimmed);
     }, debounceMs);
@@ -185,8 +194,10 @@ export function useDebouncedYoutubeSearch(options: UseDebouncedYoutubeSearchOpti
     searchQuery,
     setSearchQuery,
     searchResults,
+    searchPending,
     searchLoading,
     loadMoreLoading,
+    isSearchBusy,
     searchError,
     hasSearched,
     hasMore,

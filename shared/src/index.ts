@@ -9,6 +9,7 @@ export * from './rate-limit.js';
 export * from './webhook.js';
 export * from './env.js';
 export * from './download-token.js';
+export * from './playlist-video-ids.js';
 export * from './playlist-share-token.js';
 export * from './user-token.js';
 export * from './permissions.js';

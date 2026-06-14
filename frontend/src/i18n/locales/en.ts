@@ -374,6 +374,7 @@ const en: MessageTree = {
     placeholder: 'Search by title (EN / 简 / 繁), composer, author, or filename…',
     button: 'Search',
     searching: 'Searching…',
+    preparing: 'Preparing search…',
     clear: 'Clear search',
     alreadyAdded: 'Added to list',
     loadingMore: 'Loading more…',

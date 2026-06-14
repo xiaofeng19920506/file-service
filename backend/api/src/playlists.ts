@@ -6,6 +6,7 @@ import {
   fetchYoutubePlaylistData,
   formatUserDisplayName,
   getAudioCacheMap,
+  getUserLibraryVideoIdSet,
   isValidYoutubeVideoId,
   playlistItems,
   playlists,
@@ -422,13 +423,8 @@ export function registerPlaylistRoutes(
     const user = request.authUser;
     if (!user) return reply.code(401).send({ error: 'unauthorized' });
 
-    const rows = await db
-      .selectDistinct({ youtubeVideoId: playlistItems.youtubeVideoId })
-      .from(playlistItems)
-      .innerJoin(playlists, eq(playlistItems.playlistId, playlists.id))
-      .where(eq(playlists.createdByUserId, user.id));
-
-    return { videoIds: rows.map((row) => row.youtubeVideoId) };
+    const videoIds = await getUserLibraryVideoIdSet(db, user.id);
+    return { videoIds: [...videoIds] };
   });
 
   app.get<{ Params: { id: string } }>('/v1/playlists/:id', async (request, reply) => {

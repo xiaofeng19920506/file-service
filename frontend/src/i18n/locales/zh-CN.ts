@@ -366,6 +366,7 @@ export default {
     placeholder: '按歌曲名（中/英/简繁）、作曲、作词或文件名搜索…',
     button: '搜索',
     searching: '搜索中…',
+    preparing: '准备搜索…',
     clear: '清空搜索',
     alreadyAdded: '已添加到列表',
     loadingMore: '加载更多…',

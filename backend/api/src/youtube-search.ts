@@ -1,14 +1,16 @@
 import {
   searchYoutubeVideos,
   searchYoutubeVideosViaYtdlp,
+  getUserLibraryVideoIdSet,
   YOUTUBE_SEARCH_DEFAULT_PAGE_SIZE,
   YOUTUBE_SEARCH_MAX_PAGE_SIZE,
   type ApiEnv,
+  type Db,
 } from '@file-service/shared';
 import type { FastifyInstance } from 'fastify';
 
-export function registerYoutubeSearchRoutes(app: FastifyInstance, opts: { env: ApiEnv }) {
-  const { env } = opts;
+export function registerYoutubeSearchRoutes(app: FastifyInstance, opts: { db: Db; env: ApiEnv }) {
+  const { db, env } = opts;
 
   app.get<{ Querystring: { q?: string; limit?: string; pageToken?: string; offset?: string } }>(
     '/v1/youtube/search',
@@ -30,10 +32,21 @@ export function registerYoutubeSearchRoutes(app: FastifyInstance, opts: { env: A
       const offset = Number.isFinite(offsetRaw) ? Math.max(offsetRaw, 0) : 0;
 
       try {
-        const page = env.YOUTUBE_API_KEY
-          ? await searchYoutubeVideos(q, env.YOUTUBE_API_KEY, { maxResults, pageToken })
-          : await searchYoutubeVideosViaYtdlp(q, env.YT_DLP_PATH, { maxResults, offset });
-        return { query: q, ...page };
+        const [page, libraryIds] = await Promise.all([
+          env.YOUTUBE_API_KEY
+            ? searchYoutubeVideos(q, env.YOUTUBE_API_KEY, { maxResults, pageToken })
+            : searchYoutubeVideosViaYtdlp(q, env.YT_DLP_PATH, { maxResults, offset }),
+          getUserLibraryVideoIdSet(db, user.id),
+        ]);
+
+        return {
+          query: q,
+          ...page,
+          results: page.results.map((row) => ({
+            ...row,
+            inLibrary: libraryIds.has(row.videoId),
+          })),
+        };
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'youtube_search_failed';
         if (msg === 'ytdlp_not_installed') {

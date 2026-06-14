@@ -1,5 +1,6 @@
 import { desc, eq, sql } from 'drizzle-orm';
 import { isValidYoutubeVideoId } from './youtube-audio-extract.js';
+import { getUserLibraryVideoIdSet } from './playlist-video-ids.js';
 import { playlistItems, youtubeVideoDailyPlays, type Db } from './db/index.js';
 
 export type TrendingSong = {
@@ -7,6 +8,7 @@ export type TrendingSong = {
   title: string;
   channelTitle: string | null;
   playCount: number;
+  inLibrary: boolean;
 };
 
 export type TrendingScope = 'today' | 'all_time' | 'popular';
@@ -54,7 +56,7 @@ export async function recordYoutubeVideoPlay(
     });
 }
 
-async function fetchTodayTrending(db: Db, limit: number): Promise<TrendingSong[]> {
+async function fetchTodayTrending(db: Db, limit: number): Promise<Omit<TrendingSong, 'inLibrary'>[]> {
   const playDate = todayUtcDateString();
   const rows = await db
     .select({
@@ -76,7 +78,7 @@ async function fetchTodayTrending(db: Db, limit: number): Promise<TrendingSong[]
   }));
 }
 
-async function fetchAllTimeTrending(db: Db, limit: number): Promise<TrendingSong[]> {
+async function fetchAllTimeTrending(db: Db, limit: number): Promise<Omit<TrendingSong, 'inLibrary'>[]> {
   const rows = await db
     .select({
       videoId: youtubeVideoDailyPlays.youtubeVideoId,
@@ -99,7 +101,7 @@ async function fetchAllTimeTrending(db: Db, limit: number): Promise<TrendingSong
     }));
 }
 
-async function fetchPopularFromLibrary(db: Db, limit: number): Promise<TrendingSong[]> {
+async function fetchPopularFromLibrary(db: Db, limit: number): Promise<Omit<TrendingSong, 'inLibrary'>[]> {
   const rows = await db
     .select({
       videoId: playlistItems.youtubeVideoId,
@@ -121,21 +123,38 @@ async function fetchPopularFromLibrary(db: Db, limit: number): Promise<TrendingS
     }));
 }
 
-export async function getTrendingYoutubeSongs(db: Db, limit = 10): Promise<TrendingSongsResult> {
+export async function getTrendingYoutubeSongs(
+  db: Db,
+  limit = 10,
+  userId?: string,
+): Promise<TrendingSongsResult> {
   const capped = Math.min(Math.max(limit, 1), 20);
+
+  let scope: TrendingScope = 'popular';
+  let songs: Omit<TrendingSong, 'inLibrary'>[] = [];
 
   const today = await fetchTodayTrending(db, capped);
   if (today.length > 0) {
-    return { scope: 'today', songs: today };
+    scope = 'today';
+    songs = today;
+  } else {
+    const allTime = await fetchAllTimeTrending(db, capped);
+    if (allTime.length > 0) {
+      scope = 'all_time';
+      songs = allTime;
+    } else {
+      songs = await fetchPopularFromLibrary(db, capped);
+    }
   }
 
-  const allTime = await fetchAllTimeTrending(db, capped);
-  if (allTime.length > 0) {
-    return { scope: 'all_time', songs: allTime };
-  }
-
-  const popular = await fetchPopularFromLibrary(db, capped);
-  return { scope: 'popular', songs: popular };
+  const libraryIds = userId ? await getUserLibraryVideoIdSet(db, userId) : new Set<string>();
+  return {
+    scope,
+    songs: songs.map((song) => ({
+      ...song,
+      inLibrary: libraryIds.has(song.videoId),
+    })),
+  };
 }
 
 export function trendingSongVideoUrl(videoId: string): string {

@@ -71,13 +71,19 @@ export default function YoutubeTrendingSongs({
   }, [t]);
 
   const isInCurrentPlaylist = (videoId: string) => existingVideoIds.has(videoId);
-  const isInAnyPlaylist = (videoId: string) => libraryVideoIds.has(videoId);
+  const isInAnyPlaylist = (videoId: string, inLibrary?: boolean) =>
+    inLibrary === true || libraryVideoIds.has(videoId);
 
   const addToPlaylist = async (targetPlaylistId: string, videoId: string, title: string) => {
     setAddingVideoId(videoId);
     try {
       const data = await addPlaylistItemsByVideos(targetPlaylistId, [{ videoId, title }]);
       onAdded(data, { addedCount: data.addedCount, skippedCount: data.skippedCount });
+      setSongs((prev) =>
+        prev.map((song) =>
+          song.videoId === videoId ? { ...song, inLibrary: true } : song,
+        ),
+      );
       setPendingAdd(null);
     } catch (err) {
       if (pickPlaylistOnAdd) {
@@ -108,8 +114,15 @@ export default function YoutubeTrendingSongs({
 
   if (loading) {
     return (
-      <section className={`youtube-trending${className ? ` ${className}` : ''}`}>
-        <p className="playlists-muted youtube-trending-loading">{t('playlists.trendingLoading')}</p>
+      <section
+        className={`youtube-trending${className ? ` ${className}` : ''}`}
+        role="status"
+        aria-live="polite"
+      >
+        <div className="youtube-trending-loading">
+          <span className="youtube-search-loading-spinner" aria-hidden />
+          <span className="youtube-trending-loading-label">{t('playlists.trendingLoading')}</span>
+        </div>
       </section>
     );
   }
@@ -128,7 +141,7 @@ export default function YoutubeTrendingSongs({
         <ul className="search-results youtube-search-results youtube-trending-results">
           {songs.map((row) => {
             const inCurrentPlaylist = !pickPlaylistOnAdd && isInCurrentPlaylist(row.videoId);
-            const alreadyAdded = pickPlaylistOnAdd && isInAnyPlaylist(row.videoId);
+            const alreadyAdded = pickPlaylistOnAdd && isInAnyPlaylist(row.videoId, row.inLibrary);
             const adding = addingVideoId === row.videoId;
             return (
               <li key={row.videoId} className="search-result-item youtube-search-result">

@@ -599,9 +599,9 @@
     height: 2rem;
   }
 
-  .playlists-youtube-search-loading {
-    margin: 0.45rem 0 0;
-    font-size: 0.78rem;
+  .playlists-youtube-search--mobile-list .youtube-search-loading-state--mobile-home {
+    flex: 1;
+    min-height: 0;
   }
 
   .playlists-youtube-search-hint {

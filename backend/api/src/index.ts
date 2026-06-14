@@ -102,7 +102,7 @@ async function buildApp() {
   registerYoutubeCaptionRoutes(app);
   registerYoutubeAudioRoutes(app, { db, env, storage, audioQueue });
   registerYoutubeOAuthRoutes(app, { db, env });
-  registerYoutubeSearchRoutes(app, { env });
+  registerYoutubeSearchRoutes(app, { db, env });
   registerYoutubeTrendingRoutes(app, { db });
 
   const maxUploadBytes = env.MAX_UPLOAD_MB * 1024 * 1024;

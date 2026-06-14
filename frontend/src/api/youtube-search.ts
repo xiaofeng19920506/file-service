@@ -7,6 +7,7 @@ export type YoutubeSearchResult = {
   channelTitle: string | null;
   thumbnailUrl: string | null;
   relevanceScore: number;
+  inLibrary?: boolean;
 };
 
 export type YoutubeSearchPageResponse = {
