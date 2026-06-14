@@ -38,7 +38,7 @@ export function isWebAppClient(clientId: string | null | undefined): boolean {
   return kind === 'web' || kind === 'unknown';
 }
 
-/** 仅手机 App 需要 IAP / 试用；Web 端 MP3 与列表功能不受订阅限制 */
-export function requiresPremiumSubscription(clientId: string | null | undefined): boolean {
-  return isMobileAppClient(clientId);
+/** 订阅已移除，所有客户端均免费开放 */
+export function requiresPremiumSubscription(_clientId: string | null | undefined): boolean {
+  return false;
 }

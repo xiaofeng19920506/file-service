@@ -7,7 +7,6 @@ import {
   formatUserDisplayName,
   getAudioCacheMap,
   isValidYoutubeVideoId,
-  assertPremiumPlaybackAccess,
   playlistItems,
   playlists,
   signPlaylistShareToken,
@@ -444,11 +443,6 @@ export function registerPlaylistRoutes(
       const access = await assertPlaylistAccess(db, id, user);
       if (access.error === 'not_found') return reply.code(404).send({ error: 'not_found' });
       if (access.error === 'forbidden') return reply.code(403).send({ error: 'forbidden' });
-
-      const premiumAccess = await assertPremiumPlaybackAccess(db, user.id, request.headers);
-      if (!premiumAccess.ok) {
-        return reply.code(403).send({ error: premiumAccess.error });
-      }
 
       const bodyItems = request.body?.items;
       if (Array.isArray(bodyItems) && bodyItems.length > 0) {

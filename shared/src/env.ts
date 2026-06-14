@@ -51,17 +51,6 @@ const apiFs = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().min(3).optional(),
-  APPLE_BUNDLE_ID: z.string().min(3).default('com.fileservice.playlistplayer'),
-  APPLE_IAP_ISSUER_ID: z.string().optional(),
-  APPLE_IAP_KEY_ID: z.string().optional(),
-  APPLE_IAP_PRIVATE_KEY: z.string().optional(),
-  APPLE_IAP_ENVIRONMENT: z.enum(['sandbox', 'production']).default('sandbox'),
-  SUBSCRIPTION_IAP_PRODUCT_IDS: z.string().optional(),
-  SUBSCRIPTION_DEV_MODE: z
-    .enum(['true', 'false', '1', '0'])
-    .default('false')
-    .transform((v) => v === 'true' || v === '1'),
-  REGISTRATION_TRIAL_DAYS: z.coerce.number().int().positive().default(3),
 });
 
 const apiS3 = z.object({
@@ -112,17 +101,6 @@ const apiS3 = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().min(3).optional(),
-  APPLE_BUNDLE_ID: z.string().min(3).default('com.fileservice.playlistplayer'),
-  APPLE_IAP_ISSUER_ID: z.string().optional(),
-  APPLE_IAP_KEY_ID: z.string().optional(),
-  APPLE_IAP_PRIVATE_KEY: z.string().optional(),
-  APPLE_IAP_ENVIRONMENT: z.enum(['sandbox', 'production']).default('sandbox'),
-  SUBSCRIPTION_IAP_PRODUCT_IDS: z.string().optional(),
-  SUBSCRIPTION_DEV_MODE: z
-    .enum(['true', 'false', '1', '0'])
-    .default('false')
-    .transform((v) => v === 'true' || v === '1'),
-  REGISTRATION_TRIAL_DAYS: z.coerce.number().int().positive().default(3),
 });
 
 export const apiSchema = z.discriminatedUnion('STORAGE_BACKEND', [

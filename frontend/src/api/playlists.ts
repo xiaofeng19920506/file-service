@@ -89,6 +89,18 @@ export async function addPlaylistItems(
   return parseJson<PlaylistDetail & { addedCount: number; skippedCount: number }>(res);
 }
 
+export async function addPlaylistItemsByVideos(
+  playlistId: string,
+  items: { videoId: string; title: string }[],
+): Promise<PlaylistDetail & { addedCount: number; skippedCount: number }> {
+  const res = await apiFetch(`/v1/playlists/${playlistId}/items`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items }),
+  });
+  return parseJson<PlaylistDetail & { addedCount: number; skippedCount: number }>(res);
+}
+
 export async function reorderPlaylistItems(
   playlistId: string,
   itemIds: string[],

@@ -267,7 +267,7 @@ export default function PlaylistAudioPlayer({
         const streamed = await getYoutubeAudioStreamUrl(videoId);
         return { url: streamed.url, preview: false };
       } catch {
-        /* 无 premium 权限时回退 preview */
+        /* stream-url 不可用时回退 preview */
       }
     }
     if (status.previewStreamUrl) {

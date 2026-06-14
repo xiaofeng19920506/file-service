@@ -584,6 +584,10 @@ export default function PlaylistsPage({
   }, []);
 
   const currentItem = detail?.items[activeIndex];
+  const existingVideoIds = useMemo(
+    () => new Set(detail?.items.map((item) => item.youtubeVideoId) ?? []),
+    [detail?.items],
+  );
   const showPlayer = playerEngaged && playerItems.length > 0;
   const youtubeWatchActive = showPlayer && playbackMode === 'video';
   const youtubeWatchMobile = youtubeWatchActive && isMobileViewport;
@@ -1446,6 +1450,7 @@ export default function PlaylistsPage({
       {showAddModal && selectedId && (
         <AddPlaylistItemsModal
           playlistId={selectedId}
+          existingVideoIds={existingVideoIds}
           onClose={() => setShowAddModal(false)}
           onAdded={(data, meta) => {
             setError(null);

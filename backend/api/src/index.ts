@@ -51,7 +51,6 @@ import { registerYoutubeCaptionRoutes } from './youtube-captions.js';
 import { registerYoutubeAudioRoutes } from './youtube-audio.js';
 import { registerYoutubeOAuthRoutes } from './youtube-oauth.js';
 import { registerYoutubeSearchRoutes } from './youtube-search.js';
-import { registerSubscriptionRoutes } from './subscriptions.js';
 import { resolveRequestActor } from './request-actor.js';
 
 async function buildApp() {
@@ -97,7 +96,6 @@ async function buildApp() {
 
   const apiKeyConfig = loadApiKeyConfig(env.API_KEY);
   registerAuthRoutes(app, { db, env, apiKeyConfig });
-  registerSubscriptionRoutes(app, { db, env });
   registerAdminUserRoutes(app, { db });
   registerPlaylistRoutes(app, { db, env, audioQueue });
   registerYoutubeCaptionRoutes(app);

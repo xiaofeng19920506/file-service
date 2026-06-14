@@ -13,7 +13,7 @@
  */
 import 'dotenv/config';
 import { eq } from 'drizzle-orm';
-import { createDb, fetchYoutubePlaylistData, grantReviewSubscription, playlistItems, playlists, users } from '@file-service/shared';
+import { createDb, fetchYoutubePlaylistData, playlistItems, playlists, users } from '@file-service/shared';
 import { hashPassword } from '../backend/api/src/auth.js';
 
 const MANUAL_SOURCE = 'manual://app-store-review';
@@ -111,9 +111,6 @@ async function main() {
     userId = created!.id;
     console.log(`[seed] 已创建用户: ${email}`);
   }
-
-  await grantReviewSubscription(db, userId);
-  console.log('[seed] 已为审核账号开通 Premium 订阅');
 
   const demo = await resolvePlaylistItems();
   const reviewTitle = 'App Store 审核演示';

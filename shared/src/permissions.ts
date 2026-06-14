@@ -47,6 +47,7 @@ export function isSearchPath(method: string, path: string): boolean {
 
 export function isPlaylistPath(method: string, path: string): boolean {
   if (path.startsWith('/v1/playlists')) return true;
+  if (method === 'GET' && path === '/v1/youtube/search') return true;
   if (method === 'GET' && /^\/v1\/youtube\/videos\/[^/]+\/captions$/.test(path)) return true;
   if (method === 'POST' && path === '/v1/youtube/audio/prioritize') return true;
   if (/^\/v1\/youtube\/videos\/[^/]+\/audio/.test(path)) return true;
