@@ -44,7 +44,7 @@ function AppShellInner({
   const [theme, setTheme] = useState<'light' | 'dark'>(() =>
     document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light',
   );
-  const navRef = useRef<HTMLElement>(null);
+  const drawerRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (loading) return;
@@ -84,12 +84,21 @@ function AppShellInner({
 
   useEffect(() => {
     if (!mobileMenuOpen) return;
-    const onPointerDown = (event: PointerEvent) => {
-      if (!navRef.current?.contains(event.target as Node)) setMobileMenuOpen(false);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileMenuOpen(false);
     };
-    document.addEventListener('pointerdown', onPointerDown);
-    return () => document.removeEventListener('pointerdown', onPointerDown);
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
   }, [mobileMenuOpen, setMobileMenuOpen]);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileMenuOpen]);
 
   useEffect(() => {
     if (page === 'preview' || page === 'login' || page === 'merge-edit' || page === 'library-upload')
@@ -176,7 +185,7 @@ function AppShellInner({
 
   return (
     <div className={`app${page === 'playlists' ? ' app-playlists' : ''}${mobileMenuOpen ? ' nav-mobile-menu-open' : ''}`}>
-      <header className="nav" ref={navRef}>
+      <header className="nav">
         <div className="nav-inner">
           <div className="nav-brand">
             <span className="nav-brand-name nav-brand-app-name">{t('app.name')}</span>
@@ -216,8 +225,36 @@ function AppShellInner({
             </button>
           </div>
         </div>
+      </header>
 
-        <div className={`nav-mobile-menu${mobileMenuOpen ? ' is-open' : ''}`} id="nav-mobile-menu" hidden={!mobileMenuOpen}>
+      <div
+        className={`nav-mobile-drawer-backdrop${mobileMenuOpen ? ' is-visible' : ''}`}
+        aria-hidden={!mobileMenuOpen}
+        onClick={() => setMobileMenuOpen(false)}
+      />
+
+      <aside
+        ref={drawerRef}
+        className={`nav-mobile-drawer${mobileMenuOpen ? ' is-open' : ''}`}
+        id="nav-mobile-menu"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('nav.menu')}
+        aria-hidden={!mobileMenuOpen}
+      >
+        <div className="nav-mobile-drawer-head">
+          <span className="nav-mobile-drawer-title">{pageTitle}</span>
+          <button
+            type="button"
+            className="nav-mobile-drawer-close"
+            aria-label={t('metadata.close')}
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <CloseIcon />
+          </button>
+        </div>
+
+        <div className="nav-mobile-menu nav-mobile-drawer-body">
           {page === 'playlists' && (
             <div
               id={PLAYLISTS_MOBILE_MENU_MOUNT_ID}
@@ -229,7 +266,7 @@ function AppShellInner({
             {langToggle}
           </div>
         </div>
-      </header>
+      </aside>
 
       <div className="app-content">
         {page === 'library' && permissions.canSearch && <LibraryPage libraryUpload={libraryUpload} />}
