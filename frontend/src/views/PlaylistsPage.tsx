@@ -113,6 +113,13 @@ export default function PlaylistsPage({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(null), 2000);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
   const [activeIndex, setActiveIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [playerEngaged, setPlayerEngaged] = useState(false);
@@ -1274,6 +1281,7 @@ export default function PlaylistsPage({
         data-audio-mobile-record={audioWatchMobile ? 'true' : 'false'}
         data-mobile-audio-dock={showMobileAudioDock ? 'true' : 'false'}
         data-mobile-home={mobileHomeView}
+        data-mobile-detail={isMobileViewport && selectedId ? 'true' : undefined}
       >
         <header className={`playlists-header${selectedId ? ' mobile-only-hidden' : ''}`}>
           <h1>{t('playlists.title')}</h1>
