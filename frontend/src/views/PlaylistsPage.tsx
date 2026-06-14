@@ -1110,7 +1110,7 @@ export default function PlaylistsPage({
           <p className="playlists-intro">{t('playlists.intro')}</p>
         </header>
 
-        {(error || notice) && (
+        {(error || notice) && !(isMobileViewport && !selectedId) && (
           <div className="playlists-alerts">
             {error && <p className="error-msg playlists-alert">{error}</p>}
             {notice && <p className="playlists-notice">{notice}</p>}
@@ -1130,49 +1130,34 @@ export default function PlaylistsPage({
           data-playback-mode={playbackMode}
           data-mobile-audio-dock={showMobileAudioDock ? 'true' : 'false'}
         >
-          <aside className="playlists-sidebar" aria-label={t('playlists.savedTitle')}>
-            <div className="playlists-sidebar-head">
-              <h2>{t('playlists.savedTitle')}</h2>
-              {!loadingList && playlists.length > 0 && (
-                <span className="playlists-sidebar-count">{playlists.length}</span>
-              )}
-            </div>
+          <aside
+            className={`playlists-sidebar${isMobileViewport && !selectedId ? ' playlists-sidebar--search-only' : ''}`}
+            aria-label={
+              isMobileViewport && !selectedId
+                ? t('playlists.searchSection')
+                : t('playlists.savedTitle')
+            }
+          >
+            {isMobileViewport && !selectedId ? (
+              listSearchTargetId ? (
+                <PlaylistYoutubeSearchPanel
+                  className="playlists-youtube-search--mobile-list"
+                  playlistId={listSearchTargetId}
+                  existingVideoIds={listSearchExistingVideoIds}
+                  onAdded={(data, meta) => void handleItemsAdded(data, meta)}
+                  mobileListOnly
+                />
+              ) : null
+            ) : (
+              <>
+                <div className="playlists-sidebar-head">
+                  <h2>{t('playlists.savedTitle')}</h2>
+                  {!loadingList && playlists.length > 0 && (
+                    <span className="playlists-sidebar-count">{playlists.length}</span>
+                  )}
+                </div>
 
-            {isMobileViewport && !selectedId && (
-              <div className="playlists-sidebar-search mobile-only">
-                {playlists.length > 1 && listSearchTargetId && (
-                  <label className="playlists-sidebar-search-target">
-                    <span>{t('playlists.searchTargetLabel')}</span>
-                    <select
-                      className="playlists-text-input"
-                      value={listSearchTargetId}
-                      onChange={(e) => setListSearchTargetId(e.target.value)}
-                      aria-label={t('playlists.searchTargetLabel')}
-                    >
-                      {playlists.map((row) => (
-                        <option key={row.id} value={row.id}>
-                          {row.title}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                )}
-                {listSearchTargetId ? (
-                  <PlaylistYoutubeSearchPanel
-                    className="playlists-youtube-search--mobile-list"
-                    playlistId={listSearchTargetId}
-                    existingVideoIds={listSearchExistingVideoIds}
-                    onAdded={(data, meta) => void handleItemsAdded(data, meta)}
-                  />
-                ) : (
-                  <p className="playlists-muted playlists-sidebar-search-empty">
-                    {t('playlists.searchCreateListFirst')}
-                  </p>
-                )}
-              </div>
-            )}
-
-            <div className="playlists-sidebar-list">
+                <div className="playlists-sidebar-list">
               <form
                 className="playlists-create-inline"
                 onSubmit={(e) => void handleCreateList(e)}
@@ -1284,7 +1269,9 @@ export default function PlaylistsPage({
                   ))}
                 </ul>
               )}
-            </div>
+                </div>
+              </>
+            )}
           </aside>
 
           <section className="playlists-main" aria-live="polite">

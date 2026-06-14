@@ -11,6 +11,7 @@ type PlaylistYoutubeSearchPanelProps = {
   existingVideoIds: Set<string>;
   onAdded: (detail: PlaylistDetail, meta: { addedCount: number; skippedCount: number }) => void;
   showHint?: boolean;
+  mobileListOnly?: boolean;
   className?: string;
 };
 
@@ -19,6 +20,7 @@ export default function PlaylistYoutubeSearchPanel({
   existingVideoIds,
   onAdded,
   showHint = false,
+  mobileListOnly = false,
   className = '',
 }: PlaylistYoutubeSearchPanelProps) {
   const { t } = useI18n();
@@ -95,15 +97,15 @@ export default function PlaylistYoutubeSearchPanel({
         )}
       </div>
 
-      {isMobileViewport && searchLoading && (
+      {isMobileViewport && searchLoading && !mobileListOnly && (
         <p className="playlists-muted playlists-youtube-search-loading">{t('search.searching')}</p>
       )}
 
-      {showHint && (
+      {showHint && !mobileListOnly && (
         <p className="playlists-muted playlists-youtube-search-hint">{t('playlists.searchHint')}</p>
       )}
 
-      {(searchError || addError) && (
+      {!mobileListOnly && (searchError || addError) && (
         <p className="error-msg playlists-youtube-search-error">{searchError ?? addError}</p>
       )}
 
