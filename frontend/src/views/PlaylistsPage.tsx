@@ -8,6 +8,7 @@ import RenamePlaylistModal from '../components/RenamePlaylistModal';
 import PlaylistListSwipeRow, {
   type PlaylistListSwipeSide,
 } from '../components/PlaylistListSwipeRow';
+import PlaylistTrackSwipeRow from '../components/PlaylistTrackSwipeRow';
 import SharePlaylistModal from '../components/SharePlaylistModal';
 import ExportYoutubePlaylistModal from '../components/ExportYoutubePlaylistModal';
 import { DragHandleIcon, PlusIcon } from '../components/icons';
@@ -131,7 +132,12 @@ export default function PlaylistsPage({
   useEffect(() => {
     setTracksEditMode(false);
     setQueueOpen(false);
+    setTrackSwipeOpenId(null);
   }, [selectedId]);
+
+  useEffect(() => {
+    if (tracksEditMode) setTrackSwipeOpenId(null);
+  }, [tracksEditMode]);
   const [removingItemId, setRemovingItemId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
@@ -150,6 +156,10 @@ export default function PlaylistsPage({
     id: string;
     side: Exclude<PlaylistListSwipeSide, 'none'>;
   } | null>(null);
+  const [trackSwipeOpenId, setTrackSwipeOpenId] = useState<string | null>(null);
+  const [removeTrackTarget, setRemoveTrackTarget] = useState<{ id: string; title: string } | null>(
+    null,
+  );
   const [renameTarget, setRenameTarget] = useState<{ id: string; title: string } | null>(null);
   const [savingRename, setSavingRename] = useState(false);
   const [playbackMode, setPlaybackMode] = useState<PlaylistPlaybackMode>(readPlaylistPlaybackMode);
@@ -164,6 +174,7 @@ export default function PlaylistsPage({
   });
   const audioProgressHandleRef = useRef<PlaylistAudioProgressHandle | null>(null);
   const blockListSelectRef = useRef(false);
+  const blockTrackPlayRef = useRef(false);
 
   useEffect(() => {
     if (oauthHandledRef.current) return;
@@ -463,6 +474,15 @@ export default function PlaylistsPage({
     } finally {
       setRemovingItemId(null);
     }
+  };
+
+  const requestRemoveTrack = (item: { id: string; title: string }) => {
+    blockTrackPlayRef.current = true;
+    window.setTimeout(() => {
+      blockTrackPlayRef.current = false;
+    }, 700);
+    setTrackSwipeOpenId(null);
+    setRemoveTrackTarget({ id: item.id, title: item.title });
   };
 
   const itemCount = detail?.items.length ?? 0;
@@ -1450,10 +1470,11 @@ export default function PlaylistsPage({
                             trackDragOver?.index === index && !trackDragOver.after;
                           const isDragOverAfter =
                             trackDragOver?.index === index && trackDragOver.after;
+                          const useTrackSwipe = isMobileViewport && !tracksEditMode;
                           return (
                             <li
                               key={item.id}
-                              className={`playlists-track${isActive ? ' active' : ''}${isPlaying ? ' playing' : ''}${isDragging ? ' dragging' : ''}${isDragOverBefore ? ' drag-over-before' : ''}${isDragOverAfter ? ' drag-over-after' : ''}`}
+                              className={`playlists-track${isActive ? ' active' : ''}${isPlaying ? ' playing' : ''}${isDragging ? ' dragging' : ''}${isDragOverBefore ? ' drag-over-before' : ''}${isDragOverAfter ? ' drag-over-after' : ''}${useTrackSwipe ? ' playlists-track--swipe' : ''}`}
                               onDragOver={(e) => {
                                 if (!tracksEditMode || trackDragIndex === null || savingOrder) return;
                                 e.preventDefault();
@@ -1477,6 +1498,25 @@ export default function PlaylistsPage({
                                 }
                               }}
                             >
+                              {useTrackSwipe ? (
+                                <PlaylistTrackSwipeRow
+                                  title={item.title}
+                                  thumbUrl={youtubeThumb(item.youtubeVideoId)}
+                                  isActive={isActive}
+                                  isPlaying={isPlaying}
+                                  opened={trackSwipeOpenId === item.id}
+                                  onOpenedChange={(open) => {
+                                    setTrackSwipeOpenId(open ? item.id : null);
+                                  }}
+                                  onPlay={() => {
+                                    if (blockTrackPlayRef.current || removeTrackTarget) return;
+                                    engageAndPlay(index);
+                                  }}
+                                  onDeleteRequest={() => requestRemoveTrack(item)}
+                                  deleteBusy={removingItemId === item.id}
+                                />
+                              ) : (
+                                <>
                               {tracksEditMode && (
                                 <span
                                   className={`playlists-track-drag-handle${savingOrder ? ' disabled' : ''}`}
@@ -1531,6 +1571,8 @@ export default function PlaylistsPage({
                                 >
                                   {removingItemId === item.id ? '…' : '×'}
                                 </button>
+                              )}
+                                </>
                               )}
                             </li>
                           );
@@ -1649,6 +1691,21 @@ export default function PlaylistsPage({
             const id = deleteTarget.id;
             setDeleteTarget(null);
             void performDelete(id);
+          }}
+        />
+      )}
+
+      {removeTrackTarget && (
+        <ConfirmModal
+          title={t('playlists.removeTrackConfirmTitle')}
+          message={t('playlists.removeTrackConfirm', { title: removeTrackTarget.title })}
+          confirmLabel={t('playlists.removeTrackShort')}
+          danger
+          onCancel={() => setRemoveTrackTarget(null)}
+          onConfirm={() => {
+            const id = removeTrackTarget.id;
+            setRemoveTrackTarget(null);
+            void handleRemoveItem(id);
           }}
         />
       )}

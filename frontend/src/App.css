@@ -4396,6 +4396,21 @@
   cursor: not-allowed;
 }
 
+.playlists-track--swipe {
+  display: block;
+  padding: 0;
+  border-color: transparent;
+}
+
+.playlists-track-swipe {
+  width: 100%;
+}
+
+.playlists-track-swipe .playlists-list-swipe-content.active .playlists-track-main {
+  background: color-mix(in srgb, var(--accent, #3b82f6) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent, #3b82f6) 35%, var(--border));
+}
+
 .playlists-list-item-body {
   display: block;
   min-width: 0;
