@@ -100,6 +100,14 @@ export function PlaylistsNavIcon() {
   );
 }
 
+export function HomeNavIcon() {
+  return (
+    <NavIcon>
+      <path d="M4 10.5 12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5H15v-6h-6v6H5.5A1.5 1.5 0 0 1 4 19v-8.5z" strokeLinejoin="round" />
+    </NavIcon>
+  );
+}
+
 export function MergeNavIcon() {
   return (
     <NavIcon>

@@ -1,5 +1,6 @@
 import {
   AdminNavIcon,
+  HomeNavIcon,
   LibraryNavIcon,
   MergeNavIcon,
   PlaylistsNavIcon,
@@ -7,7 +8,7 @@ import {
 import type { AppPage } from '../hooks/useAppPage';
 import { useI18n } from '../i18n';
 
-type NavTarget = 'library' | 'playlists' | 'merge' | 'admin';
+type NavTarget = 'library' | 'playlists' | 'playlist-lists' | 'merge' | 'admin';
 
 type PageNavTabsProps = {
   page: AppPage;
@@ -22,17 +23,25 @@ type PageNavTabsProps = {
 const NAV_ITEMS: {
   id: NavTarget;
   icon: typeof LibraryNavIcon;
-  labelKey: 'nav.library' | 'nav.playlists' | 'nav.merge' | 'nav.admin';
+  labelKey: 'nav.library' | 'nav.playlistsShort' | 'nav.playlistLists' | 'nav.merge' | 'nav.admin';
   requiresSearch?: boolean;
   requiresPlaylists?: boolean;
   requiresMerge?: boolean;
   requiresEdit?: boolean;
+  bottomOnly?: boolean;
 }[] = [
   {
     id: 'playlists',
-    icon: PlaylistsNavIcon,
-    labelKey: 'nav.playlists',
+    icon: HomeNavIcon,
+    labelKey: 'nav.playlistsShort',
     requiresPlaylists: true,
+  },
+  {
+    id: 'playlist-lists',
+    icon: PlaylistsNavIcon,
+    labelKey: 'nav.playlistLists',
+    requiresPlaylists: true,
+    bottomOnly: true,
   },
   {
     id: 'library',
@@ -67,6 +76,7 @@ export default function PageNavTabs({
   const isBottom = variant === 'bottom';
 
   const items = NAV_ITEMS.filter((item) => {
+    if (item.bottomOnly && !isBottom) return false;
     if (item.requiresSearch && !canSearch) return false;
     if (item.requiresPlaylists && !canAccessPlaylists) return false;
     if (item.requiresMerge && !canMerge) return false;

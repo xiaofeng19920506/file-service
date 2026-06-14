@@ -8,6 +8,7 @@ export type AppPage =
   | 'merge'
   | 'merge-edit'
   | 'playlists'
+  | 'playlist-lists'
   | 'admin'
   | 'login'
   | 'preview';
@@ -56,6 +57,17 @@ function routeFromHash(rawHash: string): AppRoute {
     const mergePlaylistId = params.get('playlist')?.trim() || undefined;
     return { page: 'merge', mergePlaylistId };
   }
+  if (hash.startsWith('#/playlists/lists')) {
+    const qIndex = hash.indexOf('?');
+    const params =
+      qIndex === -1 ? new URLSearchParams() : new URLSearchParams(hash.slice(qIndex + 1));
+    const hasShare = Boolean(params.get('share')?.trim());
+    const hasYoutubeOauth = Boolean(params.get('youtube_oauth')?.trim());
+    const keepIdInUrl = !isMobileViewport() || hasShare || hasYoutubeOauth;
+    const playlistId = keepIdInUrl ? params.get('id')?.trim() || undefined : undefined;
+    const playlistShareToken = params.get('share')?.trim() || undefined;
+    return { page: 'playlist-lists', playlistId, playlistShareToken };
+  }
   if (hash.startsWith('#/playlists')) {
     const qIndex = hash.indexOf('?');
     const params =
@@ -92,13 +104,15 @@ export function useAppPage() {
     const hash =
       next === 'merge'
         ? '#/merge'
-        : next === 'playlists'
-          ? HOME_HASH
-          : next === 'admin'
-            ? '#/admin'
-            : next === 'login'
-              ? '#/login'
-              : '#/library';
+        : next === 'playlist-lists'
+          ? '#/playlists/lists'
+          : next === 'playlists'
+            ? HOME_HASH
+            : next === 'admin'
+              ? '#/admin'
+              : next === 'login'
+                ? '#/login'
+                : '#/library';
     if (window.location.hash !== hash) {
       window.location.hash = hash;
     }
@@ -107,8 +121,13 @@ export function useAppPage() {
 
   const navigateToPlaylist = useCallback((id?: string) => {
     const isMobile = isMobileViewport();
+    const listsRoute = window.location.hash.startsWith('#/playlists/lists');
     const keepIdInUrl = Boolean(id) && !isMobile;
-    const hash = keepIdInUrl ? `#/playlists?id=${encodeURIComponent(id!)}` : HOME_HASH;
+    const hash = keepIdInUrl
+      ? `#/playlists?id=${encodeURIComponent(id!)}`
+      : listsRoute
+        ? '#/playlists/lists'
+        : HOME_HASH;
     if (window.location.hash !== hash) {
       window.location.hash = hash;
     }

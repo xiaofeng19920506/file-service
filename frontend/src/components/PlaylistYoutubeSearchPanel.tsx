@@ -60,8 +60,7 @@ export default function PlaylistYoutubeSearchPanel({
     if (searchQuery.trim()) searchNow();
   };
 
-  const showClearSearch =
-    Boolean(searchQuery.trim()) || searchLoading || hasSearched || searchResults.length > 0;
+  const showClearSearch = searchResults.length > 0;
 
   const handleClearSearch = () => {
     resetSearch();

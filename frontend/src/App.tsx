@@ -65,6 +65,10 @@ function AppShellInner({
       navigate(home);
       return;
     }
+    if (page === 'playlist-lists' && !permissions.canAccessPlaylists) {
+      navigate(home);
+      return;
+    }
     if ((page === 'merge' || page === 'merge-edit') && !permissions.canMerge) {
       navigate(home);
       return;
@@ -106,7 +110,9 @@ function AppShellInner({
     document.title =
       page === 'playlists'
         ? t('pages.playlistsTitle')
-        : page === 'merge'
+        : page === 'playlist-lists'
+          ? t('pages.playlistListsTitle')
+          : page === 'merge'
           ? t('pages.mergeTitle')
           : page === 'admin'
             ? t('pages.adminTitle')
@@ -159,7 +165,9 @@ function AppShellInner({
   const pageTitle =
     page === 'playlists'
       ? t('nav.playlistsShort')
-      : page === 'merge'
+      : page === 'playlist-lists'
+        ? t('nav.playlistListsShort')
+        : page === 'merge'
         ? t('nav.mergeShort')
         : page === 'admin'
           ? t('nav.adminShort')
@@ -184,7 +192,7 @@ function AppShellInner({
   );
 
   return (
-    <div className={`app${page === 'playlists' ? ' app-playlists' : ''}${mobileMenuOpen ? ' nav-mobile-menu-open' : ''}`}>
+    <div className={`app${page === 'playlists' || page === 'playlist-lists' ? ' app-playlists' : ''}${mobileMenuOpen ? ' nav-mobile-menu-open' : ''}`}>
       <header className="nav">
         <div className="nav-inner">
           <div className="nav-brand">
@@ -270,8 +278,9 @@ function AppShellInner({
 
       <div className="app-content">
         {page === 'library' && permissions.canSearch && <LibraryPage libraryUpload={libraryUpload} />}
-        {page === 'playlists' && permissions.canAccessPlaylists && (
+        {(page === 'playlists' || page === 'playlist-lists') && permissions.canAccessPlaylists && (
           <PlaylistsPage
+            mobileHome={page === 'playlist-lists' ? 'lists' : 'search'}
             selectedId={playlistId}
             shareToken={playlistShareToken}
             onSelectId={navigateToPlaylist}

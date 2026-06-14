@@ -51,6 +51,7 @@ import { useAuth } from '../auth/AuthContext';
 import { writeLastPlaylistId } from '../lib/playlist-last-open';
 
 type PlaylistsPageProps = {
+  mobileHome?: 'search' | 'lists';
   selectedId?: string;
   shareToken?: string;
   onSelectId: (id: string | undefined) => void;
@@ -85,6 +86,7 @@ function reorderTrackItems(items: PlaylistItem[], from: number, target: TrackDra
 }
 
 export default function PlaylistsPage({
+  mobileHome = 'search',
   selectedId,
   shareToken,
   onSelectId,
@@ -1058,6 +1060,131 @@ export default function PlaylistsPage({
     );
   };
 
+  const renderPlaylistLibrary = () => (
+    <>
+      <div className="playlists-sidebar-head">
+        <h2>{t('playlists.savedTitle')}</h2>
+        {!loadingList && playlists.length > 0 && (
+          <span className="playlists-sidebar-count">{playlists.length}</span>
+        )}
+      </div>
+
+      <div className="playlists-sidebar-list">
+        <form
+          className="playlists-create-inline"
+          onSubmit={(e) => void handleCreateList(e)}
+          aria-label={t('playlists.importTitle')}
+        >
+          <div className="playlists-create-row">
+            <input
+              id="playlist-create-title"
+              type="text"
+              className="playlists-text-input"
+              placeholder={t('playlists.createPlaceholder')}
+              value={newListTitle}
+              onChange={(e) => setNewListTitle(e.target.value)}
+              disabled={creatingList}
+              maxLength={200}
+              autoComplete="off"
+              aria-label={t('playlists.createPlaceholder')}
+            />
+            <button
+              type="submit"
+              className="btn-primary playlists-create-btn"
+              disabled={creatingList || !newListTitle.trim()}
+            >
+              {creatingList ? t('playlists.creating') : t('playlists.importButton')}
+            </button>
+          </div>
+        </form>
+
+        {loadingList ? (
+          <p className="playlists-muted">{t('playlists.loading')}</p>
+        ) : playlists.length === 0 ? (
+          <div className="playlists-empty-card">
+            <p className="playlists-empty-title">{t('playlists.emptyTitle')}</p>
+            <p className="playlists-muted">{t('playlists.empty')}</p>
+          </div>
+        ) : (
+          <ul className="playlists-list">
+            {playlists.map((row) => (
+              <li
+                key={row.id}
+                className={`playlists-list-row${selectedId === row.id ? ' active' : ''}${renamingId === row.id ? ' renaming' : ''}`}
+              >
+                {renamingId === row.id ? (
+                  <form className="playlists-list-rename" onSubmit={(e) => void saveRename(e)}>
+                    <input
+                      type="text"
+                      className="playlists-text-input playlists-list-rename-input"
+                      value={renameDraft}
+                      onChange={(e) => setRenameDraft(e.target.value)}
+                      disabled={savingRename}
+                      autoFocus
+                      maxLength={200}
+                      aria-label={t('playlists.renameLabel')}
+                    />
+                    <div className="playlists-list-rename-actions">
+                      <button
+                        type="submit"
+                        className="btn-primary btn-compact"
+                        disabled={savingRename || !renameDraft.trim()}
+                      >
+                        {savingRename ? t('playlists.renaming') : t('playlists.renameSave')}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-secondary btn-compact"
+                        onClick={cancelRename}
+                        disabled={savingRename}
+                      >
+                        {t('playlists.renameCancel')}
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="playlists-list-row-inner">
+                    <button
+                      type="button"
+                      className="playlists-list-rename-btn"
+                      onClick={() => startRename(row.id, row.title)}
+                      aria-label={t('playlists.rename')}
+                      title={t('playlists.rename')}
+                    >
+                      <PencilIcon />
+                    </button>
+                    <button
+                      type="button"
+                      className="playlists-list-item"
+                      onClick={() => {
+                        if (renamingId !== null && renamingId !== row.id) {
+                          cancelRename();
+                        }
+                        onSelectId(row.id);
+                      }}
+                    >
+                      <span className="playlists-list-item-body">
+                        <span className="playlists-list-title">{row.title}</span>
+                        <span className="playlists-list-meta">
+                          {t('playlists.trackCount', { count: row.itemCount })}
+                          <span className="playlists-list-dot">·</span>
+                          {formatDate(row.createdAt)}
+                        </span>
+                      </span>
+                    </button>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </>
+  );
+
+  const mobileHomeView =
+    isMobileViewport && !selectedId ? mobileHome : undefined;
+
   return (
     <>
       <PlaylistsMobileMenuPortal>{renderPlaylistsMobileMenu()}</PlaylistsMobileMenuPortal>
@@ -1071,13 +1198,14 @@ export default function PlaylistsPage({
         data-audio-desktop-dock={audioWatchDesktop ? 'true' : 'false'}
         data-audio-mobile-record={audioWatchMobile ? 'true' : 'false'}
         data-mobile-audio-dock={showMobileAudioDock ? 'true' : 'false'}
+        data-mobile-home={mobileHomeView}
       >
         <header className={`playlists-header${selectedId ? ' mobile-only-hidden' : ''}`}>
           <h1>{t('playlists.title')}</h1>
           <p className="playlists-intro">{t('playlists.intro')}</p>
         </header>
 
-        {(error || notice) && !(isMobileViewport && !selectedId) && (
+        {(error || notice) && !(isMobileViewport && !selectedId && mobileHome === 'search') && (
           <div className="playlists-alerts">
             {error && <p className="error-msg playlists-alert">{error}</p>}
             {notice && <p className="playlists-notice">{notice}</p>}
@@ -1098,14 +1226,20 @@ export default function PlaylistsPage({
           data-mobile-audio-dock={showMobileAudioDock ? 'true' : 'false'}
         >
           <aside
-            className={`playlists-sidebar${isMobileViewport && !selectedId ? ' playlists-sidebar--search-only' : ''}`}
+            className={`playlists-sidebar${
+              mobileHomeView === 'search'
+                ? ' playlists-sidebar--search-only'
+                : mobileHomeView === 'lists'
+                  ? ' playlists-sidebar--lists-only'
+                  : ''
+            }`}
             aria-label={
-              isMobileViewport && !selectedId
+              mobileHomeView === 'search'
                 ? t('playlists.searchSection')
                 : t('playlists.savedTitle')
             }
           >
-            {isMobileViewport && !selectedId ? (
+            {mobileHomeView === 'search' ? (
               <PlaylistYoutubeSearchPanel
                 className="playlists-youtube-search--mobile-list"
                 mobileListOnly
@@ -1116,128 +1250,7 @@ export default function PlaylistsPage({
                 onAdded={(data, meta) => void handleItemsAdded(data, meta)}
               />
             ) : (
-              <>
-                <div className="playlists-sidebar-head">
-                  <h2>{t('playlists.savedTitle')}</h2>
-                  {!loadingList && playlists.length > 0 && (
-                    <span className="playlists-sidebar-count">{playlists.length}</span>
-                  )}
-                </div>
-
-                <div className="playlists-sidebar-list">
-              <form
-                className="playlists-create-inline"
-                onSubmit={(e) => void handleCreateList(e)}
-                aria-label={t('playlists.importTitle')}
-              >
-                <div className="playlists-create-row">
-                  <input
-                    id="playlist-create-title"
-                    type="text"
-                    className="playlists-text-input"
-                    placeholder={t('playlists.createPlaceholder')}
-                    value={newListTitle}
-                    onChange={(e) => setNewListTitle(e.target.value)}
-                    disabled={creatingList}
-                    maxLength={200}
-                    autoComplete="off"
-                    aria-label={t('playlists.createPlaceholder')}
-                  />
-                  <button
-                    type="submit"
-                    className="btn-primary playlists-create-btn"
-                    disabled={creatingList || !newListTitle.trim()}
-                  >
-                    {creatingList ? t('playlists.creating') : t('playlists.importButton')}
-                  </button>
-                </div>
-              </form>
-
-              {loadingList ? (
-                <p className="playlists-muted">{t('playlists.loading')}</p>
-              ) : playlists.length === 0 ? (
-                <div className="playlists-empty-card">
-                  <p className="playlists-empty-title">{t('playlists.emptyTitle')}</p>
-                  <p className="playlists-muted">{t('playlists.empty')}</p>
-                </div>
-              ) : (
-                <ul className="playlists-list">
-                  {playlists.map((row) => (
-                    <li
-                      key={row.id}
-                      className={`playlists-list-row${selectedId === row.id ? ' active' : ''}${renamingId === row.id ? ' renaming' : ''}`}
-                    >
-                      {renamingId === row.id ? (
-                        <form
-                          className="playlists-list-rename"
-                          onSubmit={(e) => void saveRename(e)}
-                        >
-                          <input
-                            type="text"
-                            className="playlists-text-input playlists-list-rename-input"
-                            value={renameDraft}
-                            onChange={(e) => setRenameDraft(e.target.value)}
-                            disabled={savingRename}
-                            autoFocus
-                            maxLength={200}
-                            aria-label={t('playlists.renameLabel')}
-                          />
-                          <div className="playlists-list-rename-actions">
-                            <button
-                              type="submit"
-                              className="btn-primary btn-compact"
-                              disabled={savingRename || !renameDraft.trim()}
-                            >
-                              {savingRename ? t('playlists.renaming') : t('playlists.renameSave')}
-                            </button>
-                            <button
-                              type="button"
-                              className="btn-secondary btn-compact"
-                              onClick={cancelRename}
-                              disabled={savingRename}
-                            >
-                              {t('playlists.renameCancel')}
-                            </button>
-                          </div>
-                        </form>
-                      ) : (
-                        <div className="playlists-list-row-inner">
-                          <button
-                            type="button"
-                            className="playlists-list-rename-btn"
-                            onClick={() => startRename(row.id, row.title)}
-                            aria-label={t('playlists.rename')}
-                            title={t('playlists.rename')}
-                          >
-                            <PencilIcon />
-                          </button>
-                          <button
-                            type="button"
-                            className="playlists-list-item"
-                            onClick={() => {
-                              if (renamingId !== null && renamingId !== row.id) {
-                                cancelRename();
-                              }
-                              onSelectId(row.id);
-                            }}
-                          >
-                            <span className="playlists-list-item-body">
-                              <span className="playlists-list-title">{row.title}</span>
-                              <span className="playlists-list-meta">
-                                {t('playlists.trackCount', { count: row.itemCount })}
-                                <span className="playlists-list-dot">·</span>
-                                {formatDate(row.createdAt)}
-                              </span>
-                            </span>
-                          </button>
-                        </div>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-                </div>
-              </>
+              renderPlaylistLibrary()
             )}
           </aside>
 
