@@ -2,7 +2,7 @@ import {
   searchYoutubeVideos,
   searchYoutubeVideosViaYtdlp,
   YOUTUBE_SEARCH_DEFAULT_PAGE_SIZE,
-  YOUTUBE_SEARCH_MAX_TOTAL,
+  YOUTUBE_SEARCH_MAX_PAGE_SIZE,
   type ApiEnv,
 } from '@file-service/shared';
 import type { FastifyInstance } from 'fastify';
@@ -21,26 +21,13 @@ export function registerYoutubeSearchRoutes(app: FastifyInstance, opts: { env: A
       if (q.length > 200) return reply.code(400).send({ error: 'query_too_long' });
 
       const limitRaw = Number.parseInt(request.query.limit ?? String(YOUTUBE_SEARCH_DEFAULT_PAGE_SIZE), 10);
-      const pageSize = Number.isFinite(limitRaw)
-        ? Math.min(Math.max(limitRaw, 1), YOUTUBE_SEARCH_MAX_TOTAL)
+      const maxResults = Number.isFinite(limitRaw)
+        ? Math.min(Math.max(limitRaw, 1), YOUTUBE_SEARCH_MAX_PAGE_SIZE)
         : YOUTUBE_SEARCH_DEFAULT_PAGE_SIZE;
 
       const pageToken = request.query.pageToken?.trim() || undefined;
       const offsetRaw = Number.parseInt(request.query.offset ?? '0', 10);
       const offset = Number.isFinite(offsetRaw) ? Math.max(offsetRaw, 0) : 0;
-
-      if (offset >= YOUTUBE_SEARCH_MAX_TOTAL) {
-        return {
-          query: q,
-          results: [],
-          nextPageToken: null,
-          hasMore: false,
-          nextOffset: offset,
-        };
-      }
-
-      const remaining = YOUTUBE_SEARCH_MAX_TOTAL - offset;
-      const maxResults = Math.min(pageSize, remaining);
 
       try {
         const page = env.YOUTUBE_API_KEY

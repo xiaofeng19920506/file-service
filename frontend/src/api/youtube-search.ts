@@ -18,7 +18,6 @@ export type YoutubeSearchPageResponse = {
 };
 
 export const YOUTUBE_SEARCH_PAGE_SIZE = 15;
-export const YOUTUBE_SEARCH_MAX_TOTAL = 50;
 
 export async function searchYoutubeVideos(
   query: string,

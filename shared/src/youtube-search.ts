@@ -4,7 +4,7 @@ import { isValidYoutubeVideoId, resolveYtdlpPath } from './youtube-audio-extract
 
 const execFileAsync = promisify(execFile);
 
-export const YOUTUBE_SEARCH_MAX_TOTAL = 50;
+export const YOUTUBE_SEARCH_MAX_PAGE_SIZE = 50;
 export const YOUTUBE_SEARCH_DEFAULT_PAGE_SIZE = 15;
 
 export type YoutubeSearchResult = {
@@ -75,10 +75,8 @@ type SearchApiItem = {
   };
 };
 
-function clampPageSize(maxResults: number | undefined, offset = 0): number {
-  const remaining = Math.max(YOUTUBE_SEARCH_MAX_TOTAL - offset, 0);
-  if (!remaining) return 0;
-  return Math.min(Math.max(maxResults ?? YOUTUBE_SEARCH_DEFAULT_PAGE_SIZE, 1), remaining, 50);
+function clampPageSize(maxResults: number | undefined): number {
+  return Math.min(Math.max(maxResults ?? YOUTUBE_SEARCH_DEFAULT_PAGE_SIZE, 1), YOUTUBE_SEARCH_MAX_PAGE_SIZE);
 }
 
 function rankSearchResults(query: string, items: SearchApiItem[]): YoutubeSearchResult[] {
@@ -186,10 +184,7 @@ export async function searchYoutubeVideosViaYtdlp(
   }
 
   const offset = Math.max(options?.offset ?? 0, 0);
-  const maxResults = clampPageSize(options?.maxResults, offset);
-  if (!maxResults) {
-    return { results: [], nextPageToken: null, hasMore: false, nextOffset: offset };
-  }
+  const maxResults = clampPageSize(options?.maxResults);
 
   const bin = resolveYtdlpPath(ytdlpPath);
   const start = offset + 1;
@@ -245,7 +240,7 @@ export async function searchYoutubeVideosViaYtdlp(
 
   ranked.sort((a, b) => b.relevanceScore - a.relevanceScore);
   const nextOffset = offset + maxResults;
-  const hasMore = nextOffset < YOUTUBE_SEARCH_MAX_TOTAL && rawCount > 0;
+  const hasMore = rawCount >= maxResults;
 
   return {
     results: ranked,

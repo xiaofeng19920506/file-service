@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   searchYoutubeVideos,
-  YOUTUBE_SEARCH_MAX_TOTAL,
   YOUTUBE_SEARCH_PAGE_SIZE,
   type YoutubeSearchResult,
 } from '../api/youtube-search';
@@ -26,7 +25,7 @@ function mergeSearchResults(
     seen.add(row.videoId);
     merged.push(row);
   }
-  return merged.slice(0, YOUTUBE_SEARCH_MAX_TOTAL);
+  return merged;
 }
 
 export function useDebouncedYoutubeSearch(options: UseDebouncedYoutubeSearchOptions = {}) {
@@ -44,8 +43,6 @@ export function useDebouncedYoutubeSearch(options: UseDebouncedYoutubeSearchOpti
   const requestIdRef = useRef(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeQueryRef = useRef('');
-  const searchResultsRef = useRef<YoutubeSearchResult[]>([]);
-  searchResultsRef.current = searchResults;
 
   const resetPagination = useCallback(() => {
     setHasMore(false);
@@ -79,11 +76,7 @@ export function useDebouncedYoutubeSearch(options: UseDebouncedYoutubeSearchOpti
       );
       setNextPageToken(data.nextPageToken);
       setNextOffset(data.nextOffset);
-      setHasMore(
-        data.hasMore && (mode === 'replace'
-          ? data.results.length < YOUTUBE_SEARCH_MAX_TOTAL
-          : true),
-      );
+      setHasMore(data.hasMore);
       setHasSearched(true);
     },
     [],
@@ -107,7 +100,6 @@ export function useDebouncedYoutubeSearch(options: UseDebouncedYoutubeSearchOpti
         const data = await searchYoutubeVideos(trimmed, { limit: YOUTUBE_SEARCH_PAGE_SIZE });
         if (id !== requestIdRef.current) return;
         applySearchPage(data, 'replace');
-        setHasMore(data.hasMore && data.results.length < YOUTUBE_SEARCH_MAX_TOTAL);
       } catch (e) {
         if (id !== requestIdRef.current) return;
         setSearchError(friendlyError(e instanceof Error ? e.message : 'youtube_search_failed', t));
@@ -129,30 +121,17 @@ export function useDebouncedYoutubeSearch(options: UseDebouncedYoutubeSearchOpti
     setLoadMoreLoading(true);
     setSearchError(null);
     try {
-      const remaining = YOUTUBE_SEARCH_MAX_TOTAL - searchResultsRef.current.length;
-      if (remaining <= 0) {
-        setHasMore(false);
-        return;
-      }
-
       const data = await searchYoutubeVideos(trimmed, {
-        limit: Math.min(YOUTUBE_SEARCH_PAGE_SIZE, remaining),
+        limit: YOUTUBE_SEARCH_PAGE_SIZE,
         pageToken: nextPageToken ?? undefined,
         offset: nextPageToken ? undefined : nextOffset,
       });
       if (id !== requestIdRef.current) return;
 
-      setSearchResults((prev) => {
-        const merged = mergeSearchResults(prev, data.results);
-        setHasMore(
-          data.hasMore
-          && merged.length < YOUTUBE_SEARCH_MAX_TOTAL
-          && data.results.length > 0,
-        );
-        return merged;
-      });
+      setSearchResults((prev) => mergeSearchResults(prev, data.results));
       setNextPageToken(data.nextPageToken);
       setNextOffset(data.nextOffset);
+      setHasMore(data.hasMore && data.results.length > 0);
     } catch (e) {
       if (id !== requestIdRef.current) return;
       setSearchError(friendlyError(e instanceof Error ? e.message : 'youtube_search_failed', t));
