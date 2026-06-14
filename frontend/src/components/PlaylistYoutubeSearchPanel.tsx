@@ -73,6 +73,10 @@ export default function PlaylistYoutubeSearchPanel({
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
+                if (isMobileViewport) {
+                  e.currentTarget.blur();
+                  return;
+                }
                 submitSearch();
               }
             }}
