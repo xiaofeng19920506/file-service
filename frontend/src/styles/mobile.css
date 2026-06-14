@@ -409,7 +409,25 @@
   }
 
   /* ── 敬拜列表 ── */
-  .playlists-page {
+  .playlists-page:has(.playlists-workspace[data-mobile-view='list']) {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 0;
+  }
+
+  .playlists-page:has(.playlists-workspace[data-mobile-view='list']) .playlists-header {
+    display: none;
+  }
+
+  .playlists-page:has(.playlists-workspace[data-mobile-view='list']) .playlists-alerts {
+    margin: 0;
+    flex-shrink: 0;
+    padding: 0.5rem var(--page-gutter) 0;
+  }
+
+  .playlists-page:not(:has(.playlists-workspace[data-mobile-view='list'])) {
     padding: 0.5rem var(--page-gutter) 0.75rem;
   }
 
@@ -435,6 +453,16 @@
     min-height: 10rem;
   }
 
+  .playlists-workspace[data-mobile-view='list'] {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    width: 100%;
+    gap: 0;
+    grid-template-rows: 1fr;
+  }
+
   .playlists-workspace[data-mobile-view='list'] .playlists-main {
     display: none;
   }
@@ -456,9 +484,30 @@
   }
 
   .playlists-workspace[data-mobile-view='list'] .playlists-sidebar {
+    flex: 1;
+    width: 100%;
+    max-width: none;
     max-height: none;
+    min-height: 0;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+  }
+
+  .playlists-workspace[data-mobile-view='list'] .playlists-sidebar-head {
+    padding-inline: var(--page-gutter);
+  }
+
+  .playlists-workspace[data-mobile-view='list'] .playlists-sidebar-list {
     flex: 1;
     min-height: 0;
+    padding-inline: calc(var(--page-gutter) - 0.45rem);
+    padding-bottom: calc(0.55rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .playlists-workspace[data-mobile-view='list'] .playlists-sidebar-search {
+    padding: 0 var(--page-gutter) 0.65rem;
   }
 
   .playlists-sidebar-search {
