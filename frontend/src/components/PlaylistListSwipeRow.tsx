@@ -3,7 +3,7 @@ import { useI18n } from '../i18n';
 
 const ACTION_WIDTH_PX = 76;
 const DRAG_CLICK_THRESHOLD_PX = 6;
-const SUPPRESS_CLICK_MS = 400;
+const SUPPRESS_CLICK_MS = 700;
 
 export type PlaylistListSwipeSide = 'none' | 'edit' | 'delete';
 
@@ -36,7 +36,12 @@ export default function PlaylistListSwipeRow({
   const [contentWidth, setContentWidth] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef({ startX: 0, startOffset: 0, pointerId: -1, moved: false });
+  const openSideRef = useRef<PlaylistListSwipeSide>('none');
   const suppressClickUntilRef = useRef(0);
+
+  useLayoutEffect(() => {
+    openSideRef.current = openedSide;
+  }, [openedSide]);
 
   useLayoutEffect(() => {
     const el = rootRef.current;
@@ -63,6 +68,17 @@ export default function PlaylistListSwipeRow({
       return { offset: ACTION_WIDTH_PX, side: 'edit' };
     }
     return { offset: 0, side: 'none' };
+  };
+
+  const suppressClicks = () => {
+    suppressClickUntilRef.current = Date.now() + SUPPRESS_CLICK_MS;
+  };
+
+  const shouldSuppressClick = () => Date.now() < suppressClickUntilRef.current;
+
+  const setOpenSide = (side: PlaylistListSwipeSide) => {
+    openSideRef.current = side;
+    onOpenedSideChange(side);
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -105,43 +121,43 @@ export default function PlaylistListSwipeRow({
 
     const { offset: snapped, side } = snapOffset(offset);
     setOffset(snapped);
-    onOpenedSideChange(side);
+    setOpenSide(side);
 
-    if (didMove) {
-      suppressClickUntilRef.current = Date.now() + SUPPRESS_CLICK_MS;
+    if (didMove || side !== 'none') {
+      suppressClicks();
       e.preventDefault();
     }
 
     dragRef.current.moved = false;
   };
 
-  const shouldSuppressClick = () => Date.now() < suppressClickUntilRef.current;
-
   const handleSelect = () => {
     if (shouldSuppressClick()) return;
 
-    if (openedSide !== 'none') {
-      onOpenedSideChange('none');
+    if (openSideRef.current !== 'none') {
+      setOpenSide('none');
       return;
     }
 
     onSelect();
   };
 
-  const handleEdit = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    suppressClickUntilRef.current = Date.now() + SUPPRESS_CLICK_MS;
-    onOpenedSideChange('none');
-    onEdit();
+  const runAction = (action: () => void) => {
+    suppressClicks();
+    action();
+    setOpenSide('none');
   };
 
-  const handleDelete = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleEditPointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    suppressClickUntilRef.current = Date.now() + SUPPRESS_CLICK_MS;
-    onOpenedSideChange('none');
-    onDelete();
+    runAction(onEdit);
+  };
+
+  const handleDeletePointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    runAction(onDelete);
   };
 
   const stopActionPointer = (e: React.PointerEvent<HTMLButtonElement>) => {
@@ -162,7 +178,7 @@ export default function PlaylistListSwipeRow({
             type="button"
             className="playlists-list-swipe-action-btn"
             onPointerDown={stopActionPointer}
-            onClick={handleEdit}
+            onPointerUp={handleEditPointerUp}
           >
             {t('playlists.rename')}
           </button>
@@ -190,7 +206,7 @@ export default function PlaylistListSwipeRow({
             className="playlists-list-swipe-action-btn"
             disabled={deleteBusy}
             onPointerDown={stopActionPointer}
-            onClick={handleDelete}
+            onPointerUp={handleDeletePointerUp}
           >
             {deleteBusy ? t('playlists.deleting') : t('playlists.delete')}
           </button>

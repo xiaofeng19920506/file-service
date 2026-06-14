@@ -156,6 +156,7 @@ export default function PlaylistsPage({
     canSeek: false,
   });
   const audioProgressHandleRef = useRef<PlaylistAudioProgressHandle | null>(null);
+  const blockListSelectRef = useRef(false);
 
   useEffect(() => {
     if (oauthHandledRef.current) return;
@@ -746,6 +747,10 @@ export default function PlaylistsPage({
   }, [youtubeWatchMobile, audioWatchMobile]);
 
   const startRename = (id: string, title: string) => {
+    blockListSelectRef.current = true;
+    window.setTimeout(() => {
+      blockListSelectRef.current = false;
+    }, 800);
     setRenameTarget({ id, title });
     setListSwipeOpen(null);
   };
@@ -1228,6 +1233,7 @@ export default function PlaylistsPage({
                     </>
                   }
                   onSelect={() => {
+                    if (blockListSelectRef.current || renameTarget) return;
                     setListSwipeOpen(null);
                     onSelectId(row.id);
                   }}
