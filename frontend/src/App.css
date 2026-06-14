@@ -1620,10 +1620,49 @@
   font-size: 0.9375rem;
   color: var(--text);
   outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.search-input::-webkit-search-cancel-button,
+.search-input::-webkit-search-decoration {
+  display: none;
 }
 
 .search-input::placeholder {
   color: var(--text-tertiary);
+}
+
+.search-clear-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-right: -0.15rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.search-clear-btn:hover:not(:disabled) {
+  background: var(--border-light);
+  color: var(--text-secondary);
+}
+
+.search-clear-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.search-clear-btn svg {
+  width: 0.875rem;
+  height: 0.875rem;
 }
 
 .btn-search {

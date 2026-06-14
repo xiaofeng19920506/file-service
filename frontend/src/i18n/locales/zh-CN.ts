@@ -354,6 +354,7 @@ export default {
     placeholder: '按歌曲名（中/英/简繁）、作曲、作词或文件名搜索…',
     button: '搜索',
     searching: '搜索中…',
+    clear: '清空搜索',
     add: '加入列表',
     added: '已加入',
     empty: '输入关键词搜索已上传的演示文稿',

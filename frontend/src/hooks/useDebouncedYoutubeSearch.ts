@@ -88,6 +88,16 @@ export function useDebouncedYoutubeSearch(options: UseDebouncedYoutubeSearchOpti
     };
   }, [searchQuery, runSearch, debounceMs, debounceEnabled, clearSearchState]);
 
+  const resetSearch = useCallback(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    requestIdRef.current += 1;
+    setSearchQuery('');
+    clearSearchState();
+  }, [clearSearchState]);
+
   return {
     searchQuery,
     setSearchQuery,
@@ -96,5 +106,6 @@ export function useDebouncedYoutubeSearch(options: UseDebouncedYoutubeSearchOpti
     searchError,
     hasSearched,
     searchNow,
+    resetSearch,
   };
 }

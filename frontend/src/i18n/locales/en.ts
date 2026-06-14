@@ -362,6 +362,7 @@ const en: MessageTree = {
     placeholder: 'Search by title (EN / 简 / 繁), composer, author, or filename…',
     button: 'Search',
     searching: 'Searching…',
+    clear: 'Clear search',
     add: 'Add to setlist',
     added: 'Added',
     empty: 'Enter keywords to search uploaded presentations',

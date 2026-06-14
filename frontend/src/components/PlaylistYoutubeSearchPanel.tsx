@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { addPlaylistItemsByVideos, type PlaylistDetail } from '../api/playlists';
 import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 import { useDebouncedYoutubeSearch } from '../hooks/useDebouncedYoutubeSearch';
 import { friendlyError } from '../lib/error-messages';
-import { CheckIcon, PlusIcon, SearchIcon } from './icons';
+import { CheckIcon, CloseIcon, PlusIcon, SearchIcon } from './icons';
 import { useI18n } from '../i18n';
 
 type PlaylistYoutubeSearchPanelProps = {
@@ -25,6 +25,7 @@ export default function PlaylistYoutubeSearchPanel({
 }: PlaylistYoutubeSearchPanelProps) {
   const { t } = useI18n();
   const isMobileViewport = useMediaQuery(MOBILE_MEDIA_QUERY);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [addingVideoId, setAddingVideoId] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
 
@@ -36,10 +37,20 @@ export default function PlaylistYoutubeSearchPanel({
     searchError,
     hasSearched,
     searchNow,
+    resetSearch,
   } = useDebouncedYoutubeSearch({ debounceEnabled: !isMobileViewport });
 
   const submitSearch = () => {
     if (searchQuery.trim()) searchNow();
+  };
+
+  const showClearSearch =
+    Boolean(searchQuery.trim()) || searchLoading || hasSearched || searchResults.length > 0;
+
+  const handleClearSearch = () => {
+    resetSearch();
+    setAddError(null);
+    searchInputRef.current?.blur();
   };
 
   const handleAddSearchResult = async (videoId: string, title: string) => {
@@ -66,6 +77,7 @@ export default function PlaylistYoutubeSearchPanel({
         <div className="search-input-wrap">
           <SearchIcon />
           <input
+            ref={searchInputRef}
             type="search"
             className="search-input"
             value={searchQuery}
@@ -88,6 +100,18 @@ export default function PlaylistYoutubeSearchPanel({
             autoComplete="off"
             disabled={addingVideoId !== null}
           />
+          {showClearSearch && (
+            <button
+              type="button"
+              className="search-clear-btn"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={handleClearSearch}
+              aria-label={t('search.clear')}
+              disabled={addingVideoId !== null}
+            >
+              <CloseIcon />
+            </button>
+          )}
         </div>
         {!isMobileViewport && (
           <button

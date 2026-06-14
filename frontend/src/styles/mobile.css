@@ -547,6 +547,11 @@
     width: 100%;
   }
 
+  .search-clear-btn {
+    width: 2rem;
+    height: 2rem;
+  }
+
   .playlists-youtube-search-loading {
     margin: 0.45rem 0 0;
     font-size: 0.78rem;
