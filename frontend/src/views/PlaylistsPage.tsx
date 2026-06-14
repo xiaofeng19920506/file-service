@@ -3,6 +3,7 @@ import AcceptSharedPlaylistModal from '../components/AcceptSharedPlaylistModal';
 import AddPlaylistItemsModal from '../components/AddPlaylistItemsModal';
 import PlaylistYoutubeSearchPanel from '../components/PlaylistYoutubeSearchPanel';
 import ConfirmModal from '../components/ConfirmModal';
+import CreatePlaylistModal from '../components/CreatePlaylistModal';
 import SharePlaylistModal from '../components/SharePlaylistModal';
 import ExportYoutubePlaylistModal from '../components/ExportYoutubePlaylistModal';
 import { DragHandleIcon, PencilIcon, PlusIcon } from '../components/icons';
@@ -101,8 +102,7 @@ export default function PlaylistsPage({
   const [libraryVideoIds, setLibraryVideoIds] = useState<Set<string>>(() => new Set());
   const [detail, setDetail] = useState<PlaylistDetail | null>(null);
   const [newListTitle, setNewListTitle] = useState('');
-  const [showMobileCreateList, setShowMobileCreateList] = useState(false);
-  const createListInputRef = useRef<HTMLInputElement>(null);
+  const [showCreateListModal, setShowCreateListModal] = useState(false);
   const [loadingList, setLoadingList] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [creatingList, setCreatingList] = useState(false);
@@ -283,31 +283,40 @@ export default function PlaylistsPage({
     onSelectId(undefined);
   };
 
+  const performCreateList = useCallback(
+    async (title: string) => {
+      const trimmed = title.trim();
+      if (!trimmed || creatingList) return;
+
+      setCreatingList(true);
+      setNotice(null);
+      try {
+        const data = await createPlaylist(trimmed);
+        setNewListTitle('');
+        await loadList();
+        onSelectId(data.playlist.id);
+        setDetail(data);
+        setActiveIndex(0);
+        setPlaying(false);
+        setPlayerEngaged(false);
+        setNotice(t('playlists.createSuccess', { title: data.playlist.title }));
+        setShowCreateListModal(false);
+      } catch (err) {
+        throw err instanceof Error ? err : new Error('create_playlist_failed');
+      } finally {
+        setCreatingList(false);
+      }
+    },
+    [creatingList, loadList, onSelectId, t],
+  );
+
   const handleCreateList = async (e: React.FormEvent) => {
     e.preventDefault();
-    const title = newListTitle.trim();
-    if (!title || creatingList) return;
-
-    setCreatingList(true);
     setError(null);
-    setNotice(null);
     try {
-      const data = await createPlaylist(title);
-      setNewListTitle('');
-      await loadList();
-      onSelectId(data.playlist.id);
-      setDetail(data);
-      setActiveIndex(0);
-      setPlaying(false);
-      setPlayerEngaged(false);
-      setNotice(t('playlists.createSuccess', { title: data.playlist.title }));
-      if (isMobileViewport && mobileHome === 'lists' && !selectedId) {
-        setShowMobileCreateList(false);
-      }
+      await performCreateList(newListTitle);
     } catch (err) {
       setError(friendlyError(err instanceof Error ? err.message : 'create_playlist_failed', t));
-    } finally {
-      setCreatingList(false);
     }
   };
 
@@ -1103,7 +1112,6 @@ export default function PlaylistsPage({
 
   const renderPlaylistLibrary = () => {
     const isMobileLists = isMobileViewport && !selectedId && mobileHome === 'lists';
-    const showCreateForm = !isMobileLists || showMobileCreateList;
 
     return (
     <>
@@ -1113,10 +1121,7 @@ export default function PlaylistsPage({
           <button
             type="button"
             className="playlists-sidebar-add-btn"
-            onClick={() => {
-              setShowMobileCreateList(true);
-              requestAnimationFrame(() => createListInputRef.current?.focus());
-            }}
+            onClick={() => setShowCreateListModal(true)}
             disabled={creatingList}
             aria-label={t('playlists.importTitle')}
             title={t('playlists.importTitle')}
@@ -1132,7 +1137,7 @@ export default function PlaylistsPage({
       </div>
 
       <div className="playlists-sidebar-list">
-        {showCreateForm && (
+        {!isMobileLists && (
         <form
           className="playlists-create-inline"
           onSubmit={(e) => void handleCreateList(e)}
@@ -1140,7 +1145,6 @@ export default function PlaylistsPage({
         >
           <div className="playlists-create-row">
             <input
-              ref={createListInputRef}
               id="playlist-create-title"
               type="text"
               className="playlists-text-input"
@@ -1249,7 +1253,7 @@ export default function PlaylistsPage({
   };
 
   useEffect(() => {
-    if (mobileHome !== 'lists') setShowMobileCreateList(false);
+    if (mobileHome !== 'lists') setShowCreateListModal(false);
   }, [mobileHome]);
 
   const mobileHomeView =
@@ -1612,6 +1616,14 @@ export default function PlaylistsPage({
             setDetail(data);
             setNotice(t('playlists.shareAccepted'));
           }}
+        />
+      )}
+
+      {showCreateListModal && (
+        <CreatePlaylistModal
+          onClose={() => setShowCreateListModal(false)}
+          onCreate={performCreateList}
+          busy={creatingList}
         />
       )}
 

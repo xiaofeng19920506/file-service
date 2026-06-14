@@ -4590,6 +4590,26 @@
   flex-direction: column;
 }
 
+.create-playlist-modal {
+  width: min(100%, 22rem);
+}
+
+.create-playlist-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.create-playlist-modal-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.create-playlist-modal-input {
+  width: 100%;
+}
+
 .pick-playlist-for-add-body {
   display: flex;
   flex-direction: column;
