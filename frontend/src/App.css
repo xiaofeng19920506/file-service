@@ -4538,6 +4538,102 @@
   text-align: center;
 }
 
+.pick-playlist-for-add-modal {
+  width: min(100%, 24rem);
+  max-height: min(88vh, 34rem);
+  display: flex;
+  flex-direction: column;
+}
+
+.pick-playlist-for-add-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-height: 0;
+  overflow: auto;
+}
+
+.pick-playlist-for-add-song {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pick-playlist-for-add-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: min(36vh, 16rem);
+  overflow: auto;
+}
+
+.pick-playlist-for-add-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.12rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.pick-playlist-for-add-item:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--blue) 35%, var(--border));
+  background: var(--blue-muted);
+}
+
+.pick-playlist-for-add-item:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.pick-playlist-for-add-item-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pick-playlist-for-add-item-meta {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.pick-playlist-for-add-create {
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border-light);
+}
+
+.pick-playlist-for-add-create-label {
+  margin: 0 0 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.pick-playlist-for-add-create-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
 .youtube-search-results {
   max-height: min(36vh, 16rem);
   overflow: auto;

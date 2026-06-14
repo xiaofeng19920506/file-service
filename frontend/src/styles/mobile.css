@@ -422,7 +422,22 @@
   }
 
   .playlists-page:has(.playlists-workspace[data-mobile-view='list']) .playlists-alerts {
+    margin: 0;
+    flex-shrink: 0;
+    padding: 0.35rem var(--page-gutter) 0;
+  }
+
+  .playlists-page:has(.playlists-workspace[data-mobile-view='list']) .playlists-alert {
     display: none;
+  }
+
+  .pick-playlist-for-add-create-form {
+    flex-direction: row;
+  }
+
+  .pick-playlist-for-add-create-form .btn-primary {
+    flex-shrink: 0;
+    white-space: nowrap;
   }
 
   .playlists-page:not(:has(.playlists-workspace[data-mobile-view='list'])) {

@@ -48,7 +48,7 @@ import {
 import { useI18n } from '../i18n';
 import { usePlaylistsMobileMenu, PlaylistsMobileMenuPortal } from '../contexts/PlaylistsMobileMenuContext';
 import { useAuth } from '../auth/AuthContext';
-import { readLastPlaylistId, writeLastPlaylistId } from '../lib/playlist-last-open';
+import { writeLastPlaylistId } from '../lib/playlist-last-open';
 
 type PlaylistsPageProps = {
   selectedId?: string;
@@ -94,10 +94,6 @@ export default function PlaylistsPage({
   const { t, locale } = useI18n();
   const { permissions } = useAuth();
   const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
-  const [listSearchTargetId, setListSearchTargetId] = useState<string | undefined>(undefined);
-  const [listSearchExistingVideoIds, setListSearchExistingVideoIds] = useState<Set<string>>(
-    () => new Set(),
-  );
   const [detail, setDetail] = useState<PlaylistDetail | null>(null);
   const [newListTitle, setNewListTitle] = useState('');
   const [loadingList, setLoadingList] = useState(true);
@@ -203,41 +199,6 @@ export default function PlaylistsPage({
     });
   }, [detail, exportTarget]);
 
-  useEffect(() => {
-    if (playlists.length === 0) {
-      setListSearchTargetId(undefined);
-      return;
-    }
-    setListSearchTargetId((prev) => {
-      if (prev && playlists.some((row) => row.id === prev)) return prev;
-      const lastId = readLastPlaylistId();
-      if (lastId && playlists.some((row) => row.id === lastId)) return lastId;
-      return playlists[0]?.id;
-    });
-  }, [playlists]);
-
-  useEffect(() => {
-    if (!listSearchTargetId) {
-      setListSearchExistingVideoIds(new Set());
-      return;
-    }
-    let cancelled = false;
-    void getPlaylist(listSearchTargetId)
-      .then((data) => {
-        if (!cancelled) {
-          setListSearchExistingVideoIds(
-            new Set(data.items.map((item) => item.youtubeVideoId)),
-          );
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setListSearchExistingVideoIds(new Set());
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [listSearchTargetId]);
-
   const loadList = useCallback(async () => {
     setLoadingList(true);
     setError(null);
@@ -335,17 +296,21 @@ export default function PlaylistsPage({
     }
   };
 
+  const createPlaylistForSearch = useCallback(
+    async (title: string) => {
+      const data = await createPlaylist(title);
+      await loadList();
+      return data;
+    },
+    [loadList],
+  );
+
   const handleItemsAdded = async (
     data: PlaylistDetail,
     meta: { addedCount: number; skippedCount: number },
   ) => {
     if (selectedId === data.playlist.id) {
       setDetail(data);
-    }
-    if (listSearchTargetId === data.playlist.id) {
-      setListSearchExistingVideoIds(
-        new Set(data.items.map((item) => item.youtubeVideoId)),
-      );
     }
     await loadList();
     if (meta.skippedCount > 0 && meta.addedCount > 0) {
@@ -357,6 +322,8 @@ export default function PlaylistsPage({
       );
     } else if (meta.skippedCount > 0) {
       setNotice(t('playlists.addAllDuplicate'));
+    } else if (meta.addedCount > 0) {
+      setNotice(t('playlists.addToListSuccess', { title: data.playlist.title }));
     }
   };
 
@@ -1139,15 +1106,15 @@ export default function PlaylistsPage({
             }
           >
             {isMobileViewport && !selectedId ? (
-              listSearchTargetId ? (
-                <PlaylistYoutubeSearchPanel
-                  className="playlists-youtube-search--mobile-list"
-                  playlistId={listSearchTargetId}
-                  existingVideoIds={listSearchExistingVideoIds}
-                  onAdded={(data, meta) => void handleItemsAdded(data, meta)}
-                  mobileListOnly
-                />
-              ) : null
+              <PlaylistYoutubeSearchPanel
+                className="playlists-youtube-search--mobile-list"
+                mobileListOnly
+                pickPlaylistOnAdd
+                playlists={playlists}
+                loadingPlaylists={loadingList}
+                onCreatePlaylist={createPlaylistForSearch}
+                onAdded={(data, meta) => void handleItemsAdded(data, meta)}
+              />
             ) : (
               <>
                 <div className="playlists-sidebar-head">
