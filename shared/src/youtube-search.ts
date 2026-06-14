@@ -4,6 +4,9 @@ import { isValidYoutubeVideoId, resolveYtdlpPath } from './youtube-audio-extract
 
 const execFileAsync = promisify(execFile);
 
+export const YOUTUBE_SEARCH_MAX_TOTAL = 50;
+export const YOUTUBE_SEARCH_DEFAULT_PAGE_SIZE = 15;
+
 export type YoutubeSearchResult = {
   videoId: string;
   title: string;
@@ -11,6 +14,13 @@ export type YoutubeSearchResult = {
   channelTitle: string | null;
   thumbnailUrl: string | null;
   relevanceScore: number;
+};
+
+export type YoutubeSearchPage = {
+  results: YoutubeSearchResult[];
+  nextPageToken: string | null;
+  hasMore: boolean;
+  nextOffset: number;
 };
 
 const SKIPPED_TITLES = new Set(['Private video', 'Deleted video', '已设为私享', '私人视频', '已删除的视频']);
@@ -65,36 +75,18 @@ type SearchApiItem = {
   };
 };
 
-export async function searchYoutubeVideos(
-  query: string,
-  apiKey: string | undefined,
-  options?: { maxResults?: number },
-): Promise<YoutubeSearchResult[]> {
+function clampPageSize(maxResults: number | undefined, offset = 0): number {
+  const remaining = Math.max(YOUTUBE_SEARCH_MAX_TOTAL - offset, 0);
+  if (!remaining) return 0;
+  return Math.min(Math.max(maxResults ?? YOUTUBE_SEARCH_DEFAULT_PAGE_SIZE, 1), remaining, 50);
+}
+
+function rankSearchResults(query: string, items: SearchApiItem[]): YoutubeSearchResult[] {
   const q = query.trim();
-  if (!q) return [];
-  if (!apiKey) throw new Error('youtube_api_key_missing');
-
-  const maxResults = Math.min(Math.max(options?.maxResults ?? 50, 1), 50);
-  const url = new URL('https://www.googleapis.com/youtube/v3/search');
-  url.searchParams.set('part', 'snippet');
-  url.searchParams.set('type', 'video');
-  url.searchParams.set('maxResults', String(maxResults));
-  url.searchParams.set('q', q);
-  url.searchParams.set('key', apiKey);
-  url.searchParams.set('safeSearch', 'none');
-  url.searchParams.set('videoEmbeddable', 'true');
-
-  const res = await fetch(url);
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(`youtube_search_failed:${res.status}:${body.slice(0, 120)}`);
-  }
-
-  const data = (await res.json()) as { items?: SearchApiItem[] };
   const seen = new Set<string>();
   const ranked: YoutubeSearchResult[] = [];
 
-  for (const item of data.items ?? []) {
+  for (const item of items) {
     const videoId = item.id?.videoId?.trim() ?? '';
     const title = item.snippet?.title?.trim() ?? '';
     if (!isValidYoutubeVideoId(videoId) || seen.has(videoId)) continue;
@@ -118,7 +110,53 @@ export async function searchYoutubeVideos(
   }
 
   ranked.sort((a, b) => b.relevanceScore - a.relevanceScore);
-  return ranked.slice(0, maxResults);
+  return ranked;
+}
+
+export async function searchYoutubeVideos(
+  query: string,
+  apiKey: string | undefined,
+  options?: { maxResults?: number; pageToken?: string },
+): Promise<YoutubeSearchPage> {
+  const q = query.trim();
+  if (!q) {
+    return { results: [], nextPageToken: null, hasMore: false, nextOffset: 0 };
+  }
+  if (!apiKey) throw new Error('youtube_api_key_missing');
+
+  const maxResults = clampPageSize(options?.maxResults);
+  if (!maxResults) {
+    return { results: [], nextPageToken: null, hasMore: false, nextOffset: 0 };
+  }
+
+  const url = new URL('https://www.googleapis.com/youtube/v3/search');
+  url.searchParams.set('part', 'snippet');
+  url.searchParams.set('type', 'video');
+  url.searchParams.set('maxResults', String(maxResults));
+  url.searchParams.set('q', q);
+  url.searchParams.set('key', apiKey);
+  url.searchParams.set('safeSearch', 'none');
+  url.searchParams.set('videoEmbeddable', 'true');
+  if (options?.pageToken) {
+    url.searchParams.set('pageToken', options.pageToken);
+  }
+
+  const res = await fetch(url);
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`youtube_search_failed:${res.status}:${body.slice(0, 120)}`);
+  }
+
+  const data = (await res.json()) as { items?: SearchApiItem[]; nextPageToken?: string };
+  const results = rankSearchResults(q, data.items ?? []);
+  const nextPageToken = data.nextPageToken?.trim() || null;
+
+  return {
+    results,
+    nextPageToken,
+    hasMore: Boolean(nextPageToken),
+    nextOffset: 0,
+  };
 }
 
 function parseYtdlpSearchLine(line: string): { videoId: string; title: string; channelTitle: string | null } | null {
@@ -133,30 +171,45 @@ function parseYtdlpSearchLine(line: string): { videoId: string; title: string; c
   };
 }
 
+function ytdlpSearchUrl(query: string): string {
+  return `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&sp=EgIQAQ%253D%253D`;
+}
+
 export async function searchYoutubeVideosViaYtdlp(
   query: string,
   ytdlpPath: string,
-  options?: { maxResults?: number },
-): Promise<YoutubeSearchResult[]> {
+  options?: { maxResults?: number; offset?: number },
+): Promise<YoutubeSearchPage> {
   const q = query.trim();
-  if (!q) return [];
+  if (!q) {
+    return { results: [], nextPageToken: null, hasMore: false, nextOffset: 0 };
+  }
 
-  const maxResults = Math.min(Math.max(options?.maxResults ?? 50, 1), 50);
+  const offset = Math.max(options?.offset ?? 0, 0);
+  const maxResults = clampPageSize(options?.maxResults, offset);
+  if (!maxResults) {
+    return { results: [], nextPageToken: null, hasMore: false, nextOffset: offset };
+  }
+
   const bin = resolveYtdlpPath(ytdlpPath);
+  const start = offset + 1;
+  const end = offset + maxResults;
 
   let stdout = '';
   try {
     const result = await execFileAsync(
       bin,
       [
-        `ytsearch${maxResults}:${q}`,
+        ytdlpSearchUrl(q),
         '--flat-playlist',
+        '--playlist-items',
+        `${start}-${end}`,
         '--print',
         '%(id)s|||%(title)s|||%(channel)s',
         '--no-warnings',
         '--no-playlist',
       ],
-      { timeout: 30_000, maxBuffer: 2 * 1024 * 1024 },
+      { timeout: 45_000, maxBuffer: 2 * 1024 * 1024 },
     );
     stdout = result.stdout;
   } catch (e) {
@@ -167,10 +220,13 @@ export async function searchYoutubeVideosViaYtdlp(
 
   const seen = new Set<string>();
   const ranked: YoutubeSearchResult[] = [];
+  let rawCount = 0;
 
   for (const line of stdout.split('\n')) {
     const parsed = parseYtdlpSearchLine(line);
-    if (!parsed || seen.has(parsed.videoId)) continue;
+    if (!parsed) continue;
+    rawCount += 1;
+    if (seen.has(parsed.videoId)) continue;
     if (shouldSkipSearchResult(parsed.title)) continue;
 
     seen.add(parsed.videoId);
@@ -188,5 +244,13 @@ export async function searchYoutubeVideosViaYtdlp(
   }
 
   ranked.sort((a, b) => b.relevanceScore - a.relevanceScore);
-  return ranked.slice(0, maxResults);
+  const nextOffset = offset + maxResults;
+  const hasMore = nextOffset < YOUTUBE_SEARCH_MAX_TOTAL && rawCount > 0;
+
+  return {
+    results: ranked,
+    nextPageToken: null,
+    hasMore,
+    nextOffset,
+  };
 }

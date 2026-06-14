@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   addPlaylistItemsByVideos,
   type PlaylistDetail,
@@ -8,6 +8,7 @@ import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 import { useDebouncedYoutubeSearch } from '../hooks/useDebouncedYoutubeSearch';
 import { friendlyError } from '../lib/error-messages';
 import PickPlaylistForAddModal from './PickPlaylistForAddModal';
+import YoutubeTrendingSongs from './YoutubeTrendingSongs';
 import { CheckIcon, CloseIcon, PlusIcon, SearchIcon } from './icons';
 import { useI18n } from '../i18n';
 
@@ -52,11 +53,35 @@ export default function PlaylistYoutubeSearchPanel({
     setSearchQuery,
     searchResults,
     searchLoading,
+    loadMoreLoading,
     searchError,
     hasSearched,
+    hasMore,
     searchNow,
+    loadMore,
     resetSearch,
   } = useDebouncedYoutubeSearch({ debounceEnabled: !isMobileViewport });
+
+  const resultsListRef = useRef<HTMLUListElement>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const root = resultsListRef.current;
+    const target = loadMoreRef.current;
+    if (!root || !target || !hasMore || searchLoading || loadMoreLoading) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          void loadMore();
+        }
+      },
+      { root, rootMargin: '120px', threshold: 0 },
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [hasMore, loadMore, loadMoreLoading, searchLoading, searchResults.length]);
 
   const submitSearch = () => {
     if (searchQuery.trim()) searchNow();
@@ -166,6 +191,20 @@ export default function PlaylistYoutubeSearchPanel({
           )}
         </div>
 
+        {searchResults.length === 0 && !searchLoading && (
+          <YoutubeTrendingSongs
+            className={mobileListOnly ? 'youtube-trending--mobile-home' : ''}
+            pickPlaylistOnAdd={pickPlaylistOnAdd}
+            playlistId={playlistId}
+            libraryVideoIds={libraryVideoIds}
+            existingVideoIds={existingVideoIds}
+            playlists={playlists}
+            loadingPlaylists={loadingPlaylists}
+            onCreatePlaylist={onCreatePlaylist}
+            onAdded={onAdded}
+          />
+        )}
+
         {isMobileViewport && searchLoading && !mobileListOnly && (
           <p className="playlists-muted playlists-youtube-search-loading">{t('search.searching')}</p>
         )}
@@ -183,7 +222,10 @@ export default function PlaylistYoutubeSearchPanel({
         )}
 
         {searchResults.length > 0 && (
-          <ul className="search-results youtube-search-results playlists-youtube-search-results">
+          <ul
+            ref={resultsListRef}
+            className="search-results youtube-search-results playlists-youtube-search-results"
+          >
             {searchResults.map((row) => {
               const inCurrentPlaylist = !pickPlaylistOnAdd && isInCurrentPlaylist(row.videoId);
               const alreadyAdded = pickPlaylistOnAdd && isInAnyPlaylist(row.videoId);
@@ -244,6 +286,15 @@ export default function PlaylistYoutubeSearchPanel({
                 </li>
               );
             })}
+            {(hasMore || loadMoreLoading) && (
+              <li className="youtube-search-load-more" aria-hidden={!loadMoreLoading}>
+                <div ref={loadMoreRef} className="youtube-search-load-more-sentinel">
+                  {loadMoreLoading && (
+                    <span className="youtube-search-load-more-label">{t('search.loadingMore')}</span>
+                  )}
+                </div>
+              </li>
+            )}
           </ul>
         )}
       </section>

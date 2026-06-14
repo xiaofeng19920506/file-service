@@ -9,11 +9,31 @@ export type YoutubeSearchResult = {
   relevanceScore: number;
 };
 
+export type YoutubeSearchPageResponse = {
+  query: string;
+  results: YoutubeSearchResult[];
+  nextPageToken: string | null;
+  hasMore: boolean;
+  nextOffset: number;
+};
+
+export const YOUTUBE_SEARCH_PAGE_SIZE = 15;
+export const YOUTUBE_SEARCH_MAX_TOTAL = 50;
+
 export async function searchYoutubeVideos(
   query: string,
-  limit = 50,
-): Promise<{ query: string; results: YoutubeSearchResult[] }> {
-  const params = new URLSearchParams({ q: query.trim(), limit: String(limit) });
+  options?: {
+    limit?: number;
+    pageToken?: string;
+    offset?: number;
+  },
+): Promise<YoutubeSearchPageResponse> {
+  const params = new URLSearchParams({
+    q: query.trim(),
+    limit: String(options?.limit ?? YOUTUBE_SEARCH_PAGE_SIZE),
+  });
+  if (options?.pageToken) params.set('pageToken', options.pageToken);
+  if (options?.offset) params.set('offset', String(options.offset));
   const res = await apiFetch(`/v1/youtube/search?${params}`);
-  return parseJson<{ query: string; results: YoutubeSearchResult[] }>(res);
+  return parseJson<YoutubeSearchPageResponse>(res);
 }

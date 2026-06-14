@@ -1,5 +1,6 @@
 import {
   bigint,
+  date,
   pgTable,
   text,
   timestamp,
@@ -153,6 +154,20 @@ export const youtubeAudioCache = pgTable('youtube_audio_cache', {
   completedAt: timestamp('completed_at', { withTimezone: true }),
 });
 
+export const youtubeVideoDailyPlays = pgTable(
+  'youtube_video_daily_plays',
+  {
+    playDate: date('play_date').notNull(),
+    youtubeVideoId: text('youtube_video_id').notNull(),
+    title: text('title').notNull(),
+    channelTitle: text('channel_title'),
+    playCount: integer('play_count').notNull().default(0),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.playDate, t.youtubeVideoId] }),
+  }),
+);
+
 export const userSubscriptions = pgTable('user_subscriptions', {
   userId: uuid('user_id')
     .primaryKey()
@@ -172,5 +187,6 @@ export type MergeJobRow = typeof mergeJobs.$inferSelect;
 export type PlaylistRow = typeof playlists.$inferSelect;
 export type PlaylistItemRow = typeof playlistItems.$inferSelect;
 export type YoutubeAudioCacheRow = typeof youtubeAudioCache.$inferSelect;
+export type YoutubeVideoDailyPlayRow = typeof youtubeVideoDailyPlays.$inferSelect;
 export type YoutubeOAuthConnectionRow = typeof youtubeOAuthConnections.$inferSelect;
 export type UserSubscriptionRow = typeof userSubscriptions.$inferSelect;

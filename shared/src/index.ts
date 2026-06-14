@@ -18,6 +18,7 @@ export * from './user-name.js';
 export * from './user-contact.js';
 export * from './youtube.js';
 export * from './youtube-search.js';
+export * from './youtube-trending.js';
 export * from './youtube-captions.js';
 export * from './audio-stream-token.js';
 export * from './youtube-audio-extract.js';

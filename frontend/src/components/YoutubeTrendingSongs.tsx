@@ -1,0 +1,208 @@
+import { useEffect, useState } from 'react';
+import {
+  addPlaylistItemsByVideos,
+  type PlaylistDetail,
+  type PlaylistSummary,
+} from '../api/playlists';
+import {
+  fetchTrendingYoutubeSongs,
+  type TrendingScope,
+  type TrendingSong,
+} from '../api/youtube-trending';
+import { friendlyError } from '../lib/error-messages';
+import PickPlaylistForAddModal from './PickPlaylistForAddModal';
+import { CheckIcon, PlusIcon } from './icons';
+import { useI18n } from '../i18n';
+
+type PendingAdd = { videoId: string; title: string };
+
+type YoutubeTrendingSongsProps = {
+  libraryVideoIds?: Set<string>;
+  existingVideoIds?: Set<string>;
+  pickPlaylistOnAdd?: boolean;
+  playlistId?: string;
+  playlists?: PlaylistSummary[];
+  loadingPlaylists?: boolean;
+  onCreatePlaylist?: (title: string) => Promise<PlaylistDetail>;
+  onAdded: (detail: PlaylistDetail, meta: { addedCount: number; skippedCount: number }) => void;
+  className?: string;
+};
+
+export default function YoutubeTrendingSongs({
+  libraryVideoIds = new Set(),
+  existingVideoIds = new Set(),
+  pickPlaylistOnAdd = false,
+  playlistId,
+  playlists = [],
+  loadingPlaylists = false,
+  onCreatePlaylist,
+  onAdded,
+  className = '',
+}: YoutubeTrendingSongsProps) {
+  const { t } = useI18n();
+  const [songs, setSongs] = useState<TrendingSong[]>([]);
+  const [scope, setScope] = useState<TrendingScope>('today');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [addingVideoId, setAddingVideoId] = useState<string | null>(null);
+  const [pendingAdd, setPendingAdd] = useState<PendingAdd | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    void fetchTrendingYoutubeSongs(10)
+      .then((data) => {
+        if (cancelled) return;
+        setSongs(data.songs);
+        setScope(data.scope);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setSongs([]);
+        setError(friendlyError(e instanceof Error ? e.message : 'load_trending_failed', t));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [t]);
+
+  const isInCurrentPlaylist = (videoId: string) => existingVideoIds.has(videoId);
+  const isInAnyPlaylist = (videoId: string) => libraryVideoIds.has(videoId);
+
+  const addToPlaylist = async (targetPlaylistId: string, videoId: string, title: string) => {
+    setAddingVideoId(videoId);
+    try {
+      const data = await addPlaylistItemsByVideos(targetPlaylistId, [{ videoId, title }]);
+      onAdded(data, { addedCount: data.addedCount, skippedCount: data.skippedCount });
+      setPendingAdd(null);
+    } catch (err) {
+      if (pickPlaylistOnAdd) {
+        throw err instanceof Error ? err : new Error('add_playlist_item_failed');
+      }
+    } finally {
+      setAddingVideoId(null);
+    }
+  };
+
+  const handleAdd = async (videoId: string, title: string) => {
+    if (addingVideoId) return;
+    if (pickPlaylistOnAdd) {
+      if (!onCreatePlaylist) return;
+      setPendingAdd({ videoId, title });
+      return;
+    }
+    if (!playlistId || isInCurrentPlaylist(videoId)) return;
+    await addToPlaylist(playlistId, videoId, title);
+  };
+
+  const scopeLabel =
+    scope === 'today'
+      ? t('playlists.trendingToday')
+      : scope === 'all_time'
+        ? t('playlists.trendingAllTime')
+        : t('playlists.trendingPopular');
+
+  if (loading) {
+    return (
+      <section className={`youtube-trending${className ? ` ${className}` : ''}`}>
+        <p className="playlists-muted youtube-trending-loading">{t('playlists.trendingLoading')}</p>
+      </section>
+    );
+  }
+
+  if (error || songs.length === 0) {
+    return null;
+  }
+
+  return (
+    <>
+      <section className={`youtube-trending${className ? ` ${className}` : ''}`} aria-label={scopeLabel}>
+        <div className="youtube-trending-header">
+          <h3 className="youtube-trending-title">{t('playlists.trendingTitle')}</h3>
+          <p className="youtube-trending-subtitle">{scopeLabel}</p>
+        </div>
+        <ul className="search-results youtube-search-results youtube-trending-results">
+          {songs.map((row) => {
+            const inCurrentPlaylist = !pickPlaylistOnAdd && isInCurrentPlaylist(row.videoId);
+            const alreadyAdded = pickPlaylistOnAdd && isInAnyPlaylist(row.videoId);
+            const adding = addingVideoId === row.videoId;
+            return (
+              <li key={row.videoId} className="search-result-item youtube-search-result">
+                <div className="search-result-main">
+                  <strong className="search-result-title" title={row.title}>
+                    {row.title}
+                  </strong>
+                  {row.channelTitle && (
+                    <p className="search-result-channel" title={row.channelTitle}>
+                      {row.channelTitle}
+                    </p>
+                  )}
+                </div>
+                {inCurrentPlaylist ? (
+                  <button
+                    type="button"
+                    className="youtube-search-add-btn added"
+                    disabled
+                    aria-label={t('search.added')}
+                    title={t('search.added')}
+                  >
+                    <CheckIcon />
+                  </button>
+                ) : alreadyAdded ? (
+                  <button
+                    type="button"
+                    className={`youtube-search-added-btn${adding ? ' loading' : ''}`}
+                    onClick={() => void handleAdd(row.videoId, row.title)}
+                    disabled={addingVideoId !== null}
+                    aria-label={adding ? t('playlists.adding') : t('search.alreadyAdded')}
+                    title={adding ? t('playlists.adding') : t('search.alreadyAdded')}
+                  >
+                    {adding ? (
+                      <span className="youtube-search-add-spinner" aria-hidden />
+                    ) : (
+                      t('search.alreadyAdded')
+                    )}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className={`youtube-search-add-btn${adding ? ' loading' : ''}`}
+                    onClick={() => void handleAdd(row.videoId, row.title)}
+                    disabled={addingVideoId !== null}
+                    aria-label={adding ? t('playlists.adding') : t('search.add')}
+                    title={adding ? t('playlists.adding') : t('search.add')}
+                  >
+                    {adding ? (
+                      <span className="youtube-search-add-spinner" aria-hidden />
+                    ) : (
+                      <PlusIcon />
+                    )}
+                  </button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
+      {pendingAdd && onCreatePlaylist && (
+        <PickPlaylistForAddModal
+          videoTitle={pendingAdd.title}
+          playlists={playlists}
+          loadingPlaylists={loadingPlaylists}
+          busy={addingVideoId === pendingAdd.videoId}
+          onClose={() => {
+            if (addingVideoId) return;
+            setPendingAdd(null);
+          }}
+          onPick={(targetId) => addToPlaylist(targetId, pendingAdd.videoId, pendingAdd.title)}
+          onCreatePlaylist={onCreatePlaylist}
+        />
+      )}
+    </>
+  );
+}

@@ -50,6 +50,7 @@ import { useI18n } from '../i18n';
 import { usePlaylistsMobileMenu, PlaylistsMobileMenuPortal } from '../contexts/PlaylistsMobileMenuContext';
 import { useAuth } from '../auth/AuthContext';
 import { writeLastPlaylistId } from '../lib/playlist-last-open';
+import { useRecordYoutubePlay } from '../hooks/useRecordYoutubePlay';
 
 type PlaylistsPageProps = {
   mobileHome?: 'search' | 'lists';
@@ -629,6 +630,12 @@ export default function PlaylistsPage({
   }, []);
 
   const currentItem = detail?.items[activeIndex];
+  useRecordYoutubePlay({
+    videoId: currentItem?.youtubeVideoId,
+    title: currentItem?.title,
+    playing: playing && playerEngaged,
+    enabled: Boolean(currentItem),
+  });
   const existingVideoIds = useMemo(
     () => new Set(detail?.items.map((item) => item.youtubeVideoId) ?? []),
     [detail?.items],
