@@ -4333,24 +4333,39 @@
   overflow: hidden;
   border-radius: 10px;
   touch-action: pan-y;
-  isolation: isolate;
+}
+
+.playlists-list-swipe-track {
+  display: flex;
+  align-items: stretch;
+  will-change: transform;
+  transition: transform 0.22s ease;
+  touch-action: pan-y;
+}
+
+.playlists-list-swipe-track.is-dragging {
+  transition: none;
+}
+
+.playlists-list-swipe-content {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.playlists-list-swipe-content .playlists-list-item {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.playlists-list-swipe-content.active .playlists-list-item {
+  background: color-mix(in srgb, var(--accent, #3b82f6) 10%, var(--bg));
+  border-color: color-mix(in srgb, var(--accent, #3b82f6) 35%, var(--border));
 }
 
 .playlists-list-swipe-action {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 4.75rem;
+  flex: 0 0 4.75rem;
   display: flex;
   align-items: stretch;
-}
-
-.playlists-list-swipe-action--edit {
-  left: 0;
-}
-
-.playlists-list-swipe-action--delete {
-  right: 0;
 }
 
 .playlists-list-swipe-action-btn {
@@ -4377,28 +4392,25 @@
   cursor: not-allowed;
 }
 
-.playlists-list-swipe-panel {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  background: var(--surface);
-  will-change: transform;
-  transition: transform 0.22s ease;
-  touch-action: pan-y;
+.playlists-list-item-body {
+  display: block;
+  min-width: 0;
 }
 
-.playlists-list-swipe-panel .playlists-list-item {
-  width: 100%;
-  box-sizing: border-box;
+.playlists-list-title {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
-.playlists-list-swipe-panel.is-dragging {
-  transition: none;
-}
-
-.playlists-list-swipe-panel.active .playlists-list-item {
-  background: color-mix(in srgb, var(--accent, #3b82f6) 10%, var(--bg));
-  border-color: color-mix(in srgb, var(--accent, #3b82f6) 35%, var(--border));
+.playlists-list-meta {
+  display: block;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+  overflow-wrap: anywhere;
 }
 
 .playlists-sidebar-head--mobile-toolbar {
@@ -4504,20 +4516,6 @@
 .btn-compact {
   padding: 0.28rem 0.55rem;
   font-size: 0.78rem;
-}
-
-.playlists-list-title {
-  display: block;
-  font-weight: 600;
-  font-size: 0.9rem;
-  line-height: 1.35;
-}
-
-.playlists-list-meta {
-  display: block;
-  font-size: 0.76rem;
-  color: var(--text-muted);
-  margin-top: 0.2rem;
 }
 
 .playlists-list-dot {

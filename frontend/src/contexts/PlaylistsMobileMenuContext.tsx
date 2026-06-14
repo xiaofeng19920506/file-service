@@ -5,8 +5,15 @@ import { createPortal } from 'react-dom';
 
 export const PLAYLISTS_MOBILE_MENU_MOUNT_ID = 'playlists-mobile-menu-mount';
 
+export type PlaylistsMobileHeaderState = {
+  title: string;
+  onBack: () => void;
+};
+
 type PlaylistsMobileMenuContextValue = {
   closeMenu: () => void;
+  mobileHeader: PlaylistsMobileHeaderState | null;
+  setMobileHeader: (header: PlaylistsMobileHeaderState | null) => void;
 };
 
 const PlaylistsMobileMenuContext = createContext<PlaylistsMobileMenuContextValue | null>(null);
@@ -18,12 +25,18 @@ export function PlaylistsMobileMenuProvider({
   children: ReactNode;
   onCloseMenu: () => void;
 }) {
+  const [mobileHeader, setMobileHeaderState] = useState<PlaylistsMobileHeaderState | null>(null);
+
   const closeMenu = useCallback(() => {
     onCloseMenu();
   }, [onCloseMenu]);
 
+  const setMobileHeader = useCallback((header: PlaylistsMobileHeaderState | null) => {
+    setMobileHeaderState(header);
+  }, []);
+
   return (
-    <PlaylistsMobileMenuContext.Provider value={{ closeMenu }}>
+    <PlaylistsMobileMenuContext.Provider value={{ closeMenu, mobileHeader, setMobileHeader }}>
       {children}
     </PlaylistsMobileMenuContext.Provider>
   );

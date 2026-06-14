@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useI18n } from '../i18n';
 
 const ACTION_WIDTH_PX = 76;
@@ -32,7 +32,20 @@ export default function PlaylistListSwipeRow({
   const { t } = useI18n();
   const [offset, setOffset] = useState(0);
   const [dragging, setDragging] = useState(false);
+  const [contentWidth, setContentWidth] = useState(0);
+  const rootRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef({ startX: 0, startOffset: 0, pointerId: -1, moved: false });
+
+  useLayoutEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+
+    const update = () => setContentWidth(el.clientWidth);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (openedSide === 'edit') setOffset(ACTION_WIDTH_PX);
@@ -107,46 +120,56 @@ export default function PlaylistListSwipeRow({
   };
 
   return (
-    <div className="playlists-list-swipe">
-      <div className="playlists-list-swipe-action playlists-list-swipe-action--edit">
-        <button
-          type="button"
-          className="playlists-list-swipe-action-btn"
-          onClick={() => {
-            onOpenedSideChange('none');
-            onEdit();
-          }}
-        >
-          {t('playlists.rename')}
-        </button>
-      </div>
-      <div className="playlists-list-swipe-action playlists-list-swipe-action--delete">
-        <button
-          type="button"
-          className="playlists-list-swipe-action-btn"
-          disabled={deleteBusy}
-          onClick={() => {
-            onOpenedSideChange('none');
-            onDelete();
-          }}
-        >
-          {deleteBusy ? t('playlists.deleting') : t('playlists.delete')}
-        </button>
-      </div>
+    <div className="playlists-list-swipe" ref={rootRef}>
       <div
-        className={`playlists-list-swipe-panel${dragging ? ' is-dragging' : ''}${isActive ? ' active' : ''}`}
-        style={{ transform: `translateX(${offset}px)` }}
+        className={`playlists-list-swipe-track${dragging ? ' is-dragging' : ''}`}
+        style={{
+          transform: `translateX(${-ACTION_WIDTH_PX + offset}px)`,
+          width: contentWidth > 0 ? contentWidth + ACTION_WIDTH_PX * 2 : undefined,
+        }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={finishDrag}
         onPointerCancel={finishDrag}
       >
-        <button type="button" className="playlists-list-item" onClick={handleSelect}>
-          <span className="playlists-list-item-body">
-            <span className="playlists-list-title">{title}</span>
-            <span className="playlists-list-meta">{meta}</span>
-          </span>
-        </button>
+        <div className="playlists-list-swipe-action playlists-list-swipe-action--edit">
+          <button
+            type="button"
+            className="playlists-list-swipe-action-btn"
+            onClick={() => {
+              onOpenedSideChange('none');
+              onEdit();
+            }}
+          >
+            {t('playlists.rename')}
+          </button>
+        </div>
+
+        <div
+          className={`playlists-list-swipe-content${isActive ? ' active' : ''}`}
+          style={{ width: contentWidth > 0 ? contentWidth : undefined }}
+        >
+          <button type="button" className="playlists-list-item" onClick={handleSelect}>
+            <span className="playlists-list-item-body">
+              <span className="playlists-list-title">{title}</span>
+              <span className="playlists-list-meta">{meta}</span>
+            </span>
+          </button>
+        </div>
+
+        <div className="playlists-list-swipe-action playlists-list-swipe-action--delete">
+          <button
+            type="button"
+            className="playlists-list-swipe-action-btn"
+            disabled={deleteBusy}
+            onClick={() => {
+              onOpenedSideChange('none');
+              onDelete();
+            }}
+          >
+            {deleteBusy ? t('playlists.deleting') : t('playlists.delete')}
+          </button>
+        </div>
       </div>
     </div>
   );

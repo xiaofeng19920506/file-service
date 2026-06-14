@@ -10,7 +10,7 @@ import PlaylistsPage from './views/PlaylistsPage';
 import UploadConfirmPage from './views/UploadConfirmPage';
 import { useLibraryUpload } from './hooks/useLibraryUpload';
 import PageNavTabs from './components/PageNavTabs';
-import { CloseIcon, MenuIcon, MoonIcon, SunIcon } from './components/icons';
+import { CloseIcon, ChevronLeftIcon, MenuIcon, MoonIcon, SunIcon } from './components/icons';
 import { useAppPage } from './hooks/useAppPage';
 import { hasStoredSession } from './lib/auth-session';
 import { formatUserDisplayName } from './lib/user-name';
@@ -19,6 +19,7 @@ import { useI18n } from './i18n';
 import {
   PlaylistsMobileMenuProvider,
   PLAYLISTS_MOBILE_MENU_MOUNT_ID,
+  usePlaylistsMobileMenu,
 } from './contexts/PlaylistsMobileMenuContext';
 
 function AppShellInner({
@@ -162,6 +163,8 @@ function AppShellInner({
     </button>
   );
 
+  const { mobileHeader } = usePlaylistsMobileMenu();
+
   const pageTitle =
     page === 'playlists'
       ? t('nav.playlistsShort')
@@ -195,12 +198,30 @@ function AppShellInner({
     <div className={`app${page === 'playlists' || page === 'playlist-lists' ? ' app-playlists' : ''}${mobileMenuOpen ? ' nav-mobile-menu-open' : ''}`}>
       <header className="nav">
         <div className="nav-inner">
-          <div className="nav-brand">
-            <span className="nav-brand-name nav-brand-app-name">{t('app.name')}</span>
-            {page !== 'playlist-lists' && (
-              <span className="nav-brand-name nav-brand-page-title">{pageTitle}</span>
+          <div className={`nav-brand${mobileHeader ? ' nav-brand--with-back' : ''}`}>
+            {mobileHeader ? (
+              <>
+                <button
+                  type="button"
+                  className="nav-back-btn"
+                  onClick={mobileHeader.onBack}
+                  aria-label={t('playlists.backToList')}
+                >
+                  <ChevronLeftIcon />
+                </button>
+                <span className="nav-brand-name nav-brand-page-title nav-brand-detail-title">
+                  {mobileHeader.title}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="nav-brand-name nav-brand-app-name">{t('app.name')}</span>
+                {page !== 'playlist-lists' && (
+                  <span className="nav-brand-name nav-brand-page-title">{pageTitle}</span>
+                )}
+                <span className="nav-brand-tagline">{t('app.tagline')}</span>
+              </>
             )}
-            <span className="nav-brand-tagline">{t('app.tagline')}</span>
           </div>
 
           <div className="nav-center nav-center-desktop">

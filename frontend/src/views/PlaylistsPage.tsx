@@ -118,7 +118,7 @@ export default function PlaylistsPage({
   const [repeatMode, setRepeatMode] = useState<PlaylistRepeatMode>(readPlaylistRepeatMode);
   const [tracksEditMode, setTracksEditMode] = useState(false);
   const isMobileViewport = useMediaQuery(MOBILE_MEDIA_QUERY);
-  const { closeMenu } = usePlaylistsMobileMenu();
+  const { closeMenu, setMobileHeader } = usePlaylistsMobileMenu();
 
   useEffect(() => {
     setTracksEditMode(false);
@@ -286,9 +286,30 @@ export default function PlaylistsPage({
     setTrackDragOver(null);
   }, [selectedId, loadDetail]);
 
-  const backToList = () => {
+  const backToList = useCallback(() => {
     onSelectId(undefined);
-  };
+  }, [onSelectId]);
+
+  useEffect(() => {
+    if (!isMobileViewport || !selectedId) {
+      setMobileHeader(null);
+      return;
+    }
+
+    const title =
+      detail?.playlist.title ?? playlists.find((row) => row.id === selectedId)?.title ?? null;
+    if (!title) {
+      setMobileHeader(null);
+      return;
+    }
+
+    setMobileHeader({
+      title,
+      onBack: backToList,
+    });
+
+    return () => setMobileHeader(null);
+  }, [isMobileViewport, selectedId, detail, playlists, backToList, setMobileHeader]);
 
   const performCreateList = useCallback(
     async (title: string) => {
@@ -1365,13 +1386,6 @@ export default function PlaylistsPage({
                 {renderMainToolbar(detail.playlist, detail.items.length > 0)}
 
                 <div className="playlists-mobile-watch-toolbar mobile-only">
-                  <button
-                    type="button"
-                    className="btn-secondary playlists-mobile-back"
-                    onClick={backToList}
-                  >
-                    {t('playlists.backToList')}
-                  </button>
                   {detail.items.length > 0 && renderPlaybackModeToggle('playlists-mobile-watch-mode')}
                 </div>
 

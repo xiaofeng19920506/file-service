@@ -75,6 +75,43 @@
     font-size: 1rem;
   }
 
+  .nav-brand--with-back {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.15rem;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .nav-back-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: var(--touch-target);
+    height: var(--touch-target);
+    margin-left: -0.35rem;
+    padding: 0;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--blue);
+    cursor: pointer;
+  }
+
+  .nav-back-icon {
+    width: 1.35rem;
+    height: 1.35rem;
+  }
+
+  .nav-brand-detail-title {
+    flex: 1;
+    min-width: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
   .nav-center-desktop,
   .nav-actions-desktop {
     display: none;
@@ -654,6 +691,7 @@
 
   .playlists-mobile-watch-toolbar {
     display: flex;
+    justify-content: flex-end;
   }
 
   .playlists-main-inner {
