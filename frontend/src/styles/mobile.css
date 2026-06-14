@@ -373,6 +373,52 @@
     min-height: 0;
   }
 
+  .playlists-sidebar-search {
+    flex-shrink: 0;
+    padding: 0 0.55rem 0.65rem;
+    border-bottom: 1px solid var(--border-light);
+    background: var(--surface);
+  }
+
+  .playlists-sidebar-search-target {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-bottom: 0.55rem;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
+
+  .playlists-sidebar-search-target select {
+    width: 100%;
+  }
+
+  .playlists-sidebar-search-empty {
+    margin: 0;
+    padding: 0.35rem 0.15rem 0;
+    font-size: 0.82rem;
+  }
+
+  .playlists-youtube-search--mobile-list .search-box {
+    margin-bottom: 0;
+  }
+
+  .playlists-youtube-search--mobile-list .playlists-youtube-search-results {
+    max-height: min(36vh, 260px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-top: 0.65rem;
+  }
+
+  .playlists-youtube-search-hint {
+    margin: 0.45rem 0 0;
+    font-size: 0.78rem;
+  }
+
+  .playlists-youtube-search-error {
+    margin: 0.5rem 0 0;
+  }
+
   .playlists-workspace[data-mobile-view='detail'] .playlists-main {
     min-height: 0;
     overflow: hidden;

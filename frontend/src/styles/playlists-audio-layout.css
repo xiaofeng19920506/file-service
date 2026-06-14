@@ -274,6 +274,17 @@
     flex-shrink: 0;
   }
 
+  .playlists-main-inner--mobile-audio .playlists-player-stage[data-audio-mobile-record='true'] {
+    min-height: 0;
+  }
+
+  .playlists-main-inner--mobile-audio
+    .playlists-player-stage[data-audio-mobile-record='true']
+    .playlist-audio-record-stage {
+    min-height: min(38vh, 300px);
+    padding-bottom: 0.75rem;
+  }
+
   .playlist-audio-player--mobile-record {
     flex: 1;
     display: flex;

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AcceptSharedPlaylistModal from '../components/AcceptSharedPlaylistModal';
 import AddPlaylistItemsModal from '../components/AddPlaylistItemsModal';
+import PlaylistYoutubeSearchPanel from '../components/PlaylistYoutubeSearchPanel';
 import ConfirmModal from '../components/ConfirmModal';
 import SharePlaylistModal from '../components/SharePlaylistModal';
 import ExportYoutubePlaylistModal from '../components/ExportYoutubePlaylistModal';
@@ -47,7 +48,7 @@ import {
 import { useI18n } from '../i18n';
 import { usePlaylistsMobileMenu, PlaylistsMobileMenuPortal } from '../contexts/PlaylistsMobileMenuContext';
 import { useAuth } from '../auth/AuthContext';
-import { writeLastPlaylistId } from '../lib/playlist-last-open';
+import { readLastPlaylistId, writeLastPlaylistId } from '../lib/playlist-last-open';
 
 type PlaylistsPageProps = {
   selectedId?: string;
@@ -93,6 +94,10 @@ export default function PlaylistsPage({
   const { t, locale } = useI18n();
   const { permissions } = useAuth();
   const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
+  const [listSearchTargetId, setListSearchTargetId] = useState<string | undefined>(undefined);
+  const [listSearchExistingVideoIds, setListSearchExistingVideoIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [detail, setDetail] = useState<PlaylistDetail | null>(null);
   const [newListTitle, setNewListTitle] = useState('');
   const [loadingList, setLoadingList] = useState(true);
@@ -198,6 +203,41 @@ export default function PlaylistsPage({
     });
   }, [detail, exportTarget]);
 
+  useEffect(() => {
+    if (playlists.length === 0) {
+      setListSearchTargetId(undefined);
+      return;
+    }
+    setListSearchTargetId((prev) => {
+      if (prev && playlists.some((row) => row.id === prev)) return prev;
+      const lastId = readLastPlaylistId();
+      if (lastId && playlists.some((row) => row.id === lastId)) return lastId;
+      return playlists[0]?.id;
+    });
+  }, [playlists]);
+
+  useEffect(() => {
+    if (!listSearchTargetId) {
+      setListSearchExistingVideoIds(new Set());
+      return;
+    }
+    let cancelled = false;
+    void getPlaylist(listSearchTargetId)
+      .then((data) => {
+        if (!cancelled) {
+          setListSearchExistingVideoIds(
+            new Set(data.items.map((item) => item.youtubeVideoId)),
+          );
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setListSearchExistingVideoIds(new Set());
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [listSearchTargetId]);
+
   const loadList = useCallback(async () => {
     setLoadingList(true);
     setError(null);
@@ -299,7 +339,14 @@ export default function PlaylistsPage({
     data: PlaylistDetail,
     meta: { addedCount: number; skippedCount: number },
   ) => {
-    setDetail(data);
+    if (selectedId === data.playlist.id) {
+      setDetail(data);
+    }
+    if (listSearchTargetId === data.playlist.id) {
+      setListSearchExistingVideoIds(
+        new Set(data.items.map((item) => item.youtubeVideoId)),
+      );
+    }
     await loadList();
     if (meta.skippedCount > 0 && meta.addedCount > 0) {
       setNotice(
@@ -1090,6 +1137,40 @@ export default function PlaylistsPage({
                 <span className="playlists-sidebar-count">{playlists.length}</span>
               )}
             </div>
+
+            {isMobileViewport && !selectedId && (
+              <div className="playlists-sidebar-search mobile-only">
+                {playlists.length > 1 && listSearchTargetId && (
+                  <label className="playlists-sidebar-search-target">
+                    <span>{t('playlists.searchTargetLabel')}</span>
+                    <select
+                      className="playlists-text-input"
+                      value={listSearchTargetId}
+                      onChange={(e) => setListSearchTargetId(e.target.value)}
+                      aria-label={t('playlists.searchTargetLabel')}
+                    >
+                      {playlists.map((row) => (
+                        <option key={row.id} value={row.id}>
+                          {row.title}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                {listSearchTargetId ? (
+                  <PlaylistYoutubeSearchPanel
+                    className="playlists-youtube-search--mobile-list"
+                    playlistId={listSearchTargetId}
+                    existingVideoIds={listSearchExistingVideoIds}
+                    onAdded={(data, meta) => void handleItemsAdded(data, meta)}
+                  />
+                ) : (
+                  <p className="playlists-muted playlists-sidebar-search-empty">
+                    {t('playlists.searchCreateListFirst')}
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="playlists-sidebar-list">
               <form
