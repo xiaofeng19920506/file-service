@@ -362,7 +362,7 @@ export default {
     button: '搜索',
     searching: '搜索中…',
     clear: '清空搜索',
-    alreadyAdded: '已添加',
+    alreadyAdded: '已添加到列表',
     add: '加入列表',
     added: '已加入',
     empty: '输入关键词搜索已上传的演示文稿',

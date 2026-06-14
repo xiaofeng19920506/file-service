@@ -63,6 +63,12 @@ export async function listPlaylists(): Promise<PlaylistSummary[]> {
   return data.playlists;
 }
 
+export async function listPlaylistYoutubeVideoIds(): Promise<string[]> {
+  const res = await apiFetch('/v1/playlists/youtube-video-ids');
+  const data = await parseJson<{ videoIds: string[] }>(res);
+  return data.videoIds;
+}
+
 export async function getPlaylist(id: string): Promise<PlaylistDetail> {
   const res = await apiFetch(`/v1/playlists/${id}`);
   return parseJson<PlaylistDetail>(res);

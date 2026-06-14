@@ -200,43 +200,47 @@ export default function PlaylistYoutubeSearchPanel({
                       </p>
                     )}
                   </div>
-                  <div className="youtube-search-result-actions">
-                    {alreadyAdded && (
-                      <span className="youtube-search-added-label">{t('search.alreadyAdded')}</span>
-                    )}
+                  {inCurrentPlaylist ? (
                     <button
                       type="button"
-                      className={`youtube-search-add-btn${inCurrentPlaylist ? ' added' : ''}${adding ? ' loading' : ''}`}
-                      onClick={() => void handleAddSearchResult(row.videoId, row.title)}
-                      disabled={inCurrentPlaylist || addingVideoId !== null}
-                      aria-label={
-                        inCurrentPlaylist
-                          ? t('search.added')
-                          : adding
-                            ? t('playlists.adding')
-                            : alreadyAdded
-                              ? t('search.alreadyAdded')
-                              : t('search.add')
-                      }
-                      title={
-                        inCurrentPlaylist
-                          ? t('search.added')
-                          : adding
-                            ? t('playlists.adding')
-                            : alreadyAdded
-                              ? t('search.alreadyAdded')
-                              : t('search.add')
-                      }
+                      className={`youtube-search-add-btn added${adding ? ' loading' : ''}`}
+                      disabled
+                      aria-label={t('search.added')}
+                      title={t('search.added')}
                     >
-                      {inCurrentPlaylist ? (
-                        <CheckIcon />
-                      ) : adding ? (
+                      <CheckIcon />
+                    </button>
+                  ) : alreadyAdded ? (
+                    <button
+                      type="button"
+                      className={`youtube-search-added-btn${adding ? ' loading' : ''}`}
+                      onClick={() => void handleAddSearchResult(row.videoId, row.title)}
+                      disabled={addingVideoId !== null}
+                      aria-label={adding ? t('playlists.adding') : t('search.alreadyAdded')}
+                      title={adding ? t('playlists.adding') : t('search.alreadyAdded')}
+                    >
+                      {adding ? (
+                        <span className="youtube-search-add-spinner" aria-hidden />
+                      ) : (
+                        t('search.alreadyAdded')
+                      )}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className={`youtube-search-add-btn${adding ? ' loading' : ''}`}
+                      onClick={() => void handleAddSearchResult(row.videoId, row.title)}
+                      disabled={addingVideoId !== null}
+                      aria-label={adding ? t('playlists.adding') : t('search.add')}
+                      title={adding ? t('playlists.adding') : t('search.add')}
+                    >
+                      {adding ? (
                         <span className="youtube-search-add-spinner" aria-hidden />
                       ) : (
                         <PlusIcon />
                       )}
                     </button>
-                  </div>
+                  )}
                 </li>
               );
             })}

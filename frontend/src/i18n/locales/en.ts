@@ -370,7 +370,7 @@ const en: MessageTree = {
     button: 'Search',
     searching: 'Searching…',
     clear: 'Clear search',
-    alreadyAdded: 'Already added',
+    alreadyAdded: 'Added to list',
     add: 'Add to setlist',
     added: 'Added',
     empty: 'Enter keywords to search uploaded presentations',

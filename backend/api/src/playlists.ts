@@ -418,6 +418,19 @@ export function registerPlaylistRoutes(
     };
   });
 
+  app.get('/v1/playlists/youtube-video-ids', async (request, reply) => {
+    const user = request.authUser;
+    if (!user) return reply.code(401).send({ error: 'unauthorized' });
+
+    const rows = await db
+      .selectDistinct({ youtubeVideoId: playlistItems.youtubeVideoId })
+      .from(playlistItems)
+      .innerJoin(playlists, eq(playlistItems.playlistId, playlists.id))
+      .where(eq(playlists.createdByUserId, user.id));
+
+    return { videoIds: rows.map((row) => row.youtubeVideoId) };
+  });
+
   app.get<{ Params: { id: string } }>('/v1/playlists/:id', async (request, reply) => {
     const user = request.authUser;
     const id = request.params.id;

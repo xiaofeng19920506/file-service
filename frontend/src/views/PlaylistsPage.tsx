@@ -20,6 +20,7 @@ import {
   deletePlaylist,
   createPlaylist,
   getPlaylist,
+  listPlaylistYoutubeVideoIds,
   listPlaylists,
   reorderPlaylistItems,
   removePlaylistItem,
@@ -216,29 +217,24 @@ export default function PlaylistsPage({
     }
   }, [t]);
 
-  const refreshLibraryVideoIds = useCallback(async (rows: PlaylistSummary[]) => {
-    if (!rows.length) {
-      setLibraryVideoIds(new Set());
-      return;
-    }
+  const refreshLibraryVideoIds = useCallback(async () => {
     try {
-      const details = await Promise.all(rows.map((row) => getPlaylist(row.id)));
-      const ids = new Set<string>();
-      for (const playlist of details) {
-        for (const item of playlist.items) {
-          ids.add(item.youtubeVideoId);
-        }
-      }
-      setLibraryVideoIds(ids);
+      const videoIds = await listPlaylistYoutubeVideoIds();
+      setLibraryVideoIds(new Set(videoIds));
     } catch {
-      setLibraryVideoIds(new Set());
+      // 保留已有缓存，避免刷新失败时清空「已添加」标记
     }
   }, []);
 
   useEffect(() => {
     if (loadingList) return;
-    void refreshLibraryVideoIds(playlists);
-  }, [loadingList, playlists, refreshLibraryVideoIds]);
+    void refreshLibraryVideoIds();
+  }, [loadingList, playlists.length, refreshLibraryVideoIds]);
+
+  useEffect(() => {
+    if (!isMobileViewport || selectedId || mobileHome !== 'search') return;
+    void refreshLibraryVideoIds();
+  }, [isMobileViewport, selectedId, mobileHome, refreshLibraryVideoIds]);
 
   const loadDetail = useCallback(
     async (id: string) => {
@@ -339,7 +335,15 @@ export default function PlaylistsPage({
     if (selectedId === data.playlist.id) {
       setDetail(data);
     }
+    setLibraryVideoIds((prev) => {
+      const next = new Set(prev);
+      for (const item of data.items) {
+        next.add(item.youtubeVideoId);
+      }
+      return next;
+    });
     await loadList();
+    void refreshLibraryVideoIds();
     if (meta.skippedCount > 0 && meta.addedCount > 0) {
       setNotice(
         t('playlists.addPartialDuplicate', {

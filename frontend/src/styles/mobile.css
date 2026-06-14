@@ -556,9 +556,23 @@
     padding: 0.5rem 0.55rem;
   }
 
+  .playlists-youtube-search--mobile-list .youtube-search-add-btn,
+  .playlists-youtube-search--mobile-list .youtube-search-added-btn {
+    min-height: var(--touch-target);
+  }
+
   .playlists-youtube-search--mobile-list .youtube-search-add-btn {
     width: var(--touch-target);
     height: var(--touch-target);
+  }
+
+  .playlists-youtube-search--mobile-list .youtube-search-added-btn {
+    min-width: 5.5rem;
+    font-size: 0.78rem;
+  }
+
+  .playlists-youtube-search--mobile-list .youtube-search-added-btn.loading {
+    min-width: var(--touch-target);
   }
 
   .search-box--submit-only .search-input-wrap {
