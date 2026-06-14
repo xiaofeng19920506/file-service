@@ -4,6 +4,7 @@
   height: 100dvh;
   max-height: 100dvh;
   overflow: hidden;
+  max-width: 100%;
 }
 
 .app-content {
@@ -12,6 +13,7 @@
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
+  max-width: 100%;
 }
 
 /* ── Nav ── */
@@ -2954,16 +2956,29 @@
   background: rgba(0, 0, 0, 0.55);
   padding: 1rem;
   z-index: var(--z-modal, 120);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .metadata-modal {
   width: min(620px, 100%);
+  max-width: 100%;
   max-height: min(90dvh, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1.5rem));
   display: flex;
   flex-direction: column;
   background: var(--surface);
   border-radius: 16px;
   box-shadow: 0 24px 68px rgba(0, 0, 0, 0.22);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.metadata-modal form {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -2978,6 +2993,8 @@
 .metadata-modal-header h3 {
   margin: 0;
   font-size: 1.05rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .modal-close-btn {
@@ -2992,7 +3009,9 @@
 
 .metadata-modal-body {
   padding: 1rem 1.25rem;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  min-width: 0;
 }
 
 .metadata-modal-actions {
@@ -4208,6 +4227,8 @@
 .playlists-text-input {
   flex: 1;
   min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 0.55rem 0.7rem;
   border: 1px solid var(--border);
   border-radius: 9px;
@@ -4303,6 +4324,78 @@
 
 .playlists-list-row {
   min-width: 0;
+  overflow: hidden;
+}
+
+.playlists-list-swipe {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+  touch-action: pan-y;
+}
+
+.playlists-list-swipe-action {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 4.75rem;
+  display: flex;
+  align-items: stretch;
+}
+
+.playlists-list-swipe-action--edit {
+  left: 0;
+}
+
+.playlists-list-swipe-action--delete {
+  right: 0;
+}
+
+.playlists-list-swipe-action-btn {
+  flex: 1;
+  border: none;
+  padding: 0 0.35rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  color: #fff;
+}
+
+.playlists-list-swipe-action--edit .playlists-list-swipe-action-btn {
+  background: var(--blue);
+}
+
+.playlists-list-swipe-action--delete .playlists-list-swipe-action-btn {
+  background: #e5484d;
+}
+
+.playlists-list-swipe-action-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.playlists-list-swipe-panel {
+  position: relative;
+  z-index: 1;
+  will-change: transform;
+  transition: transform 0.22s ease;
+  touch-action: pan-y;
+}
+
+.playlists-list-swipe-panel.is-dragging {
+  transition: none;
+}
+
+.playlists-list-swipe-panel.active .playlists-list-item {
+  background: color-mix(in srgb, var(--accent, #3b82f6) 10%, var(--bg));
+  border-color: color-mix(in srgb, var(--accent, #3b82f6) 35%, var(--border));
+}
+
+.playlists-sidebar-head--mobile-toolbar {
+  justify-content: flex-end;
+  min-height: var(--touch-target);
+  padding-block: 0.35rem;
 }
 
 .playlists-list-row-inner {
@@ -4592,12 +4685,14 @@
 
 .create-playlist-modal {
   width: min(100%, 22rem);
+  max-width: 100%;
 }
 
 .create-playlist-modal-body {
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
+  min-width: 0;
 }
 
 .create-playlist-modal-label {
@@ -4608,6 +4703,8 @@
 
 .create-playlist-modal-input {
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .pick-playlist-for-add-body {

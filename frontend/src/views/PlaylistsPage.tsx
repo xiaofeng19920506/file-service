@@ -4,9 +4,12 @@ import AddPlaylistItemsModal from '../components/AddPlaylistItemsModal';
 import PlaylistYoutubeSearchPanel from '../components/PlaylistYoutubeSearchPanel';
 import ConfirmModal from '../components/ConfirmModal';
 import CreatePlaylistModal from '../components/CreatePlaylistModal';
+import PlaylistListSwipeRow, {
+  type PlaylistListSwipeSide,
+} from '../components/PlaylistListSwipeRow';
 import SharePlaylistModal from '../components/SharePlaylistModal';
 import ExportYoutubePlaylistModal from '../components/ExportYoutubePlaylistModal';
-import { DragHandleIcon, PencilIcon, PlusIcon } from '../components/icons';
+import { DragHandleIcon, PlusIcon } from '../components/icons';
 import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 import PlaylistAudioPlayer, {
   type PlaylistAudioProgressHandle,
@@ -136,6 +139,10 @@ export default function PlaylistsPage({
   const [trackDragOver, setTrackDragOver] = useState<TrackDragOver | null>(null);
   const [savingOrder, setSavingOrder] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [listSwipeOpen, setListSwipeOpen] = useState<{
+    id: string;
+    side: Exclude<PlaylistListSwipeSide, 'none'>;
+  } | null>(null);
   const [renameDraft, setRenameDraft] = useState('');
   const [savingRename, setSavingRename] = useState(false);
   const [playbackMode, setPlaybackMode] = useState<PlaylistPlaybackMode>(readPlaylistPlaybackMode);
@@ -1115,8 +1122,10 @@ export default function PlaylistsPage({
 
     return (
     <>
-      <div className="playlists-sidebar-head">
-        <h2>{isMobileLists ? t('nav.playlistListsShort') : t('playlists.savedTitle')}</h2>
+      <div
+        className={`playlists-sidebar-head${isMobileLists ? ' playlists-sidebar-head--mobile-toolbar' : ''}`}
+      >
+        {!isMobileLists && <h2>{t('playlists.savedTitle')}</h2>}
         {isMobileLists ? (
           <button
             type="button"
@@ -1136,7 +1145,10 @@ export default function PlaylistsPage({
         )}
       </div>
 
-      <div className="playlists-sidebar-list">
+      <div
+        className="playlists-sidebar-list"
+        onScroll={() => setListSwipeOpen(null)}
+      >
         {!isMobileLists && (
         <form
           className="playlists-create-inline"
@@ -1212,36 +1224,37 @@ export default function PlaylistsPage({
                     </div>
                   </form>
                 ) : (
-                  <div className="playlists-list-row-inner">
-                    <button
-                      type="button"
-                      className="playlists-list-rename-btn"
-                      onClick={() => startRename(row.id, row.title)}
-                      aria-label={t('playlists.rename')}
-                      title={t('playlists.rename')}
-                    >
-                      <PencilIcon />
-                    </button>
-                    <button
-                      type="button"
-                      className="playlists-list-item"
-                      onClick={() => {
-                        if (renamingId !== null && renamingId !== row.id) {
-                          cancelRename();
-                        }
-                        onSelectId(row.id);
-                      }}
-                    >
-                      <span className="playlists-list-item-body">
-                        <span className="playlists-list-title">{row.title}</span>
-                        <span className="playlists-list-meta">
-                          {t('playlists.trackCount', { count: row.itemCount })}
-                          <span className="playlists-list-dot">·</span>
-                          {formatDate(row.createdAt)}
-                        </span>
-                      </span>
-                    </button>
-                  </div>
+                  <PlaylistListSwipeRow
+                    isActive={selectedId === row.id}
+                    openedSide={
+                      listSwipeOpen?.id === row.id ? listSwipeOpen.side : 'none'
+                    }
+                    onOpenedSideChange={(side) => {
+                      if (side === 'none') {
+                        setListSwipeOpen(null);
+                        return;
+                      }
+                      setListSwipeOpen({ id: row.id, side });
+                    }}
+                    title={row.title}
+                    meta={
+                      <>
+                        {t('playlists.trackCount', { count: row.itemCount })}
+                        <span className="playlists-list-dot">·</span>
+                        {formatDate(row.createdAt)}
+                      </>
+                    }
+                    onSelect={() => {
+                      if (renamingId !== null && renamingId !== row.id) {
+                        cancelRename();
+                      }
+                      setListSwipeOpen(null);
+                      onSelectId(row.id);
+                    }}
+                    onEdit={() => startRename(row.id, row.title)}
+                    onDelete={() => setDeleteTarget({ id: row.id, title: row.title })}
+                    deleteBusy={deletingId === row.id}
+                  />
                 )}
               </li>
             ))}
@@ -1253,7 +1266,10 @@ export default function PlaylistsPage({
   };
 
   useEffect(() => {
-    if (mobileHome !== 'lists') setShowCreateListModal(false);
+    if (mobileHome !== 'lists') {
+      setShowCreateListModal(false);
+      setListSwipeOpen(null);
+    }
   }, [mobileHome]);
 
   const mobileHomeView =
