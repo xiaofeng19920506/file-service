@@ -59,6 +59,47 @@
     overflow: hidden;
   }
 
+  .playlists-page[data-mobile-home-preview='true'] {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 0;
+    width: 100%;
+  }
+
+  .playlists-page[data-mobile-home-preview='true'] .playlists-header {
+    display: none;
+  }
+
+  .playlists-page[data-mobile-home-preview='true'] .playlists-workspace {
+    flex: 1;
+    min-height: 0;
+    gap: 0;
+    width: 100%;
+  }
+
+  .playlists-page[data-mobile-home-preview='true'] .playlists-home-preview-main {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .playlists-page[data-mobile-home-preview='true'] .playlists-main-inner {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .playlists-page[data-mobile-home-preview='true'] .playlists-home-preview-actions {
+    padding-bottom: calc(
+      var(--playlists-mobile-dock-height-active) + var(--bottom-nav-height) + 0.75rem
+    );
+  }
+
   .playlists-track-swipe .playlists-track-main {
     border-radius: 10px;
   }

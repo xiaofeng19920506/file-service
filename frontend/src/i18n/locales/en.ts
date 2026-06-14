@@ -223,6 +223,8 @@ const en: MessageTree = {
     pickPlaylistEmpty: 'No lists yet. Create one below.',
     pickPlaylistCreateNew: 'Or create a new list',
     addToListSuccess: 'Added to "{title}"',
+    addToList: 'Add to list',
+    previewListening: 'Preview',
     searchHint: 'Search YouTube, then tap "Add to list". You can add multiple tracks in a row.',
     searchNoResults: 'No matching YouTube videos found',
     trendingTitle: 'Recommended',

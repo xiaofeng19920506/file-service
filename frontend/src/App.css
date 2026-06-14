@@ -4849,6 +4849,47 @@
   overflow: hidden;
 }
 
+.youtube-search-result-play {
+  flex: 1;
+  min-width: 0;
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.youtube-search-result-play:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.youtube-search-result-play .search-result-main {
+  width: 100%;
+}
+
+.playlists-home-preview-main {
+  flex: 1;
+  min-height: 0;
+  border: none;
+  border-radius: 0;
+  background: var(--surface);
+}
+
+.playlists-home-preview-actions {
+  flex-shrink: 0;
+  padding: 0.75rem var(--page-gutter) calc(0.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+.playlists-home-preview-add-btn {
+  width: 100%;
+  min-height: 2.875rem;
+}
+
 .youtube-search-result .search-result-title {
   display: block;
   margin: 0;

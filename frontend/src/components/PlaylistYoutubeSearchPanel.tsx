@@ -25,6 +25,7 @@ type PlaylistYoutubeSearchPanelProps = {
   playlists?: PlaylistSummary[];
   loadingPlaylists?: boolean;
   onCreatePlaylist?: (title: string) => Promise<PlaylistDetail>;
+  onPreviewTrack?: (track: { videoId: string; title: string }) => void;
   className?: string;
 };
 
@@ -39,6 +40,7 @@ export default function PlaylistYoutubeSearchPanel({
   playlists = [],
   loadingPlaylists = false,
   onCreatePlaylist,
+  onPreviewTrack,
   className = '',
 }: PlaylistYoutubeSearchPanelProps) {
   const { t } = useI18n();
@@ -226,6 +228,7 @@ export default function PlaylistYoutubeSearchPanel({
             loadingPlaylists={loadingPlaylists}
             onCreatePlaylist={onCreatePlaylist}
             onAdded={onAdded}
+            onPreviewTrack={onPreviewTrack}
           />
         )}
 
@@ -252,16 +255,36 @@ export default function PlaylistYoutubeSearchPanel({
               const adding = addingVideoId === row.videoId;
               return (
                 <li key={row.videoId} className="search-result-item youtube-search-result">
-                  <div className="search-result-main">
-                    <strong className="search-result-title" title={row.title}>
-                      {row.title}
-                    </strong>
-                    {row.channelTitle && (
-                      <p className="search-result-channel" title={row.channelTitle}>
-                        {row.channelTitle}
-                      </p>
-                    )}
-                  </div>
+                  {onPreviewTrack ? (
+                    <button
+                      type="button"
+                      className="youtube-search-result-play"
+                      onClick={() => onPreviewTrack({ videoId: row.videoId, title: row.title })}
+                      disabled={addingVideoId !== null}
+                    >
+                      <div className="search-result-main">
+                        <strong className="search-result-title" title={row.title}>
+                          {row.title}
+                        </strong>
+                        {row.channelTitle && (
+                          <p className="search-result-channel" title={row.channelTitle}>
+                            {row.channelTitle}
+                          </p>
+                        )}
+                      </div>
+                    </button>
+                  ) : (
+                    <div className="search-result-main">
+                      <strong className="search-result-title" title={row.title}>
+                        {row.title}
+                      </strong>
+                      {row.channelTitle && (
+                        <p className="search-result-channel" title={row.channelTitle}>
+                          {row.channelTitle}
+                        </p>
+                      )}
+                    </div>
+                  )}
                   {inCurrentPlaylist ? (
                     <button
                       type="button"

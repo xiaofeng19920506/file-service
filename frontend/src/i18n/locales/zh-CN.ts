@@ -215,6 +215,8 @@ export default {
     pickPlaylistEmpty: '还没有列表，请在下方创建一个新列表。',
     pickPlaylistCreateNew: '或创建新列表',
     addToListSuccess: '已添加到「{title}」',
+    addToList: '添加到列表',
+    previewListening: '试听',
     searchHint: '搜索 YouTube 后点「加入列表」即可添加；可连续添加多首。',
     searchNoResults: '未找到相关 YouTube 视频',
     trendingTitle: '推荐歌曲',

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AcceptSharedPlaylistModal from '../components/AcceptSharedPlaylistModal';
 import AddPlaylistItemsModal from '../components/AddPlaylistItemsModal';
+import PickPlaylistForAddModal from '../components/PickPlaylistForAddModal';
 import PlaylistYoutubeSearchPanel from '../components/PlaylistYoutubeSearchPanel';
 import ConfirmModal from '../components/ConfirmModal';
 import CreatePlaylistModal from '../components/CreatePlaylistModal';
@@ -23,6 +24,7 @@ import PlaylistQueuePanel from '../components/PlaylistQueuePanel';
 import YoutubePlaylistPlayer from '../components/YoutubePlaylistPlayer';
 import { prioritizeYoutubeAudioCache, type YoutubeAudioStatus } from '../api/youtube-audio';
 import {
+  addPlaylistItemsByVideos,
   deletePlaylist,
   createPlaylist,
   getPlaylist,
@@ -175,6 +177,11 @@ export default function PlaylistsPage({
   const audioProgressHandleRef = useRef<PlaylistAudioProgressHandle | null>(null);
   const blockListSelectRef = useRef(false);
   const blockTrackPlayRef = useRef(false);
+  const [homePreview, setHomePreview] = useState<{ videoId: string; title: string } | null>(null);
+  const [homePreviewPlaying, setHomePreviewPlaying] = useState(false);
+  const [homePreviewAudio, setHomePreviewAudio] = useState<YoutubeAudioStatus | undefined>();
+  const [homePreviewAddOpen, setHomePreviewAddOpen] = useState(false);
+  const [homePreviewAdding, setHomePreviewAdding] = useState(false);
 
   useEffect(() => {
     if (oauthHandledRef.current) return;
@@ -309,8 +316,48 @@ export default function PlaylistsPage({
     onSelectId(undefined);
   }, [onSelectId]);
 
+  const closeHomePreview = useCallback(() => {
+    setHomePreview(null);
+    setHomePreviewPlaying(false);
+    setHomePreviewAudio(undefined);
+    setHomePreviewAddOpen(false);
+  }, []);
+
+  const startHomePreview = useCallback((track: { videoId: string; title: string }) => {
+    setHomePreview(track);
+    setHomePreviewAudio(undefined);
+    setHomePreviewPlaying(true);
+    setPlaybackMode('audio');
+    writePlaylistPlaybackMode('audio');
+    void prioritizeYoutubeAudioCache([track.videoId], [
+      { videoId: track.videoId, title: track.title },
+    ]);
+  }, []);
+
+  const homeSearchPreviewEnabled =
+    !selectedId && mobileHome === 'search' && isMobileViewport;
+
   useEffect(() => {
-    if (!isMobileViewport || !selectedId) {
+    if (!homeSearchPreviewEnabled) {
+      closeHomePreview();
+    }
+  }, [homeSearchPreviewEnabled, closeHomePreview]);
+
+  useEffect(() => {
+    if (!isMobileViewport) {
+      setMobileHeader(null);
+      return;
+    }
+
+    if (homePreview && !selectedId) {
+      setMobileHeader({
+        title: homePreview.title,
+        onBack: closeHomePreview,
+      });
+      return;
+    }
+
+    if (!selectedId) {
       setMobileHeader(null);
       return;
     }
@@ -328,7 +375,7 @@ export default function PlaylistsPage({
     });
 
     return () => setMobileHeader(null);
-  }, [isMobileViewport, selectedId, detail, playlists, backToList, setMobileHeader]);
+  }, [isMobileViewport, selectedId, detail, playlists, backToList, setMobileHeader, homePreview, closeHomePreview]);
 
   const performCreateList = useCallback(
     async (title: string) => {
@@ -699,12 +746,52 @@ export default function PlaylistsPage({
     });
   }, []);
 
+  const handleHomePreviewAudioStatusChange = useCallback((_videoId: string, status: YoutubeAudioStatus) => {
+    setHomePreviewAudio(status);
+  }, []);
+
+  const homePreviewPlayerItems = useMemo(
+    () =>
+      homePreview
+        ? [
+            {
+              youtubeVideoId: homePreview.videoId,
+              title: homePreview.title,
+              audio: homePreviewAudio,
+            },
+          ]
+        : [],
+    [homePreview, homePreviewAudio],
+  );
+
+  const homePreviewMobile = Boolean(homePreview && isMobileViewport && !selectedId);
+
+  const addHomePreviewToPlaylist = async (targetPlaylistId: string) => {
+    if (!homePreview || homePreviewAdding) return;
+    setHomePreviewAdding(true);
+    setError(null);
+    try {
+      const data = await addPlaylistItemsByVideos(targetPlaylistId, [
+        { videoId: homePreview.videoId, title: homePreview.title },
+      ]);
+      await handleItemsAdded(data, {
+        addedCount: data.addedCount,
+        skippedCount: data.skippedCount,
+      });
+      setHomePreviewAddOpen(false);
+    } catch (err) {
+      throw err instanceof Error ? err : new Error('add_playlist_item_failed');
+    } finally {
+      setHomePreviewAdding(false);
+    }
+  };
+
   const currentItem = detail?.items[activeIndex];
   useRecordYoutubePlay({
-    videoId: currentItem?.youtubeVideoId,
-    title: currentItem?.title,
-    playing: playing && playerEngaged,
-    enabled: Boolean(currentItem),
+    videoId: homePreview?.videoId ?? currentItem?.youtubeVideoId,
+    title: homePreview?.title ?? currentItem?.title,
+    playing: homePreview ? homePreviewPlaying : playing && playerEngaged,
+    enabled: Boolean(homePreview || currentItem),
   });
   const existingVideoIds = useMemo(
     () => new Set(detail?.items.map((item) => item.youtubeVideoId) ?? []),
@@ -719,13 +806,17 @@ export default function PlaylistsPage({
   const audioWatchMobile = audioWatchActive && isMobileViewport;
   const showMobileAudioDock =
     isMobileViewport &&
-    Boolean(selectedId && detail?.items.length) &&
+    Boolean(homePreview || (selectedId && detail?.items.length)) &&
     playbackMode === 'audio' &&
     !youtubeWatchMobile;
   const mobileDockCanGoPrev = playerEngaged ? canGoPrev : activeIndex > 0;
   const mobileDockCanGoNext = playerEngaged ? canGoNext : itemCount > 1 || shuffleEnabled;
 
   const handleMobileDockPlayToggle = () => {
+    if (homePreview) {
+      setHomePreviewPlaying((wasPlaying) => !wasPlaying);
+      return;
+    }
     if (!detail?.items.length) return;
     if (!playerEngaged) {
       startPlayback();
@@ -764,14 +855,14 @@ export default function PlaylistsPage({
   }, [audioWatchDesktop]);
 
   useEffect(() => {
-    if (!youtubeWatchMobile && !audioWatchMobile) return;
+    if (!youtubeWatchMobile && !audioWatchMobile && !homePreviewMobile) return;
     document.body.classList.add(
       youtubeWatchMobile ? 'playlists-mobile-video-active' : 'playlists-mobile-audio-active',
     );
     return () => {
       document.body.classList.remove('playlists-mobile-video-active', 'playlists-mobile-audio-active');
     };
-  }, [youtubeWatchMobile, audioWatchMobile]);
+  }, [youtubeWatchMobile, audioWatchMobile, homePreviewMobile]);
 
   const startRename = (id: string, title: string) => {
     blockListSelectRef.current = true;
@@ -1027,6 +1118,24 @@ export default function PlaylistsPage({
 
   const renderPlaylistsMobileMenu = () => {
     if (!isMobileViewport) return null;
+
+    if (homePreview && !selectedId) {
+      return (
+        <div className="nav-mobile-menu-playlists-inner">
+          <p className="nav-mobile-menu-playlists-title">{t('playlists.mobileMenuTitle')}</p>
+          <button
+            type="button"
+            className="nav-mobile-menu-item btn-primary"
+            onClick={() => {
+              setHomePreviewAddOpen(true);
+              closeMenu();
+            }}
+          >
+            {t('playlists.addToList')}
+          </button>
+        </div>
+      );
+    }
 
     if (!selectedId || !detail) {
       return (
@@ -1285,7 +1394,44 @@ export default function PlaylistsPage({
   }, [mobileHome]);
 
   const mobileHomeView =
-    isMobileViewport && !selectedId ? mobileHome : undefined;
+    isMobileViewport && !selectedId && !homePreview ? mobileHome : undefined;
+
+  const renderHomePreviewMain = () => (
+    <section className="playlists-main playlists-home-preview-main" aria-live="polite">
+      <div className="playlists-main-inner playlists-main-inner--mobile-audio">
+        <div
+          className="playlists-player-stage"
+          data-playback-mode="audio"
+          data-player-engaged="true"
+          data-audio-mobile-record="true"
+        >
+          <div className="playlists-player-col">
+            <PlaylistAudioPlayer
+              items={homePreviewPlayerItems}
+              activeIndex={0}
+              onActiveIndexChange={() => {}}
+              playing={homePreviewPlaying}
+              onPlayingChange={setHomePreviewPlaying}
+              onAudioStatusChange={handleHomePreviewAudioStatusChange}
+              playlistTitle={t('playlists.previewListening')}
+              variant="mobileRecord"
+              onProgressUpdate={setAudioProgress}
+              progressHandleRef={audioProgressHandleRef}
+            />
+          </div>
+        </div>
+        <div className="playlists-home-preview-actions">
+          <button
+            type="button"
+            className="btn-primary playlists-home-preview-add-btn"
+            onClick={() => setHomePreviewAddOpen(true)}
+          >
+            {t('playlists.addToList')}
+          </button>
+        </div>
+      </div>
+    </section>
+  );
 
   return (
     <>
@@ -1302,6 +1448,8 @@ export default function PlaylistsPage({
         data-mobile-audio-dock={showMobileAudioDock ? 'true' : 'false'}
         data-mobile-home={mobileHomeView}
         data-mobile-detail={isMobileViewport && selectedId ? 'true' : undefined}
+        data-home-preview={homePreview ? 'true' : undefined}
+        data-mobile-home-preview={homePreviewMobile ? 'true' : undefined}
       >
         <header className={`playlists-header${selectedId ? ' mobile-only-hidden' : ''}`}>
           <h1>{t('playlists.title')}</h1>
@@ -1317,8 +1465,8 @@ export default function PlaylistsPage({
 
         <div
           className="playlists-workspace"
-          data-mobile-view={selectedId ? 'detail' : 'list'}
-          data-player-active={showPlayer ? 'true' : 'false'}
+          data-mobile-view={homePreviewMobile || selectedId ? 'detail' : 'list'}
+          data-player-active={homePreview || showPlayer ? 'true' : 'false'}
           data-youtube-watch={youtubeWatchActive ? 'true' : 'false'}
           data-youtube-desktop-watch={youtubeWatchDesktop ? 'true' : 'false'}
           data-mobile-video-immersive={youtubeWatchMobile ? 'true' : 'false'}
@@ -1328,6 +1476,7 @@ export default function PlaylistsPage({
           data-playback-mode={playbackMode}
           data-mobile-audio-dock={showMobileAudioDock ? 'true' : 'false'}
         >
+          {!homePreviewMobile && (
           <aside
             className={`playlists-sidebar${
               mobileHomeView === 'search'
@@ -1352,12 +1501,17 @@ export default function PlaylistsPage({
                 libraryVideoIds={libraryVideoIds}
                 onCreatePlaylist={createPlaylistForSearch}
                 onAdded={(data, meta) => void handleItemsAdded(data, meta)}
+                onPreviewTrack={homeSearchPreviewEnabled ? startHomePreview : undefined}
               />
             ) : (
               renderPlaylistLibrary()
             )}
           </aside>
+          )}
 
+          {homePreviewMobile ? (
+            renderHomePreviewMain()
+          ) : (
           <section className="playlists-main" aria-live="polite">
             {!selectedId ? (
               <div className="playlists-placeholder">
@@ -1611,6 +1765,7 @@ export default function PlaylistsPage({
               </div>
             ) : null}
           </section>
+          )}
         </div>
       </main>
 
@@ -1710,7 +1865,44 @@ export default function PlaylistsPage({
         />
       )}
 
-      {showMobileAudioDock && currentItem && detail && (
+      {homePreviewAddOpen && homePreview && (
+        <PickPlaylistForAddModal
+          videoTitle={homePreview.title}
+          playlists={playlists}
+          loadingPlaylists={loadingList}
+          busy={homePreviewAdding}
+          onClose={() => {
+            if (homePreviewAdding) return;
+            setHomePreviewAddOpen(false);
+          }}
+          onPick={addHomePreviewToPlaylist}
+          onCreatePlaylist={createPlaylistForSearch}
+        />
+      )}
+
+      {showMobileAudioDock && homePreview && (
+        <PlaylistsMobilePlaybackDock
+          title={homePreview.title}
+          trackLabel={t('playlists.previewListening')}
+          playing={homePreviewPlaying}
+          canGoPrev={false}
+          canGoNext={false}
+          showProgress
+          currentTime={audioProgress.currentTime}
+          duration={audioProgress.duration}
+          canSeek={audioProgress.canSeek}
+          onSeekRatio={(ratio) => audioProgressHandleRef.current?.seekToRatio(ratio)}
+          shuffleEnabled={false}
+          queueOpen={false}
+          onToggleShuffle={() => {}}
+          onToggleQueue={() => {}}
+          onPlayToggle={handleMobileDockPlayToggle}
+          onPrev={() => {}}
+          onNext={() => {}}
+        />
+      )}
+
+      {showMobileAudioDock && !homePreview && currentItem && detail && (
         <PlaylistsMobilePlaybackDock
           title={currentItem.title}
           trackLabel={t('playlists.trackCounter', {
