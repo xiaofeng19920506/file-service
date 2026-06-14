@@ -74,7 +74,7 @@ export async function searchYoutubeVideos(
   if (!q) return [];
   if (!apiKey) throw new Error('youtube_api_key_missing');
 
-  const maxResults = Math.min(Math.max(options?.maxResults ?? 12, 1), 25);
+  const maxResults = Math.min(Math.max(options?.maxResults ?? 50, 1), 50);
   const url = new URL('https://www.googleapis.com/youtube/v3/search');
   url.searchParams.set('part', 'snippet');
   url.searchParams.set('type', 'video');
@@ -141,7 +141,7 @@ export async function searchYoutubeVideosViaYtdlp(
   const q = query.trim();
   if (!q) return [];
 
-  const maxResults = Math.min(Math.max(options?.maxResults ?? 12, 1), 25);
+  const maxResults = Math.min(Math.max(options?.maxResults ?? 50, 1), 50);
   const bin = resolveYtdlpPath(ytdlpPath);
 
   let stdout = '';

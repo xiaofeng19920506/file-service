@@ -14,8 +14,8 @@ export function registerYoutubeSearchRoutes(app: FastifyInstance, opts: { env: A
       if (!q) return reply.code(400).send({ error: 'query_required' });
       if (q.length > 200) return reply.code(400).send({ error: 'query_too_long' });
 
-      const limitRaw = Number.parseInt(request.query.limit ?? '12', 10);
-      const maxResults = Number.isFinite(limitRaw) ? limitRaw : 12;
+      const limitRaw = Number.parseInt(request.query.limit ?? '50', 10);
+      const maxResults = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 50) : 50;
 
       try {
         const results = env.YOUTUBE_API_KEY

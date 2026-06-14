@@ -11,7 +11,7 @@ export type YoutubeSearchResult = {
 
 export async function searchYoutubeVideos(
   query: string,
-  limit = 12,
+  limit = 50,
 ): Promise<{ query: string; results: YoutubeSearchResult[] }> {
   const params = new URLSearchParams({ q: query.trim(), limit: String(limit) });
   const res = await apiFetch(`/v1/youtube/search?${params}`);
