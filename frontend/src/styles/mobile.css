@@ -93,6 +93,35 @@
     gap: 0.65rem;
   }
 
+  .app.nav-mobile-menu-open .nav {
+    z-index: calc(var(--z-modal) + 3);
+  }
+
+  .nav-mobile-menu.is-open {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: calc(var(--nav-height) + var(--safe-top));
+    bottom: 0;
+    z-index: calc(var(--z-modal) + 2);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-height: none;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding: 0.75rem var(--page-gutter) calc(var(--bottom-nav-height) + 1rem);
+    border-top: 1px solid var(--border-light);
+    background: var(--surface);
+    box-shadow: 0 16px 48px color-mix(in srgb, var(--shadow-sm) 70%, transparent);
+  }
+
+  .nav-mobile-menu-playlists-inner {
+    flex: 0 0 auto;
+  }
+
   .nav-user {
     display: none;
   }

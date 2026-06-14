@@ -216,6 +216,7 @@ const en: MessageTree = {
     searchPlaceholder: 'Search YouTube by song title or artist…',
     searchHint: 'Same as the mobile player: search YouTube, then tap "Add to list". Add multiple tracks without closing.',
     searchNoResults: 'No matching YouTube videos found',
+    searchSongs: 'Search songs',
     mobileMenuTitle: 'Setlist actions',
     addPlaceholder: 'Paste a YouTube video or playlist URL…',
     addButton: 'Add',

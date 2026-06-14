@@ -929,10 +929,20 @@ export default function PlaylistsPage({
         <button type="button" className="nav-mobile-menu-item btn-secondary" onClick={focusImportField}>
           {t('playlists.importTitle')}
         </button>
+        <button
+          type="button"
+          className="nav-mobile-menu-item btn-primary"
+          onClick={() => {
+            setShowAddModal(true);
+            closeMenu();
+          }}
+        >
+          {t('playlists.searchSongs')}
+        </button>
         {hasTracks && (
           <button
             type="button"
-            className="nav-mobile-menu-item btn-primary"
+            className="nav-mobile-menu-item btn-secondary"
             onClick={() => {
               startPlayback();
               closeMenu();
@@ -941,16 +951,6 @@ export default function PlaylistsPage({
             {t('playlists.playAll')}
           </button>
         )}
-        <button
-          type="button"
-          className="nav-mobile-menu-item btn-secondary"
-          onClick={() => {
-            setShowAddModal(true);
-            closeMenu();
-          }}
-        >
-          {t('playlists.addTitle')}
-        </button>
         {hasTracks && (
           <>
             <button

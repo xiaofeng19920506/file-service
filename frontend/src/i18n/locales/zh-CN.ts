@@ -208,6 +208,7 @@ export default {
     searchPlaceholder: '搜索 YouTube 歌曲名、歌手…',
     searchHint: '与手机播放器相同：搜索 YouTube 后点「加入列表」；可连续添加多首。',
     searchNoResults: '未找到相关 YouTube 视频',
+    searchSongs: '搜索歌曲',
     mobileMenuTitle: '歌单操作',
     addPlaceholder: '粘贴 YouTube 视频或播放列表链接…',
     addButton: '添加',

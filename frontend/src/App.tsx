@@ -175,7 +175,7 @@ function AppShellInner({
   );
 
   return (
-    <div className={`app${page === 'playlists' ? ' app-playlists' : ''}`}>
+    <div className={`app${page === 'playlists' ? ' app-playlists' : ''}${mobileMenuOpen ? ' nav-mobile-menu-open' : ''}`}>
       <header className="nav" ref={navRef}>
         <div className="nav-inner">
           <div className="nav-brand">
