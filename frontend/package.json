@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "preview": "next start"
+    "preview": "next start",
+    "icons:pwa": "node scripts/generate-pwa-icons.mjs"
   },
   "dependencies": {
     "jszip": "^3.10.1",

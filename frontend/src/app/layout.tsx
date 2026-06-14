@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import '../index.css';
 import '../App.css';
 import '../styles/apple-design.css';
@@ -14,18 +14,37 @@ import '../styles/playlists-audio-layout.css';
 
 export const metadata: Metadata = {
   title: '敬拜诗库',
+  description: '敬拜歌曲列表与播放 — 支持 YouTube 搜索、MP3 与视频播放',
+  applicationName: '敬拜诗库',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: '敬拜诗库',
+  },
+  icons: {
+    icon: [
+      { url: '/icons/favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    apple: [{ url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
   other: { 'color-scheme': 'light dark' },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#fbfbfd' },
+    { media: '(prefers-color-scheme: dark)', color: '#000000' },
+  ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-        <meta name="theme-color" content="#fbfbfd" media="(prefers-color-scheme: light)" />
-        <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         {/* Inline theme script runs before first paint to avoid flash */}
         <script
           dangerouslySetInnerHTML={{
