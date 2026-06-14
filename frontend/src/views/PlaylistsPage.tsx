@@ -96,6 +96,7 @@ export default function PlaylistsPage({
   const { t, locale } = useI18n();
   const { permissions } = useAuth();
   const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
+  const [libraryVideoIds, setLibraryVideoIds] = useState<Set<string>>(() => new Set());
   const [detail, setDetail] = useState<PlaylistDetail | null>(null);
   const [newListTitle, setNewListTitle] = useState('');
   const [loadingList, setLoadingList] = useState(true);
@@ -214,6 +215,30 @@ export default function PlaylistsPage({
       setLoadingList(false);
     }
   }, [t]);
+
+  const refreshLibraryVideoIds = useCallback(async (rows: PlaylistSummary[]) => {
+    if (!rows.length) {
+      setLibraryVideoIds(new Set());
+      return;
+    }
+    try {
+      const details = await Promise.all(rows.map((row) => getPlaylist(row.id)));
+      const ids = new Set<string>();
+      for (const playlist of details) {
+        for (const item of playlist.items) {
+          ids.add(item.youtubeVideoId);
+        }
+      }
+      setLibraryVideoIds(ids);
+    } catch {
+      setLibraryVideoIds(new Set());
+    }
+  }, []);
+
+  useEffect(() => {
+    if (loadingList) return;
+    void refreshLibraryVideoIds(playlists);
+  }, [loadingList, playlists, refreshLibraryVideoIds]);
 
   const loadDetail = useCallback(
     async (id: string) => {
@@ -1246,6 +1271,7 @@ export default function PlaylistsPage({
                 pickPlaylistOnAdd
                 playlists={playlists}
                 loadingPlaylists={loadingList}
+                libraryVideoIds={libraryVideoIds}
                 onCreatePlaylist={createPlaylistForSearch}
                 onAdded={(data, meta) => void handleItemsAdded(data, meta)}
               />
