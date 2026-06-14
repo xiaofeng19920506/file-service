@@ -4,6 +4,7 @@ import AddPlaylistItemsModal from '../components/AddPlaylistItemsModal';
 import PlaylistYoutubeSearchPanel from '../components/PlaylistYoutubeSearchPanel';
 import ConfirmModal from '../components/ConfirmModal';
 import CreatePlaylistModal from '../components/CreatePlaylistModal';
+import RenamePlaylistModal from '../components/RenamePlaylistModal';
 import PlaylistListSwipeRow, {
   type PlaylistListSwipeSide,
 } from '../components/PlaylistListSwipeRow';
@@ -138,12 +139,11 @@ export default function PlaylistsPage({
   const [trackDragIndex, setTrackDragIndex] = useState<number | null>(null);
   const [trackDragOver, setTrackDragOver] = useState<TrackDragOver | null>(null);
   const [savingOrder, setSavingOrder] = useState(false);
-  const [renamingId, setRenamingId] = useState<string | null>(null);
   const [listSwipeOpen, setListSwipeOpen] = useState<{
     id: string;
     side: Exclude<PlaylistListSwipeSide, 'none'>;
   } | null>(null);
-  const [renameDraft, setRenameDraft] = useState('');
+  const [renameTarget, setRenameTarget] = useState<{ id: string; title: string } | null>(null);
   const [savingRename, setSavingRename] = useState(false);
   const [playbackMode, setPlaybackMode] = useState<PlaylistPlaybackMode>(readPlaylistPlaybackMode);
   const [shuffleEnabled, setShuffleEnabled] = useState(readPlaylistShuffleEnabled);
@@ -746,44 +746,37 @@ export default function PlaylistsPage({
   }, [youtubeWatchMobile, audioWatchMobile]);
 
   const startRename = (id: string, title: string) => {
-    setRenamingId(id);
-    setRenameDraft(title);
-    setError(null);
-    if (selectedId !== id) onSelectId(id);
+    setRenameTarget({ id, title });
+    setListSwipeOpen(null);
   };
 
-  const cancelRename = () => {
-    setRenamingId(null);
-    setRenameDraft('');
-  };
+  const performRename = useCallback(
+    async (title: string) => {
+      if (!renameTarget || savingRename) return;
 
-  const saveRename = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!renamingId || savingRename) return;
-    const title = renameDraft.trim();
-    if (!title) {
-      setError(friendlyError('title_required', t));
-      return;
-    }
+      const trimmed = title.trim();
+      if (!trimmed) {
+        throw new Error('title_required');
+      }
 
-    setSavingRename(true);
-    setError(null);
-    setNotice(null);
-    try {
-      const updated = await updatePlaylist(renamingId, title);
-      if (selectedId === renamingId) setDetail(updated);
-      setPlaylists((rows) =>
-        rows.map((row) => (row.id === renamingId ? { ...row, title } : row)),
-      );
-      setRenamingId(null);
-      setRenameDraft('');
-      setNotice(t('playlists.renamed'));
-    } catch (err) {
-      setError(friendlyError(err instanceof Error ? err.message : 'update_playlist_failed', t));
-    } finally {
-      setSavingRename(false);
-    }
-  };
+      setSavingRename(true);
+      setNotice(null);
+      try {
+        const updated = await updatePlaylist(renameTarget.id, trimmed);
+        if (selectedId === renameTarget.id) setDetail(updated);
+        setPlaylists((rows) =>
+          rows.map((row) => (row.id === renameTarget.id ? { ...row, title: trimmed } : row)),
+        );
+        setRenameTarget(null);
+        setNotice(t('playlists.renamed'));
+      } catch (err) {
+        throw err instanceof Error ? err : new Error('update_playlist_failed');
+      } finally {
+        setSavingRename(false);
+      }
+    },
+    [renameTarget, savingRename, selectedId, t],
+  );
 
   const onPlaybackModeChange = (mode: PlaylistPlaybackMode) => {
     setPlaybackMode(mode);
@@ -1212,71 +1205,36 @@ export default function PlaylistsPage({
             {playlists.map((row) => (
               <li
                 key={row.id}
-                className={`playlists-list-row${selectedId === row.id ? ' active' : ''}${renamingId === row.id ? ' renaming' : ''}`}
+                className={`playlists-list-row${selectedId === row.id ? ' active' : ''}`}
               >
-                {renamingId === row.id ? (
-                  <form className="playlists-list-rename" onSubmit={(e) => void saveRename(e)}>
-                    <input
-                      type="text"
-                      className="playlists-text-input playlists-list-rename-input"
-                      value={renameDraft}
-                      onChange={(e) => setRenameDraft(e.target.value)}
-                      disabled={savingRename}
-                      autoFocus
-                      maxLength={200}
-                      aria-label={t('playlists.renameLabel')}
-                    />
-                    <div className="playlists-list-rename-actions">
-                      <button
-                        type="submit"
-                        className="btn-primary btn-compact"
-                        disabled={savingRename || !renameDraft.trim()}
-                      >
-                        {savingRename ? t('playlists.renaming') : t('playlists.renameSave')}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-secondary btn-compact"
-                        onClick={cancelRename}
-                        disabled={savingRename}
-                      >
-                        {t('playlists.renameCancel')}
-                      </button>
-                    </div>
-                  </form>
-                ) : (
-                  <PlaylistListSwipeRow
-                    isActive={selectedId === row.id}
-                    openedSide={
-                      listSwipeOpen?.id === row.id ? listSwipeOpen.side : 'none'
-                    }
-                    onOpenedSideChange={(side) => {
-                      if (side === 'none') {
-                        setListSwipeOpen(null);
-                        return;
-                      }
-                      setListSwipeOpen({ id: row.id, side });
-                    }}
-                    title={row.title}
-                    meta={
-                      <>
-                        {t('playlists.trackCount', { count: row.itemCount })}
-                        <span className="playlists-list-dot">·</span>
-                        {formatDate(row.createdAt)}
-                      </>
-                    }
-                    onSelect={() => {
-                      if (renamingId !== null && renamingId !== row.id) {
-                        cancelRename();
-                      }
+                <PlaylistListSwipeRow
+                  isActive={selectedId === row.id}
+                  openedSide={
+                    listSwipeOpen?.id === row.id ? listSwipeOpen.side : 'none'
+                  }
+                  onOpenedSideChange={(side) => {
+                    if (side === 'none') {
                       setListSwipeOpen(null);
-                      onSelectId(row.id);
-                    }}
-                    onEdit={() => startRename(row.id, row.title)}
-                    onDelete={() => setDeleteTarget({ id: row.id, title: row.title })}
-                    deleteBusy={deletingId === row.id}
-                  />
-                )}
+                      return;
+                    }
+                    setListSwipeOpen({ id: row.id, side });
+                  }}
+                  title={row.title}
+                  meta={
+                    <>
+                      {t('playlists.trackCount', { count: row.itemCount })}
+                      <span className="playlists-list-dot">·</span>
+                      {formatDate(row.createdAt)}
+                    </>
+                  }
+                  onSelect={() => {
+                    setListSwipeOpen(null);
+                    onSelectId(row.id);
+                  }}
+                  onEdit={() => startRename(row.id, row.title)}
+                  onDelete={() => setDeleteTarget({ id: row.id, title: row.title })}
+                  deleteBusy={deletingId === row.id}
+                />
               </li>
             ))}
           </ul>
@@ -1654,6 +1612,15 @@ export default function PlaylistsPage({
           onClose={() => setShowCreateListModal(false)}
           onCreate={performCreateList}
           busy={creatingList}
+        />
+      )}
+
+      {renameTarget && (
+        <RenamePlaylistModal
+          initialTitle={renameTarget.title}
+          onClose={() => setRenameTarget(null)}
+          onRename={performRename}
+          busy={savingRename}
         />
       )}
 
