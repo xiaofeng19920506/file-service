@@ -4507,33 +4507,87 @@
 
 .youtube-search-result {
   align-items: center;
-}
-
-.youtube-search-thumb {
-  flex-shrink: 0;
-  width: 4.5rem;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
-  border-radius: 8px;
-  background: var(--surface-elevated, var(--surface));
-}
-
-.youtube-search-result .btn-add {
-  flex-shrink: 0;
-  align-self: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.65rem;
 }
 
 .youtube-search-result .search-result-main {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
 }
 
 .youtube-search-result .search-result-title {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  display: block;
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: nowrap;
   overflow: hidden;
-  margin-bottom: 0.25rem;
+  text-overflow: ellipsis;
+}
+
+.youtube-search-result .search-result-channel {
+  margin: 0.12rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.3;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.youtube-search-add-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--blue) 35%, var(--border));
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--blue);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.youtube-search-add-btn:hover:not(:disabled) {
+  background: var(--blue-muted);
+  border-color: color-mix(in srgb, var(--blue) 50%, var(--border));
+}
+
+.youtube-search-add-btn:disabled {
+  cursor: default;
+}
+
+.youtube-search-add-btn.added {
+  color: var(--text-tertiary);
+  border-color: var(--border-light);
+  opacity: 0.65;
+}
+
+.youtube-search-add-btn .plus-icon,
+.youtube-search-add-btn .check-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.youtube-search-add-spinner {
+  width: 0.95rem;
+  height: 0.95rem;
+  border: 2px solid color-mix(in srgb, var(--blue) 25%, transparent);
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: youtube-search-add-spin 0.7s linear infinite;
+}
+
+@keyframes youtube-search-add-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .btn-danger-outline {

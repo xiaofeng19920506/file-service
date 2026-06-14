@@ -506,6 +506,16 @@
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     margin-top: 0.65rem;
+    gap: 0.35rem;
+  }
+
+  .playlists-youtube-search--mobile-list .youtube-search-result {
+    padding: 0.5rem 0.55rem;
+  }
+
+  .playlists-youtube-search--mobile-list .youtube-search-add-btn {
+    width: var(--touch-target);
+    height: var(--touch-target);
   }
 
   .playlists-youtube-search-hint {

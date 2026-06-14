@@ -3,7 +3,7 @@ import { addPlaylistItemsByVideos, type PlaylistDetail } from '../api/playlists'
 import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 import { useDebouncedYoutubeSearch } from '../hooks/useDebouncedYoutubeSearch';
 import { friendlyError } from '../lib/error-messages';
-import { SearchIcon } from './icons';
+import { CheckIcon, PlusIcon, SearchIcon } from './icons';
 import { useI18n } from '../i18n';
 
 type PlaylistYoutubeSearchPanelProps = {
@@ -117,34 +117,38 @@ export default function PlaylistYoutubeSearchPanel({
             const inList = existingVideoIds.has(row.videoId);
             const adding = addingVideoId === row.videoId;
             return (
-              <li key={row.videoId} className="search-result-item search-result-card youtube-search-result">
-                {row.thumbnailUrl && (
-                  <img
-                    className="youtube-search-thumb"
-                    src={row.thumbnailUrl}
-                    alt=""
-                    loading="lazy"
-                  />
-                )}
+              <li key={row.videoId} className="search-result-item youtube-search-result">
                 <div className="search-result-main">
-                  <strong className="search-result-title">{row.title}</strong>
+                  <strong className="search-result-title" title={row.title}>
+                    {row.title}
+                  </strong>
                   {row.channelTitle && (
-                    <div className="search-result-meta">
-                      <span className="meta-tag">{row.channelTitle}</span>
-                    </div>
+                    <p className="search-result-channel" title={row.channelTitle}>
+                      {row.channelTitle}
+                    </p>
                   )}
                 </div>
                 <button
                   type="button"
-                  className={`btn-secondary btn-add${inList ? ' added' : ''}`}
+                  className={`youtube-search-add-btn${inList ? ' added' : ''}${adding ? ' loading' : ''}`}
                   onClick={() => void handleAddSearchResult(row.videoId, row.title)}
                   disabled={inList || addingVideoId !== null}
+                  aria-label={
+                    inList
+                      ? t('search.added')
+                      : adding
+                        ? t('playlists.adding')
+                        : t('search.add')
+                  }
+                  title={
+                    inList
+                      ? t('search.added')
+                      : adding
+                        ? t('playlists.adding')
+                        : t('search.add')
+                  }
                 >
-                  {inList
-                    ? t('search.added')
-                    : adding
-                      ? t('playlists.adding')
-                      : t('search.add')}
+                  {inList ? <CheckIcon /> : adding ? <span className="youtube-search-add-spinner" aria-hidden /> : <PlusIcon />}
                 </button>
               </li>
             );
