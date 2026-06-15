@@ -378,11 +378,7 @@ export default function BulletinPage() {
           </section>
 
           <aside className="bulletin-workspace-preview" aria-label={t('bulletin.previewTitle')}>
-            <BulletinPreviewPanel
-              wizardStep={wizardStep}
-              serviceDate={draft.serviceDate}
-              serviceTime={draft.serviceTime}
-            />
+            <BulletinPreviewPanel wizardStep={wizardStep} bulletin={draft} />
           </aside>
         </div>
       )}

@@ -5,9 +5,8 @@ type BulletinSlidePreviewProps = {
   loading?: boolean;
   emptyLabel: string;
   slideLabel?: string;
-  /** 封面页：在幻灯片图上叠加动态日期/时间 */
-  coverOverlay?: { date: string; time: string };
-  /** 右侧大预览区 */
+  /** 本步写入 PPT 的文字（仅展示，不叠加在背景图上） */
+  editedTextLabel?: string;
   large?: boolean;
 };
 
@@ -23,7 +22,7 @@ export default function BulletinSlidePreview({
   loading,
   emptyLabel,
   slideLabel,
-  coverOverlay,
+  editedTextLabel,
   large,
 }: BulletinSlidePreviewProps) {
   const rootClass = `bulletin-slide-preview${large ? ' bulletin-slide-preview--large' : ''}`;
@@ -45,33 +44,33 @@ export default function BulletinSlidePreview({
   }
 
   const thumb = slideImageUrl(slide);
-  const textPreview =
-    slide.title || slide.snippet?.split('\n')[0] || slide.textLines[0] || '';
+  const editedLines = slide.textLines.filter((line) => line.trim());
 
   return (
     <figure className={rootClass}>
       {slideLabel && <figcaption className="bulletin-slide-preview-caption">{slideLabel}</figcaption>}
       <div className="bulletin-slide-preview-frame">
         {thumb ? (
-          <>
-            <img className="bulletin-slide-preview-img" src={thumb} alt="" />
-            {coverOverlay && (
-              <div className="bulletin-cover-overlay" aria-hidden>
-                <p className="bulletin-cover-overlay-date">{coverOverlay.date}</p>
-                <p className="bulletin-cover-overlay-time">{coverOverlay.time}</p>
-              </div>
-            )}
-          </>
+          <img className="bulletin-slide-preview-img" src={thumb} alt="" />
         ) : (
           <div className="bulletin-slide-preview-fallback">
-            {slide.title && <p className="bulletin-slide-preview-title">{slide.title}</p>}
-            {slide.textLines.map((line, i) => (
+            {editedLines.map((line, i) => (
               <p key={i}>{line}</p>
             ))}
-            {!slide.title && !slide.textLines.length && textPreview && <p>{textPreview}</p>}
+            {!editedLines.length && slide.title && <p>{slide.title}</p>}
           </div>
         )}
       </div>
+      {thumb && editedLines.length > 0 && (
+        <div className="bulletin-slide-preview-edits">
+          {editedTextLabel && <p className="bulletin-slide-preview-edits-label">{editedTextLabel}</p>}
+          <ul className="bulletin-slide-preview-edits-list">
+            {editedLines.map((line, i) => (
+              <li key={i}>{line}</li>
+            ))}
+          </ul>
+        </div>
+      )}
     </figure>
   );
 }

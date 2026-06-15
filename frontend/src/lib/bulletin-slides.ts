@@ -1,36 +1,10 @@
 import { fetchBulletinTemplateFile } from '../api/bulletins';
 import type { WeeklyBulletin } from '../api/bulletins';
-import { formatBulletinCoverDate } from './bulletin-date';
+import { applySlidePatches, patchesForStep } from './bulletin-pptx-patches';
 import { buildBulletinPptxFile } from './bulletin-publish';
 import { parsePptxSlidesDetailed, type EditableSlide } from './pptx-preview';
 
-function applyCoverTexts(slide: EditableSlide, serviceDate: string, serviceTime: string): EditableSlide {
-  const date = formatBulletinCoverDate(serviceDate);
-  const time = serviceTime || '11:00';
-  const textLines = [date, time];
-  return {
-    ...slide,
-    title: date,
-    snippet: time,
-    textLines,
-  };
-}
-
-/** 仅预览封面（第 1 页），日期/时间替换为当前选择 */
-export async function previewCoverSlide(
-  serviceDate: string,
-  serviceTime = '11:00',
-): Promise<EditableSlide | null> {
-  const template = await fetchBulletinTemplateFile();
-  const parsed = await parsePptxSlidesDetailed(template, {
-    sourceFile: 'weekly-bulletin-template.pptx',
-  });
-  const cover = parsed.find((s) => s.slideInFile === 1);
-  if (!cover) return null;
-  return applyCoverTexts(cover, serviceDate, serviceTime);
-}
-
-/** 从模板加载指定页码的幻灯片（静态预览） */
+/** 从模板加载指定页（不修改任何内容） */
 export async function previewTemplateSlides(slideNumbers: number[]): Promise<EditableSlide[]> {
   if (!slideNumbers.length) return [];
   const template = await fetchBulletinTemplateFile();
@@ -40,6 +14,37 @@ export async function previewTemplateSlides(slideNumbers: number[]): Promise<Edi
   return slideNumbers
     .map((n) => parsed.find((s) => s.slideInFile === n))
     .filter((s): s is EditableSlide => Boolean(s));
+}
+
+/**
+ * 预览指定页：仅对 patches 列出的幻灯片替换文字，其余保持模板原样。
+ */
+export async function previewPatchedSlides(
+  slideNumbers: number[],
+  patches: Parameters<typeof applySlidePatches>[1],
+): Promise<EditableSlide[]> {
+  if (!slideNumbers.length) return [];
+  const template = await fetchBulletinTemplateFile();
+  const file = await applySlidePatches(template, patches, 'bulletin-preview.pptx');
+  const parsed = await parsePptxSlidesDetailed(file, {
+    sourceFile: 'bulletin-preview.pptx',
+  });
+  return slideNumbers
+    .map((n) => parsed.find((s) => s.slideInFile === n))
+    .filter((s): s is EditableSlide => Boolean(s));
+}
+
+/** 当前向导步骤的预览：只应用本步字段补丁 */
+export async function previewStepSlides(
+  stepId: string,
+  bulletin: WeeklyBulletin,
+  slideNumbers: number[],
+): Promise<EditableSlide[]> {
+  const patches = patchesForStep(stepId, bulletin);
+  if (!patches.length) {
+    return previewTemplateSlides(slideNumbers);
+  }
+  return previewPatchedSlides(slideNumbers, patches);
 }
 
 export async function rebuildBulletinSlides(bulletin: WeeklyBulletin): Promise<EditableSlide[]> {
