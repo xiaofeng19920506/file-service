@@ -6044,6 +6044,17 @@
   border-radius: 14px;
   padding: 1rem;
   background: var(--surface);
+  align-self: start;
+}
+
+.bulletin-preview-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.bulletin-preview-panel-header {
+  width: 100%;
 }
 
 .bulletin-preview-panel-header h2 {
@@ -6187,10 +6198,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 12rem;
+  min-height: 10rem;
   border: 1px dashed var(--border-light);
   border-radius: 12px;
   color: var(--text-secondary);
+}
+
+.bulletin-slide-preview--large .bulletin-slide-preview-frame {
+  width: min(100%, 22rem);
+}
+
+.bulletin-slide-preview--large.bulletin-slide-preview--loading,
+.bulletin-slide-preview--large.bulletin-slide-preview--empty {
+  width: min(100%, 22rem);
+  min-height: 10rem;
 }
 
 @media (max-width: 960px) {
@@ -6494,6 +6515,7 @@
 
 .bulletin-slide-preview {
   margin: 0;
+  width: min(100%, 22rem);
 }
 
 .bulletin-slide-preview-caption {
@@ -6504,6 +6526,7 @@
 
 .bulletin-slide-preview-frame {
   position: relative;
+  width: 100%;
   aspect-ratio: 4 / 3;
   border: 1px solid var(--border-light);
   border-radius: 12px;
@@ -6621,15 +6644,6 @@
 
 .bulletin-slide-preview-edits-list li {
   margin: 0.15rem 0;
-}
-
-.bulletin-slide-preview--large .bulletin-slide-preview-frame {
-  min-height: min(52vh, 28rem);
-}
-
-.bulletin-slide-preview--large.bulletin-slide-preview--loading,
-.bulletin-slide-preview--large.bulletin-slide-preview--empty {
-  min-height: min(52vh, 28rem);
 }
 
 .worship-live-slide-img {
