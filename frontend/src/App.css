@@ -6504,7 +6504,7 @@
 
 .bulletin-slide-preview-frame {
   position: relative;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 4 / 3;
   border: 1px solid var(--border-light);
   border-radius: 12px;
   overflow: hidden;
@@ -6513,6 +6513,7 @@
 
 .bulletin-composite-slide {
   background: #fff;
+  container-type: size;
 }
 
 .bulletin-composite-bg {
@@ -6522,33 +6523,30 @@
   height: 100%;
   object-fit: cover;
   display: block;
-  z-index: 0;
 }
 
 .bulletin-composite-fill {
   position: absolute;
-  z-index: 1;
   pointer-events: none;
 }
 
 .bulletin-composite-image {
   position: absolute;
-  z-index: 3;
   object-fit: contain;
   pointer-events: none;
 }
 
 .bulletin-composite-text {
   position: absolute;
-  z-index: 2;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  line-height: 1.15;
+  line-height: 1.1;
   pointer-events: none;
   box-sizing: border-box;
-  padding: 0.15em 0.35em;
+  padding: 0.1em 0.3em;
+  contain: layout paint;
 }
 
 .bulletin-composite-text--middle {
@@ -6559,10 +6557,19 @@
   justify-content: flex-end;
 }
 
+.bulletin-composite-text--band {
+  padding: 0 0.4em;
+  line-height: 1.05;
+}
+
 .bulletin-composite-text p {
-  margin: 0 0 0.12em;
+  margin: 0;
+  max-height: 100%;
+  overflow: hidden;
   white-space: pre-wrap;
   word-break: break-word;
+  flex-shrink: 1;
+  min-height: 0;
 }
 
 .bulletin-slide-preview-img {

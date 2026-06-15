@@ -48,6 +48,8 @@ export type SlideVisualLayer =
       height: number;
       align: 'left' | 'center' | 'right';
       valign?: 'top' | 'middle' | 'bottom';
+      /** 形状启用 spAutoFit 时，文字需缩放进框内 */
+      autoFit?: boolean;
     };
 
 function emuPct(value: number, total: number): number {
@@ -106,9 +108,11 @@ function extractTextRuns(xml: string): {
   lines: SlideTextLine[];
   align: 'left' | 'center' | 'right';
   valign: 'top' | 'middle' | 'bottom';
+  autoFit: boolean;
 } {
   const txBody = xml.match(/<p:txBody>([\s\S]*?)<\/p:txBody>/)?.[1] ?? '';
   const bodyPr = txBody.match(/<a:bodyPr([^/]*)\/>/)?.[1] ?? txBody.match(/<a:bodyPr([^>]*)>/)?.[1] ?? '';
+  const autoFit = /<a:spAutoFit\s*\/?>/.test(txBody);
   let align: 'left' | 'center' | 'right' = 'left';
   let valign: 'top' | 'middle' | 'bottom' = 'top';
   if (bodyPr.includes('anchor="ctr"')) valign = 'middle';
@@ -147,7 +151,7 @@ function extractTextRuns(xml: string): {
     }
   }
 
-  return { lines, align, valign };
+  return { lines, align, valign, autoFit };
 }
 
 async function resolveMediaPath(zip: JSZip, slidePath: string, rId: string): Promise<string | null> {

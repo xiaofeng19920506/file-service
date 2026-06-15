@@ -86,6 +86,8 @@ export default function BulletinCompositeSlide({
       {slideLabel && <figcaption className="bulletin-slide-preview-caption">{slideLabel}</figcaption>}
       <div className="bulletin-slide-preview-frame bulletin-composite-slide">
         {layers.map((layer, i) => {
+          const stackStyle = { zIndex: i + 1 };
+
           if (layer.kind === 'background') {
             return (
               <img
@@ -94,6 +96,7 @@ export default function BulletinCompositeSlide({
                 src={layer.url}
                 alt=""
                 draggable={false}
+                style={stackStyle}
               />
             );
           }
@@ -103,6 +106,7 @@ export default function BulletinCompositeSlide({
                 key={`fill-${i}`}
                 className="bulletin-composite-fill"
                 style={{
+                  ...stackStyle,
                   left: `${layer.left}%`,
                   top: `${layer.top}%`,
                   width: `${layer.width}%`,
@@ -121,6 +125,7 @@ export default function BulletinCompositeSlide({
                 alt=""
                 draggable={false}
                 style={{
+                  ...stackStyle,
                   left: `${layer.left}%`,
                   top: `${layer.top}%`,
                   width: `${layer.width}%`,
@@ -129,11 +134,19 @@ export default function BulletinCompositeSlide({
               />
             );
           }
+
+          const lineCount = Math.max(layer.lines.length, 1);
+          const slotCqh = (layer.height / lineCount) * (layer.autoFit ? 0.82 : 0.68);
+          const isFooterBand = layer.top >= 60 && layer.height <= 10;
+
           return (
             <div
               key={`text-${i}`}
-              className={`bulletin-composite-text bulletin-composite-text--${layer.valign ?? 'top'}`}
+              className={`bulletin-composite-text bulletin-composite-text--${layer.valign ?? 'top'}${
+                isFooterBand ? ' bulletin-composite-text--band' : ''
+              }`}
               style={{
+                ...stackStyle,
                 left: `${layer.left}%`,
                 top: `${layer.top}%`,
                 width: `${layer.width}%`,
@@ -148,8 +161,8 @@ export default function BulletinCompositeSlide({
                     color: line.color,
                     fontWeight: line.bold ? 700 : undefined,
                     fontSize: line.fontSizePt
-                      ? `clamp(0.5rem, ${(line.fontSizePt / 13).toFixed(2)}vw, ${line.fontSizePt}px)`
-                      : undefined,
+                      ? `min(${line.fontSizePt}px, ${slotCqh.toFixed(2)}cqh)`
+                      : `min(14px, ${slotCqh.toFixed(2)}cqh)`,
                   }}
                 >
                   {line.text}
