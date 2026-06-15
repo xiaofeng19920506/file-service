@@ -42,6 +42,26 @@ function escapeXml(text: string): string {
     .replace(/"/g, '&quot;');
 }
 
+/** 按非空 <t> 节点序号替换文字，未列出的节点保持模板原样 */
+export function applyIndexedTextReplacementsToSlideXml(
+  xml: string,
+  replacements: { textIndex: number; text: string }[],
+): string {
+  const byIndex = new Map(replacements.map((r) => [r.textIndex, r.text]));
+  let idx = 0;
+  return xml.replace(
+    /<((?:[\w-]+:)?t)([^>]*)>([\s\S]*?)<\/(?:[\w-]+:)?t>/g,
+    (full, tag, attrs, content) => {
+      if (!content.trim()) return full;
+      const current = idx++;
+      if (byIndex.has(current)) {
+        return `<${tag}${attrs}>${escapeXml(byIndex.get(current)!)}</${tag}>`;
+      }
+      return full;
+    },
+  );
+}
+
 function decodeXmlEntities(text: string): string {
   return text
     .replace(/&amp;/g, '&')

@@ -23,10 +23,12 @@ function resolveBulletinTemplateDir(): string {
     join(process.cwd(), '../shared/templates/bulletin'),
   ];
   for (const dir of candidates) {
-    if (existsSync(join(dir, 'weekly-bulletin-template.pptx'))) return dir;
+    if (existsSync(join(dir, '06_14_2026.pptx'))) return dir;
   }
   return candidates[0]!;
 }
+
+const BULLETIN_TEMPLATE_FILE = '06_14_2026.pptx';
 
 const BULLETIN_TEMPLATE_DIR = resolveBulletinTemplateDir();
 
@@ -160,13 +162,13 @@ export function registerBulletinRoutes(
     if (!user || !canViewBulletin(user.role)) {
       return reply.code(403).send({ error: 'bulletin_forbidden' });
     }
-    const buf = await readFile(join(BULLETIN_TEMPLATE_DIR, 'weekly-bulletin-template.pptx'));
+    const buf = await readFile(join(BULLETIN_TEMPLATE_DIR, BULLETIN_TEMPLATE_FILE));
     return reply
       .header(
         'Content-Type',
         'application/vnd.openxmlformats-officedocument.presentationml.presentation',
       )
-      .header('Content-Disposition', 'attachment; filename="weekly-bulletin-template.pptx"')
+      .header('Content-Disposition', `attachment; filename="${BULLETIN_TEMPLATE_FILE}"`)
       .send(buf);
   });
 

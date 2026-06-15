@@ -1,6 +1,6 @@
 import { fetchBulletinTemplateFile } from '../api/bulletins';
 import type { WeeklyBulletin } from '../api/bulletins';
-import { applySlidePatches, patchesForStep } from './bulletin-pptx-patches';
+import { BULLETIN_TEMPLATE_FILENAME, applySlidePatches, patchesForStep } from './bulletin-pptx-patches';
 import { buildBulletinPptxFile } from './bulletin-publish';
 import { parsePptxSlidesDetailed, type EditableSlide } from './pptx-preview';
 
@@ -9,7 +9,7 @@ export async function previewTemplateSlides(slideNumbers: number[]): Promise<Edi
   if (!slideNumbers.length) return [];
   const template = await fetchBulletinTemplateFile();
   const parsed = await parsePptxSlidesDetailed(template, {
-    sourceFile: 'weekly-bulletin-template.pptx',
+    sourceFile: BULLETIN_TEMPLATE_FILENAME,
   });
   return slideNumbers
     .map((n) => parsed.find((s) => s.slideInFile === n))

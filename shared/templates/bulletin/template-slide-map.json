@@ -1,5 +1,5 @@
 {
-  "templateFile": "weekly-bulletin-template.pptx",
+  "templateFile": "06_14_2026.pptx",
   "sourceWeek": "2026-06-14",
   "totalSlides": 38,
   "nativeHiddenSlides": [],
@@ -26,15 +26,57 @@
     { "id": "department_reports", "slides": [36], "role": "optional", "notes": "各部门同工报告，同工会时用" },
     { "id": "closing", "slides": [37, 38], "role": "static", "notes": "三颂、祝福祷告" }
   ],
-  "dateFields": [
-    { "slide": 1, "fields": ["serviceDate", "serviceTime"], "example": "06/14/2026, 11:00" },
-    { "slide": 19, "fields": ["lastWeekOfferingDate"], "example": "6/07" },
-    { "slide": 22, "fields": ["quarterYear", "quarterMonths"], "example": "2026年第2季度, 4月5月" },
-    { "slide": 24, "fields": ["birthdayMonth", "birthdayNames"], "example": "7月份" },
-    { "slide": 27, "fields": ["baptismDate", "baptismDetails"], "example": "7月5日主日" },
-    { "slide": 31, "fields": ["staffMeetingDate"], "example": "6/21/2026" },
-    { "slide": 33, "fields": ["testimonyShareDate"], "example": "8/30" },
-    { "slide": 34, "fields": ["nextSundayDate", "roster"], "example": "6/21, 6/14" }
+  "editableFields": [
+    {
+      "slide": 1,
+      "fields": [
+        { "key": "serviceDate", "textIndex": 8, "example": "06/14/2026" },
+        { "key": "serviceTime", "textIndex": 9, "example": "11:00" }
+      ]
+    },
+    {
+      "slide": 19,
+      "fields": [{ "key": "lastWeekOfferingDate", "textIndex": 6, "example": "6/07" }]
+    },
+    {
+      "slide": 24,
+      "fields": [
+        { "key": "birthdayMonth", "textIndex": 1, "example": "7月份生日的家人們" },
+        { "key": "birthdayName1", "textIndex": 3, "example": "孫强" },
+        { "key": "birthdayName2", "textIndex": 4, "example": "邱春林" },
+        { "key": "birthdayName3", "textIndex": 5, "example": "Andrew Wang" }
+      ]
+    },
+    {
+      "slide": 25,
+      "fields": [
+        { "key": "announcementTitle", "textIndex": 0, "example": "特別感謝" },
+        { "key": "announcementBody", "textIndex": 1, "example": "…" }
+      ]
+    },
+    {
+      "slide": 26,
+      "fields": [
+        { "key": "announcementTitle", "textIndex": 0, "example": "家有喜事" },
+        { "key": "announcementBody", "textIndex": 1, "example": "…" }
+      ]
+    },
+    {
+      "slide": 27,
+      "fields": [{ "key": "baptismText", "textIndex": 3, "example": "7月5日主日" }]
+    },
+    {
+      "slide": 33,
+      "fields": [{ "key": "testimonyShareDate", "textIndex": 0, "example": "下主日8/30見證分享" }]
+    },
+    {
+      "slide": 34,
+      "fields": [{ "key": "serviceRosterText", "textIndex": 1, "example": "Michelle, 洪雪吟, 嘉文" }]
+    },
+    {
+      "slide": 35,
+      "fields": [{ "key": "verseOfWeek", "textIndex": 10, "example": "…" }]
+    }
   ],
-  "specialAnnouncementSlides": [25, 26, 27]
+  "specialAnnouncementSlides": [25, 26]
 }
