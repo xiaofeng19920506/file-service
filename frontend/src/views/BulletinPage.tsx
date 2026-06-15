@@ -12,6 +12,7 @@ import {
 import { useAuth } from '../auth/AuthContext';
 import { useI18n } from '../i18n';
 import { generateBulletinPptx } from '../lib/bulletin-pptx';
+import { readWorshipLiveConfig, writeWorshipLiveConfig } from '../lib/worship-live-config';
 
 type AnnouncementDraft = AnnouncementInput & { key: string };
 
@@ -198,6 +199,23 @@ export default function BulletinPage() {
         {canManage && (
           <button type="button" className="btn-primary" disabled={saving} onClick={handleCreate}>
             {t('bulletin.create')}
+          </button>
+        )}
+        {permissions.canStartWorship && draft && (
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => {
+              const prev = readWorshipLiveConfig();
+              writeWorshipLiveConfig({
+                mode: 'ppt',
+                playlistId: prev?.playlistId ?? '',
+                bulletinId: draft.id,
+              });
+              window.location.hash = '#/worship';
+            }}
+          >
+            {t('worship.start')}
           </button>
         )}
       </header>

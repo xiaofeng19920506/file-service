@@ -5,11 +5,12 @@ import {
   LibraryNavIcon,
   MergeNavIcon,
   PlaylistsNavIcon,
+  WorshipNavIcon,
 } from './icons';
 import type { AppPage } from '../hooks/useAppPage';
 import { useI18n } from '../i18n';
 
-type NavTarget = 'library' | 'playlists' | 'playlist-lists' | 'merge' | 'bulletin' | 'admin';
+type NavTarget = 'library' | 'playlists' | 'playlist-lists' | 'merge' | 'bulletin' | 'worship' | 'admin';
 
 type PageNavTabsProps = {
   page: AppPage;
@@ -18,6 +19,7 @@ type PageNavTabsProps = {
   canAccessPlaylists: boolean;
   canMerge: boolean;
   canViewBulletin: boolean;
+  canStartWorship: boolean;
   canEdit: boolean;
   variant: 'header' | 'bottom';
 };
@@ -25,11 +27,12 @@ type PageNavTabsProps = {
 const NAV_ITEMS: {
   id: NavTarget;
   icon: typeof LibraryNavIcon;
-  labelKey: 'nav.library' | 'nav.playlistsShort' | 'nav.playlistLists' | 'nav.merge' | 'nav.bulletinShort' | 'nav.admin';
+  labelKey: 'nav.library' | 'nav.playlistsShort' | 'nav.playlistLists' | 'nav.merge' | 'nav.bulletinShort' | 'nav.worshipShort' | 'nav.admin';
   requiresSearch?: boolean;
   requiresPlaylists?: boolean;
   requiresMerge?: boolean;
   requiresBulletin?: boolean;
+  requiresWorship?: boolean;
   requiresEdit?: boolean;
   bottomOnly?: boolean;
   /** 桌面顶栏不展示（首页由左侧应用名标识即可） */
@@ -68,6 +71,12 @@ const NAV_ITEMS: {
     requiresBulletin: true,
   },
   {
+    id: 'worship',
+    icon: WorshipNavIcon,
+    labelKey: 'nav.worshipShort',
+    requiresWorship: true,
+  },
+  {
     id: 'admin',
     icon: AdminNavIcon,
     labelKey: 'nav.admin',
@@ -82,6 +91,7 @@ export default function PageNavTabs({
   canAccessPlaylists,
   canMerge,
   canViewBulletin,
+  canStartWorship,
   canEdit,
   variant,
 }: PageNavTabsProps) {
@@ -95,6 +105,7 @@ export default function PageNavTabs({
     if (item.requiresPlaylists && !canAccessPlaylists) return false;
     if (item.requiresMerge && !canMerge) return false;
     if (item.requiresBulletin && !canViewBulletin) return false;
+    if (item.requiresWorship && !canStartWorship) return false;
     if (item.requiresEdit && !canEdit) return false;
     return true;
   });
@@ -109,7 +120,7 @@ export default function PageNavTabs({
     >
       {items.map((item) => {
         const Icon = item.icon;
-        const active = page === item.id;
+        const active = page === item.id || (item.id === 'worship' && page === 'worship-live');
         const label = t(item.labelKey);
 
         return (

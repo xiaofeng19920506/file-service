@@ -8,6 +8,8 @@ import LibraryPage from './views/LibraryPage';
 import MergePage from './views/MergePage';
 import PlaylistsPage from './views/PlaylistsPage';
 import BulletinPage from './views/BulletinPage';
+import WorshipPage from './views/WorshipPage';
+import WorshipLivePage from './views/WorshipLivePage';
 import UploadConfirmPage from './views/UploadConfirmPage';
 import { useLibraryUpload } from './hooks/useLibraryUpload';
 import PageNavTabs from './components/PageNavTabs';
@@ -85,6 +87,10 @@ function AppShellInner({
     }
     if (page === 'bulletin' && !permissions.canViewBulletin) {
       navigate(home);
+      return;
+    }
+    if (page === 'worship' && !permissions.canStartWorship) {
+      navigate(home);
     }
   }, [loading, user, page, navigate, permissions]);
 
@@ -124,7 +130,9 @@ function AppShellInner({
             ? t('pages.adminTitle')
             : page === 'bulletin'
               ? t('pages.bulletinTitle')
-              : page === 'library'
+              : page === 'worship'
+                ? t('pages.worshipTitle')
+                : page === 'library'
               ? t('pages.libraryTitle')
               : t('pages.playlistsTitle');
   }, [page, t]);
@@ -183,7 +191,9 @@ function AppShellInner({
           ? t('nav.adminShort')
           : page === 'bulletin'
             ? t('nav.bulletinShort')
-            : page === 'library'
+            : page === 'worship'
+              ? t('nav.worshipShort')
+              : page === 'library'
             ? t('nav.libraryShort')
             : t('nav.playlistsShort');
 
@@ -241,6 +251,7 @@ function AppShellInner({
               canAccessPlaylists={permissions.canAccessPlaylists}
               canMerge={permissions.canMerge}
               canViewBulletin={permissions.canViewBulletin}
+              canStartWorship={permissions.canStartWorship}
               canEdit={permissions.canEdit}
               variant="header"
             />
@@ -323,6 +334,7 @@ function AppShellInner({
         )}
         {page === 'merge' && permissions.canMerge && <MergePage mergePlaylistId={mergePlaylistId} />}
         {page === 'bulletin' && permissions.canViewBulletin && <BulletinPage />}
+        {page === 'worship' && permissions.canStartWorship && <WorshipPage />}
         {page === 'admin' && permissions.canEdit && <AdminPage />}
       </div>
 
@@ -334,6 +346,7 @@ function AppShellInner({
           canAccessPlaylists={permissions.canAccessPlaylists}
           canMerge={permissions.canMerge}
           canViewBulletin={permissions.canViewBulletin}
+          canStartWorship={permissions.canStartWorship}
           canEdit={permissions.canEdit}
           variant="bottom"
         />
@@ -355,7 +368,7 @@ function AppShellWithMenu() {
 
 export default function App() {
   const { user, loading, permissions } = useAuth();
-  const { page, previewBlobId, mergeEditBlobIds, mergeEditTitle } = useAppPage();
+  const { page, previewBlobId, mergeEditBlobIds, mergeEditTitle, worshipPlaylistId, worshipBulletinId, worshipMode } = useAppPage();
   const libraryUpload = useLibraryUpload();
   const { t } = useI18n();
 
@@ -381,6 +394,30 @@ export default function App() {
 
   if (page === 'library-upload' && permissions.canUpload) {
     return <UploadConfirmPage libraryUpload={libraryUpload} />;
+  }
+
+  if (
+    page === 'worship-live' &&
+    worshipPlaylistId &&
+    worshipMode &&
+    permissions.canStartWorship
+  ) {
+    return (
+      <WorshipLivePage
+        playlistId={worshipPlaylistId}
+        bulletinId={worshipBulletinId}
+        mode={worshipMode}
+      />
+    );
+  }
+
+  if (page === 'worship-live') {
+    window.location.hash = '#/worship';
+    return (
+      <div className="auth-page">
+        <p className="auth-loading">{t('worship.loading')}</p>
+      </div>
+    );
   }
 
   return <AppShellWithMenu />;

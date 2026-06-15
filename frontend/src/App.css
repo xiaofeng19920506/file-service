@@ -6108,3 +6108,192 @@
     grid-template-columns: 1fr;
   }
 }
+
+.worship-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 5rem;
+}
+
+.worship-header h1 {
+  margin: 0 0 0.35rem;
+}
+
+.worship-intro {
+  margin: 0 0 1rem;
+  color: var(--text-secondary);
+}
+
+.worship-setup-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.worship-fieldset {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.worship-mode-option {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  cursor: pointer;
+}
+
+.worship-mode-option strong {
+  display: block;
+}
+
+.worship-mode-option small {
+  display: block;
+  color: var(--text-secondary);
+  margin-top: 0.2rem;
+}
+
+.worship-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.worship-start-btn {
+  align-self: flex-start;
+}
+
+.worship-live {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: #000;
+  color: #fff;
+}
+
+.worship-live--loading,
+.worship-live--error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.worship-live--youtube {
+  display: flex;
+  flex-direction: column;
+}
+
+.worship-live-youtube-stage {
+  flex: 1;
+  min-height: 0;
+}
+
+.worship-live-topbar {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 5;
+}
+
+.worship-live--ppt {
+  display: grid;
+  grid-template-rows: 1fr auto;
+}
+
+.worship-live-ppt-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 1rem;
+  background: #000;
+}
+
+.worship-live-slide-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.worship-live-slide-fallback {
+  max-width: 48rem;
+  text-align: center;
+  padding: 1rem;
+}
+
+.worship-live-ppt-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.85);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.worship-live-toolbar-btn {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: #fff;
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.worship-live-slide-counter {
+  min-width: 5rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.worship-live-worship-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 4.5rem;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.65);
+  font-size: 0.85rem;
+}
+
+.worship-live-music-root {
+  position: fixed;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.worship-live-music-root.is-open {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: auto;
+  height: auto;
+  max-height: min(42vh, 360px);
+  opacity: 1;
+  pointer-events: auto;
+  overflow: auto;
+  z-index: 6;
+  background: var(--surface);
+  color: var(--text);
+  border-top: 1px solid var(--border-light);
+  padding: 0.5rem 0.75rem 0.75rem;
+}

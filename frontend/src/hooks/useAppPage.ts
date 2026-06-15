@@ -12,7 +12,9 @@ export type AppPage =
   | 'admin'
   | 'login'
   | 'preview'
-  | 'bulletin';
+  | 'bulletin'
+  | 'worship'
+  | 'worship-live';
 
 export type AppRoute = {
   page: AppPage;
@@ -22,6 +24,9 @@ export type AppRoute = {
   playlistId?: string;
   playlistShareToken?: string;
   mergePlaylistId?: string;
+  worshipPlaylistId?: string;
+  worshipBulletinId?: string;
+  worshipMode?: 'youtube' | 'ppt';
 };
 
 const HOME_HASH = '#/playlists';
@@ -81,6 +86,24 @@ function routeFromHash(rawHash: string): AppRoute {
     return { page: 'playlists', playlistId, playlistShareToken };
   }
   if (hash === '#/admin') return { page: 'admin' };
+  if (hash.startsWith('#/worship/live')) {
+    const qIndex = hash.indexOf('?');
+    const params =
+      qIndex === -1 ? new URLSearchParams() : new URLSearchParams(hash.slice(qIndex + 1));
+    const worshipPlaylistId = params.get('playlist')?.trim() || undefined;
+    const worshipBulletinId = params.get('bulletin')?.trim() || undefined;
+    const modeRaw = params.get('mode')?.trim();
+    const worshipMode = modeRaw === 'youtube' || modeRaw === 'ppt' ? modeRaw : undefined;
+    if (worshipPlaylistId && worshipMode) {
+      return {
+        page: 'worship-live',
+        worshipPlaylistId,
+        worshipBulletinId,
+        worshipMode,
+      };
+    }
+  }
+  if (hash === '#/worship' || hash.startsWith('#/worship?')) return { page: 'worship' };
   if (hash === '#/bulletin' || hash.startsWith('#/bulletin?')) return { page: 'bulletin' };
   if (hash === '#/login') return { page: 'login' };
   if (hash.startsWith('#/library')) return { page: 'library' };
@@ -114,7 +137,9 @@ export function useAppPage() {
               ? '#/admin'
               : next === 'bulletin'
                 ? '#/bulletin'
-                : next === 'login'
+                : next === 'worship'
+                  ? '#/worship'
+                  : next === 'login'
                 ? '#/login'
                 : '#/library';
     if (window.location.hash !== hash) {
@@ -161,6 +186,9 @@ export function useAppPage() {
     playlistId: route.playlistId,
     playlistShareToken: route.playlistShareToken,
     mergePlaylistId: route.mergePlaylistId,
+    worshipPlaylistId: route.worshipPlaylistId,
+    worshipBulletinId: route.worshipBulletinId,
+    worshipMode: route.worshipMode,
     navigate,
     navigateToPlaylist,
     navigateClearPlaylistShare,

@@ -47,6 +47,10 @@ export function canViewBulletin(role: UserRole | null): boolean {
   return isWorshipCapable(role);
 }
 
+export function canStartWorship(role: UserRole | null): boolean {
+  return isWorshipCapable(role);
+}
+
 export function roleLabelKey(role: UserRole): string {
   return `auth.role.${role}`;
 }
@@ -63,6 +67,7 @@ export function permissionsForRole(role: UserRole | null) {
     canExportToYoutube: canExportToYoutube(normalized),
     canManageBulletin: canManageBulletin(normalized),
     canViewBulletin: canViewBulletin(normalized),
+    canStartWorship: canStartWorship(normalized),
   };
 }
 
