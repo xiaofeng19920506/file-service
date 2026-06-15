@@ -5394,6 +5394,19 @@
   color: #e5484d;
 }
 
+@media (min-width: 901px) {
+  .playlists-track-remove--desktop {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .playlists-track:hover .playlists-track-remove--desktop,
+  .playlists-track:focus-within .playlists-track-remove--desktop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
 .playlists-tracks-edit-btn.active {
   background: var(--blue-muted);
   border-color: color-mix(in srgb, var(--blue) 35%, var(--border-light));

@@ -6,6 +6,7 @@ import PlaylistYoutubeSearchPanel from '../components/PlaylistYoutubeSearchPanel
 import ConfirmModal from '../components/ConfirmModal';
 import CreatePlaylistModal from '../components/CreatePlaylistModal';
 import RenamePlaylistModal from '../components/RenamePlaylistModal';
+import PlaylistListRow from '../components/PlaylistListRow';
 import PlaylistListSwipeRow, {
   type PlaylistListSwipeSide,
 } from '../components/PlaylistListSwipeRow';
@@ -1358,35 +1359,52 @@ export default function PlaylistsPage({
                 key={row.id}
                 className={`playlists-list-row${selectedId === row.id ? ' active' : ''}`}
               >
-                <PlaylistListSwipeRow
-                  isActive={selectedId === row.id}
-                  openedSide={
-                    listSwipeOpen?.id === row.id ? listSwipeOpen.side : 'none'
-                  }
-                  onOpenedSideChange={(side) => {
-                    if (side === 'none') {
-                      setListSwipeOpen(null);
-                      return;
+                {isMobileViewport ? (
+                  <PlaylistListSwipeRow
+                    isActive={selectedId === row.id}
+                    openedSide={
+                      listSwipeOpen?.id === row.id ? listSwipeOpen.side : 'none'
                     }
-                    setListSwipeOpen({ id: row.id, side });
-                  }}
-                  title={row.title}
-                  meta={
-                    <>
-                      {t('playlists.trackCount', { count: row.itemCount })}
-                      <span className="playlists-list-dot">·</span>
-                      {formatDate(row.createdAt)}
-                    </>
-                  }
-                  onSelect={() => {
-                    if (blockListSelectRef.current || renameTarget) return;
-                    setListSwipeOpen(null);
-                    onSelectId(row.id);
-                  }}
-                  onEdit={() => startRename(row.id, row.title)}
-                  onDelete={() => setDeleteTarget({ id: row.id, title: row.title })}
-                  deleteBusy={deletingId === row.id}
-                />
+                    onOpenedSideChange={(side) => {
+                      if (side === 'none') {
+                        setListSwipeOpen(null);
+                        return;
+                      }
+                      setListSwipeOpen({ id: row.id, side });
+                    }}
+                    title={row.title}
+                    meta={
+                      <>
+                        {t('playlists.trackCount', { count: row.itemCount })}
+                        <span className="playlists-list-dot">·</span>
+                        {formatDate(row.createdAt)}
+                      </>
+                    }
+                    onSelect={() => {
+                      if (blockListSelectRef.current || renameTarget) return;
+                      setListSwipeOpen(null);
+                      onSelectId(row.id);
+                    }}
+                    onEdit={() => startRename(row.id, row.title)}
+                    onDelete={() => setDeleteTarget({ id: row.id, title: row.title })}
+                    deleteBusy={deletingId === row.id}
+                  />
+                ) : (
+                  <PlaylistListRow
+                    title={row.title}
+                    meta={
+                      <>
+                        {t('playlists.trackCount', { count: row.itemCount })}
+                        <span className="playlists-list-dot">·</span>
+                        {formatDate(row.createdAt)}
+                      </>
+                    }
+                    onSelect={() => {
+                      if (blockListSelectRef.current || renameTarget) return;
+                      onSelectId(row.id);
+                    }}
+                  />
+                )}
               </li>
             ))}
           </ul>
@@ -1723,14 +1741,18 @@ export default function PlaylistsPage({
                                 </span>
                                 <span className="playlists-track-title">{item.title}</span>
                               </button>
-                              {tracksEditMode && (
+                              {(tracksEditMode || !isMobileViewport) && (
                                 <button
                                   type="button"
-                                  className="playlists-track-remove"
+                                  className={`playlists-track-remove${!isMobileViewport ? ' playlists-track-remove--desktop' : ''}`}
                                   disabled={removingItemId === item.id || savingOrder}
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    void handleRemoveItem(item.id);
+                                    if (isMobileViewport) {
+                                      void handleRemoveItem(item.id);
+                                      return;
+                                    }
+                                    requestRemoveTrack(item);
                                   }}
                                   aria-label={t('playlists.removeTrack', { title: item.title })}
                                 >
