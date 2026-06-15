@@ -1,4 +1,5 @@
 import { apiFetch, parseJson } from './http';
+import { runBulletinPreviewTask } from '../lib/bulletin-preview-queue';
 
 export type BulletinAnnouncement = {
   id: string;
@@ -134,8 +135,10 @@ export async function fetchBulletinSlidePreviewPng(
   if (params.serviceDate) qs.set('serviceDate', params.serviceDate);
   if (params.serviceTime) qs.set('serviceTime', params.serviceTime);
   const query = qs.toString();
-  const res = await apiFetch(
-    `/v1/bulletins/template/slides/${slideNumber}/preview.png${query ? `?${query}` : ''}`,
+  const res = await runBulletinPreviewTask(() =>
+    apiFetch(
+      `/v1/bulletins/template/slides/${slideNumber}/preview.png${query ? `?${query}` : ''}`,
+    ),
   );
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
