@@ -892,13 +892,21 @@
 }
 
 .btn-danger {
-  border: 1px solid #c62828;
-  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 1.1rem;
+  border: 1px solid color-mix(in srgb, #c62828 35%, var(--border));
+  border-radius: 980px;
+  background: var(--surface);
   color: #c62828;
+  font-size: 0.875rem;
+  transition: background 0.2s, border-color 0.2s;
 }
 
 .btn-danger:hover:not(:disabled) {
-  background: rgba(198, 40, 40, 0.08);
+  background: color-mix(in srgb, #c62828 8%, var(--bg));
+  border-color: color-mix(in srgb, #c62828 50%, var(--border));
 }
 
 .btn-danger:disabled {
@@ -907,12 +915,13 @@
 }
 
 [data-theme='dark'] .btn-danger {
-  border-color: #ef5350;
+  border-color: color-mix(in srgb, #ef5350 40%, var(--border));
   color: #ef5350;
 }
 
 [data-theme='dark'] .btn-danger:hover:not(:disabled) {
-  background: rgba(239, 83, 80, 0.12);
+  background: color-mix(in srgb, #ef5350 10%, var(--bg));
+  border-color: color-mix(in srgb, #ef5350 55%, var(--border));
 }
 
 .edit-library-delete {
