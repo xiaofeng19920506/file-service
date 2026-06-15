@@ -967,18 +967,6 @@ export default function PlaylistsPage({
     setTracksEditMode((open) => !open);
   };
 
-  const renderPlaybackOrderButton = (className = 'playlists-play-order-btn') => (
-    <button
-      type="button"
-      className={`${className}${playbackOrderMode !== 'sequential' ? ' active' : ''}`}
-      aria-label={t('playlists.playOrderTitle')}
-      title={t('playlists.playOrderTitle')}
-      onClick={openPlaybackOrderPanel}
-    >
-      {t('playlists.playOrderShort')}
-    </button>
-  );
-
   const renderPlaybackModeToggle = (className = 'playlists-playback-mode') => (
     <div className={className} role="group" aria-label={t('playlists.playbackMode')}>
       <button
@@ -1055,12 +1043,9 @@ export default function PlaylistsPage({
       <header className="playlists-detail-header desktop-only">
         <div className="playlists-detail-actions">
           {hasTracks && (
-            <>
-              <button type="button" className="btn-primary playlists-play-all-btn" onClick={startPlayback}>
-                {t('playlists.playAll')}
-              </button>
-              {renderPlaybackModeToggle()}
-            </>
+            <button type="button" className="btn-primary playlists-play-all-btn" onClick={startPlayback}>
+              {t('playlists.playAll')}
+            </button>
           )}
           <button type="button" className="btn-secondary" onClick={() => setShowAddModal(true)}>
             {t('playlists.addTitle')}
@@ -1640,6 +1625,11 @@ export default function PlaylistsPage({
                             ? t('playlists.mixLabel', { title: detail.playlist.title })
                             : t('playlists.tracksTitle')}
                         </h3>
+                        {!isMobileViewport && (
+                          <div className="playlists-tracks-head-actions desktop-only">
+                            {renderPlaybackModeToggle('playlists-tracks-playback-mode')}
+                          </div>
+                        )}
                       </div>
                       <ol
                         ref={tracksListRef}

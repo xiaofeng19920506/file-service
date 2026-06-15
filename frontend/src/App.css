@@ -5361,16 +5361,31 @@
 
 .playlists-tracks-head {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
   margin: 0 0 0.45rem;
 }
 
 .playlists-tracks-head h3 {
   margin: 0;
+  min-width: 0;
+  flex: 1 1 auto;
   font-size: 0.82rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-muted);
+}
+
+.playlists-tracks-head-actions {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.playlists-tracks-playback-mode {
+  flex-shrink: 0;
 }
 
 .playlists-tracks {
