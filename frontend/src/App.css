@@ -6060,6 +6060,34 @@
   width: 100%;
 }
 
+.bulletin-deck-preview {
+  width: 100%;
+  max-height: min(72vh, 900px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding-right: 0.35rem;
+  scroll-behavior: smooth;
+}
+
+.bulletin-deck-preview-meta {
+  margin: 0 0 0.15rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  text-align: center;
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  padding: 0.35rem 0;
+  z-index: 1;
+}
+
+.bulletin-deck-slide--highlight .bulletin-slide-preview-frame {
+  outline: 2px solid #0b5394;
+  outline-offset: 2px;
+}
+
 .bulletin-preview-static-block {
   width: 100%;
 }

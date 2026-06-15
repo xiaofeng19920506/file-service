@@ -102,6 +102,16 @@ export async function saveBulletinAnnouncements(
   return data.bulletin;
 }
 
+export type BulletinTemplateMap = {
+  totalSlides: number;
+  templateFile: string;
+};
+
+export async function fetchBulletinTemplateMap(): Promise<BulletinTemplateMap> {
+  const res = await apiFetch('/v1/bulletins/template/slides');
+  return parseJson<BulletinTemplateMap>(res);
+}
+
 export async function fetchBulletinTemplateFile(): Promise<Blob> {
   const res = await apiFetch('/v1/bulletins/template/file');
   if (!res.ok) {

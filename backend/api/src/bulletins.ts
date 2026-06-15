@@ -212,10 +212,9 @@ export function registerBulletinRoutes(
     const workRoot = await mkdtemp(join(tmpdir(), 'fs-bulletin-preview-'));
     try {
       const templateBuf = await readFile(join(BULLETIN_TEMPLATE_DIR, BULLETIN_TEMPLATE_FILE));
-      const pptxBuf =
-        slideNumber === 1 && serviceDate
-          ? await patchCoverSlideInPptx(templateBuf, { serviceDate, serviceTime })
-          : templateBuf;
+      const pptxBuf = serviceDate
+        ? await patchCoverSlideInPptx(templateBuf, { serviceDate, serviceTime })
+        : templateBuf;
 
       const pptxPath = join(workRoot, 'preview.pptx');
       await writeFile(pptxPath, pptxBuf);
