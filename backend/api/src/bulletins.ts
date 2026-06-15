@@ -37,6 +37,8 @@ const BULLETIN_TEMPLATE_FILE = '06_14_2026.pptx';
 const BULLETIN_TEMPLATE_DIR = resolveBulletinTemplateDir();
 
 const slidePreviewCache = new Map<string, Buffer>();
+/** 封面补丁版本；变更后自动失效旧 PNG 缓存 */
+const SLIDE_PREVIEW_PATCH_REV = 'v3';
 
 export type BulletinAnnouncementDto = {
   id: string;
@@ -203,7 +205,7 @@ export function registerBulletinRoutes(
       return reply.code(400).send({ error: 'invalid_service_date' });
     }
 
-    const cacheKey = `${slideNumber}:${serviceDate ?? ''}:${serviceTime}`;
+    const cacheKey = `${SLIDE_PREVIEW_PATCH_REV}:${slideNumber}:${serviceDate ?? ''}:${serviceTime}`;
     const cached = slidePreviewCache.get(cacheKey);
     if (cached) {
       return reply.header('Content-Type', 'image/png').header('X-Preview-Cached', 'true').send(cached);

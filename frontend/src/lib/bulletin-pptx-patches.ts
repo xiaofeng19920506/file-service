@@ -23,22 +23,85 @@ export type SlideTextReplacement = {
 export type SlideTextPatch = {
   slideNumber: number;
   replacements: SlideTextReplacement[];
+  /** 封面日期行整段重写（避免 run 替换 + spAutoFit 换行错位） */
+  coverLine?: { serviceDate: string; serviceTime: string };
 };
 
-/** 封面日期行：左日期 + 宽间距 + 右时间（同一字号、同一基线） */
+/** 封面日期行补丁 */
 export function buildCoverPatch(serviceDate: string, serviceTime: string): SlideTextPatch {
+  return {
+    slideNumber: 1,
+    replacements: [],
+    coverLine: { serviceDate, serviceTime: serviceTime.trim() || '11:00' },
+  };
+}
+
+function escapeXml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function findShapeBlock(xml: string, shapeId: string): { start: number; end: number } | null {
+  const marker = `<p:cNvPr id="${shapeId}"`;
+  const idIdx = xml.indexOf(marker);
+  if (idIdx < 0) return null;
+  const start = xml.lastIndexOf('<p:sp>', idIdx);
+  const endTag = xml.indexOf('</p:sp>', idIdx);
+  if (start < 0 || endTag < 0) return null;
+  return { start, end: endTag + '</p:sp>'.length };
+}
+
+function replaceShapeBlock(
+  xml: string,
+  shapeId: string,
+  transform: (block: string) => string,
+): string {
+  const loc = findShapeBlock(xml, shapeId);
+  if (!loc) return xml;
+  const block = xml.slice(loc.start, loc.end);
+  return xml.slice(0, loc.start) + transform(block) + xml.slice(loc.end);
+}
+
+/** 与 shared/bulletin-pptx-patch 保持一致 */
+function patchCoverDateLineInSlideXml(
+  xml: string,
+  serviceDate: string,
+  serviceTime: string,
+): string {
   const date = formatBulletinCoverDate(serviceDate);
   const time = serviceTime.trim() || '11:00';
   const linePt = 34;
-  return {
-    slideNumber: 1,
-    replacements: [
-      { textIndex: 8, text: `${date}${' '.repeat(12)}`, fontSizePt: linePt },
-      { textIndex: 9, text: ' '.repeat(42), fontSizePt: linePt },
-      { textIndex: 10, text: `${time} `, fontSizePt: linePt },
-      { textIndex: 11, text: '主日崇拜', fontSizePt: linePt },
-    ],
-  };
+  const sz = String(linePt * 100);
+  const rPr = `<a:rPr b="1" lang="en-US" dirty="0" sz="${sz}"><a:latin typeface="Corbel"/><a:ea typeface="Corbel"/><a:cs typeface="Corbel"/><a:sym typeface="Corbel"/></a:rPr>`;
+  const paragraph = [
+    '<a:p>',
+    '<a:pPr indent="0" lvl="0" marL="0" marR="0" rtl="0" algn="ctr">',
+    '<a:lnSpc><a:spcPct val="100000"/></a:lnSpc>',
+    '<a:buNone/>',
+    '</a:pPr>',
+    `<a:r>${rPr}<a:t>${escapeXml(date)}</a:t></a:r>`,
+    `<a:r>${rPr}<a:t xml:space="preserve">${' '.repeat(18)}</a:t></a:r>`,
+    `<a:r>${rPr}<a:t>${escapeXml(time)} </a:t></a:r>`,
+    `<a:r>${rPr}<a:t>主日崇拜</a:t></a:r>`,
+    '</a:p>',
+  ].join('');
+  const txBody = [
+    '<p:txBody>',
+    '<a:bodyPr anchorCtr="0" anchor="t" bIns="45720" lIns="91425" spcFirstLastPara="1" rIns="91425" wrap="none" tIns="45720">',
+    '<a:noAutofit/>',
+    '</a:bodyPr>',
+    '<a:lstStyle/>',
+    paragraph,
+    '</p:txBody>',
+  ].join('');
+  const COVER_DATE_LINE_Y_EMU = 987_000;
+  return replaceShapeBlock(xml, '265', (shapeXml) => {
+    let s = shapeXml.replace(/(<a:off x="\d+" y=")\d+(")/, `$1${COVER_DATE_LINE_Y_EMU}$2`);
+    return s.replace(/<p:txBody>[\s\S]*?<\/p:txBody>/, txBody);
+  });
 }
 
 function splitNameLines(names: string, max = 3): string[] {
@@ -129,7 +192,9 @@ export function patchesForStep(stepId: string, bulletin: WeeklyBulletin): SlideT
 
 function mergePatches(patches: SlideTextPatch[]): SlideTextPatch[] {
   const bySlide = new Map<number, Map<number, string>>();
+  let coverLine: SlideTextPatch['coverLine'];
   for (const patch of patches) {
+    if (patch.coverLine) coverLine = patch.coverLine;
     let slot = bySlide.get(patch.slideNumber);
     if (!slot) {
       slot = new Map();
@@ -145,6 +210,7 @@ function mergePatches(patches: SlideTextPatch[]): SlideTextPatch[] {
       replacements: [...slot.entries()]
         .sort((a, b) => a[0] - b[0])
         .map(([textIndex, text]) => ({ textIndex, text })),
+      ...(slideNumber === 1 && coverLine ? { coverLine } : {}),
     }))
     .sort((a, b) => a.slideNumber - b.slideNumber);
 }
@@ -175,7 +241,18 @@ export async function applySlidePatches(
     const entry = zip.file(slidePath);
     if (!entry) continue;
     const xml = await entry.async('string');
-    zip.file(slidePath, applyIndexedTextReplacementsToSlideXml(xml, patch.replacements));
+    let nextXml = xml;
+    if (patch.coverLine) {
+      nextXml = patchCoverDateLineInSlideXml(
+        nextXml,
+        patch.coverLine.serviceDate,
+        patch.coverLine.serviceTime,
+      );
+    }
+    if (patch.replacements.length) {
+      nextXml = applyIndexedTextReplacementsToSlideXml(nextXml, patch.replacements);
+    }
+    zip.file(slidePath, nextXml);
   }
 
   const buf = await zip.generateAsync({ type: 'arraybuffer' });
