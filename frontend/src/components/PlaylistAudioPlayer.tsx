@@ -1149,8 +1149,10 @@ export default function PlaylistAudioPlayer({
               {playlistTitle && <p className="playlist-audio-dock-album">{playlistTitle}</p>}
             </div>
           </div>
-          <div className="playlist-audio-dock-transport">{transportControls}</div>
-          <div className="playlist-audio-dock-progress">{desktopProgressBlock}</div>
+          <div className="playlist-audio-dock-center">
+            <div className="playlist-audio-dock-transport">{transportControls}</div>
+            <div className="playlist-audio-dock-progress">{desktopProgressBlock}</div>
+          </div>
           <div className="playlist-audio-dock-options">
             {shuffleRepeatControls}
             {volumeControls}

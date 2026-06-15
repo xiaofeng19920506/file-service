@@ -215,8 +215,8 @@
 }
 
 .playlist-play-order-panel.playlist-queue-panel--desktop-dock {
-  left: 1.25rem;
-  right: auto;
+  left: auto;
+  right: 1.25rem;
 }
 
 .playlist-chrome-mode {
@@ -1508,8 +1508,8 @@
 
   .playlist-queue-panel--desktop-dock {
     top: auto;
-    right: auto;
-    left: 1.25rem;
+    left: auto;
+    right: 1.25rem;
     bottom: 5.85rem;
     width: min(36rem, 40vw);
     max-height: min(70vh, 40rem);
@@ -1519,7 +1519,7 @@
       0 -6px 28px color-mix(in srgb, var(--shadow-sm) 70%, transparent),
       0 12px 40px color-mix(in srgb, var(--shadow-sm) 45%, transparent);
     animation: playlist-queue-dock-rise 0.28s cubic-bezier(0.22, 1, 0.36, 1);
-    transform-origin: left bottom;
+    transform-origin: right bottom;
   }
 
   @keyframes playlist-queue-dock-rise {
