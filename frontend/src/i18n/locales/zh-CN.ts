@@ -252,7 +252,6 @@ export default {
     openYoutube: '打开原链接',
     playAll: '播放全部',
     playbackMode: '播放模式',
-    playbackModeListHint: '播放前请选择 MP3（缓存音频）或视频（YouTube）模式。',
     playbackMp3: 'MP3',
     playbackVideo: '视频',
     freePlaybackHint: '粘贴 YouTube 链接即可添加歌曲。视频模式免费（由 YouTube 托管播放）；MP3 模式需服务器缓存音频。',

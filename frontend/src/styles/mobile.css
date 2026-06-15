@@ -810,29 +810,6 @@
     width: 100%;
   }
 
-  .playlists-mobile-playback-mode-row {
-    display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
-    width: 100%;
-  }
-
-  .playlists-mobile-playback-mode-label {
-    margin: 0;
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-  }
-
-  .playlists-mobile-playback-mode-hint {
-    margin: 0;
-    font-size: 0.78rem;
-    line-height: 1.4;
-    color: var(--text-muted);
-  }
-
   .playlists-mobile-detail-toolbar .playlists-mobile-watch-mode {
     margin-left: 0;
     width: 100%;
