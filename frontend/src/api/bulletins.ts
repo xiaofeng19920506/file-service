@@ -46,6 +46,7 @@ export type BulletinPatch = Partial<{
   weeklyMeetingVariant: number | null;
   skipTestimonyWeek: boolean;
   skipDepartmentReports: boolean;
+  outputBlobId: string | null;
 }>;
 
 export type AnnouncementInput = {

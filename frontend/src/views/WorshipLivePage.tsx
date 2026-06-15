@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { fetchBulletinTemplateFile, getBulletin } from '../api/bulletins';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { getBulletin } from '../api/bulletins';
 import { getPlaylist, type PlaylistDetail } from '../api/playlists';
 import PlaylistAudioPlayer from '../components/PlaylistAudioPlayer';
 import YoutubePlaylistPlayer from '../components/YoutubePlaylistPlayer';
 import { usePlaylistPlaybackTransport } from '../hooks/usePlaylistPlaybackTransport';
 import { useI18n } from '../i18n';
-import { generateBulletinPptx } from '../lib/bulletin-pptx';
+import { resolveBulletinPptxBlob } from '../lib/bulletin-publish';
 import { parsePptxSlidesDetailed, type EditableSlide } from '../lib/pptx-preview';
 import type { WorshipLiveMode } from '../lib/worship-live-config';
 
@@ -26,10 +26,12 @@ function slideImageUrl(slide: EditableSlide): string | null {
 
 export default function WorshipLivePage({ playlistId, bulletinId, mode }: WorshipLivePageProps) {
   const { t } = useI18n();
+  const stageRef = useRef<HTMLDivElement>(null);
   const [detail, setDetail] = useState<PlaylistDetail | null>(null);
   const [slides, setSlides] = useState<EditableSlide[]>([]);
   const [slideIndex, setSlideIndex] = useState(0);
   const [musicDockOpen, setMusicDockOpen] = useState(false);
+  const [stageFullscreen, setStageFullscreen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,8 +63,7 @@ export default function WorshipLivePage({ playlistId, bulletinId, mode }: Worshi
             return;
           }
           const bulletin = await getBulletin(bulletinId);
-          const template = await fetchBulletinTemplateFile();
-          const pptx = await generateBulletinPptx(template, bulletin);
+          const pptx = await resolveBulletinPptxBlob(bulletin);
           const parsed = await parsePptxSlidesDetailed(pptx, {
             sourceFile: `bulletin-${bulletin.serviceDate}.pptx`,
           });
@@ -86,6 +87,18 @@ export default function WorshipLivePage({ playlistId, bulletinId, mode }: Worshi
     }
   }, [loading, detail?.items.length, setPlaying]);
 
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      setStageFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
+    };
+  }, []);
+
   const audioItems = useMemo(
     () =>
       detail?.items.map((item) => ({
@@ -106,7 +119,22 @@ export default function WorshipLivePage({ playlistId, bulletinId, mode }: Worshi
   );
 
   const exitLive = useCallback(() => {
+    if (document.fullscreenElement) {
+      void document.exitFullscreen();
+    }
     window.location.hash = '#/worship';
+  }, []);
+
+  const toggleStageFullscreen = useCallback(async () => {
+    const el = stageRef.current;
+    if (!el) return;
+    const doc = document as Document & { webkitFullscreenElement?: Element };
+    if (document.fullscreenElement || doc.webkitFullscreenElement) {
+      await document.exitFullscreen();
+      return;
+    }
+    const request = el.requestFullscreen ?? (el as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> }).webkitRequestFullscreen;
+    if (request) await request.call(el);
   }, []);
 
   useEffect(() => {
@@ -119,12 +147,19 @@ export default function WorshipLivePage({ playlistId, bulletinId, mode }: Worshi
         event.preventDefault();
         setSlideIndex((i) => Math.max(0, i - 1));
       } else if (event.key === 'Escape') {
+        const doc = document as Document & { webkitFullscreenElement?: Element };
+        if (document.fullscreenElement || doc.webkitFullscreenElement) {
+          void document.exitFullscreen();
+          return;
+        }
         exitLive();
+      } else if (event.key === 'f' || event.key === 'F') {
+        void toggleStageFullscreen();
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [exitLive, mode, slides.length]);
+  }, [exitLive, mode, slides.length, toggleStageFullscreen]);
 
   const currentSlide = slides[slideIndex];
   const onWorshipSlide =
@@ -182,8 +217,11 @@ export default function WorshipLivePage({ playlistId, bulletinId, mode }: Worshi
   }
 
   return (
-    <div className="worship-live worship-live--ppt" data-worship-mode="ppt">
-      <div className="worship-live-ppt-stage">
+    <div
+      className={`worship-live worship-live--ppt${stageFullscreen ? ' worship-live--stage-fs' : ''}`}
+      data-worship-mode="ppt"
+    >
+      <div ref={stageRef} className="worship-live-ppt-stage">
         {currentSlide ? (
           <>
             {slideImageUrl(currentSlide) ? (
@@ -204,52 +242,85 @@ export default function WorshipLivePage({ playlistId, bulletinId, mode }: Worshi
         ) : (
           <p className="worship-live-slide-fallback">{t('worship.noSlides')}</p>
         )}
+
+        {stageFullscreen && (
+          <div className="worship-live-fs-controls">
+            <button
+              type="button"
+              className="worship-live-toolbar-btn"
+              disabled={slideIndex <= 0}
+              onClick={() => setSlideIndex((i) => Math.max(0, i - 1))}
+              aria-label={t('preview.prevSlide')}
+            >
+              ‹
+            </button>
+            <span className="worship-live-slide-counter">
+              {slides.length > 0
+                ? t('preview.slideCounter', { current: slideIndex + 1, total: slides.length })
+                : '—'}
+            </span>
+            <button
+              type="button"
+              className="worship-live-toolbar-btn"
+              disabled={slideIndex >= slides.length - 1}
+              onClick={() => setSlideIndex((i) => Math.min(slides.length - 1, i + 1))}
+              aria-label={t('preview.nextSlide')}
+            >
+              ›
+            </button>
+          </div>
+        )}
       </div>
 
-      <div className="worship-live-ppt-toolbar">
-        <button
-          type="button"
-          className="worship-live-toolbar-btn"
-          disabled={slideIndex <= 0}
-          onClick={() => setSlideIndex((i) => Math.max(0, i - 1))}
-          aria-label={t('preview.prevSlide')}
-        >
-          ‹
-        </button>
-        <span className="worship-live-slide-counter">
-          {slides.length > 0
-            ? t('preview.slideCounter', { current: slideIndex + 1, total: slides.length })
-            : '—'}
-        </span>
-        <button
-          type="button"
-          className="worship-live-toolbar-btn"
-          disabled={slideIndex >= slides.length - 1}
-          onClick={() => setSlideIndex((i) => Math.min(slides.length - 1, i + 1))}
-          aria-label={t('preview.nextSlide')}
-        >
-          ›
-        </button>
-        <button type="button" className="btn-secondary" onClick={jumpToWorshipSlides}>
-          {t('worship.jumpToWorshipSlides')}
-        </button>
-        <button
-          type="button"
-          className={`btn-secondary${musicDockOpen ? ' active' : ''}`}
-          onClick={() => setMusicDockOpen((open) => !open)}
-        >
-          {musicDockOpen ? t('worship.hideMusic') : t('worship.showMusic')}
-        </button>
-        <button type="button" className="btn-secondary" onClick={exitLive}>
-          {t('worship.exitLive')}
-        </button>
-      </div>
+      {!stageFullscreen && (
+        <div className="worship-live-ppt-toolbar">
+          <button
+            type="button"
+            className="worship-live-toolbar-btn"
+            disabled={slideIndex <= 0}
+            onClick={() => setSlideIndex((i) => Math.max(0, i - 1))}
+            aria-label={t('preview.prevSlide')}
+          >
+            ‹
+          </button>
+          <span className="worship-live-slide-counter">
+            {slides.length > 0
+              ? t('preview.slideCounter', { current: slideIndex + 1, total: slides.length })
+              : '—'}
+          </span>
+          <button
+            type="button"
+            className="worship-live-toolbar-btn"
+            disabled={slideIndex >= slides.length - 1}
+            onClick={() => setSlideIndex((i) => Math.min(slides.length - 1, i + 1))}
+            aria-label={t('preview.nextSlide')}
+          >
+            ›
+          </button>
+          <button type="button" className="btn-secondary" onClick={jumpToWorshipSlides}>
+            {t('worship.jumpToWorshipSlides')}
+          </button>
+          <button type="button" className="btn-secondary" onClick={() => void toggleStageFullscreen()}>
+            {t('worship.projectFullscreen')}
+          </button>
+          <button
+            type="button"
+            className={`btn-secondary${musicDockOpen ? ' active' : ''}`}
+            onClick={() => setMusicDockOpen((open) => !open)}
+          >
+            {musicDockOpen ? t('worship.hideMusic') : t('worship.showMusic')}
+          </button>
+          <button type="button" className="btn-secondary" onClick={exitLive}>
+            {t('worship.exitLive')}
+          </button>
+        </div>
+      )}
 
-      {onWorshipSlide && (
+      {!stageFullscreen && onWorshipSlide && (
         <p className="worship-live-worship-hint">{t('worship.worshipSlideHint')}</p>
       )}
 
-      <div className={`worship-live-music-root${musicDockOpen ? ' is-open' : ''}`}>
+      <div className={`worship-live-music-root${musicDockOpen && !stageFullscreen ? ' is-open' : ''}`}>
         <PlaylistAudioPlayer
           items={audioItems}
           activeIndex={transport.activeIndex}

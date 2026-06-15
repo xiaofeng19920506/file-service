@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   createBulletin,
-  fetchBulletinTemplateFile,
   getBulletin,
   listBulletins,
   saveBulletinAnnouncements,
@@ -11,7 +10,7 @@ import {
 } from '../api/bulletins';
 import { useAuth } from '../auth/AuthContext';
 import { useI18n } from '../i18n';
-import { generateBulletinPptx } from '../lib/bulletin-pptx';
+import { publishBulletinPptx, resolveBulletinPptxBlob } from '../lib/bulletin-publish';
 import { readWorshipLiveConfig, writeWorshipLiveConfig } from '../lib/worship-live-config';
 
 type AnnouncementDraft = AnnouncementInput & { key: string };
@@ -42,6 +41,7 @@ export default function BulletinPage() {
   const { t } = useI18n();
   const { permissions } = useAuth();
   const canManage = permissions.canManageBulletin;
+  const canPublish = canManage && permissions.canUpload;
 
   const [bulletins, setBulletins] = useState<WeeklyBulletin[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -50,6 +50,7 @@ export default function BulletinPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -169,12 +170,17 @@ export default function BulletinPage() {
     try {
       setGenerating(true);
       setError(null);
-      const template = await fetchBulletinTemplateFile();
-      const file = await generateBulletinPptx(template, draft);
-      const url = URL.createObjectURL(file);
+      const file = await resolveBulletinPptxBlob(draft);
+      const downloadFile =
+        file instanceof File
+          ? file
+          : new File([file], `bulletin-${draft.serviceDate}.pptx`, {
+              type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            });
+      const url = URL.createObjectURL(downloadFile);
       const a = document.createElement('a');
       a.href = url;
-      a.download = file.name;
+      a.download = downloadFile.name;
       a.click();
       URL.revokeObjectURL(url);
       setMessage(t('bulletin.generated'));
@@ -182,6 +188,44 @@ export default function BulletinPage() {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const handlePublish = async () => {
+    if (!canManage || !draft) return;
+    try {
+      setPublishing(true);
+      setError(null);
+      const saved = await updateBulletin(draft.id, {
+        serviceDate: draft.serviceDate,
+        serviceTime: draft.serviceTime,
+        lastWeekOfferingDate: draft.lastWeekOfferingDate,
+        offeringQuarterLabel: draft.offeringQuarterLabel,
+        birthdayMonth: draft.birthdayMonth,
+        birthdayNames: draft.birthdayNames,
+        staffMeetingDate: draft.staffMeetingDate,
+        testimonyShareDate: draft.testimonyShareDate,
+        serviceRosterText: draft.serviceRosterText,
+        baptismText: draft.baptismText,
+        weeklyMeetingVariant: draft.weeklyMeetingVariant,
+        skipTestimonyWeek: draft.skipTestimonyWeek,
+        skipDepartmentReports: draft.skipDepartmentReports,
+      });
+      const withAnnouncements = await saveBulletinAnnouncements(
+        saved.id,
+        announcements
+          .filter((a) => a.body.trim() || (a.title ?? '').trim())
+          .map(({ category, title, body }) => ({ category, title, body })),
+      );
+      const { bulletin } = await publishBulletinPptx(withAnnouncements);
+      setDraft(bulletin);
+      setAnnouncements(toDrafts(bulletin));
+      await refreshList();
+      setMessage(t('bulletin.published'));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPublishing(false);
     }
   };
 
@@ -459,15 +503,37 @@ export default function BulletinPage() {
                     {saving ? t('bulletin.saving') : t('bulletin.save')}
                   </button>
                 )}
+                {canPublish && (
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    disabled={publishing}
+                    onClick={() => void handlePublish()}
+                  >
+                    {publishing ? t('bulletin.publishing') : t('bulletin.publishToLibrary')}
+                  </button>
+                )}
                 <button
                   type="button"
                   className="btn-secondary"
                   disabled={generating}
-                  onClick={handleGenerate}
+                  onClick={() => void handleGenerate()}
                 >
                   {generating ? t('bulletin.generating') : t('bulletin.downloadPptx')}
                 </button>
+                {draft.outputBlobId && permissions.canDownload && (
+                  <a
+                    className="btn-secondary"
+                    href={`#/preview/${encodeURIComponent(draft.outputBlobId)}?title=${encodeURIComponent(draft.serviceDate)}`}
+                  >
+                    {t('bulletin.openInLibrary')}
+                  </a>
+                )}
               </div>
+
+              {draft.outputBlobId && (
+                <p className="bulletin-published-hint">{t('bulletin.publishedHint')}</p>
+              )}
 
               {!canManage && (
                 <p className="bulletin-readonly-hint">{t('bulletin.readonlyHint')}</p>

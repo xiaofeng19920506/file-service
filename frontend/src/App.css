@@ -6210,13 +6210,41 @@
   grid-template-rows: 1fr auto;
 }
 
+.worship-live--stage-fs {
+  grid-template-rows: 1fr;
+}
+
+.worship-live--stage-fs .worship-live-ppt-stage {
+  padding: 0;
+}
+
+.worship-live-fs-controls {
+  position: absolute;
+  left: 50%;
+  bottom: 1.25rem;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+}
+
 .worship-live-ppt-stage {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 0;
   padding: 1rem;
   background: #000;
+}
+
+.bulletin-published-hint {
+  margin: 0.75rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
 }
 
 .worship-live-slide-img {

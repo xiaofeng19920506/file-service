@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  blobs,
   bulletinAnnouncements,
   canManageBulletin,
   canViewBulletin,
@@ -117,6 +118,7 @@ type BulletinPatchBody = Partial<{
   weeklyMeetingVariant: number | null;
   skipTestimonyWeek: boolean;
   skipDepartmentReports: boolean;
+  outputBlobId: string | null;
 }>;
 
 type AnnouncementInput = {
@@ -254,6 +256,20 @@ export function registerBulletinRoutes(app: FastifyInstance, { db }: { db: Db })
       if (body.skipTestimonyWeek !== undefined) patch.skipTestimonyWeek = body.skipTestimonyWeek;
       if (body.skipDepartmentReports !== undefined) {
         patch.skipDepartmentReports = body.skipDepartmentReports;
+      }
+      if (body.outputBlobId !== undefined) {
+        if (body.outputBlobId === null) {
+          patch.outputBlobId = null;
+        } else {
+          const [blob] = await db
+            .select({ id: blobs.id })
+            .from(blobs)
+            .where(eq(blobs.id, body.outputBlobId));
+          if (!blob) {
+            return reply.code(400).send({ error: 'invalid_blob_id' });
+          }
+          patch.outputBlobId = body.outputBlobId;
+        }
       }
 
       const [row] = await db
