@@ -138,6 +138,12 @@ export default function PlaylistsPage({
   }, [selectedId]);
 
   useEffect(() => {
+    if (!isMobileViewport && selectedId) {
+      setPlaybackMode('video');
+    }
+  }, [selectedId, isMobileViewport]);
+
+  useEffect(() => {
     if (tracksEditMode) setTrackSwipeOpenId(null);
   }, [tracksEditMode]);
   const [removingItemId, setRemovingItemId] = useState<string | null>(null);
@@ -1041,7 +1047,8 @@ export default function PlaylistsPage({
   ) => (
     <>
       <header className="playlists-detail-header desktop-only">
-        <div className="playlists-detail-actions">
+        <div className="playlists-detail-toolbar-row">
+          <div className="playlists-detail-actions">
           {hasTracks && (
             <button type="button" className="btn-primary playlists-play-all-btn" onClick={startPlayback}>
               {t('playlists.playAll')}
@@ -1106,6 +1113,12 @@ export default function PlaylistsPage({
           >
             {deletingId === playlist.id ? t('playlists.deleting') : t('playlists.delete')}
           </button>
+          </div>
+          {hasTracks && (
+            <div className="playlists-detail-playback-mode">
+              {renderPlaybackModeToggle()}
+            </div>
+          )}
         </div>
       </header>
     </>
@@ -1625,11 +1638,6 @@ export default function PlaylistsPage({
                             ? t('playlists.mixLabel', { title: detail.playlist.title })
                             : t('playlists.tracksTitle')}
                         </h3>
-                        {!isMobileViewport && (
-                          <div className="playlists-tracks-head-actions desktop-only">
-                            {renderPlaybackModeToggle('playlists-tracks-playback-mode')}
-                          </div>
-                        )}
                       </div>
                       <ol
                         ref={tracksListRef}

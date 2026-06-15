@@ -11,13 +11,26 @@
     border-bottom: 1px solid color-mix(in srgb, var(--border-light) 80%, transparent);
   }
 
+  .playlists-detail-toolbar-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+    min-width: 0;
+  }
+
   .playlists-detail-actions {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.45rem;
-    width: 100%;
+    flex: 1 1 auto;
     min-width: 0;
+  }
+
+  .playlists-detail-playback-mode {
+    flex: 0 0 auto;
+    margin-left: auto;
   }
 
   .playlists-detail-actions-playback {
