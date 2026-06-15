@@ -989,7 +989,12 @@ export default function PlaylistsPage({
 
   const renderMobileDetailToolbar = (hasTracks: boolean) => (
     <div className="playlists-mobile-detail-toolbar mobile-only">
-      {hasTracks && renderPlaybackModeToggle('playlists-mobile-watch-mode')}
+      {hasTracks && (
+        <div className="playlists-mobile-playback-mode-row">
+          <span className="playlists-mobile-playback-mode-label">{t('playlists.playbackMode')}</span>
+          {renderPlaybackModeToggle('playlists-mobile-watch-mode')}
+        </div>
+      )}
       {role === 'member' && hasTracks && !showPlayer && (
         <button type="button" className="btn-primary playlists-btn-play-all" onClick={startPlayback}>
           {t('playlists.playAll')}

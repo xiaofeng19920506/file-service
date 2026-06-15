@@ -810,15 +810,51 @@
     width: 100%;
   }
 
+  .playlists-mobile-playback-mode-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    width: 100%;
+  }
+
+  .playlists-mobile-playback-mode-label {
+    margin: 0;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
   .playlists-mobile-detail-toolbar .playlists-mobile-watch-mode {
     margin-left: 0;
     width: 100%;
     display: flex;
+    gap: 0.5rem;
+    padding: 0;
+    border: none;
+    background: transparent;
+    border-radius: 0;
   }
 
-  .playlists-mobile-detail-toolbar .playlists-playback-mode-btn {
+  .playlists-mobile-detail-toolbar .playlists-mobile-watch-mode-btn {
     flex: 1;
-    min-height: 2.5rem;
+    min-height: 2.75rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 600;
+    box-shadow: none;
+  }
+
+  .playlists-mobile-detail-toolbar .playlists-mobile-watch-mode-btn.active {
+    background: var(--blue);
+    color: #fff;
+    border-color: var(--blue);
+    box-shadow: 0 1px 4px color-mix(in srgb, var(--blue) 30%, transparent);
   }
 
   .playlists-mobile-detail-toolbar .playlists-btn-play-all {
