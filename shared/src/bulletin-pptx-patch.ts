@@ -15,21 +15,60 @@ function escapeXml(text: string): string {
     .replace(/"/g, '&quot;');
 }
 
-/** 按非空 <a:t> 节点序号替换文字，未列出的节点保持模板原样 */
+export type TextRunReplacement = {
+  textIndex: number;
+  text: string;
+  /** PPT 字号（pt），如 34 对应 sz="3400" */
+  fontSizePt?: number;
+};
+
+function isIndexedRunContent(text: string): boolean {
+  return Boolean(text.trim()) || /\s/.test(text);
+}
+
+/** 按 <a:r> 内文字 run 序号替换（含仅空格的间距 run） */
 export function applyIndexedTextReplacementsToSlideXml(
   xml: string,
-  replacements: { textIndex: number; text: string }[],
+  replacements: TextRunReplacement[],
 ): string {
-  const byIndex = new Map(replacements.map((r) => [r.textIndex, r.text]));
+  const byIndex = new Map(replacements.map((r) => [r.textIndex, r]));
   let idx = 0;
-  return xml.replace(/<a:t([^>]*)>([\s\S]*?)<\/a:t>/g, (full, attrs, content) => {
-    if (!content.trim()) return full;
+  return xml.replace(/<a:r>([\s\S]*?)<\/a:r>/g, (runXml) => {
+    const textMatch = runXml.match(/<a:t([^>]*)>([\s\S]*?)<\/a:t>/);
+    if (!textMatch) return runXml;
+    const content = textMatch[2];
+    if (!isIndexedRunContent(content)) return runXml;
+
     const current = idx++;
-    if (byIndex.has(current)) {
-      return `<a:t${attrs}>${escapeXml(byIndex.get(current)!)}</a:t>`;
+    const rep = byIndex.get(current);
+    if (!rep) return runXml;
+
+    let updated = runXml.replace(
+      /<a:t([^>]*)>[\s\S]*?<\/a:t>/,
+      `<a:t$1>${escapeXml(rep.text)}</a:t>`,
+    );
+    if (rep.fontSizePt !== undefined) {
+      const sz = String(Math.round(rep.fontSizePt * 100));
+      updated = /<a:rPr[^>]*sz="/.test(updated)
+        ? updated.replace(/(<a:rPr[^>]*sz=")\d+(")/, `$1${sz}$2`)
+        : updated.replace(/<a:rPr/, `<a:rPr sz="${sz}"`);
     }
-    return full;
+    return updated;
   });
+}
+
+/** 封面日期行：左日期 + 宽间距 + 右时间（与「主日崇拜」同字号） */
+export function buildCoverSlideTextReplacements(
+  serviceDate: string,
+  serviceTime: string,
+): TextRunReplacement[] {
+  const date = formatBulletinCoverDate(serviceDate);
+  const time = serviceTime.trim() || '11:00';
+  return [
+    { textIndex: 8, text: `${date}${' '.repeat(12)}` },
+    { textIndex: 9, text: ' '.repeat(42) },
+    { textIndex: 10, text: time, fontSizePt: 34 },
+  ];
 }
 
 export type CoverSlidePatchInput = {
@@ -48,10 +87,10 @@ export async function patchCoverSlideInPptx(
   if (!entry) return template;
 
   const xml = await entry.async('string');
-  const patched = applyIndexedTextReplacementsToSlideXml(xml, [
-    { textIndex: 8, text: formatBulletinCoverDate(input.serviceDate).padEnd(30, ' ') },
-    { textIndex: 9, text: input.serviceTime?.trim() || '11:00' },
-  ]);
+  const patched = applyIndexedTextReplacementsToSlideXml(
+    xml,
+    buildCoverSlideTextReplacements(input.serviceDate, input.serviceTime ?? '11:00'),
+  );
   zip.file(slidePath, patched);
   return zip.generateAsync({ type: 'nodebuffer' });
 }

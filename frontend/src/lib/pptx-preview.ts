@@ -42,20 +42,34 @@ function escapeXml(text: string): string {
     .replace(/"/g, '&quot;');
 }
 
-/** 按非空 <a:t> 节点序号替换文字，未列出的节点保持模板原样 */
+/** 按 <a:r> 内文字 run 序号替换（含仅空格的间距 run） */
 export function applyIndexedTextReplacementsToSlideXml(
   xml: string,
-  replacements: { textIndex: number; text: string }[],
+  replacements: { textIndex: number; text: string; fontSizePt?: number }[],
 ): string {
-  const byIndex = new Map(replacements.map((r) => [r.textIndex, r.text]));
+  const byIndex = new Map(replacements.map((r) => [r.textIndex, r]));
   let idx = 0;
-  return xml.replace(/<a:t([^>]*)>([\s\S]*?)<\/a:t>/g, (full, attrs, content) => {
-    if (!content.trim()) return full;
+  return xml.replace(/<a:r>([\s\S]*?)<\/a:r>/g, (runXml) => {
+    const textMatch = runXml.match(/<a:t([^>]*)>([\s\S]*?)<\/a:t>/);
+    if (!textMatch) return runXml;
+    const content = textMatch[2];
+    if (!content.trim() && !/\s/.test(content)) return runXml;
+
     const current = idx++;
-    if (byIndex.has(current)) {
-      return `<a:t${attrs}>${escapeXml(byIndex.get(current)!)}</a:t>`;
+    const rep = byIndex.get(current);
+    if (!rep) return runXml;
+
+    let updated = runXml.replace(
+      /<a:t([^>]*)>[\s\S]*?<\/a:t>/,
+      `<a:t$1>${escapeXml(rep.text)}</a:t>`,
+    );
+    if (rep.fontSizePt !== undefined) {
+      const sz = String(Math.round(rep.fontSizePt * 100));
+      updated = /<a:rPr[^>]*sz="/.test(updated)
+        ? updated.replace(/(<a:rPr[^>]*sz=")\d+(")/, `$1${sz}$2`)
+        : updated.replace(/<a:rPr/, `<a:rPr sz="${sz}"`);
     }
-    return full;
+    return updated;
   });
 }
 

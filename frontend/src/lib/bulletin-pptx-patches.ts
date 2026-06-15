@@ -13,9 +13,10 @@ const PPTX_MIME =
   'application/vnd.openxmlformats-officedocument.presentationml.presentation';
 
 export type SlideTextReplacement = {
-  /** 幻灯片内非空文字 run 的 0-based 序号（对应原版 `06_14_2026.pptx`） */
+  /** 幻灯片内文字 run 的 0-based 序号（对应原版 `06_14_2026.pptx`） */
   textIndex: number;
   text: string;
+  fontSizePt?: number;
 };
 
 /** 仅替换指定幻灯片上列出的文字 run，不触碰图片、背景等 */
@@ -24,17 +25,16 @@ export type SlideTextPatch = {
   replacements: SlideTextReplacement[];
 };
 
-/** 封面日期 run 保留模板空格，维持与「11:00 主日崇拜」同行的版式 */
-export function formatCoverDateRunText(isoDate: string): string {
-  return formatBulletinCoverDate(isoDate).padEnd(30, ' ');
-}
-
+/** 封面日期行：左日期 + 宽间距 + 右时间（与「主日崇拜」同字号） */
 export function buildCoverPatch(serviceDate: string, serviceTime: string): SlideTextPatch {
+  const date = formatBulletinCoverDate(serviceDate);
+  const time = serviceTime.trim() || '11:00';
   return {
     slideNumber: 1,
     replacements: [
-      { textIndex: 8, text: formatCoverDateRunText(serviceDate) },
-      { textIndex: 9, text: serviceTime || '11:00' },
+      { textIndex: 8, text: `${date}${' '.repeat(12)}` },
+      { textIndex: 9, text: ' '.repeat(42) },
+      { textIndex: 10, text: time, fontSizePt: 34 },
     ],
   };
 }
