@@ -179,7 +179,7 @@ export default {
     coverDatePreview: '封面将显示：{date} · {time}',
     editorPanel: '周报编辑',
     previewTitle: 'PPT 预览',
-    previewHint: '右侧显示模板幻灯片；仅本步填写的文字会写入 PPT，背景与图片保持不变',
+    previewHint: '按原版 PPT 图层合成预览（背景、文字、色块与图片）；仅本步字段会写入导出文件',
     previewEditedTexts: '本步将写入的文字',
     previewSlideLabel: '第 {current}/{total} 张 · PPT 第 {page} 页',
     previewSectionLabel: 'PPT 第 {pages} 页',

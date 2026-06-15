@@ -6511,6 +6511,50 @@
   background: #1a1a1a;
 }
 
+.bulletin-composite-slide {
+  background: #fff;
+}
+
+.bulletin-composite-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  z-index: 0;
+}
+
+.bulletin-composite-fill {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.bulletin-composite-image {
+  position: absolute;
+  z-index: 3;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.bulletin-composite-text {
+  position: absolute;
+  z-index: 2;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  line-height: 1.2;
+  pointer-events: none;
+}
+
+.bulletin-composite-text p {
+  margin: 0 0 0.12em;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .bulletin-slide-preview-img {
   width: 100%;
   height: 100%;

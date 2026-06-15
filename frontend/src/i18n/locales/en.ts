@@ -187,7 +187,7 @@ const en: MessageTree = {
     coverDatePreview: 'Cover will show: {date} · {time}',
     editorPanel: 'Bulletin editor',
     previewTitle: 'PPT preview',
-    previewHint: 'Template slides on the right; only text from this step is written to the PPT — backgrounds and images stay unchanged',
+    previewHint: 'Composite preview from the original PPT layers (background, text, fills, images); only this step’s fields are written on export',
     previewEditedTexts: 'Text written in this step',
     previewSlideLabel: 'Slide {current}/{total} · PPT page {page}',
     previewSectionLabel: 'PPT pages {pages}',

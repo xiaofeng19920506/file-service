@@ -34,6 +34,17 @@ export async function previewPatchedSlides(
     .filter((s): s is EditableSlide => Boolean(s));
 }
 
+/** 当前向导步骤用于图层预览的 PPT（已应用本步补丁） */
+export async function previewStepPptxBlob(
+  stepId: string,
+  bulletin: WeeklyBulletin,
+): Promise<Blob> {
+  const template = await fetchBulletinTemplateFile();
+  const patches = patchesForStep(stepId, bulletin);
+  if (!patches.length) return template;
+  return applySlidePatches(template, patches, 'bulletin-preview.pptx');
+}
+
 /** 当前向导步骤的预览：只应用本步字段补丁 */
 export async function previewStepSlides(
   stepId: string,

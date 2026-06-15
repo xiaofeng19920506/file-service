@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { WeeklyBulletin } from '../../api/bulletins';
 import { useI18n } from '../../i18n';
-import { previewStepSlides, previewTemplateSlides } from '../../lib/bulletin-slides';
+import { previewStepPptxBlob, previewTemplateSlides } from '../../lib/bulletin-slides';
 import { BULLETIN_WIZARD_STEPS } from '../../lib/bulletin-template-steps';
+import { fetchBulletinTemplateFile } from '../../api/bulletins';
 import type { EditableSlide } from '../../lib/pptx-preview';
-import BulletinSlidePreview from './BulletinSlidePreview';
+import BulletinCompositeSlide from './BulletinCompositeSlide';
 
 type BulletinPreviewPanelProps = {
   wizardStep: number;
@@ -15,6 +16,7 @@ export default function BulletinPreviewPanel({ wizardStep, bulletin }: BulletinP
   const { t } = useI18n();
   const stepDef = BULLETIN_WIZARD_STEPS[wizardStep];
   const [slides, setSlides] = useState<EditableSlide[]>([]);
+  const [pptxBlob, setPptxBlob] = useState<Blob | null>(null);
   const [slideIndex, setSlideIndex] = useState(0);
   const [loading, setLoading] = useState(false);
 
@@ -25,24 +27,33 @@ export default function BulletinPreviewPanel({ wizardStep, bulletin }: BulletinP
   useEffect(() => {
     if (!stepDef) {
       setSlides([]);
+      setPptxBlob(null);
       return;
     }
 
     let cancelled = false;
     const timer = window.setTimeout(() => {
       setLoading(true);
-      const load = stepDef.enabled
-        ? previewStepSlides(stepDef.id, bulletin, stepDef.slides)
-        : stepDef.slides.length
-          ? previewTemplateSlides(stepDef.slides)
-          : Promise.resolve([]);
+      const loadSlides = stepDef.slides.length
+        ? previewTemplateSlides(stepDef.slides)
+        : Promise.resolve([]);
+      const loadBlob =
+        stepDef.enabled && stepDef.slides.length
+          ? previewStepPptxBlob(stepDef.id, bulletin)
+          : fetchBulletinTemplateFile();
 
-      void load
-        .then((result) => {
-          if (!cancelled) setSlides(result);
+      void Promise.all([loadSlides, loadBlob])
+        .then(([result, blob]) => {
+          if (!cancelled) {
+            setSlides(result);
+            setPptxBlob(blob);
+          }
         })
         .catch(() => {
-          if (!cancelled) setSlides([]);
+          if (!cancelled) {
+            setSlides([]);
+            setPptxBlob(null);
+          }
         })
         .finally(() => {
           if (!cancelled) setLoading(false);
@@ -75,12 +86,12 @@ export default function BulletinPreviewPanel({ wizardStep, bulletin }: BulletinP
         <p className="bulletin-preview-panel-hint">{t('bulletin.previewHint')}</p>
       </header>
 
-      <BulletinSlidePreview
+      <BulletinCompositeSlide
         slide={currentSlide}
+        pptxBlob={pptxBlob}
         loading={loading}
         emptyLabel={t('bulletin.coverPreviewEmpty')}
         slideLabel={slideLabel}
-        editedTextLabel={stepDef?.enabled ? t('bulletin.previewEditedTexts') : undefined}
         large
       />
 
