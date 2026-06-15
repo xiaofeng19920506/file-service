@@ -23,6 +23,8 @@ const MESSAGES: Record<string, string> = {
   search_forbidden: '当前账号无法搜索诗库',
   upload_forbidden: '当前账号无法上传文件',
   download_forbidden: '请登录后再下载或预览',
+  bulletin_forbidden: '当前账号无法访问周报',
+  bulletin_db_error: '周报数据未就绪，请确认 API 已重启并完成数据库迁移',
   delete_failed: '删除失败，请稍后重试',
   login_failed: '登录失败，请稍后重试',
   invalid_credentials: '邮箱或密码错误',

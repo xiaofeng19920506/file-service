@@ -113,6 +113,20 @@
       "when": 1750262400000,
       "tag": "0015_youtube_video_daily_plays",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1750348800000,
+      "tag": "0016_weekly_bulletins",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1750435200000,
+      "tag": "0017_bulletin_verse_of_week",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,7 @@
 import { asc, desc, eq } from 'drizzle-orm';
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   blobs,
@@ -14,10 +15,20 @@ import {
 import type { FastifyInstance } from 'fastify';
 import { notifyBulletinUpdated } from './bulletin-realtime.js';
 
-const BULLETIN_TEMPLATE_DIR = join(
-  fileURLToPath(import.meta.url),
-  '../../../shared/templates/bulletin',
-);
+function resolveBulletinTemplateDir(): string {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const candidates = [
+    join(here, '../../../shared/templates/bulletin'),
+    join(process.cwd(), 'shared/templates/bulletin'),
+    join(process.cwd(), '../shared/templates/bulletin'),
+  ];
+  for (const dir of candidates) {
+    if (existsSync(join(dir, 'weekly-bulletin-template.pptx'))) return dir;
+  }
+  return candidates[0]!;
+}
+
+const BULLETIN_TEMPLATE_DIR = resolveBulletinTemplateDir();
 
 export type BulletinAnnouncementDto = {
   id: string;
@@ -164,13 +175,18 @@ export function registerBulletinRoutes(
     if (!user || !canViewBulletin(user.role)) {
       return reply.code(403).send({ error: 'bulletin_forbidden' });
     }
-    const rows = await db
-      .select()
-      .from(weeklyBulletins)
-      .orderBy(desc(weeklyBulletins.serviceDate))
-      .limit(24);
-    const bulletins = await Promise.all(rows.map((row) => mapBulletin(db, row)));
-    return reply.send({ bulletins });
+    try {
+      const rows = await db
+        .select()
+        .from(weeklyBulletins)
+        .orderBy(desc(weeklyBulletins.serviceDate))
+        .limit(24);
+      const bulletins = await Promise.all(rows.map((row) => mapBulletin(db, row)));
+      return reply.send({ bulletins });
+    } catch (err) {
+      request.log.error(err, 'list bulletins failed');
+      return reply.code(500).send({ error: 'bulletin_db_error' });
+    }
   });
 
   app.get<{ Params: { id: string } }>('/v1/bulletins/:id', async (request, reply) => {
