@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { WeeklyBulletin } from '../../api/bulletins';
 import { useI18n } from '../../i18n';
+import { nextSundayIso } from '../../lib/bulletin-date';
 import { BULLETIN_WIZARD_STEPS } from '../../lib/bulletin-template-steps';
 import BulletinPptSlidePreview from './BulletinPptSlidePreview';
 
@@ -23,9 +24,10 @@ export default function BulletinPreviewPanel({ wizardStep, bulletin }: BulletinP
   }, [stepDef, t]);
 
   const coverPatch = useMemo(() => {
-    if (stepDef?.id !== 'cover' || !bulletin.serviceDate) return undefined;
+    if (stepDef?.id !== 'cover') return undefined;
+    const serviceDate = bulletin.serviceDate || nextSundayIso();
     return {
-      serviceDate: bulletin.serviceDate,
+      serviceDate,
       serviceTime: bulletin.serviceTime || '11:00',
     };
   }, [stepDef?.id, bulletin.serviceDate, bulletin.serviceTime]);
@@ -51,7 +53,7 @@ export default function BulletinPreviewPanel({ wizardStep, bulletin }: BulletinP
       <BulletinPptSlidePreview
         slideNumber={slideNumber}
         patch={coverPatch}
-        requireDate={stepDef.id === 'cover'}
+        requireDate={false}
         emptyLabel={t('bulletin.coverPreviewEmpty')}
         slideLabel={slideLabel}
         large
