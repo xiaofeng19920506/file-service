@@ -44,7 +44,7 @@ export default function ConfirmModal({
           </button>
           <button
             type="button"
-            className={danger ? 'btn-secondary btn-danger-outline' : 'btn-primary'}
+            className={danger ? 'btn-danger-solid' : 'btn-primary'}
             onClick={onConfirm}
           >
             {confirmLabel ?? t('common.confirm')}
