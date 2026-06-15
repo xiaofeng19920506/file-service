@@ -72,3 +72,15 @@ export async function prioritizeYoutubeAudioCache(
   });
   return prioritizeInflight;
 }
+
+export async function requestYoutubeAudioExtract(
+  videoId: string,
+  title?: string,
+): Promise<YoutubeAudioStatus> {
+  const res = await apiFetch(`/v1/youtube/videos/${encodeURIComponent(videoId)}/audio/extract`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title }),
+  });
+  return parseJson<YoutubeAudioStatus>(res);
+}

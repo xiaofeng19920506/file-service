@@ -21,6 +21,7 @@ import PlaylistAudioPlayer, {
 import PlaylistDesktopAudioCenter from '../components/PlaylistDesktopAudioCenter';
 import PlaylistsMobilePlaybackDock from '../components/PlaylistsMobilePlaybackDock';
 import PlaylistQueuePanel from '../components/PlaylistQueuePanel';
+import PlaylistPlaybackOrderPanel from '../components/PlaylistPlaybackOrderPanel';
 import YoutubePlaylistPlayer from '../components/YoutubePlaylistPlayer';
 import { prioritizeYoutubeAudioCache, type YoutubeAudioStatus } from '../api/youtube-audio';
 import {
@@ -44,16 +45,12 @@ import {
   type PlaylistPlaybackMode,
 } from '../lib/playlist-playback-mode';
 import {
-  cyclePlaylistRepeatMode,
-  readPlaylistRepeatMode,
-  writePlaylistRepeatMode,
-  type PlaylistRepeatMode,
-} from '../lib/playlist-repeat-mode';
-import {
-  buildShuffleOrder,
-  readPlaylistShuffleEnabled,
-  writePlaylistShuffleEnabled,
-} from '../lib/playlist-shuffle';
+  playbackOrderToRepeatShuffle,
+  readPlaylistPlaybackOrderMode,
+  writePlaylistPlaybackOrderMode,
+  type PlaylistPlaybackOrderMode,
+} from '../lib/playlist-playback-order-mode';
+import { buildShuffleOrder } from '../lib/playlist-shuffle';
 import { useI18n } from '../i18n';
 import { usePlaylistsMobileMenu, PlaylistsMobileMenuPortal } from '../contexts/PlaylistsMobileMenuContext';
 import { useAuth } from '../auth/AuthContext';
@@ -126,7 +123,11 @@ export default function PlaylistsPage({
   const [activeIndex, setActiveIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [playerEngaged, setPlayerEngaged] = useState(false);
-  const [repeatMode, setRepeatMode] = useState<PlaylistRepeatMode>(readPlaylistRepeatMode);
+  const [playbackOrderMode, setPlaybackOrderMode] = useState(readPlaylistPlaybackOrderMode);
+  const { repeatMode, shuffleEnabled } = useMemo(
+    () => playbackOrderToRepeatShuffle(playbackOrderMode),
+    [playbackOrderMode],
+  );
   const [tracksEditMode, setTracksEditMode] = useState(false);
   const isMobileViewport = useMediaQuery(MOBILE_MEDIA_QUERY);
   const { closeMenu, setMobileHeader } = usePlaylistsMobileMenu();
@@ -165,10 +166,10 @@ export default function PlaylistsPage({
   const [renameTarget, setRenameTarget] = useState<{ id: string; title: string } | null>(null);
   const [savingRename, setSavingRename] = useState(false);
   const [playbackMode, setPlaybackMode] = useState<PlaylistPlaybackMode>(readPlaylistPlaybackMode);
-  const [shuffleEnabled, setShuffleEnabled] = useState(readPlaylistShuffleEnabled);
   const [shuffleOrder, setShuffleOrder] = useState<number[]>([]);
   const [shuffleCursor, setShuffleCursor] = useState(0);
   const [queueOpen, setQueueOpen] = useState(false);
+  const [playbackOrderOpen, setPlaybackOrderOpen] = useState(false);
   const [audioProgress, setAudioProgress] = useState<PlaylistAudioProgressState>({
     currentTime: 0,
     duration: 0,
@@ -677,13 +678,26 @@ export default function PlaylistsPage({
     openPlayerPaused(0);
   };
 
-  const toggleShuffle = () => {
-    const next = !shuffleEnabled;
-    setShuffleEnabled(next);
-    writePlaylistShuffleEnabled(next);
-    if (next && detail?.items.length) {
-      beginShuffleRound(detail.items.length, activeIndex);
-    }
+  const applyPlaybackOrderMode = useCallback(
+    (mode: PlaylistPlaybackOrderMode) => {
+      setPlaybackOrderMode(mode);
+      writePlaylistPlaybackOrderMode(mode);
+      const { shuffleEnabled: shuffle } = playbackOrderToRepeatShuffle(mode);
+      if (shuffle && detail?.items.length) {
+        beginShuffleRound(detail.items.length, activeIndex);
+      }
+    },
+    [detail?.items.length, activeIndex, beginShuffleRound],
+  );
+
+  const openPlaybackOrderPanel = () => {
+    setQueueOpen(false);
+    setPlaybackOrderOpen(true);
+  };
+
+  const openQueuePanel = () => {
+    setPlaybackOrderOpen(false);
+    setQueueOpen((open) => !open);
   };
 
   const formatDate = (iso: string) => {
@@ -921,17 +935,6 @@ export default function PlaylistsPage({
     }
   };
 
-  const cycleRepeat = () => {
-    const next = cyclePlaylistRepeatMode(repeatMode);
-    setRepeatMode(next);
-    writePlaylistRepeatMode(next);
-  };
-
-  const changeRepeatMode = (mode: PlaylistRepeatMode) => {
-    setRepeatMode(mode);
-    writePlaylistRepeatMode(mode);
-  };
-
   const toggleTracksEditMode = () => {
     setTracksEditMode((open) => {
       if (open) {
@@ -953,16 +956,15 @@ export default function PlaylistsPage({
     </button>
   );
 
-  const renderShuffleToggle = () => (
+  const renderPlaybackOrderButton = (className = 'playlists-play-order-btn') => (
     <button
       type="button"
-      className={`playlists-shuffle-btn${shuffleEnabled ? ' active' : ''}`}
-      aria-pressed={shuffleEnabled}
-      aria-label={t('playlists.shuffle')}
-      title={t('playlists.shuffle')}
-      onClick={toggleShuffle}
+      className={`${className}${playbackOrderMode !== 'sequential' ? ' active' : ''}`}
+      aria-label={t('playlists.playOrderTitle')}
+      title={t('playlists.playOrderTitle')}
+      onClick={openPlaybackOrderPanel}
     >
-      {t('playlists.shuffleShort')}
+      {t('playlists.playOrderShort')}
     </button>
   );
 
@@ -1023,11 +1025,10 @@ export default function PlaylistsPage({
         playlistTitle={detail?.playlist.title}
         variant={audioWatchMobile ? 'mobileRecord' : 'desktopDock'}
         repeatMode={repeatMode}
-        onCycleRepeat={cycleRepeat}
-        onRepeatModeChange={changeRepeatMode}
-        shuffleEnabled={shuffleEnabled}
-        onToggleShuffle={toggleShuffle}
-        onToggleQueue={() => setQueueOpen((open) => !open)}
+        playbackOrderMode={playbackOrderMode}
+        onOpenPlaybackOrder={openPlaybackOrderPanel}
+        playbackOrderOpen={playbackOrderOpen}
+        onToggleQueue={openQueuePanel}
         queueOpen={queueOpen}
         onProgressUpdate={setAudioProgress}
         progressHandleRef={audioProgressHandleRef}
@@ -1048,21 +1049,7 @@ export default function PlaylistsPage({
                 {t('playlists.playAll')}
               </button>
               {renderPlaybackModeToggle()}
-              <button
-                type="button"
-                className={`playlists-repeat-btn${repeatMode !== 'off' ? ' active' : ''}`}
-                onClick={cycleRepeat}
-                aria-label={
-                  repeatMode === 'one'
-                    ? t('playlists.repeatOne')
-                    : repeatMode === 'all'
-                      ? t('playlists.repeatAll')
-                      : t('playlists.repeatOff')
-                }
-              >
-                {repeatMode === 'one' ? '1' : repeatMode === 'all' ? '∞' : '↻'}
-              </button>
-              {renderShuffleToggle()}
+              {renderPlaybackOrderButton()}
             </>
           )}
           <button type="button" className="btn-secondary" onClick={() => setShowAddModal(true)}>
@@ -1213,28 +1200,13 @@ export default function PlaylistsPage({
             </button>
             <button
               type="button"
-              className={`nav-mobile-menu-item btn-secondary playlists-shuffle-btn${shuffleEnabled ? ' active' : ''}`}
-              aria-pressed={shuffleEnabled}
+              className={`nav-mobile-menu-item btn-secondary playlists-play-order-btn${playbackOrderMode !== 'sequential' ? ' active' : ''}`}
               onClick={() => {
-                toggleShuffle();
+                openPlaybackOrderPanel();
                 closeMenu();
               }}
             >
-              {t('playlists.shuffle')}
-            </button>
-            <button
-              type="button"
-              className={`nav-mobile-menu-item btn-secondary playlists-repeat-btn${repeatMode !== 'off' ? ' active' : ''}`}
-              onClick={() => {
-                cycleRepeat();
-                closeMenu();
-              }}
-            >
-              {repeatMode === 'one'
-                ? t('playlists.repeatOne')
-                : repeatMode === 'all'
-                  ? t('playlists.repeatAll')
-                  : t('playlists.repeatOff')}
+              {t('playlists.playOrderTitle')}
             </button>
           </>
         )}
@@ -1771,17 +1743,6 @@ export default function PlaylistsPage({
                   </div>
                 )}
                 {audioWatchDesktop && renderAudioPlayer('dock')}
-                {(audioWatchMobile || audioWatchDesktop) && detail && (
-                  <PlaylistQueuePanel
-                    open={queueOpen}
-                    onClose={() => setQueueOpen(false)}
-                    items={detail.items}
-                    activeIndex={activeIndex}
-                    playing={playing}
-                    onSelectTrack={(index) => engageAndPlay(index)}
-                    variant={audioWatchDesktop ? 'desktopDock' : 'mobile'}
-                  />
-                )}
               </div>
             ) : null}
           </section>
@@ -1900,6 +1861,28 @@ export default function PlaylistsPage({
         />
       )}
 
+      {queueOpen && detail && (
+        <PlaylistQueuePanel
+          open={queueOpen}
+          onClose={() => setQueueOpen(false)}
+          items={detail.items}
+          activeIndex={activeIndex}
+          playing={playing}
+          onSelectTrack={(index) => engageAndPlay(index)}
+          variant={audioWatchDesktop ? 'desktopDock' : 'mobile'}
+        />
+      )}
+
+      {playbackOrderOpen && (
+        <PlaylistPlaybackOrderPanel
+          open={playbackOrderOpen}
+          onClose={() => setPlaybackOrderOpen(false)}
+          mode={playbackOrderMode}
+          onSelectMode={applyPlaybackOrderMode}
+          variant={audioWatchDesktop ? 'desktopDock' : 'mobile'}
+        />
+      )}
+
       {showMobileAudioDock && homePreview && (
         <PlaylistsMobilePlaybackDock
           title={homePreview.title}
@@ -1912,10 +1895,6 @@ export default function PlaylistsPage({
           duration={audioProgress.duration}
           canSeek={audioProgress.canSeek}
           onSeekRatio={(ratio) => audioProgressHandleRef.current?.seekToRatio(ratio)}
-          shuffleEnabled={false}
-          queueOpen={false}
-          onToggleShuffle={() => {}}
-          onToggleQueue={() => {}}
           onPlayToggle={handleMobileDockPlayToggle}
           onPrev={() => {}}
           onNext={() => {}}
@@ -1937,10 +1916,11 @@ export default function PlaylistsPage({
           duration={audioProgress.duration}
           canSeek={audioProgress.canSeek}
           onSeekRatio={(ratio) => audioProgressHandleRef.current?.seekToRatio(ratio)}
-          shuffleEnabled={shuffleEnabled}
+          playbackOrderMode={playbackOrderMode}
+          playbackOrderOpen={playbackOrderOpen}
           queueOpen={queueOpen}
-          onToggleShuffle={toggleShuffle}
-          onToggleQueue={() => setQueueOpen((open) => !open)}
+          onOpenPlaybackOrder={openPlaybackOrderPanel}
+          onToggleQueue={openQueuePanel}
           onPlayToggle={handleMobileDockPlayToggle}
           onPrev={handleMobileDockPrev}
           onNext={handleMobileDockNext}

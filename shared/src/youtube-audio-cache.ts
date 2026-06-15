@@ -9,6 +9,9 @@ import { isValidYoutubeVideoId } from './youtube-audio-extract.js';
 
 export const YOUTUBE_AUDIO_QUEUE_NAME = 'youtube-audio-extract';
 
+/** processing 超过此时长且队列无活跃任务时，视为卡住并重置 */
+export const YOUTUBE_AUDIO_PROCESSING_STALE_MS = 15 * 60 * 1000;
+
 export type YoutubeAudioExtractQueue = {
   add(
     name: string,
@@ -31,6 +34,37 @@ export type YoutubeAudioExtractQueue = {
     | undefined
   >;
 };
+
+function isJobAliveInQueue(state: string): boolean {
+  return (
+    state === 'active' ||
+    state === 'waiting' ||
+    state === 'delayed' ||
+    state === 'prioritized'
+  );
+}
+
+export async function resolveProcessingJobState(
+  queue: YoutubeAudioExtractQueue,
+  videoId: string,
+): Promise<string | 'missing'> {
+  const job = await queue.getJob(`yt-audio-${videoId}`);
+  if (!job) return 'missing';
+  return job.getState();
+}
+
+export function shouldResetStuckProcessing(
+  row: YoutubeAudioCacheRow,
+  jobState: string | 'missing',
+  now = Date.now(),
+): boolean {
+  if (row.status !== 'processing') return false;
+  const ageMs = now - row.updatedAt.getTime();
+  if (isJobAliveInQueue(jobState)) {
+    return ageMs > YOUTUBE_AUDIO_PROCESSING_STALE_MS;
+  }
+  return true;
+}
 
 function priorityForOrderIndex(index: number, total: number): number {
   if (total <= 0) return 0;
@@ -130,9 +164,26 @@ export async function ensureYoutubeAudioJobs(
   for (const videoId of sortedVideoIds) {
     const title = unique.get(videoId);
     const priority = priorityByVideoId.get(videoId) ?? 0;
-    const row = existingMap.get(videoId);
+    let row = existingMap.get(videoId);
     if (row?.status === 'ready' && row.blobId) continue;
-    if (row?.status === 'processing') continue;
+
+    if (row?.status === 'processing') {
+      const jobState = await resolveProcessingJobState(queue, videoId);
+      if (!shouldResetStuckProcessing(row, jobState, now.getTime())) continue;
+      await db
+        .update(youtubeAudioCache)
+        .set({
+          status: 'failed',
+          errorCode: jobState === 'missing' ? 'job_missing' : 'processing_stale',
+          errorDetail:
+            jobState === 'missing'
+              ? 'queue job missing while cache still processing'
+              : `processing exceeded ${YOUTUBE_AUDIO_PROCESSING_STALE_MS}ms or queue state=${jobState}`,
+          updatedAt: now,
+        })
+        .where(eq(youtubeAudioCache.youtubeVideoId, videoId));
+      row = { ...row, status: 'failed' };
+    }
 
     if (!row) {
       await db.insert(youtubeAudioCache).values({

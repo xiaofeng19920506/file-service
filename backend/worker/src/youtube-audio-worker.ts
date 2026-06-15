@@ -2,7 +2,7 @@ import { readFile, rm, mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Worker } from 'bullmq';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import {
   YOUTUBE_AUDIO_QUEUE_NAME,
   bullmqConnection,
@@ -86,11 +86,38 @@ export async function startYoutubeAudioWorker(): Promise<Worker> {
     {
       connection: bullmqConnection(env.REDIS_URL),
       concurrency: env.YOUTUBE_AUDIO_WORKER_CONCURRENCY,
+      // yt-dlp 单次提取可达数分钟，默认 30s lock 会导致 job stalled
+      lockDuration: 600_000,
+      stalledInterval: 120_000,
+      maxStalledCount: 2,
     },
   );
 
-  worker.on('failed', (job, err) => {
+  worker.on('failed', async (job, err) => {
     console.error('youtube audio job failed', job?.id, err);
+    const videoId = (job?.data as { videoId?: string } | undefined)?.videoId;
+    if (!videoId) return;
+
+    const message = err instanceof Error ? err.message : String(err);
+    const errorCode = message.includes('stalled') ? 'job_stalled' : 'audio_extract_failed';
+    await db
+      .update(youtubeAudioCache)
+      .set({
+        status: 'failed',
+        errorCode,
+        errorDetail: message.slice(0, 500),
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(youtubeAudioCache.youtubeVideoId, videoId),
+          eq(youtubeAudioCache.status, 'processing'),
+        ),
+      );
+  });
+
+  worker.on('error', (err) => {
+    console.error('youtube audio worker error', err);
   });
 
   console.log(

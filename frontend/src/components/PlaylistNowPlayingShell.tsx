@@ -4,7 +4,7 @@ import PlaylistPlayerBottomChrome from './PlaylistPlayerBottomChrome';
 import ScrollingTitle from './ScrollingTitle';
 import { useI18n } from '../i18n';
 import type { PlaylistPlaybackMode } from '../lib/playlist-playback-mode';
-import type { PlaylistRepeatMode } from '../lib/playlist-repeat-mode';
+import type { PlaylistPlaybackOrderMode } from '../lib/playlist-playback-order-mode';
 
 type PlaylistNowPlayingShellProps = {
   playlistTitle: string;
@@ -13,10 +13,9 @@ type PlaylistNowPlayingShellProps = {
   trackTotal: number;
   onMinimize: () => void;
   onToggleQueue: () => void;
-  repeatMode: PlaylistRepeatMode;
-  onCycleRepeat: () => void;
-  shuffleEnabled: boolean;
-  onToggleShuffle: () => void;
+  playbackOrderMode: PlaylistPlaybackOrderMode;
+  onOpenPlaybackOrder: () => void;
+  playbackOrderOpen?: boolean;
   playbackMode: PlaylistPlaybackMode;
   onPlaybackModeChange: (mode: PlaylistPlaybackMode) => void;
   children: ReactNode;
@@ -29,10 +28,9 @@ export default function PlaylistNowPlayingShell({
   trackTotal: _trackTotal,
   onMinimize,
   onToggleQueue,
-  repeatMode,
-  onCycleRepeat,
-  shuffleEnabled,
-  onToggleShuffle,
+  playbackOrderMode,
+  onOpenPlaybackOrder,
+  playbackOrderOpen = false,
   playbackMode,
   onPlaybackModeChange,
   children,
@@ -118,10 +116,9 @@ export default function PlaylistNowPlayingShell({
       <PlaylistPlayerBottomChrome
         className="mobile-only"
         onToggleQueue={onToggleQueue}
-        repeatMode={repeatMode}
-        onCycleRepeat={onCycleRepeat}
-        shuffleEnabled={shuffleEnabled}
-        onToggleShuffle={onToggleShuffle}
+        playbackOrderMode={playbackOrderMode}
+        onOpenPlaybackOrder={onOpenPlaybackOrder}
+        playbackOrderOpen={playbackOrderOpen}
         playbackMode={playbackMode}
         onPlaybackModeChange={onPlaybackModeChange}
       />

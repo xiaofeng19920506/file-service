@@ -229,7 +229,7 @@ export function registerYoutubeAudioRoutes(
       });
 
       return reply
-        .header('Content-Type', 'application/octet-stream')
+        .header('Content-Type', 'audio/mp4')
         .header('Cache-Control', 'no-store')
         .header('Accept-Ranges', 'none')
         .send(child.stdout);

@@ -1,8 +1,9 @@
 import AudioSeekBar from './AudioSeekBar';
-import { QueueIcon, ShuffleIcon } from './icons';
+import { PlaybackOrderModeIcon, QueueIcon } from './icons';
 import { formatPlaybackTime } from './PlaylistAudioPlayer';
 import { useI18n } from '../i18n';
 import ScrollingTitle from './ScrollingTitle';
+import type { PlaylistPlaybackOrderMode } from '../lib/playlist-playback-order-mode';
 
 type PlaylistsMobilePlaybackDockProps = {
   title: string;
@@ -14,10 +15,11 @@ type PlaylistsMobilePlaybackDockProps = {
   currentTime?: number;
   duration?: number;
   canSeek?: boolean;
-  shuffleEnabled?: boolean;
+  playbackOrderMode?: PlaylistPlaybackOrderMode;
+  playbackOrderOpen?: boolean;
   queueOpen?: boolean;
   onSeekRatio?: (ratio: number) => void;
-  onToggleShuffle?: () => void;
+  onOpenPlaybackOrder?: () => void;
   onToggleQueue?: () => void;
   onPlayToggle: () => void;
   onPrev: () => void;
@@ -34,10 +36,11 @@ export default function PlaylistsMobilePlaybackDock({
   currentTime = 0,
   duration = 0,
   canSeek = false,
-  shuffleEnabled = false,
+  playbackOrderMode = 'sequential',
+  playbackOrderOpen = false,
   queueOpen = false,
   onSeekRatio,
-  onToggleShuffle,
+  onOpenPlaybackOrder,
   onToggleQueue,
   onPlayToggle,
   onPrev,
@@ -116,24 +119,28 @@ export default function PlaylistsMobilePlaybackDock({
         </div>
 
         <div className="playlists-playback-dock-secondary">
-          <button
-            type="button"
-            className={`playlists-playback-dock-secondary-btn${shuffleEnabled ? ' active' : ''}`}
-            aria-label={t('playlists.shuffle')}
-            aria-pressed={shuffleEnabled}
-            onClick={onToggleShuffle}
-          >
-            <ShuffleIcon />
-          </button>
-          <button
-            type="button"
-            className={`playlists-playback-dock-secondary-btn${queueOpen ? ' active' : ''}`}
-            aria-label={t('playlists.queueTitle')}
-            aria-pressed={queueOpen}
-            onClick={onToggleQueue}
-          >
-            <QueueIcon />
-          </button>
+          {onOpenPlaybackOrder ? (
+            <button
+              type="button"
+              className={`playlists-playback-dock-secondary-btn${playbackOrderMode !== 'sequential' || playbackOrderOpen ? ' active' : ''}`}
+              aria-label={t('playlists.playOrderTitle')}
+              aria-pressed={playbackOrderOpen}
+              onClick={onOpenPlaybackOrder}
+            >
+              <PlaybackOrderModeIcon mode={playbackOrderMode} />
+            </button>
+          ) : null}
+          {onToggleQueue ? (
+            <button
+              type="button"
+              className={`playlists-playback-dock-secondary-btn${queueOpen ? ' active' : ''}`}
+              aria-label={t('playlists.queueTitle')}
+              aria-pressed={queueOpen}
+              onClick={onToggleQueue}
+            >
+              <QueueIcon />
+            </button>
+          ) : null}
         </div>
       </div>
     </div>

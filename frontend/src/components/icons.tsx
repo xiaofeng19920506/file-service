@@ -213,3 +213,23 @@ export function RepeatIcon({ mode }: { mode: 'off' | 'all' | 'one' }) {
     </svg>
   );
 }
+
+export function ListPlayIcon() {
+  return (
+    <svg className="player-chrome-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+      <path d="M8 5v14l11-7L8 5z" fill="currentColor" stroke="none" />
+      <path d="M4 7h.01M4 12h.01M4 17h.01" strokeLinecap="round" strokeWidth="3" />
+    </svg>
+  );
+}
+
+export function PlaybackOrderModeIcon({
+  mode,
+}: {
+  mode: 'sequential' | 'loop_all' | 'loop_one' | 'shuffle';
+}) {
+  if (mode === 'shuffle') return <ShuffleIcon />;
+  if (mode === 'loop_one') return <RepeatIcon mode="one" />;
+  if (mode === 'loop_all') return <RepeatIcon mode="all" />;
+  return <ListPlayIcon />;
+}

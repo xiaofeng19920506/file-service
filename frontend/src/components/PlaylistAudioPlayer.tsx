@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import { getYoutubeAudioStatus, getYoutubeAudioStreamUrl } from '../api/youtube-audio';
+import { getYoutubeAudioStatus, getYoutubeAudioStreamUrl, requestYoutubeAudioExtract } from '../api/youtube-audio';
 import type { YoutubeAudioStatus } from '../api/youtube-audio';
 import {
   fetchVideoCaptions,
@@ -19,8 +19,8 @@ import {
 } from '../lib/player-volume';
 import { useMediaSession } from '../hooks/useMediaSession';
 import { useSwipeTrackNavigation } from '../hooks/useSwipeTrackNavigation';
-import type { PlaylistRepeatMode } from '../lib/playlist-repeat-mode';
-import { PlaybackMoreIcon, QueueIcon, RepeatIcon, ShuffleIcon } from './icons';
+import type { PlaylistPlaybackOrderMode } from '../lib/playlist-playback-order-mode';
+import { PlaybackOrderModeIcon, QueueIcon } from './icons';
 import AudioSeekBar from './AudioSeekBar';
 import ScrollingTitle from './ScrollingTitle';
 
@@ -48,11 +48,10 @@ type PlaylistAudioPlayerProps = {
   variant?: 'default' | 'nowPlaying' | 'youtubeWatch' | 'desktopDock' | 'mobileRecord';
   /** 手机 YouTube 式页内布局（与视频播放器一致） */
   mobileInline?: boolean;
-  repeatMode?: PlaylistRepeatMode;
-  onCycleRepeat?: () => void;
-  onRepeatModeChange?: (mode: PlaylistRepeatMode) => void;
-  shuffleEnabled?: boolean;
-  onToggleShuffle?: () => void;
+  repeatMode?: import('../lib/playlist-repeat-mode').PlaylistRepeatMode;
+  playbackOrderMode?: PlaylistPlaybackOrderMode;
+  onOpenPlaybackOrder?: () => void;
+  playbackOrderOpen?: boolean;
   onToggleQueue?: () => void;
   queueOpen?: boolean;
 };
@@ -148,10 +147,9 @@ export default function PlaylistAudioPlayer({
   variant = 'default',
   mobileInline = false,
   repeatMode = 'off',
-  onCycleRepeat,
-  onRepeatModeChange,
-  shuffleEnabled = false,
-  onToggleShuffle,
+  playbackOrderMode = 'sequential',
+  onOpenPlaybackOrder,
+  playbackOrderOpen = false,
   onToggleQueue,
   queueOpen = false,
 }: PlaylistAudioPlayerProps) {
@@ -163,8 +161,6 @@ export default function PlaylistAudioPlayer({
   const audioRef = useRef<HTMLAudioElement>(null);
   const mobileSwipeRef = useRef<HTMLElement>(null);
   const volumeProgressRef = useRef<HTMLDivElement>(null);
-  const mobileOptionsRef = useRef<HTMLDivElement>(null);
-  const [mobileOptionsOpen, setMobileOptionsOpen] = useState(false);
   const wantPlayRef = useRef(playing);
   const skipPauseSyncRef = useRef(false);
   const endedHandledRef = useRef(false);
@@ -222,21 +218,6 @@ export default function PlaylistAudioPlayer({
     const activeLine = panel.querySelector<HTMLElement>('[data-active="true"]');
     activeLine?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }, [currentTime, captionCues]);
-
-  useEffect(() => {
-    if (!mobileOptionsOpen) return;
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!mobileOptionsRef.current?.contains(event.target as Node)) {
-        setMobileOptionsOpen(false);
-      }
-    };
-    document.addEventListener('pointerdown', handlePointerDown);
-    return () => document.removeEventListener('pointerdown', handlePointerDown);
-  }, [mobileOptionsOpen]);
-
-  useEffect(() => {
-    if (queueOpen) setMobileOptionsOpen(false);
-  }, [queueOpen]);
 
   const refreshAudioStatus = useCallback(
     async (videoId: string) => {
@@ -367,15 +348,31 @@ export default function PlaylistAudioPlayer({
 
     void (async () => {
       try {
-        const status = (await refreshAudioStatus(videoId)) ?? audioStatus;
+        let status = (await refreshAudioStatus(videoId)) ?? audioStatus;
         if (!status || cancelled) {
           if (!cancelled) setLoadingStream(false);
           return;
         }
 
+        if (status.status === 'failed') {
+          try {
+            status = await requestYoutubeAudioExtract(videoId, current?.title);
+            onAudioStatusChange?.(videoId, status);
+          } catch {
+            /* 仍尝试 preview */
+          }
+        }
+
         const picked = await pickStreamFromStatus(videoId, status);
         if (!picked || cancelled) {
-          if (!cancelled) setLoadingStream(false);
+          if (!cancelled) {
+            if (status.status === 'failed') {
+              setPlayerError(
+                friendlyError(status.errorCode ?? 'audio_extract_failed', t),
+              );
+            }
+            setLoadingStream(false);
+          }
           return;
         }
 
@@ -760,6 +757,11 @@ export default function PlaylistAudioPlayer({
     [advanceToNextTrack, replayCurrentTrackStream, onPlayingChange],
   );
 
+  const handleAudioError = useCallback(() => {
+    setPlayerError(friendlyError('audio_playback_failed', t));
+    onPlayingChange(false);
+  }, [onPlayingChange, t]);
+
   const goNext = useCallback(() => {
     skipPauseSyncRef.current = true;
     if (onNextTrack) {
@@ -842,12 +844,28 @@ export default function PlaylistAudioPlayer({
   if (!current) return null;
 
   const artworkUrl = youtubeThumb(current.youtubeVideoId);
-  const repeatLabel =
-    repeatMode === 'one'
+  const playbackOrderLabel =
+    playbackOrderMode === 'loop_one'
       ? t('playlists.repeatOne')
-      : repeatMode === 'all'
+      : playbackOrderMode === 'loop_all'
         ? t('playlists.repeatAll')
-        : t('playlists.repeatOff');
+        : playbackOrderMode === 'shuffle'
+          ? t('playlists.shuffle')
+          : t('playlists.playOrderSequential');
+
+  const playbackOrderButton =
+    onOpenPlaybackOrder != null ? (
+      <button
+        type="button"
+        className={`playlist-np-icon-btn playlist-np-play-order-btn${playbackOrderMode !== 'sequential' || playbackOrderOpen ? ' active' : ''}`}
+        onClick={onOpenPlaybackOrder}
+        aria-label={t('playlists.playOrderTitle')}
+        aria-pressed={playbackOrderOpen}
+        title={playbackOrderLabel}
+      >
+        <PlaybackOrderModeIcon mode={playbackOrderMode} />
+      </button>
+    ) : null;
 
   const langSwitch = (
     <div className="audio-lang-switch" role="group" aria-label={t('playlists.subtitleLanguage')}>
@@ -1058,6 +1076,7 @@ export default function PlaylistAudioPlayer({
             onPlayingChange(true);
           }}
           onPause={handlePause}
+          onError={handleAudioError}
         />
 
         {(isProcessing || playerError || audioStatus?.status === 'failed') && (
@@ -1116,35 +1135,7 @@ export default function PlaylistAudioPlayer({
     </div>
   );
 
-  const mobilePlaybackOptionsActive = shuffleEnabled || repeatMode !== 'off';
-
-  const shuffleRepeatControls = isNowPlaying || isDesktopDock || isMobileRecord ? (
-    <div
-      className="playlist-np-secondary"
-      role="group"
-      aria-label={t('playlists.playbackOptions')}
-    >
-      <button
-        type="button"
-        className={`playlist-np-icon-btn${shuffleEnabled ? ' active' : ''}`}
-        onClick={onToggleShuffle}
-        aria-pressed={shuffleEnabled}
-        aria-label={t('playlists.shuffle')}
-        title={t('playlists.shuffle')}
-      >
-        <ShuffleIcon />
-      </button>
-      <button
-        type="button"
-        className={`playlist-np-icon-btn${repeatMode !== 'off' ? ' active' : ''}`}
-        onClick={onCycleRepeat}
-        aria-label={repeatLabel}
-        title={repeatLabel}
-      >
-        <RepeatIcon mode={repeatMode} />
-      </button>
-    </div>
-  ) : null;
+  const shuffleRepeatControls = isNowPlaying || isDesktopDock || isMobileRecord ? playbackOrderButton : null;
 
   const audioElement = (
     <audio
@@ -1166,6 +1157,7 @@ export default function PlaylistAudioPlayer({
         onPlayingChange(true);
       }}
       onPause={handlePause}
+      onError={handleAudioError}
     />
   );
 
@@ -1288,6 +1280,7 @@ export default function PlaylistAudioPlayer({
           onPlayingChange(true);
         }}
         onPause={handlePause}
+        onError={handleAudioError}
       />
 
       <div className={`playlist-audio-controls${isNowPlaying ? ' playlist-np-info-col' : ''}`}>
@@ -1388,6 +1381,10 @@ export default function PlaylistAudioPlayer({
             </div>
 
             <div className="playlist-np-controls-row">
+              {playbackOrderButton}
+
+              <div className="playlist-np-transport-wrap">{transportControls}</div>
+
               <button
                 type="button"
                 className={`playlist-np-dock-corner-btn${queueOpen ? ' active' : ''}`}
@@ -1397,64 +1394,6 @@ export default function PlaylistAudioPlayer({
               >
                 <QueueIcon />
               </button>
-
-              <div className="playlist-np-transport-wrap">{transportControls}</div>
-
-              <div className="playlist-np-options-wrap" ref={mobileOptionsRef}>
-                <button
-                  type="button"
-                  className={`playlist-np-dock-corner-btn${mobilePlaybackOptionsActive ? ' active' : ''}`}
-                  onClick={() => setMobileOptionsOpen((open) => !open)}
-                  aria-label={t('playlists.playbackOptions')}
-                  aria-expanded={mobileOptionsOpen}
-                  aria-haspopup="menu"
-                >
-                  <PlaybackMoreIcon />
-                </button>
-                {mobileOptionsOpen && (
-                  <div className="playlist-np-options-menu" role="menu">
-                    <button
-                      type="button"
-                      role="menuitemradio"
-                      aria-checked={repeatMode === 'all'}
-                      className={`playlist-np-options-item${repeatMode === 'all' ? ' active' : ''}`}
-                      onClick={() => {
-                        onRepeatModeChange?.(repeatMode === 'all' ? 'off' : 'all');
-                        setMobileOptionsOpen(false);
-                      }}
-                    >
-                      <RepeatIcon mode="all" />
-                      <span>{t('playlists.repeatAll')}</span>
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitemradio"
-                      aria-checked={repeatMode === 'one'}
-                      className={`playlist-np-options-item${repeatMode === 'one' ? ' active' : ''}`}
-                      onClick={() => {
-                        onRepeatModeChange?.(repeatMode === 'one' ? 'off' : 'one');
-                        setMobileOptionsOpen(false);
-                      }}
-                    >
-                      <RepeatIcon mode="one" />
-                      <span>{t('playlists.repeatOne')}</span>
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitemcheckbox"
-                      aria-checked={shuffleEnabled}
-                      className={`playlist-np-options-item${shuffleEnabled ? ' active' : ''}`}
-                      onClick={() => {
-                        onToggleShuffle?.();
-                        setMobileOptionsOpen(false);
-                      }}
-                    >
-                      <ShuffleIcon />
-                      <span>{t('playlists.shuffle')}</span>
-                    </button>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         </div>

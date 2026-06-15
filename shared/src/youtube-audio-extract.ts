@@ -76,7 +76,7 @@ export function spawnYoutubeAudioPreviewStream(
     resolveYtdlpPath(ytdlpPath),
     [
       '-f',
-      'ba/b',
+      'ba[ext=m4a]/ba[ext=mp3]/ba/b',
       '--no-playlist',
       '--no-warnings',
       '--no-part',
