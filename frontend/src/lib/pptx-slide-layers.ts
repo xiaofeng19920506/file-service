@@ -179,8 +179,11 @@ function extractTextContent(
       if (t === undefined) continue;
       const text = decodeXmlEntities(t);
       if (!text && !/\s/.test(t)) continue;
-      const rPr = rXml.match(/<a:rPr([^>]*)>/)?.[1] ?? rXml.match(/<a:rPr([^/]*)\/>/)?.[1] ?? '';
-      runs.push({ text, ...extractRunStyle(`<a:rPr${rPr}>`, schemeColors) });
+      const rPrXml =
+        rXml.match(/<a:rPr[^>]*>[\s\S]*?<\/a:rPr>/)?.[0]
+        ?? rXml.match(/<a:rPr[^/]*\/>/)?.[0]
+        ?? '<a:rPr/>';
+      runs.push({ text, ...extractRunStyle(rPrXml, schemeColors) });
     }
 
     if (runs.length) {
