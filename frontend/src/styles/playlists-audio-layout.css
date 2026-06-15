@@ -518,6 +518,16 @@
     font-size: 0.875rem;
     line-height: 1.5;
     color: var(--text-secondary);
+    border: none;
+    background: transparent;
+    width: 100%;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .playlist-lyrics-scroller--tappable {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
   }
 
   .playlist-audio-record-now-lyric:not(:empty) {

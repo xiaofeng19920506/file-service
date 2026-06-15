@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useI18n } from '../i18n';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 
 const ACTION_WIDTH_PX = 76;
 const DRAG_CLICK_THRESHOLD_PX = 6;
@@ -31,6 +32,7 @@ export default function PlaylistListSwipeRow({
   deleteBusy = false,
 }: PlaylistListSwipeRowProps) {
   const { t } = useI18n();
+  const swipeEnabled = useMediaQuery('(pointer: coarse)');
   const [offset, setOffset] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [contentWidth, setContentWidth] = useState(0);
@@ -163,6 +165,17 @@ export default function PlaylistListSwipeRow({
   const stopActionPointer = (e: React.PointerEvent<HTMLButtonElement>) => {
     e.stopPropagation();
   };
+
+  if (!swipeEnabled) {
+    return (
+      <button type="button" className="playlists-list-item" onClick={() => onSelect()}>
+        <span className="playlists-list-item-body">
+          <span className="playlists-list-title">{title}</span>
+          <span className="playlists-list-meta">{meta}</span>
+        </span>
+      </button>
+    );
+  }
 
   return (
     <div className="playlists-list-swipe" ref={rootRef}>

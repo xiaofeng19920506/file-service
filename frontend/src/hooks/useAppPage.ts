@@ -132,9 +132,8 @@ export function useAppPage() {
       window.location.hash = hash;
     }
     const next = routeFromHash(hash);
-    if (isMobile) {
-      next.playlistId = id;
-    }
+    // 始终以显式选择同步 state，避免 routeFromHash 与 navigate 的视口判断不一致
+    next.playlistId = id;
     setRoute(next);
   }, []);
 

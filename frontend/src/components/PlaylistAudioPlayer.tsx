@@ -1221,6 +1221,7 @@ export default function PlaylistAudioPlayer({
                 emptyMessage={t('playlists.noLyricsYet')}
                 className="playlist-audio-record-lyrics-scroller"
                 panelRef={lyricsPanelRef}
+                onTap={() => setShowLyrics(false)}
               />
             </div>
           ) : (
@@ -1237,12 +1238,17 @@ export default function PlaylistAudioPlayer({
         </div>
 
         {!showLyrics && (
-          <p className="playlist-audio-record-now-lyric" aria-live="polite">
+          <button
+            type="button"
+            className="playlist-audio-record-now-lyric"
+            onClick={() => setShowLyrics(true)}
+            aria-label={t('playlists.showLyrics')}
+          >
             {lyricsLoading
               ? t('playlists.loadingLyrics')
               : activeCaption ??
                 (captionCues.length > 0 ? '\u00a0' : t('playlists.tapCdForLyrics'))}
-          </p>
+          </button>
         )}
 
         {statusMessages}
