@@ -15,6 +15,7 @@ import SharePlaylistModal from '../components/SharePlaylistModal';
 import ExportYoutubePlaylistModal from '../components/ExportYoutubePlaylistModal';
 import { DragHandleIcon, PlusIcon } from '../components/icons';
 import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
+import { useSortableVerticalList } from '../hooks/useSortableVerticalList';
 import PlaylistAudioPlayer, {
   type PlaylistAudioProgressHandle,
   type PlaylistAudioProgressState,
@@ -36,7 +37,6 @@ import {
   removePlaylistItem,
   updatePlaylist,
   type PlaylistDetail,
-  type PlaylistItem,
   type PlaylistSummary,
 } from '../api/playlists';
 import { friendlyError } from '../lib/error-messages';
@@ -72,8 +72,6 @@ function youtubeThumb(videoId: string): string {
   return `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
 }
 
-type TrackDragOver = { index: number; after: boolean };
-
 function remapActiveIndex(active: number, from: number, to: number): number {
   if (active === from) return to;
   if (from < to) {
@@ -84,13 +82,12 @@ function remapActiveIndex(active: number, from: number, to: number): number {
   return active;
 }
 
-function reorderTrackItems(items: PlaylistItem[], from: number, target: TrackDragOver): PlaylistItem[] {
-  let to = target.after ? target.index + 1 : target.index;
-  if (from < to) to -= 1;
-  if (from === to || from < 0 || to < 0 || from >= items.length) return items;
+function reorderToFinalIndex<T>(items: T[], from: number, toIndex: number): T[] {
+  if (from === toIndex || from < 0 || toIndex < 0 || from >= items.length) return items;
   const next = [...items];
   const [moved] = next.splice(from, 1);
-  next.splice(to, 0, moved!);
+  const clampedTo = Math.max(0, Math.min(toIndex, next.length));
+  next.splice(clampedTo, 0, moved!);
   return next;
 }
 
@@ -154,14 +151,13 @@ export default function PlaylistsPage({
   } | null>(null);
   const [oauthJustConnected, setOauthJustConnected] = useState(false);
   const oauthHandledRef = useRef(false);
-  const [trackDragIndex, setTrackDragIndex] = useState<number | null>(null);
-  const [trackDragOver, setTrackDragOver] = useState<TrackDragOver | null>(null);
+  const [trackSwipeOpenId, setTrackSwipeOpenId] = useState<string | null>(null);
+  const tracksListRef = useRef<HTMLOListElement>(null);
   const [savingOrder, setSavingOrder] = useState(false);
   const [listSwipeOpen, setListSwipeOpen] = useState<{
     id: string;
     side: Exclude<PlaylistListSwipeSide, 'none'>;
   } | null>(null);
-  const [trackSwipeOpenId, setTrackSwipeOpenId] = useState<string | null>(null);
   const [removeTrackTarget, setRemoveTrackTarget] = useState<{ id: string; title: string } | null>(
     null,
   );
@@ -315,8 +311,6 @@ export default function PlaylistsPage({
     }
     setShuffleOrder([]);
     setShuffleCursor(0);
-    setTrackDragIndex(null);
-    setTrackDragOver(null);
   }, [selectedId, loadDetail]);
 
   const backToList = useCallback(() => {
@@ -474,38 +468,55 @@ export default function PlaylistsPage({
     }
   };
 
-  const applyTrackReorder = async (from: number, target: TrackDragOver) => {
-    if (!selectedId || !detail || savingOrder) return;
+  const applyTrackReorderByIndex = useCallback(
+    async (from: number, toIndex: number) => {
+      if (!selectedId || !detail || savingOrder || from === toIndex) return;
 
-    let to = target.after ? target.index + 1 : target.index;
-    if (from < to) to -= 1;
-    if (from === to) return;
+      const reordered = reorderToFinalIndex(detail.items, from, toIndex);
+      const previousItems = detail.items;
+      const previousActive = activeIndex;
 
-    const reordered = reorderTrackItems(detail.items, from, target);
-    const previousItems = detail.items;
-    const previousActive = activeIndex;
+      setDetail({ ...detail, items: reordered });
+      setActiveIndex(remapActiveIndex(activeIndex, from, toIndex));
+      setSavingOrder(true);
+      setError(null);
 
-    setDetail({ ...detail, items: reordered });
-    setActiveIndex(remapActiveIndex(activeIndex, from, to));
-    setSavingOrder(true);
-    setError(null);
+      try {
+        const data = await reorderPlaylistItems(
+          selectedId,
+          reordered.map((item) => item.id),
+        );
+        setDetail(data);
+        setActiveIndex(remapActiveIndex(previousActive, from, toIndex));
+        await loadList();
+      } catch (e) {
+        setDetail({ ...detail, items: previousItems });
+        setActiveIndex(previousActive);
+        setError(friendlyError(e instanceof Error ? e.message : 'reorder_playlist_failed', t));
+      } finally {
+        setSavingOrder(false);
+      }
+    },
+    [activeIndex, detail, loadList, savingOrder, selectedId, t],
+  );
 
-    try {
-      const data = await reorderPlaylistItems(
-        selectedId,
-        reordered.map((item) => item.id),
-      );
-      setDetail(data);
-      setActiveIndex(remapActiveIndex(previousActive, from, to));
-      await loadList();
-    } catch (e) {
-      setDetail({ ...detail, items: previousItems });
-      setActiveIndex(previousActive);
-      setError(friendlyError(e instanceof Error ? e.message : 'reorder_playlist_failed', t));
-    } finally {
-      setSavingOrder(false);
-    }
-  };
+  const commitTrackReorder = useCallback(
+    (from: number, toIndex: number) => {
+      void applyTrackReorderByIndex(from, toIndex);
+    },
+    [applyTrackReorderByIndex],
+  );
+
+  const trackSortableEnabled =
+    Boolean(detail?.items.length) &&
+    !savingOrder &&
+    (!isMobileViewport || tracksEditMode);
+
+  const trackSortable = useSortableVerticalList({
+    enabled: trackSortableEnabled,
+    listRef: tracksListRef,
+    onCommit: commitTrackReorder,
+  });
 
   const handleRemoveItem = async (itemId: string) => {
     if (!selectedId || removingItemId) return;
@@ -953,13 +964,7 @@ export default function PlaylistsPage({
   };
 
   const toggleTracksEditMode = () => {
-    setTracksEditMode((open) => {
-      if (open) {
-        setTrackDragIndex(null);
-        setTrackDragOver(null);
-      }
-      return !open;
-    });
+    setTracksEditMode((open) => !open);
   };
 
   const renderPlaybackOrderButton = (className = 'playlists-play-order-btn') => (
@@ -1637,44 +1642,21 @@ export default function PlaylistsPage({
                             : t('playlists.tracksTitle')}
                         </h3>
                       </div>
-                      <ol className={`playlists-tracks${savingOrder ? ' saving-order' : ''}`}>
+                      <ol
+                        ref={tracksListRef}
+                        className={`playlists-tracks${savingOrder ? ' saving-order' : ''}${trackSortable.isSorting ? ' is-sorting' : ''}`}
+                      >
                         {detail.items.map((item, index) => {
                           const isActive = index === activeIndex;
                           const isPlaying = isActive && playing;
-                          const isDragging = trackDragIndex === index;
-                          const isDragOverBefore =
-                            trackDragOver?.index === index && !trackDragOver.after;
-                          const isDragOverAfter =
-                            trackDragOver?.index === index && trackDragOver.after;
                           const useTrackSwipe = isMobileViewport && !tracksEditMode;
                           const desktopTrackChrome = !isMobileViewport;
                           const canDragReorder = tracksEditMode || desktopTrackChrome;
                           return (
                             <li
                               key={item.id}
-                              className={`playlists-track${isActive ? ' active' : ''}${isPlaying ? ' playing' : ''}${isDragging ? ' dragging' : ''}${isDragOverBefore ? ' drag-over-before' : ''}${isDragOverAfter ? ' drag-over-after' : ''}`}
-                              onDragOver={(e) => {
-                                if (!canDragReorder || trackDragIndex === null || savingOrder) return;
-                                e.preventDefault();
-                                e.dataTransfer.dropEffect = 'move';
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                const after = e.clientY > rect.top + rect.height / 2;
-                                setTrackDragOver({ index, after });
-                              }}
-                              onDrop={(e) => {
-                                e.preventDefault();
-                                if (!canDragReorder || trackDragIndex === null || !trackDragOver) return;
-                                void applyTrackReorder(trackDragIndex, trackDragOver);
-                                setTrackDragIndex(null);
-                                setTrackDragOver(null);
-                              }}
-                              onDragLeave={(e) => {
-                                if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-                                  setTrackDragOver((prev) =>
-                                    prev?.index === index ? null : prev,
-                                  );
-                                }
-                              }}
+                              className={`playlists-track${isActive ? ' active' : ''}${isPlaying ? ' playing' : ''}${trackSortable.isDraggingItem(index) ? ' is-sortable-dragging' : ''}`}
+                              style={canDragReorder ? trackSortable.getItemStyle(index) : undefined}
                             >
                               {useTrackSwipe ? (
                                 <PlaylistTrackSwipeRow
@@ -1698,19 +1680,7 @@ export default function PlaylistsPage({
                                 <span
                                   className={`playlists-track-drag-handle${savingOrder ? ' disabled' : ''}${desktopTrackChrome ? ' playlists-track-drag-handle--desktop' : ''}`}
                                   title={t('playlists.dragToReorder')}
-                                  draggable={!savingOrder}
-                                  onDragStart={(e) => {
-                                    if (savingOrder) {
-                                      e.preventDefault();
-                                      return;
-                                    }
-                                    e.dataTransfer.effectAllowed = 'move';
-                                    setTrackDragIndex(index);
-                                  }}
-                                  onDragEnd={() => {
-                                    setTrackDragIndex(null);
-                                    setTrackDragOver(null);
-                                  }}
+                                  {...trackSortable.bindDragHandle(index)}
                                 >
                                   <DragHandleIcon />
                                 </span>
