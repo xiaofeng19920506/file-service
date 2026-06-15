@@ -5,15 +5,16 @@ const SLIDE_CY = 6858000;
 
 const FALLBACK_SCHEME: Record<string, string> = {
   accent6: '#F8E71C',
-  lt2: '#F3F3F3',
+  lt2: '#BFC7CA',
   dk1: '#FFFFFF',
+  dk2: '#1E2D31',
   bg1: '#FFFFFF',
-  tx1: '#000000',
+  tx1: '#1E2D31',
 };
 
 export type SlideTextRun = {
   text: string;
-  color?: string;
+  color: string;
   bold?: boolean;
   fontSizePt?: number;
   fontFamily?: string;
@@ -31,14 +32,6 @@ export type SlideVisualLayer =
       url: string;
     }
   | {
-      kind: 'fill';
-      color: string;
-      left: number;
-      top: number;
-      width: number;
-      height: number;
-    }
-  | {
       kind: 'image';
       url: string;
       left: number;
@@ -47,7 +40,8 @@ export type SlideVisualLayer =
       height: number;
     }
   | {
-      kind: 'text';
+      kind: 'shape';
+      fill?: string;
       paragraphs: SlideTextParagraph[];
       left: number;
       top: number;
@@ -114,7 +108,6 @@ function resolveSchemeColor(schemeColors: Record<string, string>, schemeName: st
   return schemeColors[schemeName] ?? FALLBACK_SCHEME[schemeName] ?? null;
 }
 
-/** 仅读取形状底色（p:spPr），不混入文字 run 颜色 */
 function extractShapeFillColor(chunk: string, schemeColors: Record<string, string>): string | null {
   const spPr = chunk.match(/<p:spPr>([\s\S]*?)<\/p:spPr>/)?.[1];
   if (!spPr || !spPr.includes('<a:solidFill>')) return null;
@@ -143,7 +136,12 @@ function extractRunStyle(
   const ea = rPrXml.match(/<a:ea typeface="([^"]+)"/)?.[1];
   const latin = rPrXml.match(/<a:latin typeface="([^"]+)"/)?.[1];
   const fontFamily = ea || latin;
-  return { color, bold, fontSizePt, fontFamily };
+  return {
+    color: color ?? schemeColors.tx1 ?? schemeColors.dk2 ?? '#1E2D31',
+    bold,
+    fontSizePt,
+    fontFamily,
+  };
 }
 
 function extractTextContent(
@@ -181,7 +179,7 @@ function extractTextContent(
       if (t === undefined) continue;
       const text = decodeXmlEntities(t);
       if (!text && !/\s/.test(t)) continue;
-      const rPr = rXml.match(/<a:rPr([^>]*)>/)?.[1] ?? '';
+      const rPr = rXml.match(/<a:rPr([^>]*)>/)?.[1] ?? rXml.match(/<a:rPr([^/]*)\/>/)?.[1] ?? '';
       runs.push({ text, ...extractRunStyle(`<a:rPr${rPr}>`, schemeColors) });
     }
 
@@ -216,7 +214,7 @@ async function mediaToUrl(zip: JSZip, mediaPath: string): Promise<string | null>
   return URL.createObjectURL(blob);
 }
 
-function autoFitScale(layer: Extract<SlideVisualLayer, { kind: 'text' }>): number {
+export function autoFitScale(layer: Extract<SlideVisualLayer, { kind: 'shape' }>): number {
   if (!layer.autoFit || !layer.paragraphs.length) return 1;
   const slideHeightPt = (SLIDE_CY / 914400) * 72;
   const boxHeightPt = (layer.height / 100) * slideHeightPt;
@@ -229,9 +227,7 @@ function autoFitScale(layer: Extract<SlideVisualLayer, { kind: 'text' }>): numbe
   return Math.min(1, (boxHeightPt / contentPt) * 0.92);
 }
 
-export { autoFitScale };
-
-/** 按原版 PPT 图层顺序解析幻灯片（背景、色块、文字、图片） */
+/** 按原版 PPT 图层顺序解析幻灯片（背景、形状、图片） */
 export async function parseSlideVisualLayers(
   zip: JSZip,
   slidePath: string,
@@ -273,18 +269,16 @@ export async function parseSlideVisualLayers(
       continue;
     }
 
-    const fill = extractShapeFillColor(chunk, schemeColors);
+    const fill = extractShapeFillColor(chunk, schemeColors) ?? undefined;
     const hasText = chunk.includes('<p:txBody>');
-
-    if (fill) {
-      layers.push({ kind: 'fill', color: fill, ...box });
-    }
 
     if (hasText) {
       const text = extractTextContent(chunk, schemeColors);
       if (text.paragraphs.length) {
-        layers.push({ kind: 'text', ...box, ...text });
+        layers.push({ kind: 'shape', fill, ...box, ...text });
       }
+    } else if (fill) {
+      layers.push({ kind: 'shape', fill, paragraphs: [], ...box, valign: 'top' });
     }
   }
 

@@ -6513,6 +6513,7 @@
 
 .bulletin-composite-slide {
   background: #fff;
+  color: #1e2d31;
   container-type: size;
 }
 
@@ -6525,18 +6526,13 @@
   display: block;
 }
 
-.bulletin-composite-fill {
-  position: absolute;
-  pointer-events: none;
-}
-
 .bulletin-composite-image {
   position: absolute;
   object-fit: contain;
   pointer-events: none;
 }
 
-.bulletin-composite-text {
+.bulletin-composite-shape {
   position: absolute;
   overflow: hidden;
   display: flex;
@@ -6545,21 +6541,30 @@
   line-height: 1.1;
   pointer-events: none;
   box-sizing: border-box;
-  padding: 0.1em 0.3em;
-  contain: layout paint;
+  padding: 0.1em 0.35em;
 }
 
-.bulletin-composite-text--middle {
+.bulletin-composite-shape--middle {
   justify-content: center;
 }
 
-.bulletin-composite-text--bottom {
+.bulletin-composite-shape--bottom {
   justify-content: flex-end;
 }
 
-.bulletin-composite-text--band {
-  padding: 0 0.4em;
+.bulletin-composite-shape--header {
+  padding: 0 0.5em;
+}
+
+.bulletin-composite-shape--footer {
+  padding: 0 0.45em;
   line-height: 1.05;
+  justify-content: center;
+}
+
+.bulletin-composite-text,
+.bulletin-composite-shape {
+  contain: layout paint;
 }
 
 .bulletin-composite-text p,

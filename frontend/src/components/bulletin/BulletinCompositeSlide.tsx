@@ -17,18 +17,15 @@ type BulletinCompositeSlideProps = {
   large?: boolean;
 };
 
-function runFontSizeCqh(
+/** 按 PPT pt 与幻灯片宽度比例换算字号（10" 宽 = 720pt） */
+function runFontSizePx(
   fontSizePt: number | undefined,
-  layerHeight: number,
-  lineCount: number,
   autoFit: boolean | undefined,
   fitScale: number,
 ): string {
-  const basePt = (fontSizePt ?? 14) * (autoFit ? fitScale : 1);
-  const slotCqh = (layerHeight / Math.max(lineCount, 1)) * (autoFit ? 0.92 : 0.78);
-  const cqhFromPt = (basePt / 540) * layerHeight * 1.05;
-  const cqh = Math.min(slotCqh, cqhFromPt);
-  return `min(${basePt.toFixed(1)}px, ${cqh.toFixed(2)}cqh)`;
+  const pt = (fontSizePt ?? 14) * (autoFit ? fitScale : 1);
+  const cqw = ((pt * 100) / 720).toFixed(2);
+  return `clamp(10px, ${cqw}cqw, ${pt}px)`;
 }
 
 export default function BulletinCompositeSlide({
@@ -115,22 +112,7 @@ export default function BulletinCompositeSlide({
               />
             );
           }
-          if (layer.kind === 'fill') {
-            return (
-              <div
-                key={`fill-${i}`}
-                className="bulletin-composite-fill"
-                style={{
-                  ...stackStyle,
-                  left: `${layer.left}%`,
-                  top: `${layer.top}%`,
-                  width: `${layer.width}%`,
-                  height: `${layer.height}%`,
-                  backgroundColor: layer.color,
-                }}
-              />
-            );
-          }
+
           if (layer.kind === 'image') {
             return (
               <img
@@ -151,21 +133,22 @@ export default function BulletinCompositeSlide({
           }
 
           const fitScale = autoFitScale(layer);
-          const lineCount = layer.paragraphs.length;
           const isFooterBand = layer.top >= 60 && layer.height <= 10;
+          const isHeaderBand = layer.top < 15 && (layer.fill?.toLowerCase() === '#0b5394' || layer.height <= 14);
 
           return (
             <div
-              key={`text-${i}`}
-              className={`bulletin-composite-text bulletin-composite-text--${layer.valign ?? 'top'}${
-                isFooterBand ? ' bulletin-composite-text--band' : ''
-              }`}
+              key={`shape-${i}`}
+              className={`bulletin-composite-shape bulletin-composite-shape--${layer.valign ?? 'top'}${
+                isFooterBand ? ' bulletin-composite-shape--footer' : ''
+              }${isHeaderBand ? ' bulletin-composite-shape--header' : ''}`}
               style={{
                 ...stackStyle,
                 left: `${layer.left}%`,
                 top: `${layer.top}%`,
                 width: `${layer.width}%`,
                 height: `${layer.height}%`,
+                backgroundColor: layer.fill,
               }}
             >
               {layer.paragraphs.map((para, pi) => (
@@ -184,13 +167,7 @@ export default function BulletinCompositeSlide({
                         color: run.color,
                         fontWeight: run.bold ? 700 : undefined,
                         fontFamily: run.fontFamily ? `"${run.fontFamily}", sans-serif` : undefined,
-                        fontSize: runFontSizeCqh(
-                          run.fontSizePt,
-                          layer.height,
-                          lineCount,
-                          layer.autoFit,
-                          fitScale,
-                        ),
+                        fontSize: runFontSizePx(run.fontSizePt, layer.autoFit, fitScale),
                       }}
                     >
                       {run.text}
