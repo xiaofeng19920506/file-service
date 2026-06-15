@@ -30,3 +30,4 @@ export * from './persist-raw-blob.js';
 export * from './api-client.js';
 export * from './subscription.js';
 export * from './bulletin-realtime.js';
+export * from './bulletin-pptx-patch.js';

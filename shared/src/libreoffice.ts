@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { readdir } from 'node:fs/promises';
 import { basename, extname, join } from 'node:path';
 
 const LIBREOFFICE_PRESENTATION_EXTS = [
@@ -54,4 +55,35 @@ export async function convertToPptx(opts: {
   outDir: string;
 }): Promise<string> {
   return convertWithLibreOffice({ ...opts, convertTo: 'pptx' });
+}
+
+/** 将 PPTX 各页导出为 PNG，按页码 1-based 返回对应文件路径 */
+export async function exportPptxSlidePng(opts: {
+  sofficePath: string;
+  inputPath: string;
+  outDir: string;
+  slideNumber: number;
+}): Promise<string> {
+  await convertWithLibreOffice({
+    sofficePath: opts.sofficePath,
+    inputPath: opts.inputPath,
+    outDir: opts.outDir,
+    convertTo: 'png',
+  });
+
+  const base = basename(opts.inputPath, extname(opts.inputPath));
+  const files = (await readdir(opts.outDir))
+    .filter((name) => name.toLowerCase().endsWith('.png'))
+    .sort();
+
+  const slideIdx = opts.slideNumber - 1;
+  const numbered =
+    files.find((name) => name === `${base}.png` && slideIdx === 0) ??
+    files.find((name) => new RegExp(`^${base}[-_]?0*${opts.slideNumber}\\.png$`, 'i').test(name)) ??
+    files[slideIdx];
+
+  if (!numbered) {
+    throw new Error(`slide_png_not_found:${opts.slideNumber}`);
+  }
+  return join(opts.outDir, numbered);
 }

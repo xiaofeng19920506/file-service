@@ -6585,6 +6585,13 @@
   text-align: center;
 }
 
+.bulletin-slide-preview-fallback-note {
+  margin: 0.75rem 0 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
 .bulletin-slide-preview-edits {
   margin-top: 0.65rem;
   padding: 0.65rem 0.75rem;

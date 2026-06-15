@@ -1,6 +1,7 @@
 import { asc, desc, eq } from 'drizzle-orm';
 import { existsSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -8,7 +9,9 @@ import {
   bulletinAnnouncements,
   canManageBulletin,
   canViewBulletin,
+  exportPptxSlidePng,
   normalizeUserRole,
+  patchCoverSlideInPptx,
   weeklyBulletins,
   type Db,
 } from '@file-service/shared';
@@ -31,6 +34,8 @@ function resolveBulletinTemplateDir(): string {
 const BULLETIN_TEMPLATE_FILE = '06_14_2026.pptx';
 
 const BULLETIN_TEMPLATE_DIR = resolveBulletinTemplateDir();
+
+const slidePreviewCache = new Map<string, Buffer>();
 
 export type BulletinAnnouncementDto = {
   id: string;
@@ -146,7 +151,7 @@ type AnnouncementInput = {
 
 export function registerBulletinRoutes(
   app: FastifyInstance,
-  { db, redisUrl }: { db: Db; redisUrl: string },
+  { db, redisUrl, sofficePath }: { db: Db; redisUrl: string; sofficePath: string },
 ) {
   app.get('/v1/bulletins/template/slides', async (request, reply) => {
     const user = requireUser(request);
@@ -170,6 +175,64 @@ export function registerBulletinRoutes(
       )
       .header('Content-Disposition', `attachment; filename="${BULLETIN_TEMPLATE_FILE}"`)
       .send(buf);
+  });
+
+  app.get<{
+    Params: { slide: string };
+    Querystring: { serviceDate?: string; serviceTime?: string };
+  }>('/v1/bulletins/template/slides/:slide/preview.png', async (request, reply) => {
+    const user = requireUser(request);
+    if (!user || !canViewBulletin(user.role)) {
+      return reply.code(403).send({ error: 'bulletin_forbidden' });
+    }
+
+    const slideNumber = Number.parseInt(request.params.slide, 10);
+    if (!Number.isFinite(slideNumber) || slideNumber < 1) {
+      return reply.code(400).send({ error: 'invalid_slide' });
+    }
+
+    const serviceDate = request.query.serviceDate?.trim();
+    const serviceTime = request.query.serviceTime?.trim() || '11:00';
+    if (serviceDate && !/^\d{4}-\d{2}-\d{2}$/.test(serviceDate)) {
+      return reply.code(400).send({ error: 'invalid_service_date' });
+    }
+
+    const cacheKey = `${slideNumber}:${serviceDate ?? ''}:${serviceTime}`;
+    const cached = slidePreviewCache.get(cacheKey);
+    if (cached) {
+      return reply.header('Content-Type', 'image/png').header('X-Preview-Cached', 'true').send(cached);
+    }
+
+    const workRoot = await mkdtemp(join(tmpdir(), 'fs-bulletin-preview-'));
+    try {
+      const templateBuf = await readFile(join(BULLETIN_TEMPLATE_DIR, BULLETIN_TEMPLATE_FILE));
+      const pptxBuf =
+        slideNumber === 1 && serviceDate
+          ? await patchCoverSlideInPptx(templateBuf, { serviceDate, serviceTime })
+          : templateBuf;
+
+      const pptxPath = join(workRoot, 'preview.pptx');
+      await writeFile(pptxPath, pptxBuf);
+
+      const pngPath = await exportPptxSlidePng({
+        sofficePath,
+        inputPath: pptxPath,
+        outDir: workRoot,
+        slideNumber,
+      });
+      const pngBuf = await readFile(pngPath);
+      slidePreviewCache.set(cacheKey, pngBuf);
+      if (slidePreviewCache.size > 80) {
+        const oldest = slidePreviewCache.keys().next().value;
+        if (oldest) slidePreviewCache.delete(oldest);
+      }
+      return reply.header('Content-Type', 'image/png').header('X-Preview-Cached', 'false').send(pngBuf);
+    } catch (err) {
+      request.log.warn({ err, slideNumber }, 'bulletin slide preview failed');
+      return reply.code(503).send({ error: 'slide_preview_unavailable' });
+    } finally {
+      await rm(workRoot, { recursive: true, force: true }).catch(() => undefined);
+    }
   });
 
   app.get('/v1/bulletins', async (request, reply) => {

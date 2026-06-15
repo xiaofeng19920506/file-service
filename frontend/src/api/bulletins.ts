@@ -114,3 +114,26 @@ export async function fetchBulletinTemplateFile(): Promise<Blob> {
   }
   return res.blob();
 }
+
+/** 服务端用 LibreOffice 从原版 PPT 渲染幻灯片 PNG（已按参数补丁封面文字） */
+export async function fetchBulletinSlidePreviewPng(
+  slideNumber: number,
+  params: { serviceDate?: string; serviceTime?: string },
+): Promise<Blob> {
+  const qs = new URLSearchParams();
+  if (params.serviceDate) qs.set('serviceDate', params.serviceDate);
+  if (params.serviceTime) qs.set('serviceTime', params.serviceTime);
+  const query = qs.toString();
+  const res = await apiFetch(
+    `/v1/bulletins/template/slides/${slideNumber}/preview.png${query ? `?${query}` : ''}`,
+  );
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    const msg =
+      typeof data === 'object' && data && 'error' in data
+        ? String((data as { error: string }).error)
+        : res.statusText;
+    throw new Error(msg);
+  }
+  return res.blob();
+}

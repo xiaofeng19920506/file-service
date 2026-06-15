@@ -106,7 +106,7 @@ async function buildApp() {
   registerYoutubeOAuthRoutes(app, { db, env });
   registerYoutubeSearchRoutes(app, { db, env });
   registerYoutubeTrendingRoutes(app, { db });
-  registerBulletinRoutes(app, { db, redisUrl: env.REDIS_URL });
+  registerBulletinRoutes(app, { db, redisUrl: env.REDIS_URL, sofficePath: env.SOFFICE_PATH });
   registerBulletinRealtimeRoutes(app, { redisUrl: env.REDIS_URL });
 
   const maxUploadBytes = env.MAX_UPLOAD_MB * 1024 * 1024;
