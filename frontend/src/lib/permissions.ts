@@ -1,38 +1,50 @@
-export type UserRole = 'member' | 'worship_team' | 'admin';
+export type UserRole = 'member' | 'worship_team' | 'creator' | 'admin';
 
 /** 将数据库/旧 token 中的 role 规范化为当前角色 */
 export function normalizeUserRole(raw: string | null | undefined): UserRole {
-  if (raw === 'admin' || raw === 'worship_team' || raw === 'member') return raw;
+  if (raw === 'admin' || raw === 'worship_team' || raw === 'creator' || raw === 'member') return raw;
   if (raw === 'user') return 'member';
   return 'member';
 }
 
+function isWorshipCapable(role: UserRole | null): boolean {
+  return role === 'worship_team' || role === 'creator' || role === 'admin';
+}
+
 export function canSearch(role: UserRole | null): boolean {
-  return role === 'worship_team' || role === 'admin';
+  return isWorshipCapable(role);
 }
 
 export function canAccessPlaylists(role: UserRole | null): boolean {
-  return role === 'member' || role === 'worship_team' || role === 'admin';
+  return role === 'member' || isWorshipCapable(role);
 }
 
 export function canDownload(role: UserRole | null): boolean {
-  return role === 'worship_team' || role === 'admin';
+  return isWorshipCapable(role);
 }
 
 export function canMerge(role: UserRole | null): boolean {
-  return role === 'worship_team' || role === 'admin';
+  return isWorshipCapable(role);
 }
 
 export function canUpload(role: UserRole | null): boolean {
-  return role === 'worship_team' || role === 'admin';
+  return isWorshipCapable(role);
 }
 
 export function canExportToYoutube(role: UserRole | null): boolean {
-  return role === 'worship_team' || role === 'admin';
+  return isWorshipCapable(role);
 }
 
 export function canEdit(role: UserRole | null): boolean {
   return role === 'admin';
+}
+
+export function canManageBulletin(role: UserRole | null): boolean {
+  return role === 'creator' || role === 'admin';
+}
+
+export function canViewBulletin(role: UserRole | null): boolean {
+  return isWorshipCapable(role);
 }
 
 export function roleLabelKey(role: UserRole): string {
@@ -49,6 +61,8 @@ export function permissionsForRole(role: UserRole | null) {
     canUpload: canUpload(normalized),
     canEdit: canEdit(normalized),
     canExportToYoutube: canExportToYoutube(normalized),
+    canManageBulletin: canManageBulletin(normalized),
+    canViewBulletin: canViewBulletin(normalized),
   };
 }
 
@@ -58,7 +72,8 @@ export const APP_HOME_PAGE = 'playlists' as const;
 
 export function homePageForPermissions(
   permissions: AppPermissions,
-): typeof APP_HOME_PAGE | 'library' {
+): typeof APP_HOME_PAGE | 'library' | 'bulletin' {
+  if (permissions.canManageBulletin) return 'bulletin';
   if (permissions.canAccessPlaylists) return APP_HOME_PAGE;
   if (permissions.canSearch) return 'library';
   return APP_HOME_PAGE;

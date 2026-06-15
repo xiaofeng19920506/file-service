@@ -2,9 +2,9 @@ import type { UserRole } from './db/schema.js';
 
 export type { UserRole };
 
-const VALID_ROLES: UserRole[] = ['member', 'worship_team', 'admin'];
+const VALID_ROLES: UserRole[] = ['member', 'worship_team', 'creator', 'admin'];
 export function normalizeUserRole(raw: string | null | undefined): UserRole {
-  if (raw === 'admin' || raw === 'worship_team' || raw === 'member') return raw;
+  if (raw === 'admin' || raw === 'worship_team' || raw === 'creator' || raw === 'member') return raw;
   if (raw === 'user') return 'member';
   return 'member';
 }
@@ -13,32 +13,44 @@ export function isValidUserRole(raw: string): raw is UserRole {
   return VALID_ROLES.includes(raw as UserRole);
 }
 
+function isWorshipCapable(role: UserRole | null): boolean {
+  return role === 'worship_team' || role === 'creator' || role === 'admin';
+}
+
 export function canSearch(role: UserRole | null): boolean {
-  return role === 'worship_team' || role === 'admin';
+  return isWorshipCapable(role);
 }
 
 export function canAccessPlaylists(role: UserRole | null): boolean {
-  return role === 'member' || role === 'worship_team' || role === 'admin';
+  return role === 'member' || isWorshipCapable(role);
 }
 
 export function canDownload(role: UserRole | null): boolean {
-  return role === 'worship_team' || role === 'admin';
+  return isWorshipCapable(role);
 }
 
 export function canMerge(role: UserRole | null): boolean {
-  return role === 'worship_team' || role === 'admin';
+  return isWorshipCapable(role);
 }
 
 export function canUpload(role: UserRole | null): boolean {
-  return role === 'worship_team' || role === 'admin';
+  return isWorshipCapable(role);
 }
 
 export function canExportToYoutube(role: UserRole | null): boolean {
-  return role === 'worship_team' || role === 'admin';
+  return isWorshipCapable(role);
 }
 
 export function canEdit(role: UserRole | null): boolean {
   return role === 'admin';
+}
+
+export function canManageBulletin(role: UserRole | null): boolean {
+  return role === 'creator' || role === 'admin';
+}
+
+export function canViewBulletin(role: UserRole | null): boolean {
+  return isWorshipCapable(role);
 }
 
 export function isSearchPath(method: string, path: string): boolean {
@@ -81,6 +93,15 @@ export function isMergePath(method: string, path: string): boolean {
   if (!path.startsWith('/v1/jobs')) return false;
   if (method === 'GET' && /^\/v1\/jobs\/[^/]+\/download$/.test(path)) return false;
   return true;
+}
+
+export function isBulletinPath(_method: string, path: string): boolean {
+  return path.startsWith('/v1/bulletins');
+}
+
+function isBulletinWritePath(method: string, path: string): boolean {
+  if (!path.startsWith('/v1/bulletins')) return false;
+  return method !== 'GET';
 }
 
 export function isEditPath(method: string, path: string): boolean {
@@ -126,7 +147,9 @@ export type PathAccessLevel =
   | 'playlist'
   | 'merge'
   | 'admin'
-  | 'youtube_export';
+  | 'youtube_export'
+  | 'bulletin_view'
+  | 'bulletin_manage';
 
 function isPublicInfrastructurePath(path: string): boolean {
   return path === '/health' || path === '/ready' || path === '/docs' || path.startsWith('/docs/');
@@ -166,6 +189,8 @@ export function resolvePathAccessLevel(method: string, path: string): PathAccess
   if (isAuthEntryPath(method, path)) return 'public';
   if (isYoutubeOAuthCallbackPath(method, path)) return 'public';
   if (isYoutubeExportPath(method, path)) return 'youtube_export';
+  if (isBulletinWritePath(method, path)) return 'bulletin_manage';
+  if (isBulletinPath(method, path)) return 'bulletin_view';
   if (isSearchPath(method, path)) return 'search';
   if (isAdminOnlyPath(method, path)) return 'admin';
   if (isUploadPath(method, path)) return 'upload';
@@ -193,7 +218,7 @@ export function roleMeetsAccessLevel(
     case 'search':
       return canSearch(role);
     case 'member':
-      return role === 'member' || role === 'worship_team' || role === 'admin';
+      return role === 'member' || role === 'worship_team' || role === 'creator' || role === 'admin';
     case 'download':
       return canDownload(role);
     case 'upload':
@@ -206,6 +231,10 @@ export function roleMeetsAccessLevel(
       return canEdit(role);
     case 'youtube_export':
       return canExportToYoutube(role);
+    case 'bulletin_view':
+      return canViewBulletin(role);
+    case 'bulletin_manage':
+      return canManageBulletin(role);
     default:
       return false;
   }
@@ -227,6 +256,9 @@ export function accessDeniedErrorCode(level: PathAccessLevel): string {
       return 'admin_required';
     case 'youtube_export':
       return 'youtube_export_forbidden';
+    case 'bulletin_view':
+    case 'bulletin_manage':
+      return 'bulletin_forbidden';
     case 'member':
       return 'unauthorized';
     default:

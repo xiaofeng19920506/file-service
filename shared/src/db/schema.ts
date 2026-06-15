@@ -1,5 +1,6 @@
 import {
   bigint,
+  boolean,
   date,
   pgTable,
   text,
@@ -41,7 +42,7 @@ export const userLoginDevices = pgTable('user_login_devices', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-export type UserRole = 'member' | 'worship_team' | 'admin';
+export type UserRole = 'member' | 'worship_team' | 'creator' | 'admin';
 
 export const blobs = pgTable('blobs', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -180,6 +181,42 @@ export const userSubscriptions = pgTable('user_subscriptions', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const weeklyBulletins = pgTable('weekly_bulletins', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  serviceDate: date('service_date').notNull(),
+  serviceTime: text('service_time').notNull().default('11:00'),
+  status: text('status').notNull().default('draft'),
+  lastWeekOfferingDate: text('last_week_offering_date').notNull().default(''),
+  offeringQuarterLabel: text('offering_quarter_label').notNull().default(''),
+  birthdayMonth: text('birthday_month').notNull().default(''),
+  birthdayNames: text('birthday_names').notNull().default(''),
+  staffMeetingDate: text('staff_meeting_date').notNull().default(''),
+  testimonyShareDate: text('testimony_share_date').notNull().default(''),
+  serviceRosterText: text('service_roster_text').notNull().default(''),
+  baptismText: text('baptism_text').notNull().default(''),
+  weeklyMeetingVariant: integer('weekly_meeting_variant'),
+  skipTestimonyWeek: boolean('skip_testimony_week').notNull().default(false),
+  skipDepartmentReports: boolean('skip_department_reports').notNull().default(false),
+  outputBlobId: uuid('output_blob_id').references(() => blobs.id, { onDelete: 'set null' }),
+  createdByUserId: uuid('created_by_user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }),
+});
+
+export const bulletinAnnouncements = pgTable('bulletin_announcements', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  bulletinId: uuid('bulletin_id')
+    .notNull()
+    .references(() => weeklyBulletins.id, { onDelete: 'cascade' }),
+  sortOrder: integer('sort_order').notNull(),
+  category: text('category').notNull().default('general'),
+  title: text('title').notNull().default(''),
+  body: text('body').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 export type UserRow = typeof users.$inferSelect;
 export type UserLoginDeviceRow = typeof userLoginDevices.$inferSelect;
 export type BlobRow = typeof blobs.$inferSelect;
@@ -190,3 +227,5 @@ export type YoutubeAudioCacheRow = typeof youtubeAudioCache.$inferSelect;
 export type YoutubeVideoDailyPlayRow = typeof youtubeVideoDailyPlays.$inferSelect;
 export type YoutubeOAuthConnectionRow = typeof youtubeOAuthConnections.$inferSelect;
 export type UserSubscriptionRow = typeof userSubscriptions.$inferSelect;
+export type WeeklyBulletinRow = typeof weeklyBulletins.$inferSelect;
+export type BulletinAnnouncementRow = typeof bulletinAnnouncements.$inferSelect;

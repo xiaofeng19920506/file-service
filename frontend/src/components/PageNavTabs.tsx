@@ -1,5 +1,6 @@
 import {
   AdminNavIcon,
+  BulletinNavIcon,
   HomeNavIcon,
   LibraryNavIcon,
   MergeNavIcon,
@@ -8,7 +9,7 @@ import {
 import type { AppPage } from '../hooks/useAppPage';
 import { useI18n } from '../i18n';
 
-type NavTarget = 'library' | 'playlists' | 'playlist-lists' | 'merge' | 'admin';
+type NavTarget = 'library' | 'playlists' | 'playlist-lists' | 'merge' | 'bulletin' | 'admin';
 
 type PageNavTabsProps = {
   page: AppPage;
@@ -16,6 +17,7 @@ type PageNavTabsProps = {
   canSearch: boolean;
   canAccessPlaylists: boolean;
   canMerge: boolean;
+  canViewBulletin: boolean;
   canEdit: boolean;
   variant: 'header' | 'bottom';
 };
@@ -23,10 +25,11 @@ type PageNavTabsProps = {
 const NAV_ITEMS: {
   id: NavTarget;
   icon: typeof LibraryNavIcon;
-  labelKey: 'nav.library' | 'nav.playlistsShort' | 'nav.playlistLists' | 'nav.merge' | 'nav.admin';
+  labelKey: 'nav.library' | 'nav.playlistsShort' | 'nav.playlistLists' | 'nav.merge' | 'nav.bulletinShort' | 'nav.admin';
   requiresSearch?: boolean;
   requiresPlaylists?: boolean;
   requiresMerge?: boolean;
+  requiresBulletin?: boolean;
   requiresEdit?: boolean;
   bottomOnly?: boolean;
   /** 桌面顶栏不展示（首页由左侧应用名标识即可） */
@@ -59,6 +62,12 @@ const NAV_ITEMS: {
     requiresMerge: true,
   },
   {
+    id: 'bulletin',
+    icon: BulletinNavIcon,
+    labelKey: 'nav.bulletinShort',
+    requiresBulletin: true,
+  },
+  {
     id: 'admin',
     icon: AdminNavIcon,
     labelKey: 'nav.admin',
@@ -72,6 +81,7 @@ export default function PageNavTabs({
   canSearch,
   canAccessPlaylists,
   canMerge,
+  canViewBulletin,
   canEdit,
   variant,
 }: PageNavTabsProps) {
@@ -84,6 +94,7 @@ export default function PageNavTabs({
     if (item.requiresSearch && !canSearch) return false;
     if (item.requiresPlaylists && !canAccessPlaylists) return false;
     if (item.requiresMerge && !canMerge) return false;
+    if (item.requiresBulletin && !canViewBulletin) return false;
     if (item.requiresEdit && !canEdit) return false;
     return true;
   });

@@ -7,6 +7,7 @@ import AuthPage from './views/AuthPage';
 import LibraryPage from './views/LibraryPage';
 import MergePage from './views/MergePage';
 import PlaylistsPage from './views/PlaylistsPage';
+import BulletinPage from './views/BulletinPage';
 import UploadConfirmPage from './views/UploadConfirmPage';
 import { useLibraryUpload } from './hooks/useLibraryUpload';
 import PageNavTabs from './components/PageNavTabs';
@@ -80,6 +81,10 @@ function AppShellInner({
     }
     if (page === 'admin' && !permissions.canEdit) {
       navigate(home);
+      return;
+    }
+    if (page === 'bulletin' && !permissions.canViewBulletin) {
+      navigate(home);
     }
   }, [loading, user, page, navigate, permissions]);
 
@@ -117,7 +122,9 @@ function AppShellInner({
           ? t('pages.mergeTitle')
           : page === 'admin'
             ? t('pages.adminTitle')
-            : page === 'library'
+            : page === 'bulletin'
+              ? t('pages.bulletinTitle')
+              : page === 'library'
               ? t('pages.libraryTitle')
               : t('pages.playlistsTitle');
   }, [page, t]);
@@ -174,7 +181,9 @@ function AppShellInner({
         ? t('nav.mergeShort')
         : page === 'admin'
           ? t('nav.adminShort')
-          : page === 'library'
+          : page === 'bulletin'
+            ? t('nav.bulletinShort')
+            : page === 'library'
             ? t('nav.libraryShort')
             : t('nav.playlistsShort');
 
@@ -231,6 +240,7 @@ function AppShellInner({
               canSearch={permissions.canSearch}
               canAccessPlaylists={permissions.canAccessPlaylists}
               canMerge={permissions.canMerge}
+              canViewBulletin={permissions.canViewBulletin}
               canEdit={permissions.canEdit}
               variant="header"
             />
@@ -312,6 +322,7 @@ function AppShellInner({
           />
         )}
         {page === 'merge' && permissions.canMerge && <MergePage mergePlaylistId={mergePlaylistId} />}
+        {page === 'bulletin' && permissions.canViewBulletin && <BulletinPage />}
         {page === 'admin' && permissions.canEdit && <AdminPage />}
       </div>
 
@@ -322,6 +333,7 @@ function AppShellInner({
           canSearch={permissions.canSearch}
           canAccessPlaylists={permissions.canAccessPlaylists}
           canMerge={permissions.canMerge}
+          canViewBulletin={permissions.canViewBulletin}
           canEdit={permissions.canEdit}
           variant="bottom"
         />

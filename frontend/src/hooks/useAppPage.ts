@@ -11,7 +11,8 @@ export type AppPage =
   | 'playlist-lists'
   | 'admin'
   | 'login'
-  | 'preview';
+  | 'preview'
+  | 'bulletin';
 
 export type AppRoute = {
   page: AppPage;
@@ -80,6 +81,7 @@ function routeFromHash(rawHash: string): AppRoute {
     return { page: 'playlists', playlistId, playlistShareToken };
   }
   if (hash === '#/admin') return { page: 'admin' };
+  if (hash === '#/bulletin' || hash.startsWith('#/bulletin?')) return { page: 'bulletin' };
   if (hash === '#/login') return { page: 'login' };
   if (hash.startsWith('#/library')) return { page: 'library' };
   return { page: APP_HOME_PAGE };
@@ -110,7 +112,9 @@ export function useAppPage() {
             ? HOME_HASH
             : next === 'admin'
               ? '#/admin'
-              : next === 'login'
+              : next === 'bulletin'
+                ? '#/bulletin'
+                : next === 'login'
                 ? '#/login'
                 : '#/library';
     if (window.location.hash !== hash) {

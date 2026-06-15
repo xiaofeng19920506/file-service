@@ -1,0 +1,40 @@
+{
+  "templateFile": "weekly-bulletin-template.pptx",
+  "sourceWeek": "2026-06-14",
+  "totalSlides": 38,
+  "nativeHiddenSlides": [],
+  "sections": [
+    { "id": "cover", "slides": [1], "role": "service_date", "notes": "封面：主日日期 06/14/2026、崇拜时间 11:00" },
+    { "id": "pre_service", "slides": [2, 3], "role": "static", "notes": "会前祷告（通用页 + 当週带领人）" },
+    { "id": "scripture", "slides": [4, 5, 6], "role": "static", "notes": "读经：箴言 15:1-11 中英文" },
+    { "id": "worship", "slides": [7, 8, 9], "role": "worship_break", "notes": "敬拜赞美段落；敬拜团可跳转歌单或继续 PPT" },
+    { "id": "communion", "slides": [10, 11, 12, 13], "role": "static", "notes": "圣餐" },
+    { "id": "welcome", "slides": [14], "role": "static", "notes": "欢迎新朋友" },
+    { "id": "youth_prayer", "slides": [15], "role": "static", "notes": "青少年与儿童祝福祷告" },
+    { "id": "testimony_week", "slides": [16], "role": "optional", "notes": "主日见证周标题页，非见证周可跳过" },
+    { "id": "message", "slides": [17], "role": "static", "notes": "主日信息" },
+    { "id": "family_time", "slides": [18], "role": "static", "notes": "大家庭时间" },
+    { "id": "offering", "slides": [19, 20, 21, 22], "role": "date_sensitive", "notes": "奉献报告，含上週日期、季度月份" },
+    { "id": "birthday", "slides": [23, 24], "role": "date_sensitive", "notes": "当月生日提醒" },
+    { "id": "announcements", "slides": [25, 26, 27], "role": "special_announcement", "notes": "特别感谢、家有喜事、受洗等公告" },
+    { "id": "weekly_meetings", "slides": [28, 29, 30], "role": "variant_pick_one", "notes": "本週聚会三种版式，每次只用其一" },
+    { "id": "staff_meeting", "slides": [31], "role": "date_sensitive", "notes": "同工会日期" },
+    { "id": "rotation", "slides": [32], "role": "date_sensitive", "notes": "服事轮值表季度" },
+    { "id": "future_testimony", "slides": [33], "role": "date_sensitive", "notes": "下主日见证分享日期" },
+    { "id": "service_roster", "slides": [34], "role": "date_sensitive", "notes": "下主日服事轮值与人员" },
+    { "id": "verse_of_week", "slides": [35], "role": "static", "notes": "本週金句" },
+    { "id": "department_reports", "slides": [36], "role": "optional", "notes": "各部门同工报告，同工会时用" },
+    { "id": "closing", "slides": [37, 38], "role": "static", "notes": "三颂、祝福祷告" }
+  ],
+  "dateFields": [
+    { "slide": 1, "fields": ["serviceDate", "serviceTime"], "example": "06/14/2026, 11:00" },
+    { "slide": 19, "fields": ["lastWeekOfferingDate"], "example": "6/07" },
+    { "slide": 22, "fields": ["quarterYear", "quarterMonths"], "example": "2026年第2季度, 4月5月" },
+    { "slide": 24, "fields": ["birthdayMonth", "birthdayNames"], "example": "7月份" },
+    { "slide": 27, "fields": ["baptismDate", "baptismDetails"], "example": "7月5日主日" },
+    { "slide": 31, "fields": ["staffMeetingDate"], "example": "6/21/2026" },
+    { "slide": 33, "fields": ["testimonyShareDate"], "example": "8/30" },
+    { "slide": 34, "fields": ["nextSundayDate", "roster"], "example": "6/21, 6/14" }
+  ],
+  "specialAnnouncementSlides": [25, 26, 27]
+}
