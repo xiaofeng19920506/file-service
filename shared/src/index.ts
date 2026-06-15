@@ -1,5 +1,6 @@
 export * from './load-env.js';
 export * from './libreoffice.js';
+export * from './libreoffice-preview-client.js';
 export * from './api-key.js';
 export * from './upload-chunk.js';
 export * from './redis.js';

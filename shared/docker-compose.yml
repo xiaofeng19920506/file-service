@@ -1,6 +1,6 @@
-# 本地基础设施：Postgres + Redis；可选 Worker（含 LibreOffice，profile: libre）
+# 本地基础设施：Postgres + Redis + LibreOffice 预览；可选 Worker（profile: libre）
 # 用法（在仓库根目录）：
-#   docker compose -f shared/docker-compose.yml up -d postgres redis
+#   docker compose -f shared/docker-compose.yml up -d postgres redis libreoffice
 #   docker compose -f shared/docker-compose.yml --profile libre up --build -d worker
 
 services:
@@ -22,6 +22,34 @@ services:
     image: redis:7-alpine
     ports:
       - '6379:6379'
+
+  libreoffice:
+    build:
+      context: ..
+      dockerfile: shared/docker/Dockerfile.libreoffice
+    container_name: file-service-libreoffice
+    restart: unless-stopped
+    ports:
+      - '3010:3010'
+    environment:
+      PORT: 3010
+      SOFFICE_PATH: soffice
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3010/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 45s
 
   worker:
     profiles: [libre]

@@ -12,6 +12,7 @@ import {
   exportPptxSlidePng,
   normalizeUserRole,
   patchCoverSlideInPptx,
+  renderSlidePngViaService,
   weeklyBulletins,
   type Db,
 } from '@file-service/shared';
@@ -151,7 +152,12 @@ type AnnouncementInput = {
 
 export function registerBulletinRoutes(
   app: FastifyInstance,
-  { db, redisUrl, sofficePath }: { db: Db; redisUrl: string; sofficePath: string },
+  {
+    db,
+    redisUrl,
+    sofficePath,
+    sofficePreviewUrl,
+  }: { db: Db; redisUrl: string; sofficePath: string; sofficePreviewUrl?: string },
 ) {
   app.get('/v1/bulletins/template/slides', async (request, reply) => {
     const user = requireUser(request);
@@ -214,13 +220,17 @@ export function registerBulletinRoutes(
       const pptxPath = join(workRoot, 'preview.pptx');
       await writeFile(pptxPath, pptxBuf);
 
-      const pngPath = await exportPptxSlidePng({
-        sofficePath,
-        inputPath: pptxPath,
-        outDir: workRoot,
-        slideNumber,
-      });
-      const pngBuf = await readFile(pngPath);
+      const pngBuf = sofficePreviewUrl
+        ? await renderSlidePngViaService(sofficePreviewUrl, pptxBuf, slideNumber)
+        : await (async () => {
+            const pngPath = await exportPptxSlidePng({
+              sofficePath,
+              inputPath: pptxPath,
+              outDir: workRoot,
+              slideNumber,
+            });
+            return readFile(pngPath);
+          })();
       slidePreviewCache.set(cacheKey, pngBuf);
       if (slidePreviewCache.size > 80) {
         const oldest = slidePreviewCache.keys().next().value;

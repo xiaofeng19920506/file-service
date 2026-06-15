@@ -22,6 +22,8 @@ const apiFs = z.object({
   RATE_LIMIT_UPLOAD_MAX: z.coerce.number().int().positive().default(30),
   PUBLIC_BASE_URL: z.string().url().optional(),
   SOFFICE_PATH: z.string().default('soffice'),
+  /** Docker LibreOffice 预览服务，例如 http://localhost:3010 */
+  SOFFICE_PREVIEW_URL: z.string().url().optional(),
   API_KEY: apiKeyField,
   AUTH_REQUIRED: z
     .enum(['true', 'false', '1', '0'])
@@ -72,6 +74,8 @@ const apiS3 = z.object({
   RATE_LIMIT_UPLOAD_MAX: z.coerce.number().int().positive().default(30),
   PUBLIC_BASE_URL: z.string().url().optional(),
   SOFFICE_PATH: z.string().default('soffice'),
+  /** Docker LibreOffice 预览服务，例如 http://localhost:3010 */
+  SOFFICE_PREVIEW_URL: z.string().url().optional(),
   API_KEY: apiKeyField,
   AUTH_REQUIRED: z
     .enum(['true', 'false', '1', '0'])
@@ -167,3 +171,20 @@ export function loadWorkerEnv(
 
 export const MERGE_QUEUE_NAME = 'merge-presentation';
 export { YOUTUBE_AUDIO_QUEUE_NAME } from './youtube-audio-cache.js';
+
+const previewSchema = z.object({
+  PORT: z.coerce.number().int().positive().default(3010),
+  SOFFICE_PATH: z.string().default('soffice'),
+});
+
+export type PreviewEnv = z.infer<typeof previewSchema>;
+
+export function loadPreviewEnv(
+  processEnv: NodeJS.ProcessEnv = process.env,
+): PreviewEnv {
+  const parsed = previewSchema.safeParse(processEnv);
+  if (!parsed.success) {
+    throw new Error(`Invalid env: ${parsed.error.message}`);
+  }
+  return parsed.data;
+}

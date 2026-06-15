@@ -7,7 +7,7 @@
 - `backend/worker/` — BullMQ Worker
 - `shared/` — 共享库 + Docker（Postgres / Redis / LibreOffice Worker）
 
-日常开发：`npm run dev:docker`（`shared/docker-compose.yml` 起 DB + Redis，本机跑前后端）。
+日常开发：`npm run dev:docker`（Docker 起 Postgres + Redis + **LibreOffice 预览** `:3010`，本机跑 API/Web；`.env` 设 `SOFFICE_PREVIEW_URL=http://localhost:3010`）。
 
 单独构建：`npm run build:web` / `build:api` / `build:backend` / `build`。
 

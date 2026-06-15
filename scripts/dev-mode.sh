@@ -26,12 +26,12 @@ usage() {
   cat <<'EOF'
 用法: ./scripts/dev-mode.sh [docker|libre|stop|status]
 
-  docker   【推荐·轻量】Docker 只跑 Postgres + Redis，本机 npm run dev
-           · 内存占用小，适合日常开发
-           · 直接上传 .pptx 即可预览；.ppt 需本机 LibreOffice 或转为 .pptx
+  docker   【推荐·轻量】Docker 跑 Postgres + Redis + LibreOffice 预览，本机 npm run dev
+           · 周报 PPT 预览走 Docker 内 LibreOffice（:3010）
+           · 需在 .env 设置 SOFFICE_PREVIEW_URL=http://localhost:3010
 
-  libre    Docker 跑 Postgres + Redis + Worker（含 LibreOffice，约 1.5GB+）
-           · 本机只跑 API + Web；无法本机安装 LibreOffice 时使用
+  libre    Docker 跑 Postgres + Redis + LibreOffice 预览 + Worker（含 LibreOffice，约 1.5GB+）
+           · 本机只跑 API + Web；.ppt 合并转换由 Docker Worker 处理
 
   stop     停止 Docker 中的 worker（libre 模式）
 
@@ -72,8 +72,8 @@ stop_libre_worker() {
 
 start_infra() {
   need_docker
-  info "启动 Postgres + Redis…"
-  "${COMPOSE[@]}" up -d postgres redis
+  info "启动 Postgres + Redis + LibreOffice 预览服务…"
+  "${COMPOSE[@]}" up -d --build postgres redis libreoffice
 }
 
 cmd_stop() {
@@ -88,7 +88,7 @@ cmd_status() {
   "${COMPOSE[@]}" --profile libre ps 2>/dev/null || "${COMPOSE[@]}" ps
   echo ""
   info "端口占用"
-  for port in 3000 5173 5432 6379; do
+  for port in 3000 3010 5173 5432 6379; do
     if lsof -ti ":${port}" >/dev/null 2>&1; then
       echo "  :${port}  占用中"
     else
@@ -96,6 +96,11 @@ cmd_status() {
     fi
   done
   echo ""
+  if "${COMPOSE[@]}" ps libreoffice 2>/dev/null | grep -q 'Up'; then
+    echo "LibreOffice 预览: ${GREEN}Docker :3010${NC}"
+  else
+    echo "LibreOffice 预览: ${YELLOW}未运行${NC}（docker compose up -d libreoffice）"
+  fi
   if "${COMPOSE[@]}" --profile libre ps worker 2>/dev/null | grep -q 'Up'; then
     echo "Worker: ${YELLOW}Docker libre 模式${NC}（含 LibreOffice）"
   else
@@ -107,9 +112,9 @@ cmd_docker() {
   need_docker
   echo ""
   info "轻量开发模式"
-  echo "   · Docker: 仅 Postgres + Redis"
+  echo "   · Docker: Postgres + Redis + LibreOffice 预览（:3010）"
   echo "   · 本机: API + Worker + Web（npm run dev）"
-  echo "   · 推荐直接上传 .pptx，无需 LibreOffice"
+  echo "   · 周报预览: 设置 SOFFICE_PREVIEW_URL=http://localhost:3010"
   echo ""
 
   if [[ ! -f .env ]]; then
@@ -123,11 +128,12 @@ cmd_docker() {
 
   echo ""
   ok "基础设施就绪"
-  if ! command -v soffice >/dev/null 2>&1; then
-    warn "未检测到 LibreOffice — .ppt 预览/合并不可用，请上传 .pptx 或使用 dev:docker:libre"
+  if ! grep -q '^SOFFICE_PREVIEW_URL=' .env 2>/dev/null; then
+    warn "建议在 .env 添加 SOFFICE_PREVIEW_URL=http://localhost:3010 以启用周报 PPT 预览"
   fi
   echo ""
   info "启动 npm run dev …"
+  export SOFFICE_PREVIEW_URL="${SOFFICE_PREVIEW_URL:-http://localhost:3010}"
   npm run dev
 }
 
@@ -147,13 +153,14 @@ cmd_libre() {
 
   free_port 3000
   mkdir -p ./data/storage
-  info "构建并启动 Postgres + Redis + Worker…"
-  "${COMPOSE[@]}" --profile libre up --build -d postgres redis worker
+  info "构建并启动 Postgres + Redis + LibreOffice 预览 + Worker…"
+  "${COMPOSE[@]}" --profile libre up --build -d postgres redis libreoffice worker
 
   echo ""
   ok "Docker 基础设施就绪"
   echo ""
   info "启动本机 API + Web …"
+  export SOFFICE_PREVIEW_URL="${SOFFICE_PREVIEW_URL:-http://localhost:3010}"
   npm run dev:api-web
 }
 

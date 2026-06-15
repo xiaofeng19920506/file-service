@@ -38,6 +38,11 @@ export function buildPreviewConversionGuide(fileName: string): PreviewGuideConte
         detail: '用 PowerPoint、Keynote 或 WPS 打开文件 → 另存为/导出为 .pptx → 重新上传，即可直接预览、编辑与合并',
       },
       {
+        label: '使用 Docker 中的 LibreOffice（周报预览推荐）',
+        detail:
+          '仓库根目录执行 npm run dev:docker，会启动 libreoffice 容器（:3010）；在 .env 添加 SOFFICE_PREVIEW_URL=http://localhost:3010 后重启 API',
+      },
+      {
         label: '安装 LibreOffice（适合批量 .ppt）',
         detail:
           'macOS: brew install --cask libreoffice · 安装完成后重启 npm run dev，并确认终端可运行 soffice --version',
