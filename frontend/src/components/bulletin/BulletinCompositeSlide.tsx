@@ -132,22 +132,28 @@ export default function BulletinCompositeSlide({
           return (
             <div
               key={`text-${i}`}
-              className="bulletin-composite-text"
+              className={`bulletin-composite-text bulletin-composite-text--${layer.valign ?? 'top'}`}
               style={{
                 left: `${layer.left}%`,
                 top: `${layer.top}%`,
                 width: `${layer.width}%`,
                 height: `${layer.height}%`,
                 textAlign: layer.align,
-                color: layer.color,
-                fontWeight: layer.bold ? 700 : undefined,
-                fontSize: layer.fontSizePt
-                  ? `clamp(0.55rem, ${(layer.fontSizePt / 13).toFixed(2)}vw, ${layer.fontSizePt}px)`
-                  : undefined,
               }}
             >
               {layer.lines.map((line, li) => (
-                <p key={li}>{line}</p>
+                <p
+                  key={li}
+                  style={{
+                    color: line.color,
+                    fontWeight: line.bold ? 700 : undefined,
+                    fontSize: line.fontSizePt
+                      ? `clamp(0.5rem, ${(line.fontSizePt / 13).toFixed(2)}vw, ${line.fontSizePt}px)`
+                      : undefined,
+                  }}
+                >
+                  {line.text}
+                </p>
               ))}
             </div>
           );

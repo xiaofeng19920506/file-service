@@ -6545,8 +6545,18 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  line-height: 1.2;
+  line-height: 1.15;
   pointer-events: none;
+  box-sizing: border-box;
+  padding: 0.15em 0.35em;
+}
+
+.bulletin-composite-text--middle {
+  justify-content: center;
+}
+
+.bulletin-composite-text--bottom {
+  justify-content: flex-end;
 }
 
 .bulletin-composite-text p {

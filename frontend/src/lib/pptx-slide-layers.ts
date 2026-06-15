@@ -3,6 +3,21 @@ import type JSZip from 'jszip';
 const SLIDE_CX = 9144000;
 const SLIDE_CY = 6858000;
 
+const SCHEME_COLORS: Record<string, string> = {
+  accent6: '#FFFFFF',
+  lt2: '#F3F3F3',
+  dk1: '#000000',
+  bg1: '#FFFFFF',
+  tx1: '#000000',
+};
+
+export type SlideTextLine = {
+  text: string;
+  color?: string;
+  bold?: boolean;
+  fontSizePt?: number;
+};
+
 export type SlideVisualLayer =
   | {
       kind: 'background';
@@ -26,15 +41,13 @@ export type SlideVisualLayer =
     }
   | {
       kind: 'text';
-      lines: string[];
+      lines: SlideTextLine[];
       left: number;
       top: number;
       width: number;
       height: number;
       align: 'left' | 'center' | 'right';
-      color?: string;
-      bold?: boolean;
-      fontSizePt?: number;
+      valign?: 'top' | 'middle' | 'bottom';
     };
 
 function emuPct(value: number, total: number): number {
@@ -51,8 +64,9 @@ function decodeXmlEntities(text: string): string {
 }
 
 function extractShapeBox(xml: string): { left: number; top: number; width: number; height: number } | null {
-  const off = xml.match(/<a:off x="(\d+)" y="(\d+)"/);
-  const ext = xml.match(/<a:ext cx="(\d+)" cy="(\d+)"/);
+  const spPr = xml.match(/<p:spPr>([\s\S]*?)<\/p:spPr>/)?.[1] ?? xml;
+  const off = spPr.match(/<a:off x="(\d+)" y="(\d+)"/);
+  const ext = spPr.match(/<a:ext cx="(\d+)" cy="(\d+)"/);
   if (!off || !ext) return null;
   return {
     left: emuPct(Number(off[1]), SLIDE_CX),
@@ -62,53 +76,78 @@ function extractShapeBox(xml: string): { left: number; top: number; width: numbe
   };
 }
 
-function extractFillColor(xml: string): string | null {
-  const rgb = xml.match(/<a:solidFill>[\s\S]*?<a:srgbClr val="([0-9A-Fa-f]{6})"/);
+/** 仅读取形状底色（p:spPr），不混入文字 run 颜色 */
+function extractShapeFillColor(chunk: string): string | null {
+  const spPr = chunk.match(/<p:spPr>([\s\S]*?)<\/p:spPr>/)?.[1];
+  if (!spPr || !spPr.includes('<a:solidFill>')) return null;
+
+  const rgb = spPr.match(/<a:solidFill>[\s\S]*?<a:srgbClr val="([0-9A-Fa-f]{6})"/);
   if (rgb) return `#${rgb[1]}`;
-  const scheme = xml.match(/<a:solidFill>[\s\S]*?<a:schemeClr val="([^"]+)"/);
-  if (scheme) {
-    const map: Record<string, string> = {
-      lt2: '#F3F3F3',
-      accent6: '#FFFFFF',
-    };
-    return map[scheme[1]] ?? null;
-  }
+
+  const scheme = spPr.match(/<a:solidFill>[\s\S]*?<a:schemeClr val="([^"]+)"/);
+  if (scheme) return SCHEME_COLORS[scheme[1]] ?? null;
+
   return null;
 }
 
-function extractTextRuns(xml: string): {
-  lines: string[];
-  align: 'left' | 'center' | 'right';
-  color?: string;
-  bold?: boolean;
-  fontSizePt?: number;
-} {
-  const paragraphs = [...xml.matchAll(/<a:p>([\s\S]*?)<\/a:p>/g)];
-  const lines: string[] = [];
-  let align: 'left' | 'center' | 'right' = 'left';
+function extractRunStyle(rPr: string): { color?: string; bold?: boolean; fontSizePt?: number } {
   let color: string | undefined;
-  let bold = false;
-  let fontSizePt: number | undefined;
+  const rgb = rPr.match(/<a:srgbClr val="([0-9A-Fa-f]{6})"/);
+  if (rgb) color = `#${rgb[1]}`;
+  const scheme = rPr.match(/<a:schemeClr val="([^"]+)"/);
+  if (scheme) color = SCHEME_COLORS[scheme[1]] ?? color;
+  const sz = rPr.match(/sz="(\d+)"/);
+  const fontSizePt = sz ? Number(sz[1]) / 100 : undefined;
+  const bold = /\sb="1"/.test(rPr);
+  return { color, bold, fontSizePt };
+}
+
+function extractTextRuns(xml: string): {
+  lines: SlideTextLine[];
+  align: 'left' | 'center' | 'right';
+  valign: 'top' | 'middle' | 'bottom';
+} {
+  const txBody = xml.match(/<p:txBody>([\s\S]*?)<\/p:txBody>/)?.[1] ?? '';
+  const bodyPr = txBody.match(/<a:bodyPr([^/]*)\/>/)?.[1] ?? txBody.match(/<a:bodyPr([^>]*)>/)?.[1] ?? '';
+  let align: 'left' | 'center' | 'right' = 'left';
+  let valign: 'top' | 'middle' | 'bottom' = 'top';
+  if (bodyPr.includes('anchor="ctr"')) valign = 'middle';
+  else if (bodyPr.includes('anchor="b"')) valign = 'bottom';
+
+  const lines: SlideTextLine[] = [];
+  const paragraphs = [...txBody.matchAll(/<a:p>([\s\S]*?)<\/a:p>/g)];
 
   for (const p of paragraphs) {
     const pXml = p[1];
-    const algn = pXml.match(/algn="([^"]+)"/)?.[1];
+    const algn = pXml.match(/<a:pPr[^>]*algn="([^"]+)"/)?.[1];
     if (algn === 'ctr') align = 'center';
     else if (algn === 'r') align = 'right';
 
-    const texts = [...pXml.matchAll(/<a:t>([\s\S]*?)<\/a:t>/g)]
-      .map((m) => decodeXmlEntities(m[1].replace(/\s+/g, ' ').trim()))
-      .filter(Boolean);
-    if (texts.length) lines.push(texts.join(' '));
-
-    const rgb = pXml.match(/<a:srgbClr val="([0-9A-Fa-f]{6})"/);
-    if (rgb) color = `#${rgb[1]}`;
-    const sz = pXml.match(/sz="(\d+)"/);
-    if (sz) fontSizePt = Number(sz[1]) / 100;
-    if (/<a:rPr[^>]*\sb="1"/.test(pXml)) bold = true;
+    const runs = [...pXml.matchAll(/<a:r>([\s\S]*?)<\/a:r>/g)];
+    if (runs.length) {
+      const parts: string[] = [];
+      let lineStyle: Omit<SlideTextLine, 'text'> = {};
+      for (const run of runs) {
+        const rXml = run[1];
+        const t = rXml.match(/<a:t>([\s\S]*?)<\/a:t>/)?.[1];
+        if (!t) continue;
+        const text = decodeXmlEntities(t.replace(/\s+/g, ' ').trim());
+        if (!text) continue;
+        parts.push(text);
+        const rPr = rXml.match(/<a:rPr([^>]*)>/)?.[1] ?? '';
+        lineStyle = { ...lineStyle, ...extractRunStyle(`<a:rPr${rPr}>`) };
+      }
+      const joined = parts.join(' ').trim();
+      if (joined) lines.push({ text: joined, ...lineStyle });
+    } else {
+      const texts = [...pXml.matchAll(/<a:t>([\s\S]*?)<\/a:t>/g)]
+        .map((m) => decodeXmlEntities(m[1].replace(/\s+/g, ' ').trim()))
+        .filter(Boolean);
+      if (texts.length) lines.push({ text: texts.join(' ') });
+    }
   }
 
-  return { lines, align, color, bold, fontSizePt };
+  return { lines, align, valign };
 }
 
 async function resolveMediaPath(zip: JSZip, slidePath: string, rId: string): Promise<string | null> {
@@ -175,17 +214,18 @@ export async function parseSlideVisualLayers(
       continue;
     }
 
-    const fill = extractFillColor(chunk);
+    const fill = extractShapeFillColor(chunk);
     const hasText = chunk.includes('<p:txBody>');
-    if (fill && !hasText) {
+
+    if (fill) {
       layers.push({ kind: 'fill', color: fill, ...box });
-      continue;
     }
 
     if (hasText) {
       const text = extractTextRuns(chunk);
-      if (!text.lines.length) continue;
-      layers.push({ kind: 'text', ...box, ...text });
+      if (text.lines.length) {
+        layers.push({ kind: 'text', ...box, ...text });
+      }
     }
   }
 
