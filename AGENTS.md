@@ -21,3 +21,19 @@
 4. **仅当**用户明确说「不要 push」「先别提交」「不要 commit」时，才跳过提交或推送。
 5. 不要提交 `.env`、密钥等敏感文件；push 前检查 `git status`。
 6. commit message 简洁说明「为什么」，遵循仓库既有风格（`feat:` / `fix:` 等）。
+
+## 主日周报 PPT 模板
+
+**唯一原版（勿改背景/图片，只改 `editableFields` 里列出的文字）：**
+
+- 本机源文件：`/Users/aaronliu/Desktop/06_14_2026.pptx`
+- 仓库副本：`shared/templates/bulletin/06_14_2026.pptx`
+- 结构说明：`shared/templates/bulletin/template-slide-map.json`（38 页分区 + 可编辑文字索引）
+
+更新桌面原版后同步到仓库：
+
+```bash
+npm run sync:bulletin-template
+```
+
+API 通过 `GET /v1/bulletins/template/file` 提供该文件；前端补丁逻辑见 `frontend/src/lib/bulletin-pptx-patches.ts`。
