@@ -315,6 +315,7 @@ const en: MessageTree = {
     playerLoadFailed: 'Failed to load the video player. Refresh and try again.',
     loadToMerge: 'Load into merge',
     rename: 'Rename',
+    editListName: 'Edit list name',
     renameLabel: 'List name',
     renameSave: 'Save',
     renameCancel: 'Cancel',

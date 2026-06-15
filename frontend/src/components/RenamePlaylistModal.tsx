@@ -4,6 +4,7 @@ import { useI18n } from '../i18n';
 
 type RenamePlaylistModalProps = {
   initialTitle: string;
+  modalTitle?: string;
   onClose: () => void;
   onRename: (title: string) => Promise<void>;
   busy?: boolean;
@@ -11,6 +12,7 @@ type RenamePlaylistModalProps = {
 
 export default function RenamePlaylistModal({
   initialTitle,
+  modalTitle,
   onClose,
   onRename,
   busy = false,
@@ -67,7 +69,7 @@ export default function RenamePlaylistModal({
       <div className="metadata-modal create-playlist-modal" onClick={(e) => e.stopPropagation()}>
         <form onSubmit={(e) => void handleSubmit(e)}>
           <div className="metadata-modal-header">
-            <h3 id="rename-playlist-modal-title">{t('playlists.rename')}</h3>
+            <h3 id="rename-playlist-modal-title">{modalTitle ?? t('playlists.rename')}</h3>
             <button
               type="button"
               className="modal-close-btn"

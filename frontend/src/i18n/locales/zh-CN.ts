@@ -307,6 +307,7 @@ export default {
     playerLoadFailed: '视频播放器加载失败，请刷新后重试',
     loadToMerge: '载入合并',
     rename: '重命名',
+    editListName: '编辑列表名',
     renameLabel: '列表名称',
     renameSave: '保存',
     renameCancel: '取消',

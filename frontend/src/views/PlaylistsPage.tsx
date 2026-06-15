@@ -165,7 +165,11 @@ export default function PlaylistsPage({
   const [removeTrackTarget, setRemoveTrackTarget] = useState<{ id: string; title: string } | null>(
     null,
   );
-  const [renameTarget, setRenameTarget] = useState<{ id: string; title: string } | null>(null);
+  const [renameTarget, setRenameTarget] = useState<{
+    id: string;
+    title: string;
+    modalTitle?: string;
+  } | null>(null);
   const [savingRename, setSavingRename] = useState(false);
   const [playbackMode, setPlaybackMode] = useState<PlaylistPlaybackMode>(readPlaylistPlaybackMode);
   const [shuffleOrder, setShuffleOrder] = useState<number[]>([]);
@@ -891,12 +895,12 @@ export default function PlaylistsPage({
     };
   }, [youtubeWatchMobile, audioWatchMobile, homePreviewMobile]);
 
-  const startRename = (id: string, title: string) => {
+  const startRename = (id: string, title: string, modalTitle?: string) => {
     blockListSelectRef.current = true;
     window.setTimeout(() => {
       blockListSelectRef.current = false;
     }, 800);
-    setRenameTarget({ id, title });
+    setRenameTarget({ id, title, modalTitle });
     setListSwipeOpen(null);
   };
 
@@ -957,17 +961,6 @@ export default function PlaylistsPage({
       return !open;
     });
   };
-
-  const renderTracksEditToggle = (className = 'btn-secondary') => (
-    <button
-      type="button"
-      className={`${className} playlists-tracks-edit-btn${tracksEditMode ? ' active' : ''}`}
-      aria-pressed={tracksEditMode}
-      onClick={toggleTracksEditMode}
-    >
-      {tracksEditMode ? t('playlists.doneEditTracks') : t('playlists.editTracks')}
-    </button>
-  );
 
   const renderPlaybackOrderButton = (className = 'playlists-play-order-btn') => (
     <button
@@ -1071,11 +1064,10 @@ export default function PlaylistsPage({
           <button
             type="button"
             className="btn-secondary"
-            onClick={() => startRename(playlist.id, playlist.title)}
+            onClick={() => startRename(playlist.id, playlist.title, t('playlists.editListName'))}
           >
-            {t('playlists.rename')}
+            {t('playlists.editListName')}
           </button>
-          {hasTracks && renderTracksEditToggle()}
           {permissions.canExportToYoutube && playbackMode === 'video' && hasTracks && (
             <button
               type="button"
@@ -1655,12 +1647,14 @@ export default function PlaylistsPage({
                           const isDragOverAfter =
                             trackDragOver?.index === index && trackDragOver.after;
                           const useTrackSwipe = isMobileViewport && !tracksEditMode;
+                          const desktopTrackChrome = !isMobileViewport;
+                          const canDragReorder = tracksEditMode || desktopTrackChrome;
                           return (
                             <li
                               key={item.id}
                               className={`playlists-track${isActive ? ' active' : ''}${isPlaying ? ' playing' : ''}${isDragging ? ' dragging' : ''}${isDragOverBefore ? ' drag-over-before' : ''}${isDragOverAfter ? ' drag-over-after' : ''}`}
                               onDragOver={(e) => {
-                                if (!tracksEditMode || trackDragIndex === null || savingOrder) return;
+                                if (!canDragReorder || trackDragIndex === null || savingOrder) return;
                                 e.preventDefault();
                                 e.dataTransfer.dropEffect = 'move';
                                 const rect = e.currentTarget.getBoundingClientRect();
@@ -1669,7 +1663,7 @@ export default function PlaylistsPage({
                               }}
                               onDrop={(e) => {
                                 e.preventDefault();
-                                if (!tracksEditMode || trackDragIndex === null || !trackDragOver) return;
+                                if (!canDragReorder || trackDragIndex === null || !trackDragOver) return;
                                 void applyTrackReorder(trackDragIndex, trackDragOver);
                                 setTrackDragIndex(null);
                                 setTrackDragOver(null);
@@ -1700,9 +1694,9 @@ export default function PlaylistsPage({
                                 />
                               ) : (
                                 <>
-                              {tracksEditMode && (
+                              {canDragReorder && (
                                 <span
-                                  className={`playlists-track-drag-handle${savingOrder ? ' disabled' : ''}`}
+                                  className={`playlists-track-drag-handle${savingOrder ? ' disabled' : ''}${desktopTrackChrome ? ' playlists-track-drag-handle--desktop' : ''}`}
                                   title={t('playlists.dragToReorder')}
                                   draggable={!savingOrder}
                                   onDragStart={(e) => {
@@ -1741,18 +1735,18 @@ export default function PlaylistsPage({
                                 </span>
                                 <span className="playlists-track-title">{item.title}</span>
                               </button>
-                              {(tracksEditMode || !isMobileViewport) && (
+                              {(canDragReorder || desktopTrackChrome) && (
                                 <button
                                   type="button"
-                                  className={`playlists-track-remove${!isMobileViewport ? ' playlists-track-remove--desktop' : ''}`}
+                                  className="playlists-track-remove"
                                   disabled={removingItemId === item.id || savingOrder}
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    if (isMobileViewport) {
-                                      void handleRemoveItem(item.id);
+                                    if (desktopTrackChrome) {
+                                      requestRemoveTrack(item);
                                       return;
                                     }
-                                    requestRemoveTrack(item);
+                                    void handleRemoveItem(item.id);
                                   }}
                                   aria-label={t('playlists.removeTrack', { title: item.title })}
                                 >
@@ -1851,6 +1845,7 @@ export default function PlaylistsPage({
       {renameTarget && (
         <RenamePlaylistModal
           initialTitle={renameTarget.title}
+          modalTitle={renameTarget.modalTitle}
           onClose={() => setRenameTarget(null)}
           onRename={performRename}
           busy={savingRename}
