@@ -1067,6 +1067,13 @@ export default function PlaylistsPage({
           <button type="button" className="btn-secondary" onClick={() => setShowAddModal(true)}>
             {t('playlists.addTitle')}
           </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => startRename(playlist.id, playlist.title)}
+          >
+            {t('playlists.rename')}
+          </button>
           {hasTracks && renderTracksEditToggle()}
           {permissions.canExportToYoutube && playbackMode === 'video' && hasTracks && (
             <button
