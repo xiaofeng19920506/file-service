@@ -12,6 +12,7 @@ import {
   type Db,
 } from '@file-service/shared';
 import type { FastifyInstance } from 'fastify';
+import { notifyBulletinUpdated } from './bulletin-realtime.js';
 
 const BULLETIN_TEMPLATE_DIR = join(
   fileURLToPath(import.meta.url),
@@ -39,6 +40,7 @@ export type WeeklyBulletinDto = {
   testimonyShareDate: string;
   serviceRosterText: string;
   baptismText: string;
+  verseOfWeek: string;
   weeklyMeetingVariant: number | null;
   skipTestimonyWeek: boolean;
   skipDepartmentReports: boolean;
@@ -92,6 +94,7 @@ async function mapBulletin(
     testimonyShareDate: row.testimonyShareDate,
     serviceRosterText: row.serviceRosterText,
     baptismText: row.baptismText,
+    verseOfWeek: row.verseOfWeek,
     weeklyMeetingVariant: row.weeklyMeetingVariant,
     skipTestimonyWeek: row.skipTestimonyWeek,
     skipDepartmentReports: row.skipDepartmentReports,
@@ -115,6 +118,7 @@ type BulletinPatchBody = Partial<{
   testimonyShareDate: string;
   serviceRosterText: string;
   baptismText: string;
+  verseOfWeek: string;
   weeklyMeetingVariant: number | null;
   skipTestimonyWeek: boolean;
   skipDepartmentReports: boolean;
@@ -127,7 +131,10 @@ type AnnouncementInput = {
   body: string;
 };
 
-export function registerBulletinRoutes(app: FastifyInstance, { db }: { db: Db }) {
+export function registerBulletinRoutes(
+  app: FastifyInstance,
+  { db, redisUrl }: { db: Db; redisUrl: string },
+) {
   app.get('/v1/bulletins/template/slides', async (request, reply) => {
     const user = requireUser(request);
     if (!user || !canViewBulletin(user.role)) {
@@ -246,6 +253,7 @@ export function registerBulletinRoutes(app: FastifyInstance, { db }: { db: Db })
       assignText('testimonyShareDate', 'testimonyShareDate');
       assignText('serviceRosterText', 'serviceRosterText');
       assignText('baptismText', 'baptismText');
+      assignText('verseOfWeek', 'verseOfWeek');
       if (body.weeklyMeetingVariant !== undefined) {
         const v = body.weeklyMeetingVariant;
         if (v !== null && v !== 28 && v !== 29 && v !== 30) {
@@ -277,6 +285,10 @@ export function registerBulletinRoutes(app: FastifyInstance, { db }: { db: Db })
         .set(patch)
         .where(eq(weeklyBulletins.id, request.params.id))
         .returning();
+      const updatedAt = row!.updatedAt ?? new Date();
+      void notifyBulletinUpdated(redisUrl, request.params.id, updatedAt).catch((err) => {
+        app.log.error(err, 'bulletin realtime notify failed');
+      });
       return reply.send({ bulletin: await mapBulletin(db, row!) });
     },
   );
@@ -315,10 +327,20 @@ export function registerBulletinRoutes(app: FastifyInstance, { db }: { db: Db })
         );
       }
 
+      const touchedAt = new Date();
+      await db
+        .update(weeklyBulletins)
+        .set({ updatedAt: touchedAt })
+        .where(eq(weeklyBulletins.id, request.params.id));
+
       const [row] = await db
         .select()
         .from(weeklyBulletins)
         .where(eq(weeklyBulletins.id, request.params.id));
+      const updatedAt = row!.updatedAt ?? touchedAt;
+      void notifyBulletinUpdated(redisUrl, request.params.id, updatedAt).catch((err) => {
+        app.log.error(err, 'bulletin realtime notify failed');
+      });
       return reply.send({ bulletin: await mapBulletin(db, row!) });
     },
   );

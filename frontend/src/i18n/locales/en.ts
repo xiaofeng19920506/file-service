@@ -148,6 +148,8 @@ const en: MessageTree = {
     published: 'Published to library',
     publishedHint: 'Linked to a library entry — worship live will load the published file first.',
     openInLibrary: 'Preview library PPT',
+    verseOfWeek: 'Verse of the week (slide 35)',
+    verseOfWeekHint: 'Auto-saves shortly after edits; worship live updates silently without refresh.',
     readonlyHint: 'Worship team can view and download; dates and announcements are edited by bulletin editors or admins.',
     serviceDate: 'Service date',
     serviceTime: 'Service time',

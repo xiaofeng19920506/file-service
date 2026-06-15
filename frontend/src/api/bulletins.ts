@@ -21,6 +21,7 @@ export type WeeklyBulletin = {
   testimonyShareDate: string;
   serviceRosterText: string;
   baptismText: string;
+  verseOfWeek: string;
   weeklyMeetingVariant: number | null;
   skipTestimonyWeek: boolean;
   skipDepartmentReports: boolean;
@@ -43,6 +44,7 @@ export type BulletinPatch = Partial<{
   testimonyShareDate: string;
   serviceRosterText: string;
   baptismText: string;
+  verseOfWeek: string;
   weeklyMeetingVariant: number | null;
   skipTestimonyWeek: boolean;
   skipDepartmentReports: boolean;

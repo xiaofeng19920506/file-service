@@ -140,6 +140,8 @@ export default {
     published: '已发布到诗库',
     publishedHint: '已关联诗库条目，敬拜现场将优先加载已发布版本。',
     openInLibrary: '预览诗库 PPT',
+    verseOfWeek: '本週金句（第 35 页）',
+    verseOfWeekHint: '修改后约 1 秒内自动保存；敬拜现场会静默同步，无需刷新。',
     readonlyHint: '敬拜团可查看与下载；日期与公告由周报编辑或管理员修改。',
     serviceDate: '主日日期',
     serviceTime: '崇拜时间',

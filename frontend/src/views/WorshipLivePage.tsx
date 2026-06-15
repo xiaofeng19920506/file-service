@@ -3,10 +3,11 @@ import { getBulletin } from '../api/bulletins';
 import { getPlaylist, type PlaylistDetail } from '../api/playlists';
 import PlaylistAudioPlayer from '../components/PlaylistAudioPlayer';
 import YoutubePlaylistPlayer from '../components/YoutubePlaylistPlayer';
+import { useBulletinRealtime } from '../hooks/useBulletinRealtime';
 import { usePlaylistPlaybackTransport } from '../hooks/usePlaylistPlaybackTransport';
 import { useI18n } from '../i18n';
-import { resolveBulletinPptxBlob } from '../lib/bulletin-publish';
-import { parsePptxSlidesDetailed, type EditableSlide } from '../lib/pptx-preview';
+import { rebuildBulletinSlides, preserveSlideIndex } from '../lib/bulletin-slides';
+import type { EditableSlide } from '../lib/pptx-preview';
 import type { WorshipLiveMode } from '../lib/worship-live-config';
 
 const WORSHIP_SLIDE_FIRST = 7;
@@ -34,6 +35,41 @@ export default function WorshipLivePage({ playlistId, bulletinId, mode }: Worshi
   const [stageFullscreen, setStageFullscreen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const lastSyncedAtRef = useRef<string | null>(null);
+  const slidesRef = useRef<EditableSlide[]>([]);
+  const slideIndexRef = useRef(0);
+  slidesRef.current = slides;
+  slideIndexRef.current = slideIndex;
+
+  const applyBulletinSlides = useCallback((nextSlides: EditableSlide[]) => {
+    setSlides((prev) => {
+      const nextIndex = preserveSlideIndex(prev, slideIndexRef.current, nextSlides);
+      setSlideIndex(nextIndex);
+      return nextSlides;
+    });
+  }, []);
+
+  const refreshBulletinSlides = useCallback(
+    async (updatedAt: string) => {
+      if (!bulletinId || mode !== 'ppt') return;
+      if (lastSyncedAtRef.current === updatedAt) return;
+      lastSyncedAtRef.current = updatedAt;
+      const bulletin = await getBulletin(bulletinId);
+      const nextSlides = await rebuildBulletinSlides(bulletin);
+      applyBulletinSlides(nextSlides);
+    },
+    [applyBulletinSlides, bulletinId, mode],
+  );
+
+  useBulletinRealtime(
+    bulletinId,
+    (event) => {
+      void refreshBulletinSlides(event.updatedAt).catch(() => {
+        // silent — next event or manual navigation can recover
+      });
+    },
+    mode === 'ppt' && Boolean(bulletinId) && !loading,
+  );
 
   const itemCount = detail?.items.length ?? 0;
   const transport = usePlaylistPlaybackTransport({
@@ -63,10 +99,8 @@ export default function WorshipLivePage({ playlistId, bulletinId, mode }: Worshi
             return;
           }
           const bulletin = await getBulletin(bulletinId);
-          const pptx = await resolveBulletinPptxBlob(bulletin);
-          const parsed = await parsePptxSlidesDetailed(pptx, {
-            sourceFile: `bulletin-${bulletin.serviceDate}.pptx`,
-          });
+          if (bulletin.updatedAt) lastSyncedAtRef.current = bulletin.updatedAt;
+          const parsed = await rebuildBulletinSlides(bulletin);
           if (cancelled) return;
           setSlides(parsed);
         }

@@ -67,6 +67,9 @@ export async function generateBulletinPptx(
   if (bulletin.serviceRosterText) {
     replaceSlideTexts(parsed, 34, [bulletin.serviceRosterText]);
   }
+  if (bulletin.verseOfWeek) {
+    replaceSlideTexts(parsed, 35, [bulletin.verseOfWeek]);
+  }
 
   const announcementSlides = [25, 26, 27];
   bulletin.announcements.forEach((item, index) => {

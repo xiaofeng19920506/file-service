@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   createBulletin,
   getBulletin,
@@ -9,6 +9,7 @@ import {
   type WeeklyBulletin,
 } from '../api/bulletins';
 import { useAuth } from '../auth/AuthContext';
+import { useBulletinRealtime } from '../hooks/useBulletinRealtime';
 import { useI18n } from '../i18n';
 import { publishBulletinPptx, resolveBulletinPptxBlob } from '../lib/bulletin-publish';
 import { readWorshipLiveConfig, writeWorshipLiveConfig } from '../lib/worship-live-config';
@@ -53,6 +54,58 @@ export default function BulletinPage() {
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const skipVerseAutosaveRef = useRef(true);
+  const verseFocusedRef = useRef(false);
+  const savingRef = useRef(false);
+  savingRef.current = saving || publishing;
+
+  useEffect(() => {
+    skipVerseAutosaveRef.current = true;
+    const timer = window.setTimeout(() => {
+      skipVerseAutosaveRef.current = false;
+    }, 600);
+    return () => window.clearTimeout(timer);
+  }, [selectedId, draft?.updatedAt]);
+
+  useBulletinRealtime(
+    selectedId,
+    (event) => {
+      if (!selectedId || savingRef.current) return;
+      if (event.updatedAt === draft?.updatedAt) return;
+      void (async () => {
+        const remote = await getBulletin(selectedId);
+        skipVerseAutosaveRef.current = true;
+        setDraft((prev) => {
+          if (!prev || prev.id !== remote.id) return remote;
+          if (verseFocusedRef.current) {
+            return { ...remote, verseOfWeek: prev.verseOfWeek };
+          }
+          return remote;
+        });
+        if (!verseFocusedRef.current) {
+          setAnnouncements(toDrafts(remote));
+        }
+        window.setTimeout(() => {
+          skipVerseAutosaveRef.current = false;
+        }, 600);
+      })();
+    },
+    Boolean(selectedId),
+  );
+
+  useEffect(() => {
+    if (!canManage || !draft || skipVerseAutosaveRef.current) return;
+    const timer = window.setTimeout(() => {
+      void updateBulletin(draft.id, { verseOfWeek: draft.verseOfWeek }).then((updated) => {
+        setDraft((prev) =>
+          prev && prev.id === updated.id
+            ? { ...prev, verseOfWeek: updated.verseOfWeek, updatedAt: updated.updatedAt }
+            : prev,
+        );
+      });
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }, [canManage, draft?.id, draft?.verseOfWeek]);
 
   const refreshList = useCallback(async () => {
     const rows = await listBulletins();
@@ -144,6 +197,7 @@ export default function BulletinPage() {
         testimonyShareDate: draft.testimonyShareDate,
         serviceRosterText: draft.serviceRosterText,
         baptismText: draft.baptismText,
+        verseOfWeek: draft.verseOfWeek,
         weeklyMeetingVariant: draft.weeklyMeetingVariant,
         skipTestimonyWeek: draft.skipTestimonyWeek,
         skipDepartmentReports: draft.skipDepartmentReports,
@@ -207,6 +261,7 @@ export default function BulletinPage() {
         testimonyShareDate: draft.testimonyShareDate,
         serviceRosterText: draft.serviceRosterText,
         baptismText: draft.baptismText,
+        verseOfWeek: draft.verseOfWeek,
         weeklyMeetingVariant: draft.weeklyMeetingVariant,
         skipTestimonyWeek: draft.skipTestimonyWeek,
         skipDepartmentReports: draft.skipDepartmentReports,
@@ -387,6 +442,24 @@ export default function BulletinPage() {
                     disabled={!canManage}
                     onChange={(e) => patchField('baptismText', e.target.value)}
                   />
+                </label>
+                <label className="bulletin-span-2 bulletin-verse-field">
+                  {t('bulletin.verseOfWeek')}
+                  <textarea
+                    rows={4}
+                    value={draft.verseOfWeek}
+                    disabled={!canManage}
+                    onFocus={() => {
+                      verseFocusedRef.current = true;
+                    }}
+                    onBlur={() => {
+                      verseFocusedRef.current = false;
+                    }}
+                    onChange={(e) => patchField('verseOfWeek', e.target.value)}
+                  />
+                  {canManage && (
+                    <span className="bulletin-verse-hint">{t('bulletin.verseOfWeekHint')}</span>
+                  )}
                 </label>
               </div>
 

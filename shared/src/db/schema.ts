@@ -194,6 +194,7 @@ export const weeklyBulletins = pgTable('weekly_bulletins', {
   testimonyShareDate: text('testimony_share_date').notNull().default(''),
   serviceRosterText: text('service_roster_text').notNull().default(''),
   baptismText: text('baptism_text').notNull().default(''),
+  verseOfWeek: text('verse_of_week').notNull().default(''),
   weeklyMeetingVariant: integer('weekly_meeting_variant'),
   skipTestimonyWeek: boolean('skip_testimony_week').notNull().default(false),
   skipDepartmentReports: boolean('skip_department_reports').notNull().default(false),

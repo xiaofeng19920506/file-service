@@ -53,6 +53,7 @@ import { registerYoutubeOAuthRoutes } from './youtube-oauth.js';
 import { registerYoutubeSearchRoutes } from './youtube-search.js';
 import { registerYoutubeTrendingRoutes } from './youtube-trending.js';
 import { registerBulletinRoutes } from './bulletins.js';
+import { registerBulletinRealtimeRoutes } from './bulletin-realtime.js';
 import { resolveRequestActor } from './request-actor.js';
 
 async function buildApp() {
@@ -105,7 +106,8 @@ async function buildApp() {
   registerYoutubeOAuthRoutes(app, { db, env });
   registerYoutubeSearchRoutes(app, { db, env });
   registerYoutubeTrendingRoutes(app, { db });
-  registerBulletinRoutes(app, { db });
+  registerBulletinRoutes(app, { db, redisUrl: env.REDIS_URL });
+  registerBulletinRealtimeRoutes(app, { redisUrl: env.REDIS_URL });
 
   const maxUploadBytes = env.MAX_UPLOAD_MB * 1024 * 1024;
   const getActor = (request: import('fastify').FastifyRequest) =>

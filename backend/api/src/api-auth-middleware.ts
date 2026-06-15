@@ -25,10 +25,14 @@ function requestPath(request: FastifyRequest): string {
 }
 
 function extractToken(request: FastifyRequest): string | undefined {
-  return extractApiKeyFromHeaders({
+  const fromHeaders = extractApiKeyFromHeaders({
     authorization: request.headers.authorization,
     'x-api-key': request.headers['x-api-key'],
   });
+  if (fromHeaders) return fromHeaders;
+  const query = request.query as { access_token?: string };
+  const fromQuery = query.access_token?.trim();
+  return fromQuery || undefined;
 }
 
 function effectiveRole(request: FastifyRequest): UserRole | null {
