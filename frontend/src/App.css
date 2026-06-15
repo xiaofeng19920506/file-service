@@ -924,6 +924,36 @@
   border-color: color-mix(in srgb, #ef5350 55%, var(--border));
 }
 
+.btn-danger-solid {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 1.1rem;
+  border: none;
+  border-radius: 980px;
+  background: #c62828;
+  color: #fff;
+  font-size: 0.875rem;
+  transition: background 0.2s;
+}
+
+.btn-danger-solid:hover:not(:disabled) {
+  background: #b71c1c;
+}
+
+.btn-danger-solid:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+[data-theme='dark'] .btn-danger-solid {
+  background: #e53935;
+}
+
+[data-theme='dark'] .btn-danger-solid:hover:not(:disabled) {
+  background: #c62828;
+}
+
 .edit-library-delete {
   margin-top: 1.25rem;
   padding-top: 1rem;
