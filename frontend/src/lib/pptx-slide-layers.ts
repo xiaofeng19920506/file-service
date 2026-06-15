@@ -1,7 +1,9 @@
 import type JSZip from 'jszip';
 
-const SLIDE_CX = 9144000;
-const SLIDE_CY = 6858000;
+export type SlideSizeEmu = { cx: number; cy: number };
+
+/** 标准宽屏幻灯片（10" × 5.625"，16:9） */
+export const DEFAULT_SLIDE_SIZE: SlideSizeEmu = { cx: 9144000, cy: 5143500 };
 
 const FALLBACK_SCHEME: Record<string, string> = {
   accent6: '#F8E71C',
@@ -24,6 +26,9 @@ export type SlideTextParagraph = {
   runs: SlideTextRun[];
   align: 'left' | 'center' | 'right';
   lineSpacing: number;
+  /** 空段落，用于红/蓝区之间的行距 */
+  spacer?: boolean;
+  spacerHeightPt?: number;
 };
 
 export type SlideVisualLayer =
@@ -49,6 +54,7 @@ export type SlideVisualLayer =
       height: number;
       valign?: 'top' | 'middle' | 'bottom';
       autoFit?: boolean;
+      paddingPct?: { top: number; right: number; bottom: number; left: number };
     };
 
 function emuPct(value: number, total: number): number {
@@ -91,17 +97,75 @@ async function loadThemeSchemeColors(zip: JSZip): Promise<Record<string, string>
   return colors;
 }
 
-function extractShapeBox(xml: string): { left: number; top: number; width: number; height: number } | null {
-  const spPr = xml.match(/<p:spPr>([\s\S]*?)<\/p:spPr>/)?.[1] ?? xml;
+function extractShapeBoxEmu(chunk: string): {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  widthEmu: number;
+  heightEmu: number;
+} | null {
+  const spPr = chunk.match(/<p:spPr>([\s\S]*?)<\/p:spPr>/)?.[1] ?? chunk;
   const off = spPr.match(/<a:off x="(\d+)" y="(\d+)"/);
   const ext = spPr.match(/<a:ext cx="(\d+)" cy="(\d+)"/);
   if (!off || !ext) return null;
+  const widthEmu = Number(ext[1]);
+  const heightEmu = Number(ext[2]);
   return {
-    left: emuPct(Number(off[1]), SLIDE_CX),
-    top: emuPct(Number(off[2]), SLIDE_CY),
-    width: emuPct(Number(ext[1]), SLIDE_CX),
-    height: emuPct(Number(ext[2]), SLIDE_CY),
+    left: Number(off[1]),
+    top: Number(off[2]),
+    width: widthEmu,
+    height: heightEmu,
+    widthEmu,
+    heightEmu,
   };
+}
+
+function extractShapeBox(
+  xml: string,
+  slideSize: SlideSizeEmu,
+): { left: number; top: number; width: number; height: number; widthEmu: number; heightEmu: number } | null {
+  const raw = extractShapeBoxEmu(xml);
+  if (!raw) return null;
+  return {
+    left: emuPct(raw.left, slideSize.cx),
+    top: emuPct(raw.top, slideSize.cy),
+    width: emuPct(raw.width, slideSize.cx),
+    height: emuPct(raw.height, slideSize.cy),
+    widthEmu: raw.widthEmu,
+    heightEmu: raw.heightEmu,
+  };
+}
+
+function extractTextBoxPadding(
+  txBody: string,
+  widthEmu: number,
+  heightEmu: number,
+): { top: number; right: number; bottom: number; left: number } {
+  const bodyPr = txBody.match(/<a:bodyPr([^/]*)\/>/)?.[1] ?? txBody.match(/<a:bodyPr([^>]*)>/)?.[1] ?? '';
+  const read = (attr: string, base: number) => {
+    const m = bodyPr.match(new RegExp(`${attr}="(\\d+)"`));
+    return m && base > 0 ? (Number(m[1]) / base) * 100 : 0;
+  };
+  return {
+    top: read('tIns', heightEmu),
+    right: read('rIns', widthEmu),
+    bottom: read('bIns', heightEmu),
+    left: read('lIns', widthEmu),
+  };
+}
+
+/** 从 `ppt/presentation.xml` 读取幻灯片宽高（EMU） */
+export async function loadSlideSizeEmu(zip: JSZip): Promise<SlideSizeEmu> {
+  const entry = zip.file('ppt/presentation.xml');
+  if (!entry) return { ...DEFAULT_SLIDE_SIZE };
+  const xml = await entry.async('string');
+  const block = xml.match(/<p:sldSz[^/>]*\/>/)?.[0];
+  if (!block) return { ...DEFAULT_SLIDE_SIZE };
+  const cx = Number(block.match(/cx="(\d+)"/)?.[1]);
+  const cy = Number(block.match(/cy="(\d+)"/)?.[1]);
+  if (!cx || !cy) return { ...DEFAULT_SLIDE_SIZE };
+  return { cx, cy };
 }
 
 function resolveSchemeColor(schemeColors: Record<string, string>, schemeName: string): string | null {
@@ -188,6 +252,16 @@ function extractTextContent(
 
     if (runs.length) {
       paragraphs.push({ runs, align, lineSpacing });
+    } else if (/<a:r>[\s\S]*?<a:t[^>]*>\s*<\/a:t>/.test(pXml)) {
+      const endSz = pXml.match(/<a:endParaRPr[^>]*sz="(\d+)"/)?.[1];
+      const fontSizePt = endSz ? Number(endSz) / 100 : 14;
+      paragraphs.push({
+        runs: [],
+        align,
+        lineSpacing,
+        spacer: true,
+        spacerHeightPt: fontSizePt * (lineSpacing || 1),
+      });
     }
   }
 
@@ -217,9 +291,12 @@ async function mediaToUrl(zip: JSZip, mediaPath: string): Promise<string | null>
   return URL.createObjectURL(blob);
 }
 
-export function autoFitScale(layer: Extract<SlideVisualLayer, { kind: 'shape' }>): number {
+export function autoFitScale(
+  layer: Extract<SlideVisualLayer, { kind: 'shape' }>,
+  slideCy: number = DEFAULT_SLIDE_SIZE.cy,
+): number {
   if (!layer.autoFit || !layer.paragraphs.length) return 1;
-  const slideHeightPt = (SLIDE_CY / 914400) * 72;
+  const slideHeightPt = (slideCy / 914400) * 72;
   const boxHeightPt = (layer.height / 100) * slideHeightPt;
   let contentPt = 0;
   for (const p of layer.paragraphs) {
@@ -230,14 +307,20 @@ export function autoFitScale(layer: Extract<SlideVisualLayer, { kind: 'shape' }>
   return Math.min(1, (boxHeightPt / contentPt) * 0.92);
 }
 
+export type ParsedSlideVisual = {
+  layers: SlideVisualLayer[];
+  slideSize: SlideSizeEmu;
+};
+
 /** 按原版 PPT 图层顺序解析幻灯片（背景、形状、图片） */
 export async function parseSlideVisualLayers(
   zip: JSZip,
   slidePath: string,
   xml: string,
-): Promise<SlideVisualLayer[]> {
+): Promise<ParsedSlideVisual> {
   const layers: SlideVisualLayer[] = [];
   const urlCache = new Map<string, string>();
+  const slideSize = await loadSlideSizeEmu(zip);
   const schemeColors = await loadThemeSchemeColors(zip);
 
   async function urlForEmbed(rId: string): Promise<string | null> {
@@ -260,15 +343,16 @@ export async function parseSlideVisualLayers(
 
   for (const block of blocks) {
     const chunk = block[0];
-    const box = extractShapeBox(chunk);
+    const box = extractShapeBox(chunk, slideSize);
     if (!box) continue;
+    const { widthEmu, heightEmu, ...boxPct } = box;
 
     if (chunk.startsWith('<p:pic>')) {
       const embed = chunk.match(/r:embed="([^"]+)"/)?.[1];
       if (!embed) continue;
       const url = await urlForEmbed(embed);
       if (!url) continue;
-      layers.push({ kind: 'image', url, ...box });
+      layers.push({ kind: 'image', url, ...boxPct });
       continue;
     }
 
@@ -276,16 +360,18 @@ export async function parseSlideVisualLayers(
     const hasText = chunk.includes('<p:txBody>');
 
     if (hasText) {
+      const txBody = chunk.match(/<p:txBody>([\s\S]*?)<\/p:txBody>/)?.[1] ?? '';
       const text = extractTextContent(chunk, schemeColors);
+      const paddingPct = extractTextBoxPadding(txBody, box.widthEmu, box.heightEmu);
       if (text.paragraphs.length) {
-        layers.push({ kind: 'shape', fill, ...box, ...text });
+        layers.push({ kind: 'shape', fill, ...boxPct, ...text, paddingPct });
       }
     } else if (fill) {
-      layers.push({ kind: 'shape', fill, paragraphs: [], ...box, valign: 'top' });
+      layers.push({ kind: 'shape', fill, paragraphs: [], ...boxPct, valign: 'top' });
     }
   }
 
-  return layers;
+  return { layers, slideSize };
 }
 
 export function revokeSlideVisualLayers(layers: SlideVisualLayer[]): void {

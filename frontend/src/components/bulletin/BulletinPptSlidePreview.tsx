@@ -107,7 +107,7 @@ export default function BulletinPptSlidePreview({
   return (
     <figure className={rootClass}>
       {slideLabel && <figcaption className="bulletin-slide-preview-caption">{slideLabel}</figcaption>}
-      <div className="bulletin-slide-preview-frame">
+      <div className="bulletin-slide-preview-frame bulletin-slide-preview-frame--png">
         <img className="bulletin-slide-preview-img" src={previewUrl} alt="" draggable={false} />
       </div>
     </figure>

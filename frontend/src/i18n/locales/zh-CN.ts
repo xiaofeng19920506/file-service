@@ -178,7 +178,7 @@ export default {
     coverPreviewEmpty: '请选择主日日期以预览封面',
     editorPanel: '周报编辑',
     previewTitle: 'PPT 预览',
-    previewHint: '从原版 PPT 读取背景、色块、图片与文字坐标；仅替换本步可编辑文字，版式与模板一致',
+    previewHint: '由 LibreOffice 按原版 PPT 渲染预览，仅替换本步可编辑文字，版式与 PowerPoint 一致',
     previewUnavailableHint: '本机未安装 LibreOffice 时无法渲染预览，导出 PPT 后可在 PowerPoint 中查看。',
     previewSlideSingle: 'PPT 第 {page} 页',
     previewEditedTexts: '本步将写入的文字',
