@@ -15,14 +15,6 @@ export default function BulletinPreviewPanel({ wizardStep, bulletin }: BulletinP
   const stepDef = BULLETIN_WIZARD_STEPS[wizardStep];
   const slideNumber = stepDef?.slides[0];
 
-  const slideLabel = useMemo(() => {
-    if (!stepDef?.slides.length) return undefined;
-    if (stepDef.slides.length === 1) {
-      return t('bulletin.previewSlideSingle', { page: stepDef.slides[0]! });
-    }
-    return t('bulletin.previewSectionLabel', { pages: stepDef.slides.join(', ') });
-  }, [stepDef, t]);
-
   const coverPatch = useMemo(() => {
     if (stepDef?.id !== 'cover') return undefined;
     const serviceDate = bulletin.serviceDate || nextSundayIso();
@@ -43,6 +35,8 @@ export default function BulletinPreviewPanel({ wizardStep, bulletin }: BulletinP
     );
   }
 
+  const staticSlides = stepDef.companionStaticSlides ?? [];
+
   return (
     <div className="bulletin-preview-panel">
       <header className="bulletin-preview-panel-header">
@@ -50,14 +44,29 @@ export default function BulletinPreviewPanel({ wizardStep, bulletin }: BulletinP
         <p className="bulletin-preview-panel-hint">{t('bulletin.previewHint')}</p>
       </header>
 
-      <BulletinPptSlidePreview
-        slideNumber={slideNumber}
-        patch={coverPatch}
-        requireDate={false}
-        emptyLabel={t('bulletin.coverPreviewEmpty')}
-        slideLabel={slideLabel}
-        large
-      />
+      <div className="bulletin-preview-stack">
+        <BulletinPptSlidePreview
+          slideNumber={slideNumber}
+          patch={coverPatch}
+          requireDate={false}
+          emptyLabel={t('bulletin.coverPreviewEmpty')}
+          slideLabel={t('bulletin.previewSlideSingle', { page: slideNumber })}
+          large
+        />
+
+        {staticSlides.map((page) => (
+          <div key={page} className="bulletin-preview-static-block">
+            <p className="bulletin-preview-static-note">{t('bulletin.previewStaticNote')}</p>
+            <BulletinPptSlidePreview
+              slideNumber={page}
+              requireDate={false}
+              emptyLabel={t('bulletin.coverPreviewEmpty')}
+              slideLabel={t('bulletin.previewStaticPreService', { page })}
+              large
+            />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

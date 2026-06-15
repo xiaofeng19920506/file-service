@@ -1,8 +1,13 @@
+/** 封面之后自动接上的固定页（模板原样，不在 stepper 中编辑） */
+export const BULLETIN_STATIC_SLIDES_AFTER_COVER = [2] as const;
+
 /** 周报编辑向导步骤（按 PPT 模板分区，静态页后续可标记为跳过） */
 export type BulletinWizardStep = {
   id: string;
   sectionId: string;
   slides: number[];
+  /** 本步预览额外展示的固定页（只读，无编辑步骤） */
+  companionStaticSlides?: readonly number[];
   labelKey:
     | 'bulletin.steps.cover'
     | 'bulletin.steps.offering'
@@ -12,6 +17,8 @@ export type BulletinWizardStep = {
     | 'bulletin.steps.more';
   /** 当前是否已实现编辑 UI */
   enabled: boolean;
+  /** 为 true 时不出现在 stepper（如会前祷告等固定页） */
+  skipInStepper?: boolean;
 };
 
 export const BULLETIN_WIZARD_STEPS: BulletinWizardStep[] = [
@@ -19,6 +26,7 @@ export const BULLETIN_WIZARD_STEPS: BulletinWizardStep[] = [
     id: 'cover',
     sectionId: 'cover',
     slides: [1],
+    companionStaticSlides: BULLETIN_STATIC_SLIDES_AFTER_COVER,
     labelKey: 'bulletin.steps.cover',
     enabled: true,
   },

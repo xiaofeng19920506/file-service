@@ -57,7 +57,7 @@ export default function BulletinPage() {
 
   const stepperSteps = useMemo(
     () =>
-      BULLETIN_WIZARD_STEPS.map((step) => ({
+      BULLETIN_WIZARD_STEPS.filter((step) => !step.skipInStepper).map((step) => ({
         id: step.id,
         label: t(step.labelKey),
         enabled: step.enabled,
