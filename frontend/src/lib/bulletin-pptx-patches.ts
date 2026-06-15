@@ -25,16 +25,18 @@ export type SlideTextPatch = {
   replacements: SlideTextReplacement[];
 };
 
-/** 封面日期行：左日期 + 宽间距 + 右时间（与「主日崇拜」同字号） */
+/** 封面日期行：左日期 + 宽间距 + 右时间（同一字号、同一基线） */
 export function buildCoverPatch(serviceDate: string, serviceTime: string): SlideTextPatch {
   const date = formatBulletinCoverDate(serviceDate);
   const time = serviceTime.trim() || '11:00';
+  const linePt = 34;
   return {
     slideNumber: 1,
     replacements: [
-      { textIndex: 8, text: `${date}${' '.repeat(12)}` },
-      { textIndex: 9, text: ' '.repeat(42) },
-      { textIndex: 10, text: time, fontSizePt: 34 },
+      { textIndex: 8, text: `${date}${' '.repeat(12)}`, fontSizePt: linePt },
+      { textIndex: 9, text: ' '.repeat(42), fontSizePt: linePt },
+      { textIndex: 10, text: `${time} `, fontSizePt: linePt },
+      { textIndex: 11, text: '主日崇拜', fontSizePt: linePt },
     ],
   };
 }
