@@ -1497,7 +1497,7 @@
     top: 0;
     right: 0;
     bottom: 0;
-    width: min(24rem, 38vw);
+    width: min(36rem, 32vw);
     border-left: 1px solid var(--border-light);
     box-shadow: -8px 0 32px color-mix(in srgb, var(--shadow-sm) 60%, transparent);
   }
@@ -1511,8 +1511,8 @@
     right: auto;
     left: 1.25rem;
     bottom: 5.85rem;
-    width: min(22rem, 36vw);
-    max-height: min(52vh, 26rem);
+    width: min(36rem, 40vw);
+    max-height: min(70vh, 40rem);
     border: 1px solid var(--border-light);
     border-radius: 14px;
     box-shadow:
@@ -1534,12 +1534,20 @@
   }
 
   .playlist-queue-panel--desktop-dock .playlist-queue-head {
-    padding: 0.85rem 1rem 0.65rem;
+    padding: 1rem 1.15rem 0.75rem;
+  }
+
+  .playlist-queue-panel--desktop-dock .playlist-queue-head h2 {
+    font-size: 1.125rem;
   }
 
   .playlist-queue-panel--desktop-dock .playlist-queue-item {
-    padding-left: 0.75rem;
-    padding-right: 0.75rem;
+    padding-left: 0.85rem;
+    padding-right: 0.85rem;
+  }
+
+  .playlist-queue-panel--desktop-dock .playlist-queue-title {
+    font-size: 0.9375rem;
   }
 
   .playlists-mini-player {
