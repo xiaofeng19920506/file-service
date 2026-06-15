@@ -54,8 +54,7 @@ import {
 import {
   advanceShufflePlayback,
   buildShuffleOrder,
-  canAdvanceShuffle,
-  canRetreatShuffle,
+  buildShuffleOrderStartingWith,
   resolveShuffleCursor,
   retreatShufflePlayback,
 } from '../lib/playlist-shuffle';
@@ -185,6 +184,8 @@ export default function PlaylistsPage({
   const [playbackMode, setPlaybackMode] = useState<PlaylistPlaybackMode>(readPlaylistPlaybackMode);
   const [shuffleOrder, setShuffleOrder] = useState<number[]>([]);
   const [shuffleCursor, setShuffleCursor] = useState(0);
+  const shuffleOrderRef = useRef<number[]>([]);
+  const prevShuffleItemCountRef = useRef(0);
   const [queueOpen, setQueueOpen] = useState(false);
   const [playbackOrderOpen, setPlaybackOrderOpen] = useState(false);
   const [audioProgress, setAudioProgress] = useState<PlaylistAudioProgressState>({
@@ -326,6 +327,8 @@ export default function PlaylistsPage({
     }
     setShuffleOrder([]);
     setShuffleCursor(0);
+    shuffleOrderRef.current = [];
+    prevShuffleItemCountRef.current = 0;
   }, [selectedId, loadDetail]);
 
   const backToList = useCallback(() => {
@@ -567,80 +570,70 @@ export default function PlaylistsPage({
 
   const itemCount = detail?.items.length ?? 0;
 
-  const syncShuffleCursorForIndex = useCallback(
-    (index: number, order: number[]) => {
-      const cursor = order.indexOf(index);
-      setShuffleCursor(cursor >= 0 ? cursor : 0);
+  const commitShuffleState = useCallback((order: number[], cursor: number) => {
+    shuffleOrderRef.current = order;
+    setShuffleOrder(order);
+    setShuffleCursor(cursor);
+    if (order.length > 0) {
+      setActiveIndex(order[cursor] ?? order[0]!);
+    }
+  }, []);
+
+  const installShuffleOrder = useCallback(
+    (length: number, startIndex?: number) => {
+      const order = buildShuffleOrderStartingWith(length, startIndex);
+      shuffleOrderRef.current = order;
+      setShuffleOrder(order);
+      setShuffleCursor(0);
+      return order;
     },
     [],
   );
 
-  const beginShuffleRound = useCallback(
-    (length: number, startIndex?: number) => {
-      if (length <= 0) {
-        setShuffleOrder([]);
-        setShuffleCursor(0);
-        return [] as number[];
-      }
-      const order = buildShuffleOrder(length);
-      setShuffleOrder(order);
-      if (startIndex !== undefined) {
-        syncShuffleCursorForIndex(startIndex, order);
-      } else {
-        setShuffleCursor(0);
-      }
-      return order;
-    },
-    [syncShuffleCursorForIndex],
-  );
-
   useEffect(() => {
     if (!shuffleEnabled) {
+      shuffleOrderRef.current = [];
       setShuffleOrder([]);
       setShuffleCursor(0);
+      prevShuffleItemCountRef.current = 0;
       return;
     }
-    if (itemCount > 0 && shuffleOrder.length !== itemCount) {
-      beginShuffleRound(itemCount, activeIndexRef.current);
+    if (itemCount <= 0) return;
+    if (prevShuffleItemCountRef.current === itemCount && shuffleOrderRef.current.length === itemCount) {
+      return;
     }
-  }, [shuffleEnabled, itemCount, shuffleOrder.length, beginShuffleRound]);
-
-  useEffect(() => {
-    if (!shuffleEnabled || !detail?.items.length) return;
-    if (shuffleOrder.length !== detail.items.length) return;
-    const cursor = shuffleOrder.indexOf(activeIndex);
-    if (cursor >= 0 && cursor !== shuffleCursor) {
-      setShuffleCursor(cursor);
-    }
-  }, [activeIndex, shuffleEnabled, shuffleOrder, detail?.items.length, shuffleCursor]);
+    prevShuffleItemCountRef.current = itemCount;
+    installShuffleOrder(itemCount, activeIndexRef.current);
+  }, [shuffleEnabled, itemCount, installShuffleOrder]);
 
   const goToNextTrack = useCallback(() => {
     if (!detail?.items.length) return;
 
     if (shuffleEnabled) {
       const order =
-        shuffleOrder.length === detail.items.length
-          ? shuffleOrder
-          : beginShuffleRound(detail.items.length, activeIndex);
+        shuffleOrderRef.current.length === detail.items.length
+          ? shuffleOrderRef.current
+          : installShuffleOrder(detail.items.length, activeIndex);
+      const currentCursor = resolveShuffleCursor(order, activeIndex, shuffleCursor);
       const result = advanceShufflePlayback(
         order,
         activeIndex,
-        shuffleCursor,
+        currentCursor,
         detail.items.length,
         repeatMode,
         () => buildShuffleOrder(detail.items.length),
       );
       if (result.kind === 'track') {
+        shuffleOrderRef.current = order;
+        setShuffleOrder(order);
         setShuffleCursor(result.cursor);
         setActiveIndex(result.index);
         setPlaying(true);
       } else if (result.kind === 'reshuffle') {
-        setShuffleOrder(result.order);
-        setShuffleCursor(result.cursor);
-        setActiveIndex(result.index);
+        commitShuffleState(result.order, result.cursor);
         setPlaying(true);
       } else {
-        setShuffleCursor(resolveShuffleCursor(order, activeIndex, shuffleCursor));
+        setShuffleCursor(currentCursor);
         setPlaying(false);
       }
       return;
@@ -658,10 +651,10 @@ export default function PlaylistsPage({
   }, [
     detail?.items.length,
     shuffleEnabled,
-    shuffleOrder,
     shuffleCursor,
     activeIndex,
-    beginShuffleRound,
+    installShuffleOrder,
+    commitShuffleState,
     repeatMode,
   ]);
 
@@ -669,8 +662,11 @@ export default function PlaylistsPage({
     if (!detail?.items.length) return;
 
     if (shuffleEnabled) {
-      if (shuffleOrder.length !== detail.items.length) return;
-      const step = retreatShufflePlayback(shuffleOrder, activeIndex, shuffleCursor);
+      const order =
+        shuffleOrderRef.current.length === detail.items.length
+          ? shuffleOrderRef.current
+          : installShuffleOrder(detail.items.length, activeIndex);
+      const step = retreatShufflePlayback(order, activeIndex, shuffleCursor);
       if (!step) return;
       setShuffleCursor(step.cursor);
       setActiveIndex(step.index);
@@ -682,28 +678,50 @@ export default function PlaylistsPage({
       setActiveIndex(activeIndex - 1);
       setPlaying(true);
     }
-  }, [detail?.items.length, shuffleEnabled, shuffleOrder, shuffleCursor, activeIndex]);
+  }, [detail?.items.length, shuffleEnabled, shuffleCursor, activeIndex, installShuffleOrder]);
 
-  const canGoPrev = useMemo(() => {
-    if (!itemCount) return false;
-    if (!shuffleEnabled) return activeIndex > 0;
-    if (shuffleOrder.length !== itemCount) return false;
-    return canRetreatShuffle(shuffleOrder, activeIndex, shuffleCursor);
-  }, [itemCount, shuffleEnabled, activeIndex, shuffleOrder, shuffleCursor]);
+  const shuffleReady = shuffleEnabled && shuffleOrder.length === itemCount && itemCount > 0;
 
-  const canGoNext = useMemo(() => {
-    if (!itemCount) return false;
-    if (!shuffleEnabled) return activeIndex < itemCount - 1 || repeatMode === 'all';
-    if (shuffleOrder.length !== itemCount) return true;
-    return canAdvanceShuffle(shuffleOrder, activeIndex, shuffleCursor, itemCount, repeatMode);
-  }, [itemCount, shuffleEnabled, activeIndex, shuffleOrder, shuffleCursor, repeatMode]);
+  const canGoPrev = shuffleReady ? shuffleCursor > 0 : activeIndex > 0;
+
+  const canGoNext = shuffleReady
+    ? shuffleCursor < itemCount - 1 || repeatMode === 'all'
+    : activeIndex < itemCount - 1 || repeatMode === 'all';
+
+  const displayTrackRows = useMemo(() => {
+    if (!detail?.items.length) return [] as { item: PlaylistDetail['items'][number]; index: number }[];
+    if (!shuffleReady) {
+      return detail.items.map((item, index) => ({ item, index }));
+    }
+    return shuffleOrder.map((index) => ({ item: detail.items[index]!, index }));
+  }, [detail?.items, shuffleReady, shuffleOrder]);
+
+  const queueItems = useMemo(() => {
+    if (!detail?.items.length) return [];
+    if (!shuffleReady) return detail.items;
+    return shuffleOrder.map((index) => detail.items[index]!);
+  }, [detail?.items, shuffleReady, shuffleOrder]);
+
+  const queueActiveIndex = shuffleReady ? shuffleCursor : activeIndex;
+
+  const handleActiveIndexChange = useCallback(
+    (index: number) => {
+      if (shuffleReady) {
+        const cursor = shuffleOrderRef.current.indexOf(index);
+        if (cursor >= 0) setShuffleCursor(cursor);
+      }
+      setActiveIndex(index);
+    },
+    [shuffleReady],
+  );
 
   const engageAtIndex = (index: number, shouldPlay: boolean) => {
     if (shuffleEnabled && detail?.items.length) {
-      if (shuffleOrder.length !== detail.items.length) {
-        beginShuffleRound(detail.items.length, index);
+      if (shuffleOrderRef.current.length !== detail.items.length) {
+        installShuffleOrder(detail.items.length, index);
       } else {
-        syncShuffleCursorForIndex(index, shuffleOrder);
+        const cursor = shuffleOrderRef.current.indexOf(index);
+        setShuffleCursor(cursor >= 0 ? cursor : 0);
       }
     }
     setActiveIndex(index);
@@ -718,8 +736,10 @@ export default function PlaylistsPage({
   const startPlayback = () => {
     if (!detail?.items.length) return;
     if (shuffleEnabled) {
-      const order = beginShuffleRound(detail.items.length);
-      engageAndPlay(order[0]!);
+      const order = installShuffleOrder(detail.items.length);
+      setActiveIndex(order[0]!);
+      setPlaying(true);
+      setPlayerEngaged(true);
       return;
     }
     engageAndPlay(0);
@@ -728,8 +748,10 @@ export default function PlaylistsPage({
   const openPlaybackPaused = () => {
     if (!detail?.items.length) return;
     if (shuffleEnabled) {
-      const order = beginShuffleRound(detail.items.length);
-      openPlayerPaused(order[0]!);
+      const order = installShuffleOrder(detail.items.length);
+      setActiveIndex(order[0]!);
+      setPlaying(false);
+      setPlayerEngaged(true);
       return;
     }
     openPlayerPaused(0);
@@ -741,10 +763,11 @@ export default function PlaylistsPage({
       writePlaylistPlaybackOrderMode(mode);
       const { shuffleEnabled: shuffle } = playbackOrderToRepeatShuffle(mode);
       if (shuffle && detail?.items.length) {
-        beginShuffleRound(detail.items.length, activeIndex);
+        prevShuffleItemCountRef.current = detail.items.length;
+        installShuffleOrder(detail.items.length, activeIndex);
       }
     },
-    [detail?.items.length, activeIndex, beginShuffleRound],
+    [detail?.items.length, activeIndex, installShuffleOrder],
   );
 
   const openPlaybackOrderPanel = () => {
@@ -920,8 +943,12 @@ export default function PlaylistsPage({
     if (!detail?.items.length) return;
     if (!playerEngaged) {
       if (shuffleEnabled) {
-        const order = beginShuffleRound(detail.items.length);
-        engageAndPlay(order[1] ?? order[0]!);
+        const order = installShuffleOrder(detail.items.length);
+        const nextIndex = order[1] ?? order[0]!;
+        setShuffleCursor(order[1] !== undefined ? 1 : 0);
+        setActiveIndex(nextIndex);
+        setPlaying(true);
+        setPlayerEngaged(true);
       } else if (detail.items.length > 1) {
         engageAndPlay(Math.min(activeIndex + 1, detail.items.length - 1));
       } else {
@@ -1642,7 +1669,7 @@ export default function PlaylistsPage({
                         <YoutubePlaylistPlayer
                           items={playerItems}
                           activeIndex={activeIndex}
-                          onActiveIndexChange={setActiveIndex}
+                          onActiveIndexChange={handleActiveIndexChange}
                           playing={playing}
                           onPlayingChange={setPlaying}
                           onNextTrack={goToNextTrack}
@@ -1677,12 +1704,12 @@ export default function PlaylistsPage({
                         ref={tracksListRef}
                         className={`playlists-tracks${savingOrder ? ' saving-order' : ''}${trackSortable.isSorting ? ' is-sorting' : ''}`}
                       >
-                        {detail.items.map((item, index) => {
+                        {displayTrackRows.map(({ item, index }) => {
                           const isActive = index === activeIndex;
                           const isPlaying = isActive && playing;
                           const useTrackSwipe = isMobileViewport && !tracksEditMode;
                           const desktopTrackChrome = !isMobileViewport;
-                          const canDragReorder = tracksEditMode || desktopTrackChrome;
+                          const canDragReorder = (tracksEditMode || desktopTrackChrome) && !shuffleReady;
                           return (
                             <li
                               key={item.id}
@@ -1902,10 +1929,13 @@ export default function PlaylistsPage({
         <PlaylistQueuePanel
           open={queueOpen}
           onClose={() => setQueueOpen(false)}
-          items={detail.items}
-          activeIndex={activeIndex}
+          items={queueItems}
+          activeIndex={queueActiveIndex}
           playing={playing}
-          onSelectTrack={(index) => engageAndPlay(index)}
+          onSelectTrack={(displayIndex) => {
+            const itemIndex = shuffleReady ? shuffleOrder[displayIndex]! : displayIndex;
+            engageAndPlay(itemIndex);
+          }}
           variant={audioWatchDesktop ? 'desktopDock' : 'mobile'}
         />
       )}

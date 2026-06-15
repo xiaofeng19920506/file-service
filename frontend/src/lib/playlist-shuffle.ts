@@ -10,9 +10,23 @@ export function buildShuffleOrder(length: number): number[] {
   return order;
 }
 
-export type ShuffleRepeatMode = 'off' | 'all' | 'one';
+/** 随机序旋转，使 startIndex 位于队首（cursor 0） */
+export function rotateShuffleOrderToStart(order: number[], startIndex: number): number[] {
+  if (order.length === 0) return order;
+  const cursor = order.indexOf(startIndex);
+  if (cursor <= 0) return order;
+  return [...order.slice(cursor), ...order.slice(0, cursor)];
+}
 
-/** 以当前曲目在随机序中的位置为准，避免 cursor 状态漂移 */
+/** 生成随机序；若指定 startIndex，则将其置于队首 */
+export function buildShuffleOrderStartingWith(length: number, startIndex?: number): number[] {
+  const order = buildShuffleOrder(length);
+  if (startIndex === undefined || startIndex < 0 || startIndex >= length) {
+    return order;
+  }
+  return rotateShuffleOrderToStart(order, startIndex);
+}
+
 export function resolveShuffleCursor(
   order: number[],
   activeIndex: number,
@@ -21,6 +35,8 @@ export function resolveShuffleCursor(
   const cursor = order.indexOf(activeIndex);
   return cursor >= 0 ? cursor : fallbackCursor;
 }
+
+export type ShuffleRepeatMode = 'off' | 'all' | 'one';
 
 export type ShuffleAdvanceResult =
   | { kind: 'track'; index: number; cursor: number }

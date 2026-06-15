@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
   advanceShufflePlayback,
   buildShuffleOrder,
+  buildShuffleOrderStartingWith,
   canAdvanceShuffle,
   canRetreatShuffle,
   resolveShuffleCursor,
   retreatShufflePlayback,
+  rotateShuffleOrderToStart,
 } from './playlist-shuffle';
 
 describe('resolveShuffleCursor', () => {
@@ -73,5 +75,19 @@ describe('buildShuffleOrder', () => {
     const order = buildShuffleOrder(6);
     expect(order).toHaveLength(6);
     expect([...order].sort((a, b) => a - b)).toEqual([0, 1, 2, 3, 4, 5]);
+  });
+});
+
+describe('buildShuffleOrderStartingWith', () => {
+  it('places start index at the front of playback order', () => {
+    const order = buildShuffleOrderStartingWith(8, 4);
+    expect(order[0]).toBe(4);
+    expect([...order].sort((a, b) => a - b)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
+  });
+});
+
+describe('rotateShuffleOrderToStart', () => {
+  it('rotates order so the target index is first', () => {
+    expect(rotateShuffleOrderToStart([2, 0, 4, 1, 3], 1)).toEqual([1, 3, 2, 0, 4]);
   });
 });
