@@ -104,7 +104,7 @@ export default function PlaylistsPage({
   onLoadToMerge,
 }: PlaylistsPageProps) {
   const { t, locale } = useI18n();
-  const { permissions } = useAuth();
+  const { permissions, role } = useAuth();
   const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
   const [libraryVideoIds, setLibraryVideoIds] = useState<Set<string>>(() => new Set());
   const [detail, setDetail] = useState<PlaylistDetail | null>(null);
@@ -806,9 +806,9 @@ export default function PlaylistsPage({
   const audioWatchMobile = audioWatchActive && isMobileViewport;
   const showMobileAudioDock =
     isMobileViewport &&
-    Boolean(homePreview || (selectedId && detail?.items.length)) &&
     playbackMode === 'audio' &&
-    !youtubeWatchMobile;
+    !youtubeWatchMobile &&
+    (homePreview || (showPlayer && Boolean(selectedId && detail?.items.length)));
   const mobileDockCanGoPrev = playerEngaged ? canGoPrev : activeIndex > 0;
   const mobileDockCanGoNext = playerEngaged ? canGoNext : itemCount > 1 || shuffleEnabled;
 
@@ -907,7 +907,10 @@ export default function PlaylistsPage({
     if (!detail?.items.length) return;
     if (mode === 'audio') {
       if (!playerEngaged) {
-        openPlaybackPaused();
+        const mobileListBrowse = isMobileViewport && selectedId && !playerEngaged;
+        if (!mobileListBrowse) {
+          openPlaybackPaused();
+        }
       } else {
         setPlaying(false);
       }
@@ -981,6 +984,21 @@ export default function PlaylistsPage({
       >
         {t('playlists.playbackVideo')}
       </button>
+    </div>
+  );
+
+  const renderMobileDetailToolbar = (hasTracks: boolean) => (
+    <div className="playlists-mobile-detail-toolbar mobile-only">
+      <div className="playlists-mobile-playback-mode-row">
+        <span className="playlists-mobile-playback-mode-label">{t('playlists.playbackMode')}</span>
+        <p className="playlists-mobile-playback-mode-hint">{t('playlists.playbackModeListHint')}</p>
+        {hasTracks && renderPlaybackModeToggle('playlists-mobile-watch-mode')}
+      </div>
+      {role === 'member' && hasTracks && !showPlayer && (
+        <button type="button" className="btn-primary playlists-btn-play-all" onClick={startPlayback}>
+          {t('playlists.playAll')}
+        </button>
+      )}
     </div>
   );
 
@@ -1531,9 +1549,11 @@ export default function PlaylistsPage({
               >
                 {renderMainToolbar(detail.playlist, detail.items.length > 0)}
 
-                <div className="playlists-mobile-watch-toolbar mobile-only">
-                  {detail.items.length > 0 && renderPlaybackModeToggle('playlists-mobile-watch-mode')}
-                </div>
+                {detail.items.length > 0 && (
+                  <div className="playlists-mobile-watch-toolbar mobile-only">
+                    {renderMobileDetailToolbar(true)}
+                  </div>
+                )}
 
                 {detail.items.length === 0 ? (
                   <div className="playlists-empty-card playlists-empty-tracks">

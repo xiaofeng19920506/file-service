@@ -260,6 +260,7 @@ const en: MessageTree = {
     openYoutube: 'Open source link',
     playAll: 'Play all',
     playbackMode: 'Playback mode',
+    playbackModeListHint: 'Choose MP3 (cached audio) or Video (YouTube) before playing.',
     playbackMp3: 'MP3',
     playbackVideo: 'Video',
     freePlaybackHint: 'Paste a YouTube link to add tracks. Video mode is free (hosted by YouTube). MP3 mode uses your server cache.',

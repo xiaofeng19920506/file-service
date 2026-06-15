@@ -803,6 +803,53 @@
     justify-content: flex-end;
   }
 
+  .playlists-mobile-detail-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    width: 100%;
+  }
+
+  .playlists-mobile-playback-mode-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    width: 100%;
+  }
+
+  .playlists-mobile-playback-mode-label {
+    margin: 0;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .playlists-mobile-playback-mode-hint {
+    margin: 0;
+    font-size: 0.78rem;
+    line-height: 1.4;
+    color: var(--text-muted);
+  }
+
+  .playlists-mobile-detail-toolbar .playlists-mobile-watch-mode {
+    margin-left: 0;
+    width: 100%;
+    display: flex;
+  }
+
+  .playlists-mobile-detail-toolbar .playlists-playback-mode-btn {
+    flex: 1;
+    min-height: 2.5rem;
+  }
+
+  .playlists-mobile-detail-toolbar .playlists-btn-play-all {
+    width: 100%;
+    min-height: 2.875rem;
+    font-weight: 600;
+  }
+
   .playlists-main-inner {
     flex: 1;
     display: flex;
@@ -1237,17 +1284,18 @@
   }
 
   /* 手机列表详情：高度全部给曲目列表，仅 tracks 区域滚动 */
-  .playlists-page[data-mobile-detail='true'] .playlists-main-inner {
-    overflow: hidden;
-  }
-
   .playlists-page[data-mobile-detail='true'] .playlists-tracks-head {
     display: none;
   }
 
   .playlists-page[data-mobile-detail='true'] .playlists-mobile-watch-toolbar {
     flex-shrink: 0;
-    padding: 0.35rem var(--page-gutter);
+    display: block;
+    padding: 0;
+  }
+
+  .playlists-page[data-mobile-detail='true'] .playlists-mobile-detail-toolbar {
+    padding: 0.5rem var(--page-gutter) 0.4rem;
   }
 
   .playlists-page[data-mobile-detail='true'] .playlists-player-stage {
@@ -1255,6 +1303,8 @@
     min-height: 0;
     overflow: hidden;
     gap: 0;
+    display: flex;
+    flex-direction: column;
   }
 
   .playlists-page[data-mobile-detail='true']
@@ -1298,6 +1348,10 @@
     padding-inline: var(--page-gutter);
     padding-block: 0.25rem calc(0.35rem + env(safe-area-inset-bottom, 0px));
     box-sizing: border-box;
+  }
+
+  .playlists-page[data-mobile-detail='true'][data-mobile-audio-dock='true'] .playlists-tracks {
+    padding-bottom: calc(var(--playlists-mobile-dock-height-active) + 0.35rem);
   }
 
   .playlists-page[data-mobile-detail='true']
