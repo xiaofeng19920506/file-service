@@ -1,0 +1,127 @@
+import { useEffect, useMemo, useState } from 'react';
+import { useI18n } from '../../i18n';
+import { formatBulletinCoverDate } from '../../lib/bulletin-date';
+import { previewCoverSlide, previewTemplateSlides } from '../../lib/bulletin-slides';
+import { BULLETIN_WIZARD_STEPS } from '../../lib/bulletin-template-steps';
+import type { EditableSlide } from '../../lib/pptx-preview';
+import BulletinSlidePreview from './BulletinSlidePreview';
+
+type BulletinPreviewPanelProps = {
+  wizardStep: number;
+  serviceDate: string;
+  serviceTime: string;
+};
+
+export default function BulletinPreviewPanel({
+  wizardStep,
+  serviceDate,
+  serviceTime,
+}: BulletinPreviewPanelProps) {
+  const { t } = useI18n();
+  const stepDef = BULLETIN_WIZARD_STEPS[wizardStep];
+  const [slides, setSlides] = useState<EditableSlide[]>([]);
+  const [slideIndex, setSlideIndex] = useState(0);
+  const [loading, setLoading] = useState(false);
+
+  const isCoverStep = stepDef?.id === 'cover';
+
+  useEffect(() => {
+    setSlideIndex(0);
+  }, [wizardStep, serviceDate, serviceTime]);
+
+  useEffect(() => {
+    if (!stepDef) {
+      setSlides([]);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      setLoading(true);
+      const load =
+        isCoverStep && serviceDate
+          ? previewCoverSlide(serviceDate, serviceTime || '11:00').then((s) => (s ? [s] : []))
+          : stepDef.slides.length
+            ? previewTemplateSlides(stepDef.slides)
+            : Promise.resolve([]);
+
+      void load
+        .then((result) => {
+          if (!cancelled) setSlides(result);
+        })
+        .catch(() => {
+          if (!cancelled) setSlides([]);
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    }, 200);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [stepDef, isCoverStep, serviceDate, serviceTime]);
+
+  const currentSlide = slides[slideIndex] ?? null;
+  const coverOverlay = useMemo(() => {
+    if (!isCoverStep || !serviceDate) return undefined;
+    return {
+      date: formatBulletinCoverDate(serviceDate),
+      time: serviceTime || '11:00',
+    };
+  }, [isCoverStep, serviceDate, serviceTime]);
+
+  const slideLabel =
+    currentSlide && stepDef?.slides.length
+      ? t('bulletin.previewSlideLabel', {
+          current: slideIndex + 1,
+          total: slides.length,
+          page: currentSlide.slideInFile,
+        })
+      : stepDef?.slides.length
+        ? t('bulletin.previewSectionLabel', { pages: stepDef.slides.join(', ') })
+        : undefined;
+
+  return (
+    <div className="bulletin-preview-panel">
+      <header className="bulletin-preview-panel-header">
+        <h2>{t('bulletin.previewTitle')}</h2>
+        <p className="bulletin-preview-panel-hint">{t('bulletin.previewHint')}</p>
+      </header>
+
+      <BulletinSlidePreview
+        slide={currentSlide}
+        loading={loading}
+        emptyLabel={t('bulletin.coverPreviewEmpty')}
+        slideLabel={slideLabel}
+        coverOverlay={coverOverlay}
+        large
+      />
+
+      {slides.length > 1 && (
+        <div className="bulletin-preview-nav">
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={slideIndex <= 0}
+            onClick={() => setSlideIndex((i) => Math.max(0, i - 1))}
+          >
+            {t('bulletin.previewPrev')}
+          </button>
+          <span className="bulletin-preview-nav-meta">
+            {slideIndex + 1} / {slides.length}
+          </span>
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={slideIndex >= slides.length - 1}
+            onClick={() => setSlideIndex((i) => Math.min(slides.length - 1, i + 1))}
+          >
+            {t('bulletin.previewNext')}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}

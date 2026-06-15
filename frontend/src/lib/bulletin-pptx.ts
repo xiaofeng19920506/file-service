@@ -1,15 +1,10 @@
 import type { WeeklyBulletin } from '../api/bulletins';
+import { formatBulletinCoverDate } from './bulletin-date';
 import {
   applySlidesToPptx,
   deleteSlidesFromPptx,
   parsePptxSlidesDetailed,
 } from './pptx-preview';
-
-function formatUsDate(isoDate: string): string {
-  const [y, m, d] = isoDate.split('-');
-  if (!y || !m || !d) return isoDate;
-  return `${m}/${d}/${y}`;
-}
 
 function slidePathForNumber(n: number): string {
   return `ppt/slides/slide${n}.xml`;
@@ -43,7 +38,7 @@ export async function generateBulletinPptx(
   bulletin: WeeklyBulletin,
 ): Promise<File> {
   const parsed = await parsePptxSlidesDetailed(templateBlob);
-  const date = formatUsDate(bulletin.serviceDate);
+  const date = formatBulletinCoverDate(bulletin.serviceDate);
 
   replaceSlideTexts(parsed, 1, [date, bulletin.serviceTime || '11:00']);
   if (bulletin.lastWeekOfferingDate) {
