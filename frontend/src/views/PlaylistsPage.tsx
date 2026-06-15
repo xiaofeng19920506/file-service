@@ -1060,7 +1060,6 @@ export default function PlaylistsPage({
                 {t('playlists.playAll')}
               </button>
               {renderPlaybackModeToggle()}
-              {renderPlaybackOrderButton()}
             </>
           )}
           <button type="button" className="btn-secondary" onClick={() => setShowAddModal(true)}>
