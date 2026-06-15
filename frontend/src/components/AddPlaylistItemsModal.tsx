@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { addPlaylistItems } from '../api/playlists';
 import { friendlyError } from '../lib/error-messages';
+import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 import PlaylistYoutubeSearchPanel from './PlaylistYoutubeSearchPanel';
 import { useI18n } from '../i18n';
 import type { PlaylistDetail } from '../api/playlists';
@@ -19,9 +20,11 @@ export default function AddPlaylistItemsModal({
   onAdded,
 }: AddPlaylistItemsModalProps) {
   const { t } = useI18n();
+  const isMobileViewport = useMediaQuery(MOBILE_MEDIA_QUERY);
   const [url, setUrl] = useState('');
   const [addingUrl, setAddingUrl] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchHeaderEl, setSearchHeaderEl] = useState<HTMLElement | null>(null);
 
   const handleCancel = () => {
     if (addingUrl) return;
@@ -58,15 +61,19 @@ export default function AddPlaylistItemsModal({
       className="metadata-modal-overlay"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="add-playlist-items-title"
+      aria-label={t('playlists.addTitle')}
       onClick={handleCancel}
     >
       <div
         className="metadata-modal add-playlist-items-modal"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="metadata-modal-header">
-          <h3 id="add-playlist-items-title">{t('playlists.addTitle')}</h3>
+        <div className="metadata-modal-header add-playlist-items-header">
+          {isMobileViewport ? (
+            <h3 id="add-playlist-items-title">{t('playlists.addTitle')}</h3>
+          ) : (
+            <div ref={setSearchHeaderEl} className="add-playlist-items-header-search" />
+          )}
           <button
             type="button"
             className="modal-close-btn"
@@ -84,7 +91,7 @@ export default function AddPlaylistItemsModal({
             playlistId={playlistId}
             existingVideoIds={existingVideoIds}
             onAdded={onAdded}
-            showHint
+            searchHeaderEl={isMobileViewport ? null : searchHeaderEl}
           />
 
           <p className="add-playlist-items-divider" role="presentation">

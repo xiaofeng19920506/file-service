@@ -4726,6 +4726,30 @@
   flex-direction: column;
 }
 
+.add-playlist-items-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem 0.85rem 1.25rem;
+}
+
+.add-playlist-items-header-search {
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+}
+
+.add-playlist-items-header-search .search-box {
+  width: 100%;
+  max-width: 26rem;
+  margin: 0 auto;
+}
+
+.add-playlist-items-search.playlists-youtube-search--header-search .youtube-search-loading-state {
+  margin-top: 0;
+}
+
 .add-playlist-items-body {
   display: flex;
   flex-direction: column;

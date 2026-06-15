@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   addPlaylistItemsByVideos,
   type PlaylistDetail,
@@ -27,6 +28,8 @@ type PlaylistYoutubeSearchPanelProps = {
   onCreatePlaylist?: (title: string) => Promise<PlaylistDetail>;
   onPreviewTrack?: (track: { videoId: string; title: string }) => void;
   className?: string;
+  /** 桌面弹窗：将搜索框渲染到指定容器（通常为 modal 顶栏中间） */
+  searchHeaderEl?: HTMLElement | null;
 };
 
 export default function PlaylistYoutubeSearchPanel({
@@ -42,6 +45,7 @@ export default function PlaylistYoutubeSearchPanel({
   onCreatePlaylist,
   onPreviewTrack,
   className = '',
+  searchHeaderEl = null,
 }: PlaylistYoutubeSearchPanelProps) {
   const { t } = useI18n();
   const isMobileViewport = useMediaQuery(MOBILE_MEDIA_QUERY);
@@ -139,70 +143,79 @@ export default function PlaylistYoutubeSearchPanel({
     inLibrary === true || libraryVideoIds.has(videoId);
 
   const showTrending = searchResults.length === 0 && !isSearchBusy && !searchQuery.trim();
+  const relocateSearchToHeader = Boolean(searchHeaderEl) && !isMobileViewport;
+
+  const searchBox = (
+    <div className={`search-box${isMobileViewport ? ' search-box--submit-only' : ''}`}>
+      <div className={`search-input-wrap${isSearchBusy ? ' search-input-wrap--busy' : ''}`}>
+        {isSearchBusy ? (
+          <span className="search-input-spinner" aria-hidden />
+        ) : (
+          <SearchIcon />
+        )}
+        <input
+          ref={searchInputRef}
+          type="search"
+          className="search-input"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              if (isMobileViewport) {
+                e.currentTarget.blur();
+                return;
+              }
+              submitSearch();
+            }
+          }}
+          onBlur={() => {
+            if (isMobileViewport) submitSearch();
+          }}
+          placeholder={t('playlists.searchPlaceholder')}
+          enterKeyHint="search"
+          autoComplete="off"
+          disabled={addingVideoId !== null}
+          aria-busy={isSearchBusy}
+          aria-label={t('playlists.searchPlaceholder')}
+        />
+        {showClearSearch && !isSearchBusy && (
+          <button
+            type="button"
+            className="search-clear-btn"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={handleClearSearch}
+            aria-label={t('search.clear')}
+            disabled={addingVideoId !== null}
+          >
+            <CloseIcon />
+          </button>
+        )}
+      </div>
+      {!isMobileViewport && (
+        <button
+          type="button"
+          className="btn-secondary btn-search"
+          onClick={submitSearch}
+          disabled={isSearchBusy || addingVideoId !== null}
+        >
+          {isSearchBusy ? t('search.searching') : t('search.button')}
+        </button>
+      )}
+    </div>
+  );
 
   return (
     <>
+      {relocateSearchToHeader && searchHeaderEl
+        ? createPortal(searchBox, searchHeaderEl)
+        : null}
       <section
-        className={`playlists-youtube-search${className ? ` ${className}` : ''}`}
+        className={`playlists-youtube-search${className ? ` ${className}` : ''}${relocateSearchToHeader ? ' playlists-youtube-search--header-search' : ''}`}
         aria-label={t('playlists.searchSection')}
         aria-busy={isSearchBusy || loadMoreLoading}
       >
-        <div className={`search-box${isMobileViewport ? ' search-box--submit-only' : ''}`}>
-          <div className={`search-input-wrap${isSearchBusy ? ' search-input-wrap--busy' : ''}`}>
-            {isSearchBusy ? (
-              <span className="search-input-spinner" aria-hidden />
-            ) : (
-              <SearchIcon />
-            )}
-            <input
-              ref={searchInputRef}
-              type="search"
-              className="search-input"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  if (isMobileViewport) {
-                    e.currentTarget.blur();
-                    return;
-                  }
-                  submitSearch();
-                }
-              }}
-              onBlur={() => {
-                if (isMobileViewport) submitSearch();
-              }}
-              placeholder={t('playlists.searchPlaceholder')}
-              enterKeyHint="search"
-              autoComplete="off"
-              disabled={addingVideoId !== null}
-              aria-busy={isSearchBusy}
-            />
-            {showClearSearch && !isSearchBusy && (
-              <button
-                type="button"
-                className="search-clear-btn"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={handleClearSearch}
-                aria-label={t('search.clear')}
-                disabled={addingVideoId !== null}
-              >
-                <CloseIcon />
-              </button>
-            )}
-          </div>
-          {!isMobileViewport && (
-            <button
-              type="button"
-              className="btn-secondary btn-search"
-              onClick={submitSearch}
-              disabled={isSearchBusy || addingVideoId !== null}
-            >
-              {isSearchBusy ? t('search.searching') : t('search.button')}
-            </button>
-          )}
-        </div>
+        {!relocateSearchToHeader && searchBox}
 
         {isSearchBusy && searchQuery.trim() && (
           <div
