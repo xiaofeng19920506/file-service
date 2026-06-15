@@ -1,9 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { fetchVideoCaptions, type CaptionCue } from '../api/youtube-captions';
-import {
-  readSubtitleLanguageForVideo,
-  type SubtitleLanguage,
-} from '../lib/subtitle-preference';
+import { useEffect, useState } from 'react';
+import { usePlaylistTrackLyrics } from '../hooks/usePlaylistTrackLyrics';
+import PlaylistLyricsScroller from './PlaylistLyricsScroller';
+import { useI18n } from '../i18n';
 
 type PlaylistDesktopAudioCenterProps = {
   videoId: string;
@@ -20,89 +18,76 @@ export default function PlaylistDesktopAudioCenter({
   title,
   currentTime,
 }: PlaylistDesktopAudioCenterProps) {
-  const lyricsRef = useRef<HTMLDivElement>(null);
-  const [captionCues, setCaptionCues] = useState<CaptionCue[]>([]);
-  const [subtitleLang, setSubtitleLang] = useState<SubtitleLanguage>('en');
+  const { t, locale } = useI18n();
+  const [showLyrics, setShowLyrics] = useState(false);
+  const { captionCues, lyricsLoading, subtitleLang, changeSubtitleLang } = usePlaylistTrackLyrics({
+    videoId,
+    locale,
+  });
 
   useEffect(() => {
-    setSubtitleLang(readSubtitleLanguageForVideo(videoId));
+    setShowLyrics(false);
   }, [videoId]);
 
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const data = await fetchVideoCaptions(videoId, subtitleLang);
-        if (!cancelled) setCaptionCues(data.cues);
-      } catch {
-        if (!cancelled) setCaptionCues([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [videoId, subtitleLang]);
+  const langSwitch = (
+    <div className="playlist-desktop-audio-lang" role="group" aria-label={t('playlists.subtitleLanguage')}>
+      <button
+        type="button"
+        className={`audio-lang-btn${subtitleLang === 'zh' ? ' active' : ''}`}
+        onClick={() => changeSubtitleLang('zh')}
+      >
+        {t('playlists.subtitleChineseShort')}
+      </button>
+      <button
+        type="button"
+        className={`audio-lang-btn${subtitleLang === 'en' ? ' active' : ''}`}
+        onClick={() => changeSubtitleLang('en')}
+      >
+        {t('playlists.subtitleEnglishShort')}
+      </button>
+    </div>
+  );
 
-  const activeIndex = useMemo(() => {
-    if (!captionCues.length) return -1;
-    const exact = captionCues.findIndex(
-      (cue) => currentTime >= cue.start - 0.05 && currentTime < cue.end + 0.05,
-    );
-    if (exact >= 0) return exact;
-    for (let i = captionCues.length - 1; i >= 0; i--) {
-      if (currentTime >= captionCues[i]!.start - 0.05) return i;
-    }
-    return -1;
-  }, [captionCues, currentTime]);
-
-  useEffect(() => {
-    const panel = lyricsRef.current;
-    if (!panel || activeIndex < 0) return;
-    const activeLine = panel.querySelector<HTMLElement>('[data-active="true"]');
-    if (!activeLine) return;
-
-    const panelHeight = panel.clientHeight;
-    const lineTop = activeLine.offsetTop;
-    const lineHeight = activeLine.offsetHeight;
-    const targetScroll = lineTop - panelHeight / 2 + lineHeight / 2;
-    panel.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
-  }, [activeIndex, captionCues.length]);
-
-  const hasLyrics = captionCues.length > 0;
-
-  if (hasLyrics) {
+  if (showLyrics) {
     return (
       <div className="playlist-desktop-audio-center playlist-desktop-audio-center--lyrics">
-        <div ref={lyricsRef} className="playlist-desktop-audio-lyrics" aria-live="polite">
-          <ul className="playlist-np-lyrics-lines">
-            {captionCues.map((cue, index) => {
-              const active = index === activeIndex;
-              return (
-                <li
-                  key={`${cue.start}-${index}`}
-                  className={active ? 'active' : undefined}
-                  data-active={active || undefined}
-                >
-                  {cue.text}
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+        <header className="playlist-desktop-audio-lyrics-head">
+          <button
+            type="button"
+            className="playlist-desktop-audio-back-btn"
+            onClick={() => setShowLyrics(false)}
+          >
+            {t('playlists.backToCover')}
+          </button>
+          {langSwitch}
+        </header>
+        <PlaylistLyricsScroller
+          cues={captionCues}
+          currentTime={currentTime}
+          loading={lyricsLoading}
+          loadingMessage={t('playlists.loadingLyrics')}
+          emptyMessage={t('playlists.noLyricsYet')}
+          className="playlist-desktop-audio-lyrics"
+        />
       </div>
     );
   }
 
   return (
     <div className="playlist-desktop-audio-center playlist-desktop-audio-center--art">
-      <div className="playlist-desktop-audio-art-wrap">
+      <button
+        type="button"
+        className="playlist-desktop-audio-art-wrap playlist-desktop-audio-art-wrap--button"
+        onClick={() => setShowLyrics(true)}
+        aria-label={t('playlists.showLyrics')}
+      >
         <img
           className="playlist-desktop-audio-art"
           src={youtubeThumb(videoId)}
           alt={title}
           loading="lazy"
         />
-      </div>
+      </button>
     </div>
   );
 }

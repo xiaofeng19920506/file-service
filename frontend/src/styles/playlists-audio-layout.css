@@ -35,10 +35,35 @@
   }
 
   .playlist-desktop-audio-center--lyrics {
-    align-items: center;
-    justify-content: center;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
     padding-top: 0.25rem;
     padding-bottom: 0.75rem;
+    gap: 0.65rem;
+  }
+
+  .playlist-desktop-audio-lyrics-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+    max-width: 36rem;
+    margin: 0 auto;
+  }
+
+  .playlist-desktop-audio-art-wrap--button {
+    border: none;
+    padding: 0;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 14px;
+  }
+
+  .playlist-desktop-audio-art-wrap--button:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 4px;
   }
 
   .playlist-desktop-audio-lyrics {
@@ -329,6 +354,102 @@
     box-shadow:
       0 18px 40px color-mix(in srgb, #000 22%, transparent),
       inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button.playlist-audio-record-disc:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 4px;
+  }
+
+  .playlist-audio-record-stage--lyrics {
+    align-items: stretch;
+    justify-content: flex-start;
+    padding-top: 0.35rem;
+  }
+
+  .playlist-audio-record-lyrics-view {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: 0;
+    flex: 1;
+    gap: 0.65rem;
+  }
+
+  .playlist-audio-record-lyrics-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-shrink: 0;
+  }
+
+  .playlist-audio-record-back-btn,
+  .playlist-desktop-audio-back-btn {
+    border: none;
+    background: transparent;
+    color: var(--blue);
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.35rem 0;
+    cursor: pointer;
+  }
+
+  .playlist-audio-record-lang,
+  .playlist-desktop-audio-lang {
+    display: inline-flex;
+    gap: 0.25rem;
+    padding: 0.1rem;
+    border-radius: 999px;
+    background: var(--surface-secondary);
+    border: 1px solid var(--border-light);
+  }
+
+  .playlist-audio-record-lang .audio-lang-btn,
+  .playlist-desktop-audio-lang .audio-lang-btn {
+    min-height: 1.75rem;
+    padding: 0 0.55rem;
+    font-size: 0.6875rem;
+  }
+
+  .playlist-audio-record-lyrics-scroller,
+  .playlist-lyrics-scroller {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0.25rem 0.15rem 0.5rem;
+    mask-image: linear-gradient(
+      to bottom,
+      transparent 0,
+      #000 0.75rem,
+      #000 calc(100% - 0.75rem),
+      transparent 100%
+    );
+  }
+
+  .playlist-lyrics-scroller--loading,
+  .playlist-lyrics-scroller--empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 1.5rem 1rem;
+  }
+
+  .playlist-lyrics-scroller-status {
+    margin: 0;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+  }
+
+  .playlist-audio-player--lyrics-open .playlist-audio-record-disc.is-playing {
+    animation: none;
   }
 
   .playlist-audio-record-disc.is-playing {
@@ -388,8 +509,20 @@
     overflow: hidden;
   }
 
-  .playlist-audio-record-lyric {
-    color: var(--text-tertiary);
+  .playlist-audio-record-now-lyric {
+    flex-shrink: 0;
+    margin: 0;
+    padding: 0 1rem 0.35rem;
+    min-height: 2.5rem;
+    text-align: center;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+  }
+
+  .playlist-audio-record-now-lyric:not(:empty) {
+    color: var(--text);
+    font-weight: 500;
   }
 
   .playlist-audio-record-progress {

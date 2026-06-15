@@ -55,6 +55,7 @@ import { useI18n } from '../i18n';
 import { usePlaylistsMobileMenu, PlaylistsMobileMenuPortal } from '../contexts/PlaylistsMobileMenuContext';
 import { useAuth } from '../auth/AuthContext';
 import { writeLastPlaylistId } from '../lib/playlist-last-open';
+import { prefetchTrackLyrics, readDefaultSubtitleLanguage } from '../lib/playlist-lyrics';
 import { useRecordYoutubePlay } from '../hooks/useRecordYoutubePlay';
 
 type PlaylistsPageProps = {
@@ -717,6 +718,17 @@ export default function PlaylistsPage({
       title: item.title,
       audio: item.audio,
     })) ?? [];
+
+  useEffect(() => {
+    if (!detail?.items.length) return;
+    const lang = readDefaultSubtitleLanguage(locale);
+    const current = detail.items[activeIndex];
+    const next = detail.items[activeIndex + 1];
+    const prev = detail.items[activeIndex - 1];
+    if (current) prefetchTrackLyrics(current.youtubeVideoId, lang);
+    if (next) prefetchTrackLyrics(next.youtubeVideoId, lang);
+    if (prev) prefetchTrackLyrics(prev.youtubeVideoId, lang);
+  }, [detail?.items, activeIndex, locale]);
 
   const audioCachePriorityIds = useMemo(() => {
     if (!detail?.items.length) return [] as string[];

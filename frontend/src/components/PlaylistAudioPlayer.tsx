@@ -1,17 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { getYoutubeAudioStatus, getYoutubeAudioStreamUrl, requestYoutubeAudioExtract } from '../api/youtube-audio';
 import type { YoutubeAudioStatus } from '../api/youtube-audio';
-import {
-  fetchVideoCaptions,
-  findActiveCaption,
-  type CaptionCue,
-} from '../api/youtube-captions';
+import { usePlaylistTrackLyrics, useActiveLyricLine } from '../hooks/usePlaylistTrackLyrics';
 import { useI18n } from '../i18n';
-import {
-  readSubtitleLanguageForVideo,
-  writeSubtitleLanguageForVideo,
-  type SubtitleLanguage,
-} from '../lib/subtitle-preference';
 import { friendlyError } from '../lib/error-messages';
 import {
   readStoredPlayerVolume,
@@ -20,6 +11,7 @@ import {
 import { useMediaSession } from '../hooks/useMediaSession';
 import { useSwipeTrackNavigation } from '../hooks/useSwipeTrackNavigation';
 import type { PlaylistPlaybackOrderMode } from '../lib/playlist-playback-order-mode';
+import PlaylistLyricsScroller from './PlaylistLyricsScroller';
 import { PlaybackOrderModeIcon, QueueIcon } from './icons';
 import AudioSeekBar from './AudioSeekBar';
 import ScrollingTitle from './ScrollingTitle';
@@ -153,7 +145,7 @@ export default function PlaylistAudioPlayer({
   onToggleQueue,
   queueOpen = false,
 }: PlaylistAudioPlayerProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const isNowPlaying = variant === 'nowPlaying';
   const isYoutubeWatch = variant === 'youtubeWatch';
   const isDesktopDock = variant === 'desktopDock';
@@ -173,14 +165,26 @@ export default function PlaylistAudioPlayer({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [durationHint, setDurationHint] = useState(0);
-  const [captionCues, setCaptionCues] = useState<CaptionCue[]>([]);
-  const [subtitleLang, setSubtitleLang] = useState<SubtitleLanguage>('en');
   const [volume, setVolume] = useState(readStoredPlayerVolume);
   const [muted, setMuted] = useState(false);
   const volumeBeforeMuteRef = useRef(volume);
   const lyricsPanelRef = useRef<HTMLDivElement>(null);
+  const [showLyrics, setShowLyrics] = useState(false);
 
   const current = items[activeIndex];
+  const {
+    captionCues,
+    lyricsLoading,
+    subtitleLang,
+    changeSubtitleLang,
+  } = usePlaylistTrackLyrics({
+    videoId: current?.youtubeVideoId,
+    locale,
+  });
+
+  useEffect(() => {
+    setShowLyrics(false);
+  }, [current?.youtubeVideoId]);
   const audioStatus = current?.audio;
   const isReady = audioStatus?.status === 'ready';
   const isProcessing =
@@ -199,10 +203,7 @@ export default function PlaylistAudioPlayer({
   const canSeek = playbackDuration > 0 && Boolean(streamUrl);
   const scrubbingRef = useRef(false);
   const volumePct = muted ? 0 : volume;
-  const activeCaption = useMemo(
-    () => findActiveCaption(captionCues, currentTime),
-    [captionCues, currentTime],
-  );
+  const activeCaption = useActiveLyricLine(captionCues, currentTime);
 
   useEffect(() => {
     wantPlayRef.current = playing;
@@ -211,13 +212,6 @@ export default function PlaylistAudioPlayer({
   useEffect(() => {
     usingPreviewRef.current = usingPreview;
   }, [usingPreview]);
-
-  useEffect(() => {
-    const panel = lyricsPanelRef.current;
-    if (!panel) return;
-    const activeLine = panel.querySelector<HTMLElement>('[data-active="true"]');
-    activeLine?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  }, [currentTime, captionCues]);
 
   const refreshAudioStatus = useCallback(
     async (videoId: string) => {
@@ -289,30 +283,6 @@ export default function PlaylistAudioPlayer({
     pickStreamFromStatus,
     applyStreamUrl,
   ]);
-
-  useEffect(() => {
-    if (!current?.youtubeVideoId) return;
-    setSubtitleLang(readSubtitleLanguageForVideo(current.youtubeVideoId));
-  }, [current?.youtubeVideoId]);
-
-  useEffect(() => {
-    if (!current?.youtubeVideoId) {
-      setCaptionCues([]);
-      return;
-    }
-    let cancelled = false;
-    void (async () => {
-      try {
-        const data = await fetchVideoCaptions(current.youtubeVideoId, subtitleLang);
-        if (!cancelled) setCaptionCues(data.cues);
-      } catch {
-        if (!cancelled) setCaptionCues([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [current?.youtubeVideoId, subtitleLang]);
 
   useEffect(() => {
     const videoId = current?.youtubeVideoId;
@@ -872,20 +842,14 @@ export default function PlaylistAudioPlayer({
       <button
         type="button"
         className={`audio-lang-btn${subtitleLang === 'en' ? ' active' : ''}`}
-        onClick={() => {
-          setSubtitleLang('en');
-          writeSubtitleLanguageForVideo(current.youtubeVideoId, 'en');
-        }}
+        onClick={() => changeSubtitleLang('en')}
       >
         {t('playlists.subtitleEnglishShort')}
       </button>
       <button
         type="button"
         className={`audio-lang-btn${subtitleLang === 'zh' ? ' active' : ''}`}
-        onClick={() => {
-          setSubtitleLang('zh');
-          writeSubtitleLanguageForVideo(current.youtubeVideoId, 'zh');
-        }}
+        onClick={() => changeSubtitleLang('zh')}
       >
         {t('playlists.subtitleChineseShort')}
       </button>
@@ -1209,18 +1173,77 @@ export default function PlaylistAudioPlayer({
   }
 
   if (isMobileRecord) {
+    const recordLangSwitch = (
+      <div className="playlist-audio-record-lang" role="group" aria-label={t('playlists.subtitleLanguage')}>
+        <button
+          type="button"
+          className={`audio-lang-btn${subtitleLang === 'zh' ? ' active' : ''}`}
+          onClick={() => changeSubtitleLang('zh')}
+        >
+          {t('playlists.subtitleChineseShort')}
+        </button>
+        <button
+          type="button"
+          className={`audio-lang-btn${subtitleLang === 'en' ? ' active' : ''}`}
+          onClick={() => changeSubtitleLang('en')}
+        >
+          {t('playlists.subtitleEnglishShort')}
+        </button>
+      </div>
+    );
+
     return (
       <section
         ref={mobileSwipeRef}
-        className="playlist-audio-player playlist-audio-player--mobile-record playlist-audio-player--swipe-nav"
+        className={`playlist-audio-player playlist-audio-player--mobile-record playlist-audio-player--swipe-nav${showLyrics ? ' playlist-audio-player--lyrics-open' : ''}`}
         aria-label={t('playlists.playerSectionAudio')}
       >
-        <div className="playlist-audio-record-stage">
-          <div className={`playlist-audio-record-disc${playing ? ' is-playing' : ''}`}>
-            <div className="playlist-audio-record-disc-ring" aria-hidden />
-            <img className="playlist-audio-record-art" src={artworkUrl} alt="" loading="lazy" />
-          </div>
+        <div
+          className={`playlist-audio-record-stage${showLyrics ? ' playlist-audio-record-stage--lyrics' : ''}`}
+        >
+          {showLyrics ? (
+            <div className="playlist-audio-record-lyrics-view">
+              <header className="playlist-audio-record-lyrics-head">
+                <button
+                  type="button"
+                  className="playlist-audio-record-back-btn"
+                  onClick={() => setShowLyrics(false)}
+                >
+                  {t('playlists.backToCover')}
+                </button>
+                {recordLangSwitch}
+              </header>
+              <PlaylistLyricsScroller
+                cues={captionCues}
+                currentTime={currentTime}
+                loading={lyricsLoading}
+                loadingMessage={t('playlists.loadingLyrics')}
+                emptyMessage={t('playlists.noLyricsYet')}
+                className="playlist-audio-record-lyrics-scroller"
+                panelRef={lyricsPanelRef}
+              />
+            </div>
+          ) : (
+            <button
+              type="button"
+              className={`playlist-audio-record-disc${playing ? ' is-playing' : ''}`}
+              onClick={() => setShowLyrics(true)}
+              aria-label={t('playlists.showLyrics')}
+            >
+              <div className="playlist-audio-record-disc-ring" aria-hidden />
+              <img className="playlist-audio-record-art" src={artworkUrl} alt="" loading="lazy" />
+            </button>
+          )}
         </div>
+
+        {!showLyrics && (
+          <p className="playlist-audio-record-now-lyric" aria-live="polite">
+            {lyricsLoading
+              ? t('playlists.loadingLyrics')
+              : activeCaption ??
+                (captionCues.length > 0 ? '\u00a0' : t('playlists.tapCdForLyrics'))}
+          </p>
+        )}
 
         {statusMessages}
         {audioElement}
@@ -1318,31 +1341,15 @@ export default function PlaylistAudioPlayer({
         </header>
 
         {isNowPlaying && (
-          <div
-            ref={lyricsPanelRef}
+          <PlaylistLyricsScroller
+            cues={captionCues}
+            currentTime={currentTime}
+            loading={lyricsLoading}
+            loadingMessage={t('playlists.loadingLyrics')}
+            emptyMessage={t('playlists.noLyricsYet')}
             className="playlist-np-lyrics-desktop desktop-only"
-            aria-live="polite"
-          >
-            {captionCues.length > 0 ? (
-              <ul className="playlist-np-lyrics-lines">
-                {captionCues.map((cue, index) => {
-                  const active =
-                    currentTime >= cue.start - 0.05 && currentTime < cue.end + 0.05;
-                  return (
-                    <li
-                      key={`${cue.start}-${index}`}
-                      className={active ? 'active' : undefined}
-                      data-active={active || undefined}
-                    >
-                      {cue.text}
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <p className="playlist-np-lyrics-empty">{t('playlists.noLyricsYet')}</p>
-            )}
-          </div>
+            panelRef={lyricsPanelRef}
+          />
         )}
 
         {!isNowPlaying && (

@@ -552,7 +552,21 @@ export async function fetchYoutubeVideoCaptions(
 
   const subtitleLang = opts.subtitleLang === 'en' ? 'en' : 'zh';
   const { tracks, translationLanguages } = await fetchCaptionTrackList(videoId);
-  if (tracks.length === 0) return null;
+
+  if (tracks.length === 0) {
+    if (subtitleLang === 'en') {
+      const viaTranscript = await fetchEnglishViaTranscript(videoId);
+      if (viaTranscript?.length) {
+        return buildEnglishResult(videoId, viaTranscript, 'en', null, false);
+      }
+      return null;
+    }
+    const viaTranscript = await fetchChineseViaTranscript(videoId);
+    if (viaTranscript?.length) {
+      return buildChineseResult(videoId, viaTranscript, 'zh', null, false);
+    }
+    return null;
+  }
 
   if (subtitleLang === 'en') {
     return fetchEnglishTranslationCues(videoId, tracks, translationLanguages);
