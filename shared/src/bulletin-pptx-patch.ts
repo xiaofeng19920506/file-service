@@ -52,7 +52,7 @@ export async function patchCoverSlideInPptx(
 
   const xml = await entry.async('string');
   const patched = applyIndexedTextReplacementsToSlideXml(xml, [
-    { textIndex: 8, text: formatBulletinCoverDate(input.serviceDate) },
+    { textIndex: 8, text: formatBulletinCoverDate(input.serviceDate).padEnd(30, ' ') },
     { textIndex: 9, text: input.serviceTime?.trim() || '11:00' },
   ]);
   zip.file(slidePath, patched);

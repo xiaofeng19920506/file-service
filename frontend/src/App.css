@@ -6562,14 +6562,16 @@
   line-height: 1.05;
 }
 
-.bulletin-composite-text p {
+.bulletin-composite-text p,
+.bulletin-composite-paragraph {
   margin: 0;
   max-height: 100%;
   overflow: hidden;
-  white-space: pre-wrap;
-  word-break: break-word;
+  white-space: pre;
+  word-break: normal;
   flex-shrink: 1;
   min-height: 0;
+  width: 100%;
 }
 
 .bulletin-slide-preview-img {

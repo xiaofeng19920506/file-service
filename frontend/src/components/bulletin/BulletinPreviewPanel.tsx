@@ -1,8 +1,11 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { fetchBulletinTemplateFile } from '../../api/bulletins';
 import type { WeeklyBulletin } from '../../api/bulletins';
 import { useI18n } from '../../i18n';
+import { previewStepPptxBlob, previewTemplateSlides } from '../../lib/bulletin-slides';
 import { BULLETIN_WIZARD_STEPS } from '../../lib/bulletin-template-steps';
-import BulletinPptSlidePreview from './BulletinPptSlidePreview';
+import type { EditableSlide } from '../../lib/pptx-preview';
+import BulletinCompositeSlide from './BulletinCompositeSlide';
 
 type BulletinPreviewPanelProps = {
   wizardStep: number;
@@ -12,8 +15,10 @@ type BulletinPreviewPanelProps = {
 export default function BulletinPreviewPanel({ wizardStep, bulletin }: BulletinPreviewPanelProps) {
   const { t } = useI18n();
   const stepDef = BULLETIN_WIZARD_STEPS[wizardStep];
+  const [slides, setSlides] = useState<EditableSlide[]>([]);
+  const [pptxBlob, setPptxBlob] = useState<Blob | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const slideNumber = stepDef?.slides[0] ?? 1;
   const slideLabel = useMemo(() => {
     if (!stepDef?.slides.length) return undefined;
     if (stepDef.slides.length === 1) {
@@ -22,7 +27,49 @@ export default function BulletinPreviewPanel({ wizardStep, bulletin }: BulletinP
     return t('bulletin.previewSectionLabel', { pages: stepDef.slides.join(', ') });
   }, [stepDef, t]);
 
-  const coverOnly = stepDef?.id === 'cover';
+  useEffect(() => {
+    if (!stepDef) {
+      setSlides([]);
+      setPptxBlob(null);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      setLoading(true);
+      const loadSlides = stepDef.slides.length
+        ? previewTemplateSlides(stepDef.slides)
+        : Promise.resolve([]);
+      const loadBlob =
+        stepDef.enabled && stepDef.slides.length
+          ? previewStepPptxBlob(stepDef.id, bulletin)
+          : fetchBulletinTemplateFile();
+
+      void Promise.all([loadSlides, loadBlob])
+        .then(([result, blob]) => {
+          if (!cancelled) {
+            setSlides(result);
+            setPptxBlob(blob);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setSlides([]);
+            setPptxBlob(null);
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    }, 200);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [stepDef, bulletin]);
+
+  const currentSlide = slides[0] ?? null;
 
   return (
     <div className="bulletin-preview-panel">
@@ -31,14 +78,10 @@ export default function BulletinPreviewPanel({ wizardStep, bulletin }: BulletinP
         <p className="bulletin-preview-panel-hint">{t('bulletin.previewHint')}</p>
       </header>
 
-      <BulletinPptSlidePreview
-        slideNumber={slideNumber}
-        patch={
-          coverOnly
-            ? { serviceDate: bulletin.serviceDate, serviceTime: bulletin.serviceTime || '11:00' }
-            : undefined
-        }
-        requireDate={coverOnly}
+      <BulletinCompositeSlide
+        slide={currentSlide}
+        pptxBlob={pptxBlob}
+        loading={loading}
         emptyLabel={t('bulletin.coverPreviewEmpty')}
         slideLabel={slideLabel}
         large

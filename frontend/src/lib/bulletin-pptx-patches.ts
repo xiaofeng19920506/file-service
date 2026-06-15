@@ -24,11 +24,16 @@ export type SlideTextPatch = {
   replacements: SlideTextReplacement[];
 };
 
+/** 封面日期 run 保留模板空格，维持与「11:00 主日崇拜」同行的版式 */
+export function formatCoverDateRunText(isoDate: string): string {
+  return formatBulletinCoverDate(isoDate).padEnd(30, ' ');
+}
+
 export function buildCoverPatch(serviceDate: string, serviceTime: string): SlideTextPatch {
   return {
     slideNumber: 1,
     replacements: [
-      { textIndex: 8, text: formatBulletinCoverDate(serviceDate) },
+      { textIndex: 8, text: formatCoverDateRunText(serviceDate) },
       { textIndex: 9, text: serviceTime || '11:00' },
     ],
   };

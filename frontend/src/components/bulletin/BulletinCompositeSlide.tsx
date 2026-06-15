@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import JSZip from 'jszip';
 import {
+  autoFitScale,
   parseSlideVisualLayers,
   revokeSlideVisualLayers,
   type SlideVisualLayer,
@@ -15,6 +16,20 @@ type BulletinCompositeSlideProps = {
   slideLabel?: string;
   large?: boolean;
 };
+
+function runFontSizeCqh(
+  fontSizePt: number | undefined,
+  layerHeight: number,
+  lineCount: number,
+  autoFit: boolean | undefined,
+  fitScale: number,
+): string {
+  const basePt = (fontSizePt ?? 14) * (autoFit ? fitScale : 1);
+  const slotCqh = (layerHeight / Math.max(lineCount, 1)) * (autoFit ? 0.92 : 0.78);
+  const cqhFromPt = (basePt / 540) * layerHeight * 1.05;
+  const cqh = Math.min(slotCqh, cqhFromPt);
+  return `min(${basePt.toFixed(1)}px, ${cqh.toFixed(2)}cqh)`;
+}
 
 export default function BulletinCompositeSlide({
   slide,
@@ -135,8 +150,8 @@ export default function BulletinCompositeSlide({
             );
           }
 
-          const lineCount = Math.max(layer.lines.length, 1);
-          const slotCqh = (layer.height / lineCount) * (layer.autoFit ? 0.82 : 0.68);
+          const fitScale = autoFitScale(layer);
+          const lineCount = layer.paragraphs.length;
           const isFooterBand = layer.top >= 60 && layer.height <= 10;
 
           return (
@@ -151,21 +166,36 @@ export default function BulletinCompositeSlide({
                 top: `${layer.top}%`,
                 width: `${layer.width}%`,
                 height: `${layer.height}%`,
-                textAlign: layer.align,
               }}
             >
-              {layer.lines.map((line, li) => (
+              {layer.paragraphs.map((para, pi) => (
                 <p
-                  key={li}
+                  key={pi}
+                  className="bulletin-composite-paragraph"
                   style={{
-                    color: line.color,
-                    fontWeight: line.bold ? 700 : undefined,
-                    fontSize: line.fontSizePt
-                      ? `min(${line.fontSizePt}px, ${slotCqh.toFixed(2)}cqh)`
-                      : `min(14px, ${slotCqh.toFixed(2)}cqh)`,
+                    textAlign: para.align,
+                    lineHeight: para.lineSpacing || 1,
                   }}
                 >
-                  {line.text}
+                  {para.runs.map((run, ri) => (
+                    <span
+                      key={ri}
+                      style={{
+                        color: run.color,
+                        fontWeight: run.bold ? 700 : undefined,
+                        fontFamily: run.fontFamily ? `"${run.fontFamily}", sans-serif` : undefined,
+                        fontSize: runFontSizeCqh(
+                          run.fontSizePt,
+                          layer.height,
+                          lineCount,
+                          layer.autoFit,
+                          fitScale,
+                        ),
+                      }}
+                    >
+                      {run.text}
+                    </span>
+                  ))}
                 </p>
               ))}
             </div>

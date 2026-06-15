@@ -3,19 +3,26 @@ import type JSZip from 'jszip';
 const SLIDE_CX = 9144000;
 const SLIDE_CY = 6858000;
 
-const SCHEME_COLORS: Record<string, string> = {
-  accent6: '#FFFFFF',
+const FALLBACK_SCHEME: Record<string, string> = {
+  accent6: '#F8E71C',
   lt2: '#F3F3F3',
-  dk1: '#000000',
+  dk1: '#FFFFFF',
   bg1: '#FFFFFF',
   tx1: '#000000',
 };
 
-export type SlideTextLine = {
+export type SlideTextRun = {
   text: string;
   color?: string;
   bold?: boolean;
   fontSizePt?: number;
+  fontFamily?: string;
+};
+
+export type SlideTextParagraph = {
+  runs: SlideTextRun[];
+  align: 'left' | 'center' | 'right';
+  lineSpacing: number;
 };
 
 export type SlideVisualLayer =
@@ -41,14 +48,12 @@ export type SlideVisualLayer =
     }
   | {
       kind: 'text';
-      lines: SlideTextLine[];
+      paragraphs: SlideTextParagraph[];
       left: number;
       top: number;
       width: number;
       height: number;
-      align: 'left' | 'center' | 'right';
       valign?: 'top' | 'middle' | 'bottom';
-      /** 形状启用 spAutoFit 时，文字需缩放进框内 */
       autoFit?: boolean;
     };
 
@@ -65,6 +70,33 @@ function decodeXmlEntities(text: string): string {
     .replace(/&apos;/g, "'");
 }
 
+async function loadThemeSchemeColors(zip: JSZip): Promise<Record<string, string>> {
+  const themePath = Object.keys(zip.files).find((n) => /^ppt\/theme\/theme\d+\.xml$/.test(n));
+  const entry = themePath ? zip.file(themePath) : zip.file('ppt/theme/theme1.xml');
+  if (!entry) return { ...FALLBACK_SCHEME };
+
+  const xml = await entry.async('string');
+  const colors: Record<string, string> = { ...FALLBACK_SCHEME };
+  const names = [
+    'dk1', 'lt1', 'dk2', 'lt2',
+    'accent1', 'accent2', 'accent3', 'accent4', 'accent5', 'accent6',
+    'hlink', 'folHlink', 'bg1', 'bg2', 'tx1', 'tx2',
+  ];
+
+  for (const name of names) {
+    const block = xml.match(new RegExp(`<a:${name}>([\\s\\S]*?)</a:${name}>`))?.[1];
+    if (!block) continue;
+    const rgb = block.match(/<a:srgbClr val="([0-9A-Fa-f]{6})"/)?.[1];
+    if (rgb) {
+      colors[name] = `#${rgb}`;
+      continue;
+    }
+    const lastClr = block.match(/lastClr="([0-9A-Fa-f]{6})"/)?.[1];
+    if (lastClr) colors[name] = `#${lastClr}`;
+  }
+  return colors;
+}
+
 function extractShapeBox(xml: string): { left: number; top: number; width: number; height: number } | null {
   const spPr = xml.match(/<p:spPr>([\s\S]*?)<\/p:spPr>/)?.[1] ?? xml;
   const off = spPr.match(/<a:off x="(\d+)" y="(\d+)"/);
@@ -78,8 +110,12 @@ function extractShapeBox(xml: string): { left: number; top: number; width: numbe
   };
 }
 
+function resolveSchemeColor(schemeColors: Record<string, string>, schemeName: string): string | null {
+  return schemeColors[schemeName] ?? FALLBACK_SCHEME[schemeName] ?? null;
+}
+
 /** 仅读取形状底色（p:spPr），不混入文字 run 颜色 */
-function extractShapeFillColor(chunk: string): string | null {
+function extractShapeFillColor(chunk: string, schemeColors: Record<string, string>): string | null {
   const spPr = chunk.match(/<p:spPr>([\s\S]*?)<\/p:spPr>/)?.[1];
   if (!spPr || !spPr.includes('<a:solidFill>')) return null;
 
@@ -87,71 +123,74 @@ function extractShapeFillColor(chunk: string): string | null {
   if (rgb) return `#${rgb[1]}`;
 
   const scheme = spPr.match(/<a:solidFill>[\s\S]*?<a:schemeClr val="([^"]+)"/);
-  if (scheme) return SCHEME_COLORS[scheme[1]] ?? null;
+  if (scheme) return resolveSchemeColor(schemeColors, scheme[1]);
 
   return null;
 }
 
-function extractRunStyle(rPr: string): { color?: string; bold?: boolean; fontSizePt?: number } {
+function extractRunStyle(
+  rPrXml: string,
+  schemeColors: Record<string, string>,
+): Omit<SlideTextRun, 'text'> {
   let color: string | undefined;
-  const rgb = rPr.match(/<a:srgbClr val="([0-9A-Fa-f]{6})"/);
+  const rgb = rPrXml.match(/<a:srgbClr val="([0-9A-Fa-f]{6})"/);
   if (rgb) color = `#${rgb[1]}`;
-  const scheme = rPr.match(/<a:schemeClr val="([^"]+)"/);
-  if (scheme) color = SCHEME_COLORS[scheme[1]] ?? color;
-  const sz = rPr.match(/sz="(\d+)"/);
+  const scheme = rPrXml.match(/<a:schemeClr val="([^"]+)"/);
+  if (scheme) color = resolveSchemeColor(schemeColors, scheme[1]) ?? color;
+  const sz = rPrXml.match(/sz="(\d+)"/);
   const fontSizePt = sz ? Number(sz[1]) / 100 : undefined;
-  const bold = /\sb="1"/.test(rPr);
-  return { color, bold, fontSizePt };
+  const bold = /\sb="1"/.test(rPrXml);
+  const ea = rPrXml.match(/<a:ea typeface="([^"]+)"/)?.[1];
+  const latin = rPrXml.match(/<a:latin typeface="([^"]+)"/)?.[1];
+  const fontFamily = ea || latin;
+  return { color, bold, fontSizePt, fontFamily };
 }
 
-function extractTextRuns(xml: string): {
-  lines: SlideTextLine[];
-  align: 'left' | 'center' | 'right';
+function extractTextContent(
+  xml: string,
+  schemeColors: Record<string, string>,
+): {
+  paragraphs: SlideTextParagraph[];
   valign: 'top' | 'middle' | 'bottom';
   autoFit: boolean;
 } {
   const txBody = xml.match(/<p:txBody>([\s\S]*?)<\/p:txBody>/)?.[1] ?? '';
   const bodyPr = txBody.match(/<a:bodyPr([^/]*)\/>/)?.[1] ?? txBody.match(/<a:bodyPr([^>]*)>/)?.[1] ?? '';
   const autoFit = /<a:spAutoFit\s*\/?>/.test(txBody);
-  let align: 'left' | 'center' | 'right' = 'left';
   let valign: 'top' | 'middle' | 'bottom' = 'top';
   if (bodyPr.includes('anchor="ctr"')) valign = 'middle';
   else if (bodyPr.includes('anchor="b"')) valign = 'bottom';
 
-  const lines: SlideTextLine[] = [];
-  const paragraphs = [...txBody.matchAll(/<a:p>([\s\S]*?)<\/a:p>/g)];
+  const paragraphs: SlideTextParagraph[] = [];
+  const paragraphMatches = [...txBody.matchAll(/<a:p>([\s\S]*?)<\/a:p>/g)];
 
-  for (const p of paragraphs) {
+  for (const p of paragraphMatches) {
     const pXml = p[1];
+    let align: 'left' | 'center' | 'right' = 'left';
     const algn = pXml.match(/<a:pPr[^>]*algn="([^"]+)"/)?.[1];
     if (algn === 'ctr') align = 'center';
     else if (algn === 'r') align = 'right';
 
-    const runs = [...pXml.matchAll(/<a:r>([\s\S]*?)<\/a:r>/g)];
+    const lnSpc = pXml.match(/<a:lnSpc>[\s\S]*?<a:spcPct val="(\d+)"/)?.[1];
+    const lineSpacing = lnSpc ? Number(lnSpc) / 100_000 : 1;
+
+    const runs: SlideTextRun[] = [];
+    for (const run of pXml.matchAll(/<a:r>([\s\S]*?)<\/a:r>/g)) {
+      const rXml = run[1];
+      const t = rXml.match(/<a:t([^>]*)>([\s\S]*?)<\/a:t>/)?.[2];
+      if (t === undefined) continue;
+      const text = decodeXmlEntities(t);
+      if (!text && !/\s/.test(t)) continue;
+      const rPr = rXml.match(/<a:rPr([^>]*)>/)?.[1] ?? '';
+      runs.push({ text, ...extractRunStyle(`<a:rPr${rPr}>`, schemeColors) });
+    }
+
     if (runs.length) {
-      const parts: string[] = [];
-      let lineStyle: Omit<SlideTextLine, 'text'> = {};
-      for (const run of runs) {
-        const rXml = run[1];
-        const t = rXml.match(/<a:t>([\s\S]*?)<\/a:t>/)?.[1];
-        if (!t) continue;
-        const text = decodeXmlEntities(t.replace(/\s+/g, ' ').trim());
-        if (!text) continue;
-        parts.push(text);
-        const rPr = rXml.match(/<a:rPr([^>]*)>/)?.[1] ?? '';
-        lineStyle = { ...lineStyle, ...extractRunStyle(`<a:rPr${rPr}>`) };
-      }
-      const joined = parts.join(' ').trim();
-      if (joined) lines.push({ text: joined, ...lineStyle });
-    } else {
-      const texts = [...pXml.matchAll(/<a:t>([\s\S]*?)<\/a:t>/g)]
-        .map((m) => decodeXmlEntities(m[1].replace(/\s+/g, ' ').trim()))
-        .filter(Boolean);
-      if (texts.length) lines.push({ text: texts.join(' ') });
+      paragraphs.push({ runs, align, lineSpacing });
     }
   }
 
-  return { lines, align, valign, autoFit };
+  return { paragraphs, valign, autoFit };
 }
 
 async function resolveMediaPath(zip: JSZip, slidePath: string, rId: string): Promise<string | null> {
@@ -177,6 +216,21 @@ async function mediaToUrl(zip: JSZip, mediaPath: string): Promise<string | null>
   return URL.createObjectURL(blob);
 }
 
+function autoFitScale(layer: Extract<SlideVisualLayer, { kind: 'text' }>): number {
+  if (!layer.autoFit || !layer.paragraphs.length) return 1;
+  const slideHeightPt = (SLIDE_CY / 914400) * 72;
+  const boxHeightPt = (layer.height / 100) * slideHeightPt;
+  let contentPt = 0;
+  for (const p of layer.paragraphs) {
+    const maxPt = Math.max(...p.runs.map((r) => r.fontSizePt ?? 14), 14);
+    contentPt += maxPt * (p.lineSpacing || 1);
+  }
+  if (contentPt <= 0) return 1;
+  return Math.min(1, (boxHeightPt / contentPt) * 0.92);
+}
+
+export { autoFitScale };
+
 /** 按原版 PPT 图层顺序解析幻灯片（背景、色块、文字、图片） */
 export async function parseSlideVisualLayers(
   zip: JSZip,
@@ -185,6 +239,7 @@ export async function parseSlideVisualLayers(
 ): Promise<SlideVisualLayer[]> {
   const layers: SlideVisualLayer[] = [];
   const urlCache = new Map<string, string>();
+  const schemeColors = await loadThemeSchemeColors(zip);
 
   async function urlForEmbed(rId: string): Promise<string | null> {
     const mediaPath = await resolveMediaPath(zip, slidePath, rId);
@@ -218,7 +273,7 @@ export async function parseSlideVisualLayers(
       continue;
     }
 
-    const fill = extractShapeFillColor(chunk);
+    const fill = extractShapeFillColor(chunk, schemeColors);
     const hasText = chunk.includes('<p:txBody>');
 
     if (fill) {
@@ -226,8 +281,8 @@ export async function parseSlideVisualLayers(
     }
 
     if (hasText) {
-      const text = extractTextRuns(chunk);
-      if (text.lines.length) {
+      const text = extractTextContent(chunk, schemeColors);
+      if (text.paragraphs.length) {
         layers.push({ kind: 'text', ...box, ...text });
       }
     }

@@ -186,7 +186,7 @@ const en: MessageTree = {
     coverPreviewEmpty: 'Pick a service date to preview the cover',
     editorPanel: 'Bulletin editor',
     previewTitle: 'PPT preview',
-    previewHint: 'Rendered from the original PPT slide; only editable text for this step is replaced',
+    previewHint: 'Layers from the original PPT (background, fills, images, text positions); only editable fields are replaced',
     previewUnavailableHint: 'Install LibreOffice on the API server to enable slide preview, or download the PPT to view in PowerPoint.',
     previewSlideSingle: 'PPT page {page}',
     previewEditedTexts: 'Text written in this step',
