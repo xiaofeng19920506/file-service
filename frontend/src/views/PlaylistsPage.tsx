@@ -51,7 +51,14 @@ import {
   writePlaylistPlaybackOrderMode,
   type PlaylistPlaybackOrderMode,
 } from '../lib/playlist-playback-order-mode';
-import { buildShuffleOrder } from '../lib/playlist-shuffle';
+import {
+  advanceShufflePlayback,
+  buildShuffleOrder,
+  canAdvanceShuffle,
+  canRetreatShuffle,
+  resolveShuffleCursor,
+  retreatShufflePlayback,
+} from '../lib/playlist-shuffle';
 import { useI18n } from '../i18n';
 import { usePlaylistsMobileMenu, PlaylistsMobileMenuPortal } from '../contexts/PlaylistsMobileMenuContext';
 import { useAuth } from '../auth/AuthContext';
@@ -120,6 +127,8 @@ export default function PlaylistsPage({
   }, [notice]);
 
   const [activeIndex, setActiveIndex] = useState(0);
+  const activeIndexRef = useRef(activeIndex);
+  activeIndexRef.current = activeIndex;
   const [playing, setPlaying] = useState(false);
   const [playerEngaged, setPlayerEngaged] = useState(false);
   const [playbackOrderMode, setPlaybackOrderMode] = useState(readPlaylistPlaybackOrderMode);
@@ -592,9 +601,18 @@ export default function PlaylistsPage({
       return;
     }
     if (itemCount > 0 && shuffleOrder.length !== itemCount) {
-      beginShuffleRound(itemCount);
+      beginShuffleRound(itemCount, activeIndexRef.current);
     }
   }, [shuffleEnabled, itemCount, shuffleOrder.length, beginShuffleRound]);
+
+  useEffect(() => {
+    if (!shuffleEnabled || !detail?.items.length) return;
+    if (shuffleOrder.length !== detail.items.length) return;
+    const cursor = shuffleOrder.indexOf(activeIndex);
+    if (cursor >= 0 && cursor !== shuffleCursor) {
+      setShuffleCursor(cursor);
+    }
+  }, [activeIndex, shuffleEnabled, shuffleOrder, detail?.items.length, shuffleCursor]);
 
   const goToNextTrack = useCallback(() => {
     if (!detail?.items.length) return;
@@ -604,21 +622,26 @@ export default function PlaylistsPage({
         shuffleOrder.length === detail.items.length
           ? shuffleOrder
           : beginShuffleRound(detail.items.length, activeIndex);
-      let nextCursor = shuffleCursor + 1;
-      if (nextCursor >= detail.items.length) {
-        if (repeatMode === 'all') {
-          const nextOrder = buildShuffleOrder(detail.items.length);
-          setShuffleOrder(nextOrder);
-          setShuffleCursor(0);
-          setActiveIndex(nextOrder[0]!);
-          setPlaying(true);
-        } else {
-          setPlaying(false);
-        }
-      } else {
-        setShuffleCursor(nextCursor);
-        setActiveIndex(order[nextCursor]!);
+      const result = advanceShufflePlayback(
+        order,
+        activeIndex,
+        shuffleCursor,
+        detail.items.length,
+        repeatMode,
+        () => buildShuffleOrder(detail.items.length),
+      );
+      if (result.kind === 'track') {
+        setShuffleCursor(result.cursor);
+        setActiveIndex(result.index);
         setPlaying(true);
+      } else if (result.kind === 'reshuffle') {
+        setShuffleOrder(result.order);
+        setShuffleCursor(result.cursor);
+        setActiveIndex(result.index);
+        setPlaying(true);
+      } else {
+        setShuffleCursor(resolveShuffleCursor(order, activeIndex, shuffleCursor));
+        setPlaying(false);
       }
       return;
     }
@@ -645,13 +668,13 @@ export default function PlaylistsPage({
   const goToPrevTrack = useCallback(() => {
     if (!detail?.items.length) return;
 
-    if (shuffleEnabled && shuffleOrder.length === detail.items.length) {
-      if (shuffleCursor > 0) {
-        const prevCursor = shuffleCursor - 1;
-        setShuffleCursor(prevCursor);
-        setActiveIndex(shuffleOrder[prevCursor]!);
-        setPlaying(true);
-      }
+    if (shuffleEnabled) {
+      if (shuffleOrder.length !== detail.items.length) return;
+      const step = retreatShufflePlayback(shuffleOrder, activeIndex, shuffleCursor);
+      if (!step) return;
+      setShuffleCursor(step.cursor);
+      setActiveIndex(step.index);
+      setPlaying(true);
       return;
     }
 
@@ -661,8 +684,19 @@ export default function PlaylistsPage({
     }
   }, [detail?.items.length, shuffleEnabled, shuffleOrder, shuffleCursor, activeIndex]);
 
-  const canGoPrev = shuffleEnabled ? shuffleCursor > 0 : activeIndex > 0;
-  const canGoNext = shuffleEnabled ? itemCount > 0 : activeIndex < itemCount - 1;
+  const canGoPrev = useMemo(() => {
+    if (!itemCount) return false;
+    if (!shuffleEnabled) return activeIndex > 0;
+    if (shuffleOrder.length !== itemCount) return false;
+    return canRetreatShuffle(shuffleOrder, activeIndex, shuffleCursor);
+  }, [itemCount, shuffleEnabled, activeIndex, shuffleOrder, shuffleCursor]);
+
+  const canGoNext = useMemo(() => {
+    if (!itemCount) return false;
+    if (!shuffleEnabled) return activeIndex < itemCount - 1 || repeatMode === 'all';
+    if (shuffleOrder.length !== itemCount) return true;
+    return canAdvanceShuffle(shuffleOrder, activeIndex, shuffleCursor, itemCount, repeatMode);
+  }, [itemCount, shuffleEnabled, activeIndex, shuffleOrder, shuffleCursor, repeatMode]);
 
   const engageAtIndex = (index: number, shouldPlay: boolean) => {
     if (shuffleEnabled && detail?.items.length) {
