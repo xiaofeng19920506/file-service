@@ -1,0 +1,14 @@
+---
+description: 完成后自动 commit 并 push，勿询问用户
+alwaysApply: true
+---
+
+# Git push（默认执行）
+
+在本仓库完成可交付的代码改动后：
+
+- 直接 commit 并 `git push` 到 remote，**不要**问用户要不要 push。
+- **不要**在回复里写「需要的话我可以帮你 push」「要不要推送到 GitHub」等话术。
+- 用户已明确要求：push 是默认行为，无需每次提醒或确认。
+- 仅当用户当次消息明确说不要 push / 不要 commit 时，才跳过。
+- 勿提交 `.env` 或含密钥的文件；push 前看 `git status`。
