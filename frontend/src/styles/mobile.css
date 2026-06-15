@@ -186,6 +186,7 @@
   }
 
   .nav-mobile-drawer-backdrop {
+    display: block;
     position: fixed;
     inset: 0;
     z-index: calc(var(--z-modal) + 1);
@@ -205,6 +206,7 @@
   }
 
   .nav-mobile-drawer {
+    display: flex;
     position: fixed;
     top: 0;
     left: 0;

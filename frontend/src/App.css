@@ -158,6 +158,12 @@
   display: flex;
 }
 
+/* 移动端侧栏仅在 ≤900px 展示；桌面端账户/语言已在顶栏 */
+.nav-mobile-drawer,
+.nav-mobile-drawer-backdrop {
+  display: none;
+}
+
 .nav-mobile-menu-section {
   display: flex;
   flex-direction: column;
