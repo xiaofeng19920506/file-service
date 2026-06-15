@@ -4735,45 +4735,112 @@
   flex-direction: column;
 }
 
+.add-playlist-items-modal--split {
+  width: min(100%, 56rem);
+  max-height: min(90vh, 40rem);
+}
+
 .add-playlist-items-header {
-  display: grid;
-  grid-template-columns: 1fr auto;
+  display: flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: space-between;
+  gap: 0.75rem;
   padding: 0.85rem 1rem 0.85rem 1.25rem;
 }
 
-.add-playlist-items-header-search {
-  display: flex;
-  justify-content: center;
+.add-playlist-items-header h3 {
+  margin: 0;
   min-width: 0;
 }
 
-.add-playlist-items-header-search .search-box {
-  width: 100%;
-  max-width: 26rem;
-  margin: 0 auto;
-}
-
-.add-playlist-items-search.playlists-youtube-search--header-search .youtube-search-loading-state {
-  margin-top: 0;
-}
-
-.add-playlist-items-body {
+.add-playlist-items-layout {
   display: flex;
   flex-direction: column;
+  flex: 1;
   min-height: 0;
+  overflow: hidden;
+}
+
+.add-playlist-items-modal--split .add-playlist-items-layout {
+  flex-direction: row;
+}
+
+.add-playlist-items-col {
+  min-width: 0;
+  min-height: 0;
+}
+
+.add-playlist-items-col--search {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 0 1.25rem 1rem;
   overflow: auto;
+}
+
+.add-playlist-items-modal--split .add-playlist-items-col--search {
+  flex: 1 1 58%;
+  padding: 1rem 1.25rem;
+  border-right: 1px solid var(--border-light);
+}
+
+.add-playlist-items-col--url {
+  padding: 0 1.25rem 1rem;
+}
+
+.add-playlist-items-modal--split .add-playlist-items-col--url {
+  flex: 0 0 min(42%, 18rem);
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 1.25rem;
+}
+
+.add-playlist-items-col-title {
+  margin: 0 0 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+}
+
+.add-playlist-items-url-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.add-playlist-items-modal--split .add-playlist-items-url-form {
+  justify-content: flex-start;
+}
+
+.add-playlist-items-url-actions {
+  margin-top: auto;
+  padding-top: 1rem;
+}
+
+.add-playlist-items-modal--split .add-playlist-items-url-actions {
+  border-top: none;
+  padding: 1rem 0 0;
 }
 
 .add-playlist-items-search {
   display: flex;
   flex-direction: column;
+  flex: 1;
   min-height: 0;
 }
 
 .add-playlist-items-search .search-box {
   flex-shrink: 0;
+}
+
+.add-playlist-items-search .playlists-youtube-search-results,
+.add-playlist-items-search .youtube-trending {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .add-playlist-items-divider {

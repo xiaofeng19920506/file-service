@@ -24,7 +24,6 @@ export default function AddPlaylistItemsModal({
   const [url, setUrl] = useState('');
   const [addingUrl, setAddingUrl] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [searchHeaderEl, setSearchHeaderEl] = useState<HTMLElement | null>(null);
 
   const handleCancel = () => {
     if (addingUrl) return;
@@ -56,6 +55,46 @@ export default function AddPlaylistItemsModal({
     }
   };
 
+  const urlPanel = (
+    <form
+      className="add-playlist-items-url-form"
+      onSubmit={(e) => void handleUrlConfirm(e)}
+    >
+      {!isMobileViewport && (
+        <h4 className="add-playlist-items-col-title">{t('playlists.addUrlLabel')}</h4>
+      )}
+
+      {isMobileViewport && (
+        <p className="add-playlist-items-divider" role="presentation">
+          {t('playlists.addOrPasteUrl')}
+        </p>
+      )}
+
+      <label className="share-playlist-field">
+        {isMobileViewport && <span>{t('playlists.addUrlLabel')}</span>}
+        <input
+          type="url"
+          className="playlists-text-input"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder={t('playlists.addPlaceholder')}
+          disabled={addingUrl}
+        />
+      </label>
+      <p className="playlists-muted playlists-add-modal-hint">{t('playlists.addHint')}</p>
+      {error && <p className="error-msg">{error}</p>}
+
+      <div className="metadata-modal-actions add-playlist-items-url-actions">
+        <button type="button" className="btn-secondary" onClick={handleCancel} disabled={addingUrl}>
+          {t('common.cancel')}
+        </button>
+        <button type="submit" className="btn-primary" disabled={addingUrl || !url.trim()}>
+          {addingUrl ? t('playlists.adding') : t('playlists.addConfirm')}
+        </button>
+      </div>
+    </form>
+  );
+
   return (
     <div
       className="metadata-modal-overlay"
@@ -65,15 +104,11 @@ export default function AddPlaylistItemsModal({
       onClick={handleCancel}
     >
       <div
-        className="metadata-modal add-playlist-items-modal"
+        className={`metadata-modal add-playlist-items-modal${isMobileViewport ? '' : ' add-playlist-items-modal--split'}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="metadata-modal-header add-playlist-items-header">
-          {isMobileViewport ? (
-            <h3 id="add-playlist-items-title">{t('playlists.addTitle')}</h3>
-          ) : (
-            <div ref={setSearchHeaderEl} className="add-playlist-items-header-search" />
-          )}
+          <h3 id="add-playlist-items-title">{t('playlists.addTitle')}</h3>
           <button
             type="button"
             className="modal-close-btn"
@@ -85,42 +120,29 @@ export default function AddPlaylistItemsModal({
           </button>
         </div>
 
-        <form className="metadata-modal-body add-playlist-items-body" onSubmit={(e) => void handleUrlConfirm(e)}>
-          <PlaylistYoutubeSearchPanel
-            className="add-playlist-items-search"
-            playlistId={playlistId}
-            existingVideoIds={existingVideoIds}
-            onAdded={onAdded}
-            searchHeaderEl={isMobileViewport ? null : searchHeaderEl}
-          />
-
-          <p className="add-playlist-items-divider" role="presentation">
-            {t('playlists.addOrPasteUrl')}
-          </p>
-
-          <label className="share-playlist-field">
-            <span>{t('playlists.addUrlLabel')}</span>
-            <input
-              type="url"
-              className="playlists-text-input"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder={t('playlists.addPlaceholder')}
-              disabled={addingUrl}
+        <div className="add-playlist-items-layout">
+          <section
+            className="add-playlist-items-col add-playlist-items-col--search"
+            aria-label={t('playlists.searchSection')}
+          >
+            {!isMobileViewport && (
+              <h4 className="add-playlist-items-col-title">{t('playlists.searchSection')}</h4>
+            )}
+            <PlaylistYoutubeSearchPanel
+              className="add-playlist-items-search"
+              playlistId={playlistId}
+              existingVideoIds={existingVideoIds}
+              onAdded={onAdded}
             />
-          </label>
-          <p className="playlists-muted playlists-add-modal-hint">{t('playlists.addHint')}</p>
-          {error && <p className="error-msg">{error}</p>}
+          </section>
 
-          <div className="metadata-modal-actions">
-            <button type="button" className="btn-secondary" onClick={handleCancel} disabled={addingUrl}>
-              {t('common.cancel')}
-            </button>
-            <button type="submit" className="btn-primary" disabled={addingUrl || !url.trim()}>
-              {addingUrl ? t('playlists.adding') : t('playlists.addConfirm')}
-            </button>
-          </div>
-        </form>
+          <section
+            className="add-playlist-items-col add-playlist-items-col--url"
+            aria-label={t('playlists.addUrlLabel')}
+          >
+            {urlPanel}
+          </section>
+        </div>
       </div>
     </div>
   );
