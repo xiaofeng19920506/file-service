@@ -55,7 +55,12 @@ wait_for_api() {
 
 ensure_web_build() {
   local build_id="${ROOT}/frontend/.next/BUILD_ID"
-  local stamp_file="${ROOT}/data/autostart/web-build-head"
+  local stamp_file
+  if [[ -n "${FILE_SERVICE_REPO:-}" ]]; then
+    stamp_file="$(dirname "$LOG_FILE")/web-build-head"
+  else
+    stamp_file="${ROOT}/data/autostart/web-build-head"
+  fi
   local current_head=""
   if command -v git >/dev/null 2>&1 && git -C "$ROOT" rev-parse HEAD >/dev/null 2>&1; then
     current_head="$(git -C "$ROOT" rev-parse HEAD)"
