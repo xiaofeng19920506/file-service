@@ -102,8 +102,8 @@ export type ScriptureSlideBodies = {
   englishPages: string[][];
 };
 
-/** 中文 29pt 每行约容纳字数（保守，投影可读） */
-export const SCRIPTURE_ZH_CHARS_PER_LINE = 18;
+/** 中文 28pt 每行约容纳字数（偏保守，配合 noAutofit 分页） */
+export const SCRIPTURE_ZH_CHARS_PER_LINE = 19;
 
 /** 中文每页约可容纳的视觉行数（含自动换行） */
 export const SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES = 12;
@@ -111,11 +111,11 @@ export const SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES = 12;
 /** @deprecated 使用 SCRIPTURE_ZH_CHARS_PER_LINE / SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES */
 export const SCRIPTURE_ZH_PAGE_MAX_CHARS = SCRIPTURE_ZH_CHARS_PER_LINE * SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES;
 
-/** 英文文本框每行约容纳字符数（18.5pt，偏保守避免底部裁切） */
-export const SCRIPTURE_EN_CHARS_PER_LINE = 64;
+/** 英文 22pt 每行约容纳字符数（偏保守避免底部裁切） */
+export const SCRIPTURE_EN_CHARS_PER_LINE = 52;
 
 /** 英文每页约可容纳的视觉行数（含节内自动换行） */
-export const SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES = 12;
+export const SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES = 10;
 
 /** @deprecated 使用 SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES */
 export const SCRIPTURE_EN_PAGE_MAX_LINES = SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES;

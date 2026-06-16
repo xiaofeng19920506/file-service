@@ -30,6 +30,11 @@ function replaceShapeBlock(
 const ZH_SHAPE_ID = '294';
 const EN_SHAPE_ID = '299';
 
+/** 中文经文 28pt（原模板 29pt，投影略小一号） */
+const ZH_FONT_SZ = '2800';
+/** 英文经文 22pt（原模板 18.5pt，投影加大两号） */
+const EN_FONT_SZ = '2200';
+
 function buildChineseTxBody(text: string): string {
   const paragraph = [
     '<a:p>',
@@ -39,12 +44,12 @@ function buildChineseTxBody(text: string): string {
     '<a:buNone/>',
     '</a:pPr>',
     '<a:r>',
-    '<a:rPr lang="en" sz="2900">',
+    '<a:rPr lang="en" sz="' + ZH_FONT_SZ + '">',
     '<a:solidFill><a:schemeClr val="dk2"/></a:solidFill>',
     '</a:rPr>',
     `<a:t>${escapeXml(text)}</a:t>`,
     '</a:r>',
-    '<a:endParaRPr sz="2900">',
+    '<a:endParaRPr sz="' + ZH_FONT_SZ + '">',
     '<a:solidFill><a:schemeClr val="dk2"/></a:solidFill>',
     '</a:endParaRPr>',
     '</a:p>',
@@ -70,12 +75,12 @@ function buildEnglishParagraph(line: string): string {
     '<a:buNone/>',
     '</a:pPr>',
     '<a:r>',
-    '<a:rPr lang="en" sz="1850">',
+    '<a:rPr lang="en" sz="' + EN_FONT_SZ + '">',
     '<a:solidFill><a:schemeClr val="dk2"/></a:solidFill>',
     '</a:rPr>',
     `<a:t>${escapeXml(line)}</a:t>`,
     '</a:r>',
-    '<a:endParaRPr sz="1850">',
+    '<a:endParaRPr sz="' + EN_FONT_SZ + '">',
     '<a:solidFill><a:schemeClr val="dk2"/></a:solidFill>',
     '</a:endParaRPr>',
     '</a:p>',
