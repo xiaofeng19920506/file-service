@@ -223,6 +223,11 @@ function isSignedVideoStreamPath(method: string, path: string): boolean {
   return method === 'GET' && /^\/v1\/youtube\/videos\/[^/]+\/video\/stream$/.test(path);
 }
 
+/** 缩略图经 API 代理；<img> 无法带 Bearer，须公开 */
+function isYoutubeThumbnailPath(method: string, path: string): boolean {
+  return method === 'GET' && /^\/v1\/youtube\/thumbnails\/[^/]+$/.test(path);
+}
+
 function isAuthEntryPath(method: string, path: string): boolean {
   return (
     (method === 'POST' && path === '/v1/auth/register')
@@ -243,6 +248,7 @@ export function resolvePathAccessLevel(method: string, path: string): PathAccess
   if (isSignedAudioStreamPath(method, path)) return 'public';
   if (isSignedAudioPreviewPath(method, path)) return 'public';
   if (isSignedVideoStreamPath(method, path)) return 'public';
+  if (isYoutubeThumbnailPath(method, path)) return 'public';
   if (isAuthEntryPath(method, path)) return 'public';
   if (isYoutubeOAuthCallbackPath(method, path)) return 'public';
   if (isVipVideoPath(method, path)) return 'vip_video';
