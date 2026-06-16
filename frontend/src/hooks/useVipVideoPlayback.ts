@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  fetchYoutubeVideoStatus,
   fetchYoutubeVideoStatuses,
   prioritizeVipVideos,
   type VipVideoItemStatus,
@@ -10,21 +11,74 @@ export type VipVideoTrack = {
   title: string;
   channelTitle?: string | null;
   thumbnailUrl?: string | null;
+  cacheStatus?: VipVideoItemStatus | null;
 };
+
+const POLL_MS = 2000;
+const MAX_POLL_ERRORS = 8;
+
+async function loadVideoStatus(videoId: string) {
+  try {
+    const items = await fetchYoutubeVideoStatuses([videoId]);
+    if (items[0]) return items[0];
+  } catch {
+    /* batch 失败时回退单条 GET */
+  }
+  return fetchYoutubeVideoStatus(videoId);
+}
+
+function isTerminalStatus(status: VipVideoItemStatus, streamUrl: string | null): boolean {
+  return (status === 'ready' && Boolean(streamUrl)) || status === 'failed';
+}
 
 export function useVipVideoPlayback() {
   const [current, setCurrent] = useState<VipVideoTrack | null>(null);
   const [status, setStatus] = useState<VipVideoItemStatus>('pending');
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
+  const pollErrorCountRef = useRef(0);
+  const activeVideoIdRef = useRef<string | null>(null);
+
+  const applyStatus = useCallback((data: {
+    status: VipVideoItemStatus;
+    streamUrl: string | null;
+    errorCode: string | null;
+  }) => {
+    setStatus(data.status);
+    setStreamUrl(data.streamUrl);
+    setErrorCode(data.errorCode);
+    pollErrorCountRef.current = 0;
+  }, []);
 
   const play = useCallback((track: VipVideoTrack) => {
+    pollErrorCountRef.current = 0;
+    activeVideoIdRef.current = track.videoId;
     setCurrent(track);
-    setStatus('pending');
-    setStreamUrl(null);
     setErrorCode(null);
+    const hinted = track.cacheStatus;
+    if (hinted === 'ready' || hinted === 'processing' || hinted === 'failed') {
+      setStatus(hinted);
+    } else {
+      setStatus('pending');
+    }
+    setStreamUrl(null);
+
     void prioritizeVipVideos([{ videoId: track.videoId, title: track.title }]).catch(() => undefined);
-  }, []);
+
+    void loadVideoStatus(track.videoId)
+      .then((data) => {
+        if (activeVideoIdRef.current !== track.videoId) return;
+        applyStatus(data);
+      })
+      .catch((e) => {
+        if (activeVideoIdRef.current !== track.videoId) return;
+        const msg = e instanceof Error ? e.message : '';
+        if (msg === 'vip_forbidden' || msg === 'unauthorized' || msg === 'session_invalid') {
+          setStatus('failed');
+          setErrorCode(msg);
+        }
+      });
+  }, [applyStatus]);
 
   useEffect(() => {
     if (!current) return;
@@ -41,23 +95,26 @@ export function useVipVideoPlayback() {
 
     const refresh = async () => {
       try {
-        const items = await fetchYoutubeVideoStatuses([current.videoId]);
-        const data = items[0];
-        if (cancelled || !data) return;
-        setStatus(data.status);
-        setStreamUrl(data.streamUrl);
-        setErrorCode(data.errorCode);
-        if ((data.status === 'ready' && data.streamUrl) || data.status === 'failed') {
+        const data = await loadVideoStatus(current.videoId);
+        if (cancelled) return;
+        applyStatus(data);
+        if (isTerminalStatus(data.status, data.streamUrl)) {
           stopPolling();
         }
       } catch (e) {
+        if (cancelled) return;
+        pollErrorCountRef.current += 1;
         const msg = e instanceof Error ? e.message : '';
         if (msg === 'vip_forbidden' || msg === 'unauthorized' || msg === 'session_invalid') {
-          if (!cancelled) {
-            setStatus('failed');
-            setErrorCode(msg);
-            stopPolling();
-          }
+          setStatus('failed');
+          setErrorCode(msg);
+          stopPolling();
+          return;
+        }
+        if (pollErrorCountRef.current >= MAX_POLL_ERRORS) {
+          setStatus('failed');
+          setErrorCode('network_error');
+          stopPolling();
         }
       }
     };
@@ -65,15 +122,26 @@ export function useVipVideoPlayback() {
     void refresh();
     timer = window.setInterval(() => {
       void refresh();
-    }, 2000);
+    }, POLL_MS);
 
     return () => {
       cancelled = true;
       stopPolling();
     };
-  }, [current?.videoId]);
+  }, [applyStatus, current?.videoId]);
 
   const isReady = status === 'ready' && Boolean(streamUrl);
+
+  const markPlaybackFailed = useCallback(() => {
+    setStatus('failed');
+    setErrorCode('video_playback_failed');
+    setStreamUrl(null);
+  }, []);
+
+  const clear = useCallback(() => {
+    activeVideoIdRef.current = null;
+    setCurrent(null);
+  }, []);
 
   return {
     current,
@@ -82,6 +150,7 @@ export function useVipVideoPlayback() {
     errorCode,
     isReady,
     play,
-    clear: () => setCurrent(null),
+    markPlaybackFailed,
+    clear,
   };
 }

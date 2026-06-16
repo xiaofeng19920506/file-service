@@ -3,7 +3,7 @@ import { mkdir, stat, unlink, writeFile } from 'node:fs/promises';
 import { dirname, join, normalize, resolve, sep } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import type { Readable } from 'node:stream';
-import type { ObjectStorage } from './types.js';
+import type { ByteRange, ObjectStorage } from './types.js';
 
 function resolveSafePath(rootDir: string, key: string): string {
   const root = resolve(rootDir);
@@ -41,9 +41,10 @@ export class FsObjectStorage implements ObjectStorage {
     await writeFile(p, body);
   }
 
-  async createReadStream(key: string): Promise<Readable> {
+  async createReadStream(key: string, range?: ByteRange): Promise<Readable> {
     const p = resolveSafePath(this.rootDir, key);
-    return createReadStream(p);
+    if (!range) return createReadStream(p);
+    return createReadStream(p, { start: range.start, end: range.end });
   }
 
   async copyToFile(key: string, destPath: string): Promise<void> {

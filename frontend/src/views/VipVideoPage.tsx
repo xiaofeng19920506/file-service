@@ -6,6 +6,7 @@ import { useDebouncedYoutubeSearch } from '../hooks/useDebouncedYoutubeSearch';
 import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 import { useVipVideoPlayback } from '../hooks/useVipVideoPlayback';
 import { friendlyError } from '../lib/error-messages';
+import { resolveVideoStreamSrc } from '../lib/resolve-stream-src';
 import { useI18n } from '../i18n';
 
 function formatTime(seconds: number): string {
@@ -23,7 +24,7 @@ export default function VipVideoPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const watchTopRef = useRef<HTMLDivElement>(null);
   const search = useDebouncedYoutubeSearch({ debounceEnabled: !isMobile });
-  const { current, status, streamUrl, errorCode, isReady, play, clear } = useVipVideoPlayback();
+  const { current, status, streamUrl, errorCode, isReady, play, markPlaybackFailed, clear } = useVipVideoPlayback();
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -54,7 +55,7 @@ export default function VipVideoPage() {
   useEffect(() => {
     const el = videoRef.current;
     if (!el || !streamUrl) return;
-    el.src = streamUrl;
+    el.src = resolveVideoStreamSrc(streamUrl);
     el.load();
     if (playing && !isMobile) {
       void el.play().catch(() => setPlaying(false));
@@ -138,39 +139,35 @@ export default function VipVideoPage() {
           <div ref={watchTopRef} className="vip-video-watch">
             <div className="vip-video-watch-main">
               <section className="vip-video-stage">
-                {isReady ? (
+                <div className="vip-video-player-wrap">
                   <video
                     ref={videoRef}
                     className="vip-video-player"
                     playsInline
-                    controls={isMobile}
+                    preload={streamUrl ? 'auto' : 'none'}
+                    poster={current.thumbnailUrl ?? undefined}
+                    controls={isMobile && isReady}
                     onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
                     onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
                     onEnded={() => setPlaying(false)}
+                    onError={() => markPlaybackFailed()}
                   />
-                ) : (
-                  <div className="vip-video-placeholder">
-                    {current.thumbnailUrl && (
-                      <img
-                        className="vip-video-placeholder-thumb"
-                        src={current.thumbnailUrl}
-                        alt=""
-                      />
-                    )}
+                  {isLoading && (
                     <div
-                      className="vip-video-placeholder-overlay"
-                      role={isLoading ? 'status' : undefined}
-                      aria-busy={isLoading || undefined}
-                      aria-label={isLoading ? t('vipVideo.loading') : undefined}
+                      className="vip-video-placeholder-overlay vip-video-placeholder-overlay--player"
+                      role="status"
+                      aria-busy
+                      aria-label={t('vipVideo.loading')}
                     >
-                      {isLoading ? (
-                        <span className="vip-video-loading-spinner" aria-hidden />
-                      ) : (
-                        <p className="vip-video-placeholder-error">{errorText}</p>
-                      )}
+                      <span className="vip-video-loading-spinner" aria-hidden />
                     </div>
-                  </div>
-                )}
+                  )}
+                  {status === 'failed' && !isReady && (
+                    <div className="vip-video-placeholder-overlay vip-video-placeholder-overlay--player">
+                      <p className="vip-video-placeholder-error">{errorText}</p>
+                    </div>
+                  )}
+                </div>
 
                 {!isMobile && (
                   <>

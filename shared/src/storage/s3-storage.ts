@@ -10,7 +10,7 @@ import {
   deleteObject as s3DeleteObject,
   presignedGetUrl as s3PresignedGetUrl,
 } from '../s3.js';
-import type { ObjectStorage } from './types.js';
+import type { ByteRange, ObjectStorage } from './types.js';
 
 export type S3StorageEnv = {
   endpoint?: string;
@@ -55,16 +55,17 @@ export class S3ObjectStorage implements ObjectStorage {
     });
   }
 
-  getObjectStream(key: string): Promise<Readable> {
+  getObjectStream(key: string, range?: ByteRange): Promise<Readable> {
     return getObjectStream({
       client: this.client,
       bucket: this.env.bucket,
       key,
+      range,
     });
   }
 
-  async createReadStream(key: string): Promise<Readable> {
-    return this.getObjectStream(key);
+  async createReadStream(key: string, range?: ByteRange): Promise<Readable> {
+    return this.getObjectStream(key, range);
   }
 
   async copyToFile(key: string, destPath: string): Promise<void> {

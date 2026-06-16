@@ -28,6 +28,8 @@ export * from './youtube-audio-extract.js';
 export * from './youtube-audio-cache.js';
 export * from './youtube-video-extract.js';
 export * from './youtube-video-cache.js';
+export { parseByteRangeHeader } from './http-byte-range.js';
+export * from './media-stream.js';
 export * from './youtube-oauth-state.js';
 export * from './youtube-oauth.js';
 export * from './persist-raw-blob.js';

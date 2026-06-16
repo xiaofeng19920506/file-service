@@ -276,6 +276,7 @@ export default function VipVideoBrowse({
             title: item.title,
             channelTitle: item.channelTitle,
             thumbnailUrl: item.thumbnailUrl,
+            cacheStatus: cacheStatus ?? null,
           })
         }
       >

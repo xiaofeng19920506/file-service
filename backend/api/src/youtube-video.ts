@@ -9,6 +9,7 @@ import {
   serializeVideoCache,
   signAudioStreamToken,
   verifyAudioStreamToken,
+  sendRangedObjectStream,
   youtubeVideoCache,
   type ApiEnv,
   type Db,
@@ -174,14 +175,12 @@ export function registerYoutubeVideoRoutes(
       const [blob] = await db.select().from(blobs).where(eq(blobs.id, cache.blobId));
       if (!blob) return reply.code(404).send({ error: 'not_found' });
 
-      const stream = await storage.createReadStream(blob.storageKey);
-      return reply
-        .header('Content-Type', blob.mimeType ?? 'video/mp4')
-        .header('Content-Length', String(blob.sizeBytes))
-        .header('Content-Disposition', `inline; filename="${blob.originalFilename ?? `${videoId}.mp4`}"`)
-        .header('Accept-Ranges', 'bytes')
-        .header('Cache-Control', 'private, max-age=3600')
-        .send(stream);
+      return sendRangedObjectStream(reply, storage, {
+        storageKey: blob.storageKey,
+        sizeBytes: blob.sizeBytes,
+        mimeType: blob.mimeType ?? 'video/mp4',
+        filename: blob.originalFilename ?? `${videoId}.mp4`,
+      }, request.headers.range);
     },
   );
 }

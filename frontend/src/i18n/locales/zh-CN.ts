@@ -830,6 +830,7 @@ export default {
     vip_playlist_not_found: 'VIP 歌单不存在',
     video_not_ready: '视频尚未缓存完成，请稍候',
     video_extract_failed: '视频缓存失败，请稍后重试',
+    video_playback_failed: '视频无法播放，请刷新后重试',
     last_admin_required: '至少需要保留一名管理员，无法降级',
     cannot_change_own_role: '不能修改自己的角色',
     cannot_delete_self: '不能删除当前登录账号',

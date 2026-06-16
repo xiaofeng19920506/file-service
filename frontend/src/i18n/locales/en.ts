@@ -841,6 +841,7 @@ const en: MessageTree = {
     vip_playlist_not_found: 'VIP playlist not found',
     video_not_ready: 'Video is not cached yet — please wait',
     video_extract_failed: 'Video caching failed — try again later',
+    video_playback_failed: 'Video playback failed — refresh and try again',
     last_admin_required: 'At least one admin must remain — cannot demote',
     cannot_change_own_role: 'You cannot change your own role',
     cannot_delete_self: 'You cannot delete your own account here',

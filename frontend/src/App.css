@@ -7803,12 +7803,25 @@ body.bulletin-slideshow-window {
   min-width: 0;
 }
 
-.vip-video-player {
-  width: 100%;
+.vip-video-player-wrap {
+  position: relative;
   aspect-ratio: 16 / 9;
-  background: #000;
   border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+}
+
+.vip-video-placeholder-overlay--player {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.vip-video-player-wrap .vip-video-player {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
   object-fit: contain;
+  background: #000;
+  display: block;
 }
 
 .vip-video-placeholder {

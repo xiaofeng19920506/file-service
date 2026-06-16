@@ -69,9 +69,16 @@ export async function getObjectStream(opts: {
   client: S3Client;
   bucket: string;
   key: string;
+  range?: { start: number; end: number };
 }): Promise<Readable> {
   const out = await opts.client.send(
-    new GetObjectCommand({ Bucket: opts.bucket, Key: opts.key }),
+    new GetObjectCommand({
+      Bucket: opts.bucket,
+      Key: opts.key,
+      Range: opts.range
+        ? `bytes=${opts.range.start}-${opts.range.end}`
+        : undefined,
+    }),
   );
   if (!out.Body) {
     throw new Error('S3 GetObject returned empty body');
