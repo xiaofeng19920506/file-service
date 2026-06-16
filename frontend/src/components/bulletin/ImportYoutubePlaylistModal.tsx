@@ -16,6 +16,7 @@ type ImportYoutubePlaylistModalProps = {
   onClose: () => void;
   onImported: (detail: PlaylistDetail, meta: { addedCount: number; skippedCount: number }) => void;
   oauthJustConnected?: boolean;
+  oauthError?: string | null;
 };
 
 export default function ImportYoutubePlaylistModal({
@@ -23,6 +24,7 @@ export default function ImportYoutubePlaylistModal({
   onClose,
   onImported,
   oauthJustConnected = false,
+  oauthError = null,
 }: ImportYoutubePlaylistModalProps) {
   const { t } = useI18n();
   const [status, setStatus] = useState<YoutubeOAuthStatus | null>(null);
@@ -66,6 +68,10 @@ export default function ImportYoutubePlaylistModal({
   useEffect(() => {
     void loadStatus();
   }, [loadStatus, oauthJustConnected]);
+
+  useEffect(() => {
+    if (oauthError) setError(oauthError);
+  }, [oauthError]);
 
   useEffect(() => {
     if (status?.connected && status.dataApiReady) {
@@ -123,7 +129,7 @@ export default function ImportYoutubePlaylistModal({
           {loadingStatus ? (
             <p className="playlists-muted">{t('bulletin.worshipImportYoutubeLoadingLists')}</p>
           ) : !status?.configured ? (
-            <p className="playlists-muted">{t('bulletin.worshipImportYoutubeUnavailable')}</p>
+            <p className="error-msg">{friendlyError('youtube_oauth_not_configured', t)}</p>
           ) : !status.connected ? (
             <button
               type="button"

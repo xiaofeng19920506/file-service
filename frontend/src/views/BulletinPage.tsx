@@ -27,6 +27,7 @@ import { useI18n } from '../i18n';
 import { nextSundayIso } from '../lib/bulletin-date';
 import { BULLETIN_WIZARD_STEPS } from '../lib/bulletin-template-steps';
 import { publishBulletinPptx, resolveBulletinPptxBlob } from '../lib/bulletin-publish';
+import { friendlyError } from '../lib/error-messages';
 import { readWorshipLiveConfig, writeWorshipLiveConfig } from '../lib/worship-live-config';
 
 type AnnouncementDraft = AnnouncementInput & { key: string };
@@ -74,6 +75,7 @@ export default function BulletinPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [wizardStep, setWizardStep] = useState(0);
   const [worshipYoutubeOauthReady, setWorshipYoutubeOauthReady] = useState(false);
+  const [worshipOauthError, setWorshipOauthError] = useState<string | null>(null);
   const savingRef = useRef(false);
   const scripturePersistingRef = useRef(false);
   savingRef.current = saving || publishing;
@@ -96,20 +98,29 @@ export default function BulletinPage() {
     if (qIndex === -1) return;
 
     const params = new URLSearchParams(hash.slice(qIndex + 1));
-    if (params.get('youtube_oauth') !== 'connected' || params.get('worship_youtube') !== '1') {
-      return;
-    }
+    const oauth = params.get('youtube_oauth');
+    if (oauth !== 'connected' && oauth !== 'error') return;
+    if (params.get('worship_youtube') !== '1') return;
 
+    const reason = params.get('reason')?.trim();
     params.delete('youtube_oauth');
     params.delete('worship_youtube');
     params.delete('reason');
     const rest = params.toString();
     window.history.replaceState(null, '', rest ? `#/bulletin?${rest}` : '#/bulletin');
 
-    setWorshipYoutubeOauthReady(true);
     const worshipIdx = BULLETIN_WIZARD_STEPS.findIndex((step) => step.id === 'worship');
     if (worshipIdx >= 0) setWizardStep(worshipIdx);
-  }, []);
+
+    if (oauth === 'connected') {
+      setWorshipYoutubeOauthReady(true);
+      setWorshipOauthError(null);
+    } else {
+      const code =
+        reason === 'not_configured' ? 'youtube_oauth_not_configured' : (reason ?? 'youtube_oauth_failed');
+      setWorshipOauthError(friendlyError(code, t));
+    }
+  }, [t]);
 
   useBulletinRealtime(
     selectedId,
@@ -369,6 +380,8 @@ export default function BulletinPage() {
             canManage={canManage}
             canEditSongs={permissions.canEditBulletinWorshipSongs}
             oauthJustConnected={worshipYoutubeOauthReady}
+            oauthError={worshipOauthError}
+            onClearOauthError={() => setWorshipOauthError(null)}
             onPlaylistReady={(playlistId) => {
               setDraft((prev) => (prev ? { ...prev, servicePlaylistId: playlistId } : prev));
             }}

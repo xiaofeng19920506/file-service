@@ -100,14 +100,6 @@ function redirectToWebApp(
   return `${base}/#/${hashPath}?${search.toString()}`;
 }
 
-/** @deprecated use redirectToWebApp */
-function redirectToPlaylists(
-  webAppUrl: string,
-  params: Record<string, string>,
-) {
-  return redirectToWebApp(webAppUrl, params);
-}
-
 function callbackRedirectWebAppUrl(
   env: ApiEnv,
   state: { returnWebAppUrl?: string } | null,
@@ -120,12 +112,33 @@ function callbackRedirectWebAppUrl(
   return resolveWebAppUrl(env);
 }
 
+function parseCallbackState(env: ApiEnv, stateToken?: string) {
+  if (!stateToken?.trim()) return null;
+  return verifyYoutubeOAuthState({
+    secret: env.DOWNLOAD_HMAC_SECRET,
+    token: stateToken.trim(),
+  });
+}
+
+function oauthClientRedirect(
+  env: ApiEnv,
+  state: ReturnType<typeof parseCallbackState>,
+  params: Record<string, string>,
+) {
+  if (state?.returnHash === '/bulletin') {
+    params.worship_youtube = '1';
+  }
+  return redirectToWebApp(callbackRedirectWebAppUrl(env, state), params, {
+    returnHash: state?.returnHash,
+    returnPlaylistId: state?.returnPlaylistId,
+  });
+}
+
 export function registerYoutubeOAuthRoutes(
   app: FastifyInstance,
   opts: { db: Db; env: ApiEnv },
 ) {
   const { db, env } = opts;
-  const defaultWebAppUrl = resolveWebAppUrl(env);
 
   app.get('/v1/youtube/oauth/status', async (request, reply) => {
     const user = request.authUser;
@@ -207,15 +220,18 @@ export function registerYoutubeOAuthRoutes(
     '/v1/youtube/oauth/callback',
     async (request, reply) => {
       const oauth = resolveOAuthConfig(env);
+      const stateToken = request.query.state?.trim();
+      const state = parseCallbackState(env, stateToken);
+
       if (!oauth) {
         return reply.redirect(
-          redirectToPlaylists(defaultWebAppUrl, { youtube_oauth: 'error', reason: 'not_configured' }),
+          oauthClientRedirect(env, state, { youtube_oauth: 'error', reason: 'not_configured' }),
         );
       }
 
       if (request.query.error) {
         return reply.redirect(
-          redirectToPlaylists(defaultWebAppUrl, {
+          oauthClientRedirect(env, state, {
             youtube_oauth: 'error',
             reason: request.query.error,
           }),
@@ -223,21 +239,15 @@ export function registerYoutubeOAuthRoutes(
       }
 
       const code = request.query.code?.trim();
-      const stateToken = request.query.state?.trim();
       if (!code || !stateToken) {
         return reply.redirect(
-          redirectToPlaylists(defaultWebAppUrl, { youtube_oauth: 'error', reason: 'invalid_callback' }),
+          oauthClientRedirect(env, state, { youtube_oauth: 'error', reason: 'invalid_callback' }),
         );
       }
 
-      const state = verifyYoutubeOAuthState({
-        secret: env.DOWNLOAD_HMAC_SECRET,
-        token: stateToken,
-      });
-      const webAppUrl = callbackRedirectWebAppUrl(env, state);
       if (!state) {
         return reply.redirect(
-          redirectToPlaylists(webAppUrl, { youtube_oauth: 'error', reason: 'invalid_state' }),
+          oauthClientRedirect(env, null, { youtube_oauth: 'error', reason: 'invalid_state' }),
         );
       }
 
@@ -251,7 +261,7 @@ export function registerYoutubeOAuthRoutes(
 
         if (!token.refresh_token) {
           return reply.redirect(
-            redirectToPlaylists(webAppUrl, {
+            oauthClientRedirect(env, state, {
               youtube_oauth: 'error',
               reason: 'missing_refresh_token',
             }),
@@ -288,21 +298,15 @@ export function registerYoutubeOAuthRoutes(
             },
           });
 
-        const params: Record<string, string> = { youtube_oauth: 'connected' };
-        if (state.returnPlaylistId) params.id = state.returnPlaylistId;
-        if (state.returnHash === '/bulletin') params.worship_youtube = '1';
         return reply.redirect(
-          redirectToWebApp(webAppUrl, params, {
-            returnHash: state.returnHash,
-            returnPlaylistId: state.returnPlaylistId,
-          }),
+          oauthClientRedirect(env, state, { youtube_oauth: 'connected' }),
         );
       } catch (e) {
         const raw = e instanceof Error ? e.message : 'token_exchange_failed';
         request.log.error({ err: e, redirectUri: oauth.redirectUri }, 'youtube oauth callback failed');
         const reason = mapGoogleOAuthExchangeError(raw);
         return reply.redirect(
-          redirectToPlaylists(webAppUrl, { youtube_oauth: 'error', reason }),
+          oauthClientRedirect(env, state, { youtube_oauth: 'error', reason }),
         );
       }
     },

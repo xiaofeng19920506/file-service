@@ -16,6 +16,8 @@ type BulletinWorshipStepProps = {
   canManage: boolean;
   canEditSongs: boolean;
   oauthJustConnected?: boolean;
+  oauthError?: string | null;
+  onClearOauthError?: () => void;
   onPlaylistReady: (playlistId: string) => void;
 };
 
@@ -24,6 +26,8 @@ export default function BulletinWorshipStep({
   canManage,
   canEditSongs,
   oauthJustConnected = false,
+  oauthError = null,
+  onClearOauthError,
   onPlaylistReady,
 }: BulletinWorshipStepProps) {
   const { t } = useI18n();
@@ -55,8 +59,8 @@ export default function BulletinWorshipStep({
   }, [refreshPlaylist, draft.servicePlaylistId]);
 
   useEffect(() => {
-    if (oauthJustConnected) setYoutubeModalOpen(true);
-  }, [oauthJustConnected]);
+    if (oauthJustConnected || oauthError) setYoutubeModalOpen(true);
+  }, [oauthJustConnected, oauthError]);
 
   const handleImported = (
     detail: PlaylistDetail,
@@ -191,7 +195,11 @@ export default function BulletinWorshipStep({
         <ImportYoutubePlaylistModal
           bulletinId={draft.id}
           oauthJustConnected={oauthJustConnected}
-          onClose={() => setYoutubeModalOpen(false)}
+          oauthError={oauthError}
+          onClose={() => {
+            setYoutubeModalOpen(false);
+            onClearOauthError?.();
+          }}
           onImported={handleImported}
         />
       )}
