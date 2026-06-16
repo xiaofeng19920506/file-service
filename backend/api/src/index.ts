@@ -112,6 +112,7 @@ async function buildApp() {
     sofficePath: env.SOFFICE_PATH,
     sofficePreviewUrl: env.SOFFICE_PREVIEW_URL,
     env,
+    audioQueue,
   });
   registerBulletinRealtimeRoutes(app, { redisUrl: env.REDIS_URL });
 

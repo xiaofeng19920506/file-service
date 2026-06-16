@@ -35,6 +35,107 @@ export type YoutubeConnectionInfo = {
   channelTitle: string | null;
 };
 
+export type YoutubePlaylistSummary = {
+  id: string;
+  title: string;
+  itemCount: number;
+  thumbnailUrl: string | null;
+};
+
+const SKIPPED_OAUTH_VIDEO_TITLES = new Set([
+  'Private video',
+  'Deleted video',
+  '已设为私享',
+  '私人视频',
+  '已删除的视频',
+]);
+
+export async function listUserYoutubePlaylists(
+  accessToken: string,
+  pageToken?: string,
+): Promise<{ playlists: YoutubePlaylistSummary[]; nextPageToken: string | null }> {
+  const query = new URLSearchParams({
+    part: 'snippet,contentDetails',
+    mine: 'true',
+    maxResults: '50',
+  });
+  if (pageToken) query.set('pageToken', pageToken);
+
+  const data = await youtubeApiRequest<{
+    items?: Array<{
+      id?: string;
+      snippet?: {
+        title?: string;
+        thumbnails?: { default?: { url?: string }; medium?: { url?: string } };
+      };
+      contentDetails?: { itemCount?: number };
+    }>;
+    nextPageToken?: string;
+  }>(accessToken, `/playlists?${query.toString()}`, { method: 'GET' });
+
+  const playlists = (data.items ?? [])
+    .map((row) => {
+      const id = row.id?.trim();
+      if (!id) return null;
+      const title = row.snippet?.title?.trim() || 'Untitled playlist';
+      const thumb =
+        row.snippet?.thumbnails?.medium?.url
+        ?? row.snippet?.thumbnails?.default?.url
+        ?? null;
+      return {
+        id,
+        title,
+        itemCount: row.contentDetails?.itemCount ?? 0,
+        thumbnailUrl: thumb,
+      };
+    })
+    .filter((row): row is YoutubePlaylistSummary => row !== null);
+
+  return {
+    playlists,
+    nextPageToken: data.nextPageToken?.trim() || null,
+  };
+}
+
+export async function fetchOauthYoutubePlaylistItems(
+  accessToken: string,
+  playlistId: string,
+): Promise<Array<{ videoId: string; title: string }>> {
+  const items: Array<{ videoId: string; title: string }> = [];
+  let pageToken: string | undefined;
+
+  do {
+    const query = new URLSearchParams({
+      part: 'snippet',
+      playlistId,
+      maxResults: '50',
+    });
+    if (pageToken) query.set('pageToken', pageToken);
+
+    const data = await youtubeApiRequest<{
+      items?: Array<{
+        snippet?: {
+          title?: string;
+          resourceId?: { videoId?: string };
+        };
+      }>;
+      nextPageToken?: string;
+    }>(accessToken, `/playlistItems?${query.toString()}`, { method: 'GET' });
+
+    for (const row of data.items ?? []) {
+      const videoId = row.snippet?.resourceId?.videoId?.trim();
+      const title = row.snippet?.title?.trim();
+      if (!videoId || !title) continue;
+      if (SKIPPED_OAUTH_VIDEO_TITLES.has(title)) continue;
+      items.push({ videoId, title });
+    }
+
+    pageToken = data.nextPageToken?.trim() || undefined;
+  } while (pageToken);
+
+  return items;
+}
+
 export function buildGoogleOAuthAuthorizeUrl(opts: {
   clientId: string;
   redirectUri: string;

@@ -73,6 +73,7 @@ export default function BulletinPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [wizardStep, setWizardStep] = useState(0);
+  const [worshipYoutubeOauthReady, setWorshipYoutubeOauthReady] = useState(false);
   const savingRef = useRef(false);
   const scripturePersistingRef = useRef(false);
   savingRef.current = saving || publishing;
@@ -88,6 +89,27 @@ export default function BulletinPage() {
   );
 
   const currentStepDef = BULLETIN_WIZARD_STEPS[wizardStep];
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    const qIndex = hash.indexOf('?');
+    if (qIndex === -1) return;
+
+    const params = new URLSearchParams(hash.slice(qIndex + 1));
+    if (params.get('youtube_oauth') !== 'connected' || params.get('worship_youtube') !== '1') {
+      return;
+    }
+
+    params.delete('youtube_oauth');
+    params.delete('worship_youtube');
+    params.delete('reason');
+    const rest = params.toString();
+    window.history.replaceState(null, '', rest ? `#/bulletin?${rest}` : '#/bulletin');
+
+    setWorshipYoutubeOauthReady(true);
+    const worshipIdx = BULLETIN_WIZARD_STEPS.findIndex((step) => step.id === 'worship');
+    if (worshipIdx >= 0) setWizardStep(worshipIdx);
+  }, []);
 
   useBulletinRealtime(
     selectedId,
@@ -344,7 +366,9 @@ export default function BulletinPage() {
         return (
           <BulletinWorshipStep
             draft={draft}
-            canEdit={canManage}
+            canManage={canManage}
+            canEditSongs={permissions.canEditBulletinWorshipSongs}
+            oauthJustConnected={worshipYoutubeOauthReady}
             onPlaylistReady={(playlistId) => {
               setDraft((prev) => (prev ? { ...prev, servicePlaylistId: playlistId } : prev));
             }}

@@ -1,4 +1,5 @@
-import { asc, desc, eq } from 'drizzle-orm';
+import { asc, desc, eq, and } from 'drizzle-orm';
+import type { Queue } from 'bullmq';
 import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -9,24 +10,31 @@ import {
   bulletinAnnouncements,
   canManageBulletin,
   canViewBulletin,
+  canEditBulletinWorshipSongs,
   exportPptxSlidePng,
+  fetchYoutubePlaylistData,
+  fetchOauthYoutubePlaylistItems,
+  mapYoutubeApiError,
   normalizeUserRole,
   patchBulletinPreviewInPptx,
+  playlistItems,
+  playlists,
   renderSlidePngViaService,
   resolveScriptureSlideBodies,
   getScripturePreference,
   purgeExpiredScripturePreferences,
   upsertScripturePreference,
   weeklyBulletins,
-  playlists,
   signPlaylistEditToken,
   formatUserDisplayName,
   type ApiEnv,
   type Db,
 } from '@file-service/shared';
 import type { FastifyInstance } from 'fastify';
+import { getValidYoutubeAccessToken, resolveOAuthConfig } from './youtube-oauth-token.js';
 import { notifyBulletinUpdated } from './bulletin-realtime.js';
 import { resolveMailConfig, resolveWebAppUrl, sendMail } from './mail.js';
+import { appendVideosToPlaylist, buildPlaylistDetail } from './playlists.js';
 
 function resolveBulletinTemplateDir(): string {
   const here = dirname(fileURLToPath(import.meta.url));
@@ -184,7 +192,7 @@ async function ensureBulletinServicePlaylist(
     if (existing) return existing;
   }
 
-  const title = `${bulletin.serviceDate} 敬拜歌单`;
+  const title = `${bulletin.serviceDate} 敬拜赞美`;
   const now = new Date();
   const [playlist] = await db
     .insert(playlists)
@@ -216,12 +224,14 @@ export function registerBulletinRoutes(
     sofficePath,
     sofficePreviewUrl,
     env,
+    audioQueue,
   }: {
     db: Db;
     redisUrl: string;
     sofficePath: string;
     sofficePreviewUrl?: string;
     env: ApiEnv;
+    audioQueue: Queue;
   },
 ) {
   void purgeExpiredScripturePreferences(db).catch((err) =>
@@ -748,4 +758,284 @@ export function registerBulletinRoutes(
       emailed: Boolean(recipientEmail),
     });
   });
+
+  app.get<{ Params: { id: string } }>('/v1/bulletins/:id/worship-playlist', async (request, reply) => {
+    const user = requireUser(request);
+    if (!user || !canViewBulletin(user.role)) {
+      return reply.code(403).send({ error: 'bulletin_forbidden' });
+    }
+
+    const [bulletin] = await db
+      .select()
+      .from(weeklyBulletins)
+      .where(eq(weeklyBulletins.id, request.params.id));
+    if (!bulletin) return reply.code(404).send({ error: 'not_found' });
+
+    if (!bulletin.servicePlaylistId) {
+      return reply.send({
+        bulletin: await mapBulletin(db, bulletin),
+        playlist: null,
+        items: [],
+        canEdit: canEditBulletinWorshipSongs(user.role),
+      });
+    }
+
+    const [playlist] = await db
+      .select()
+      .from(playlists)
+      .where(eq(playlists.id, bulletin.servicePlaylistId));
+    if (!playlist) {
+      return reply.send({
+        bulletin: await mapBulletin(db, bulletin),
+        playlist: null,
+        items: [],
+        canEdit: canEditBulletinWorshipSongs(user.role),
+      });
+    }
+
+    const detail = await buildPlaylistDetail(db, playlist, audioQueue);
+    return reply.send({
+      ...detail,
+      bulletin: {
+        id: bulletin.id,
+        serviceDate: bulletin.serviceDate,
+        serviceTime: bulletin.serviceTime,
+      },
+      canEdit: canEditBulletinWorshipSongs(user.role),
+    });
+  });
+
+  app.post<{ Params: { id: string } }>('/v1/bulletins/:id/worship-playlist/open', async (request, reply) => {
+    const user = requireUser(request);
+    if (!user || !canEditBulletinWorshipSongs(user.role)) {
+      return reply.code(403).send({ error: 'bulletin_forbidden' });
+    }
+
+    const [bulletin] = await db
+      .select()
+      .from(weeklyBulletins)
+      .where(eq(weeklyBulletins.id, request.params.id));
+    if (!bulletin) return reply.code(404).send({ error: 'not_found' });
+
+    const playlist = await ensureBulletinServicePlaylist(db, bulletin, bulletin.createdByUserId);
+    const detail = await buildPlaylistDetail(db, playlist, audioQueue);
+    return reply.send({
+      ...detail,
+      bulletin: {
+        id: bulletin.id,
+        serviceDate: bulletin.serviceDate,
+        serviceTime: bulletin.serviceTime,
+      },
+      canEdit: true,
+    });
+  });
+
+  app.post<{
+    Params: { id: string };
+    Body: { url?: string; items?: { videoId?: string; title?: string }[] };
+  }>('/v1/bulletins/:id/worship-playlist/items', async (request, reply) => {
+    const user = requireUser(request);
+    if (!user || !canEditBulletinWorshipSongs(user.role)) {
+      return reply.code(403).send({ error: 'bulletin_forbidden' });
+    }
+
+    const [bulletin] = await db
+      .select()
+      .from(weeklyBulletins)
+      .where(eq(weeklyBulletins.id, request.params.id));
+    if (!bulletin) return reply.code(404).send({ error: 'not_found' });
+
+    const playlist = await ensureBulletinServicePlaylist(db, bulletin, bulletin.createdByUserId);
+    const playlistId = playlist.id;
+
+    const bodyItems = request.body?.items;
+    if (Array.isArray(bodyItems) && bodyItems.length > 0) {
+      const videos = bodyItems
+        .map((row) => ({
+          videoId: row.videoId?.trim() ?? '',
+          title: row.title?.trim() ?? '',
+        }))
+        .filter((row) => row.videoId && row.title);
+      if (!videos.length) return reply.code(400).send({ error: 'invalid_request' });
+
+      const result = await appendVideosToPlaylist(db, playlistId, videos, audioQueue);
+      if (!result.addedCount) {
+        return reply.code(409).send({
+          error: 'playlist_items_duplicate',
+          skipped: result.skippedCount,
+        });
+      }
+      return { ...result.detail, addedCount: result.addedCount, skippedCount: result.skippedCount };
+    }
+
+    const url = request.body?.url?.trim();
+    if (!url) return reply.code(400).send({ error: 'url_required' });
+
+    let imported;
+    try {
+      imported = await fetchYoutubePlaylistData(url, env.YOUTUBE_API_KEY);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'youtube_import_failed';
+      if (msg === 'invalid_youtube_url') {
+        return reply.code(400).send({ error: 'invalid_youtube_url' });
+      }
+      request.log.error(e, 'bulletin worship add items failed');
+      return reply.code(502).send({ error: 'youtube_import_failed' });
+    }
+
+    if (!imported.items.length) {
+      return reply.code(400).send({ error: 'youtube_playlist_empty' });
+    }
+
+    const result = await appendVideosToPlaylist(
+      db,
+      playlistId,
+      imported.items.map((video) => ({ videoId: video.videoId, title: video.title })),
+      audioQueue,
+    );
+    if (!result.addedCount) {
+      return reply.code(409).send({
+        error: 'playlist_items_duplicate',
+        skipped: result.skippedCount,
+      });
+    }
+    return { ...result.detail, addedCount: result.addedCount, skippedCount: result.skippedCount };
+  });
+
+  app.post<{
+    Params: { id: string };
+    Body: { youtubePlaylistId?: string };
+  }>('/v1/bulletins/:id/worship-playlist/import-youtube', async (request, reply) => {
+    const user = requireUser(request);
+    if (!user || !canEditBulletinWorshipSongs(user.role)) {
+      return reply.code(403).send({ error: 'bulletin_forbidden' });
+    }
+
+    const youtubePlaylistId = request.body?.youtubePlaylistId?.trim();
+    if (!youtubePlaylistId) return reply.code(400).send({ error: 'invalid_request' });
+
+    const oauth = resolveOAuthConfig(env);
+    if (!oauth) return reply.code(503).send({ error: 'youtube_oauth_not_configured' });
+
+    const tokenResult = await getValidYoutubeAccessToken(db, oauth, user.id);
+    if ('error' in tokenResult) {
+      const code = tokenResult.error === 'not_connected' ? 'youtube_not_connected' : 'youtube_token_refresh_failed';
+      return reply.code(tokenResult.error === 'not_connected' ? 400 : 502).send({ error: code });
+    }
+
+    const [bulletin] = await db
+      .select()
+      .from(weeklyBulletins)
+      .where(eq(weeklyBulletins.id, request.params.id));
+    if (!bulletin) return reply.code(404).send({ error: 'not_found' });
+
+    let videos;
+    try {
+      videos = await fetchOauthYoutubePlaylistItems(tokenResult.accessToken, youtubePlaylistId);
+    } catch (e) {
+      const raw = e instanceof Error ? e.message : 'youtube_import_failed';
+      request.log.error(e, 'bulletin worship oauth import failed');
+      const code = mapYoutubeApiError(raw);
+      const status =
+        code === 'youtube_quota_exceeded'
+          ? 429
+          : code === 'youtube_api_not_enabled' || code === 'youtube_channel_required'
+            ? 503
+            : 502;
+      return reply.code(status).send({ error: code });
+    }
+
+    if (!videos.length) {
+      return reply.code(400).send({ error: 'youtube_playlist_empty' });
+    }
+
+    const playlist = await ensureBulletinServicePlaylist(db, bulletin, bulletin.createdByUserId);
+    const result = await appendVideosToPlaylist(db, playlist.id, videos, audioQueue);
+    if (!result.addedCount) {
+      return reply.code(409).send({
+        error: 'playlist_items_duplicate',
+        skipped: result.skippedCount,
+      });
+    }
+    return { ...result.detail, addedCount: result.addedCount, skippedCount: result.skippedCount };
+  });
+
+  app.put<{ Params: { id: string }; Body: { itemIds?: string[] } }>(
+    '/v1/bulletins/:id/worship-playlist/items/order',
+    async (request, reply) => {
+      const user = requireUser(request);
+      if (!user || !canEditBulletinWorshipSongs(user.role)) {
+        return reply.code(403).send({ error: 'bulletin_forbidden' });
+      }
+
+      const [bulletin] = await db
+        .select()
+        .from(weeklyBulletins)
+        .where(eq(weeklyBulletins.id, request.params.id));
+      if (!bulletin?.servicePlaylistId) return reply.code(404).send({ error: 'not_found' });
+
+      const itemIds = request.body?.itemIds;
+      if (!Array.isArray(itemIds) || !itemIds.length) {
+        return reply.code(400).send({ error: 'invalid_request' });
+      }
+
+      const playlistId = bulletin.servicePlaylistId;
+      const items = await db
+        .select()
+        .from(playlistItems)
+        .where(eq(playlistItems.playlistId, playlistId));
+      const itemMap = new Map(items.map((item) => [item.id, item]));
+      if (itemIds.some((id) => !itemMap.has(id))) {
+        return reply.code(400).send({ error: 'invalid_request' });
+      }
+
+      await Promise.all(
+        itemIds.map((id, index) =>
+          db
+            .update(playlistItems)
+            .set({ sortOrder: index })
+            .where(and(eq(playlistItems.id, id), eq(playlistItems.playlistId, playlistId))),
+        ),
+      );
+      await db
+        .update(playlists)
+        .set({ updatedAt: new Date() })
+        .where(eq(playlists.id, playlistId));
+
+      const [updated] = await db.select().from(playlists).where(eq(playlists.id, playlistId));
+      return buildPlaylistDetail(db, updated!, audioQueue);
+    },
+  );
+
+  app.delete<{ Params: { id: string; itemId: string } }>(
+    '/v1/bulletins/:id/worship-playlist/items/:itemId',
+    async (request, reply) => {
+      const user = requireUser(request);
+      if (!user || !canEditBulletinWorshipSongs(user.role)) {
+        return reply.code(403).send({ error: 'bulletin_forbidden' });
+      }
+
+      const [bulletin] = await db
+        .select()
+        .from(weeklyBulletins)
+        .where(eq(weeklyBulletins.id, request.params.id));
+      if (!bulletin?.servicePlaylistId) return reply.code(404).send({ error: 'not_found' });
+
+      const playlistId = bulletin.servicePlaylistId;
+      const { itemId } = request.params;
+      const [deleted] = await db
+        .delete(playlistItems)
+        .where(and(eq(playlistItems.id, itemId), eq(playlistItems.playlistId, playlistId)))
+        .returning();
+
+      if (!deleted) return reply.code(404).send({ error: 'not_found' });
+
+      await db
+        .update(playlists)
+        .set({ updatedAt: new Date() })
+        .where(eq(playlists.id, playlistId));
+
+      return { ok: true };
+    },
+  );
 }

@@ -6,6 +6,7 @@ import {
   type PlaylistDetail,
   type PlaylistSummary,
 } from '../api/playlists';
+import { addBulletinWorshipPlaylistItemsByVideos } from '../api/bulletins';
 import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 import { useDebouncedYoutubeSearch } from '../hooks/useDebouncedYoutubeSearch';
 import { friendlyError } from '../lib/error-messages';
@@ -19,6 +20,7 @@ type PendingAdd = { videoId: string; title: string };
 type PlaylistYoutubeSearchPanelProps = {
   playlistId?: string;
   inviteToken?: string;
+  bulletinId?: string;
   existingVideoIds?: Set<string>;
   libraryVideoIds?: Set<string>;
   onAdded: (detail: PlaylistDetail, meta: { addedCount: number; skippedCount: number }) => void;
@@ -37,6 +39,7 @@ type PlaylistYoutubeSearchPanelProps = {
 export default function PlaylistYoutubeSearchPanel({
   playlistId,
   inviteToken,
+  bulletinId,
   existingVideoIds = new Set(),
   libraryVideoIds = new Set(),
   onAdded,
@@ -112,7 +115,9 @@ export default function PlaylistYoutubeSearchPanel({
     try {
       const data = inviteToken
         ? await addInvitePlaylistItemsByVideos(inviteToken, [{ videoId, title }])
-        : await addPlaylistItemsByVideos(targetPlaylistId, [{ videoId, title }]);
+        : bulletinId
+          ? await addBulletinWorshipPlaylistItemsByVideos(bulletinId, [{ videoId, title }])
+          : await addPlaylistItemsByVideos(targetPlaylistId, [{ videoId, title }]);
       onAdded(data, { addedCount: data.addedCount, skippedCount: data.skippedCount });
       setPendingAdd(null);
     } catch (err) {
@@ -138,7 +143,7 @@ export default function PlaylistYoutubeSearchPanel({
       return;
     }
 
-    if (!playlistId && !inviteToken) return;
+    if (!playlistId && !inviteToken && !bulletinId) return;
     if (isInCurrentPlaylist(videoId)) return;
     await addToPlaylist(playlistId ?? '', videoId, title);
   };

@@ -70,7 +70,7 @@ export default function ExportYoutubePlaylistModal({
     setConnecting(true);
     setError(null);
     try {
-      const { url } = await startYoutubeOAuth(playlistId);
+      const { url } = await startYoutubeOAuth({ returnPlaylistId: playlistId });
       window.location.href = url;
     } catch (err) {
       setError(friendlyError(err instanceof Error ? err.message : 'youtube_oauth_start_failed', t));

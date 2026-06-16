@@ -4,12 +4,12 @@ import {
   exchangeGoogleOAuthCode,
   exportVideosToYoutubePlaylist,
   fetchYoutubeChannelInfo,
+  listUserYoutubePlaylists,
   mapGoogleOAuthExchangeError,
   mapYoutubeApiError,
   playlistItems,
   playlists,
   probeYoutubeDataApiAccess,
-  refreshGoogleAccessToken,
   signYoutubeOAuthState,
   verifyYoutubeOAuthState,
   YOUTUBE_OAUTH_SCOPES,
@@ -20,12 +20,7 @@ import {
 } from '@file-service/shared';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { resolveWebAppUrl } from './mail.js';
-
-type OAuthConfig = {
-  clientId: string;
-  clientSecret: string;
-  redirectUri: string;
-};
+import { getValidYoutubeAccessToken, resolveOAuthConfig } from './youtube-oauth-token.js';
 
 function normalizeWebAppOrigin(raw: string): string | null {
   try {
@@ -76,21 +71,6 @@ function resolveReturnWebAppUrl(opts: {
   return fallback;
 }
 
-function resolveOAuthConfig(env: ApiEnv): OAuthConfig | null {
-  const clientId = env.GOOGLE_OAUTH_CLIENT_ID?.trim();
-  const clientSecret = env.GOOGLE_OAUTH_CLIENT_SECRET?.trim();
-  if (!clientId || !clientSecret) return null;
-
-  const redirectUri =
-    env.GOOGLE_OAUTH_REDIRECT_URI?.trim()
-    || (env.PUBLIC_BASE_URL
-      ? `${env.PUBLIC_BASE_URL.replace(/\/$/, '')}/v1/youtube/oauth/callback`
-      : undefined);
-  if (!redirectUri) return null;
-
-  return { clientId, clientSecret, redirectUri };
-}
-
 function oauthNotConfiguredReply(reply: import('fastify').FastifyReply) {
   return reply.code(503).send({ error: 'youtube_oauth_not_configured' });
 }
@@ -108,52 +88,24 @@ async function assertPlaylistAccess(
   return { error: null, playlist };
 }
 
-async function getValidAccessToken(
-  db: Db,
-  oauth: OAuthConfig,
-  userId: string,
-): Promise<{ accessToken: string } | { error: 'not_connected' | 'refresh_failed' }> {
-  const [row] = await db
-    .select()
-    .from(youtubeOAuthConnections)
-    .where(eq(youtubeOAuthConnections.userId, userId));
-
-  if (!row?.refreshToken) return { error: 'not_connected' };
-
-  const expiresAt = row.accessTokenExpiresAt?.getTime() ?? 0;
-  const stillValid = row.accessToken && expiresAt > Date.now() + 60_000;
-  if (stillValid && row.accessToken) {
-    return { accessToken: row.accessToken };
-  }
-
-  try {
-    const refreshed = await refreshGoogleAccessToken({
-      clientId: oauth.clientId,
-      clientSecret: oauth.clientSecret,
-      refreshToken: row.refreshToken,
-    });
-    const accessTokenExpiresAt = new Date(Date.now() + refreshed.expires_in * 1000);
-    await db
-      .update(youtubeOAuthConnections)
-      .set({
-        accessToken: refreshed.access_token,
-        accessTokenExpiresAt,
-        updatedAt: new Date(),
-      })
-      .where(eq(youtubeOAuthConnections.userId, userId));
-    return { accessToken: refreshed.access_token };
-  } catch {
-    return { error: 'refresh_failed' };
-  }
+function redirectToWebApp(
+  webAppUrl: string,
+  params: Record<string, string>,
+  opts?: { returnHash?: string; returnPlaylistId?: string },
+) {
+  const search = new URLSearchParams(params);
+  if (opts?.returnPlaylistId) search.set('id', opts.returnPlaylistId);
+  const base = webAppUrl.replace(/\/$/, '');
+  const hashPath = opts?.returnHash?.replace(/^\//, '') || 'playlists';
+  return `${base}/#/${hashPath}?${search.toString()}`;
 }
 
+/** @deprecated use redirectToWebApp */
 function redirectToPlaylists(
   webAppUrl: string,
   params: Record<string, string>,
 ) {
-  const search = new URLSearchParams(params);
-  const base = webAppUrl.replace(/\/$/, '');
-  return `${base}/#/playlists?${search.toString()}`;
+  return redirectToWebApp(webAppUrl, params);
 }
 
 function callbackRedirectWebAppUrl(
@@ -194,7 +146,7 @@ export function registerYoutubeOAuthRoutes(
     let dataApiReady = false;
     let dataApiError: string | null = null;
     if (row) {
-      const tokenResult = await getValidAccessToken(db, oauth, user.id);
+      const tokenResult = await getValidYoutubeAccessToken(db, oauth, user.id);
       if ('accessToken' in tokenResult) {
         const probe = await probeYoutubeDataApiAccess(tokenResult.accessToken);
         dataApiReady = probe.ok;
@@ -217,7 +169,7 @@ export function registerYoutubeOAuthRoutes(
     };
   });
 
-  app.get<{ Querystring: { returnPlaylistId?: string; returnUrl?: string } }>(
+  app.get<{ Querystring: { returnPlaylistId?: string; returnUrl?: string; returnHash?: string } }>(
     '/v1/youtube/oauth/start',
     async (request, reply) => {
       const user = request.authUser;
@@ -227,6 +179,7 @@ export function registerYoutubeOAuthRoutes(
       if (!oauth) return oauthNotConfiguredReply(reply);
 
       const returnPlaylistId = request.query.returnPlaylistId?.trim() || undefined;
+      const returnHash = request.query.returnHash?.trim() || undefined;
       const returnWebAppUrl = resolveReturnWebAppUrl({
         env,
         request,
@@ -237,6 +190,7 @@ export function registerYoutubeOAuthRoutes(
         userId: user.id,
         returnPlaylistId,
         returnWebAppUrl,
+        returnHash,
       });
 
       const url = buildGoogleOAuthAuthorizeUrl({
@@ -336,7 +290,13 @@ export function registerYoutubeOAuthRoutes(
 
         const params: Record<string, string> = { youtube_oauth: 'connected' };
         if (state.returnPlaylistId) params.id = state.returnPlaylistId;
-        return reply.redirect(redirectToPlaylists(webAppUrl, params));
+        if (state.returnHash === '/bulletin') params.worship_youtube = '1';
+        return reply.redirect(
+          redirectToWebApp(webAppUrl, params, {
+            returnHash: state.returnHash,
+            returnPlaylistId: state.returnPlaylistId,
+          }),
+        );
       } catch (e) {
         const raw = e instanceof Error ? e.message : 'token_exchange_failed';
         request.log.error({ err: e, redirectUri: oauth.redirectUri }, 'youtube oauth callback failed');
@@ -357,6 +317,37 @@ export function registerYoutubeOAuthRoutes(
       .where(eq(youtubeOAuthConnections.userId, user.id));
 
     return { ok: true };
+  });
+
+  app.get<{ Querystring: { pageToken?: string } }>('/v1/youtube/playlists', async (request, reply) => {
+    const user = request.authUser;
+    if (!user) return reply.code(401).send({ error: 'unauthorized' });
+
+    const oauth = resolveOAuthConfig(env);
+    if (!oauth) return oauthNotConfiguredReply(reply);
+
+    const tokenResult = await getValidYoutubeAccessToken(db, oauth, user.id);
+    if ('error' in tokenResult) {
+      const code = tokenResult.error === 'not_connected' ? 'youtube_not_connected' : 'youtube_token_refresh_failed';
+      return reply.code(tokenResult.error === 'not_connected' ? 400 : 502).send({ error: code });
+    }
+
+    try {
+      const pageToken = request.query.pageToken?.trim() || undefined;
+      const result = await listUserYoutubePlaylists(tokenResult.accessToken, pageToken);
+      return result;
+    } catch (e) {
+      const raw = e instanceof Error ? e.message : 'youtube_api_failed';
+      request.log.error(e, 'list youtube playlists failed');
+      const code = mapYoutubeApiError(raw);
+      const status =
+        code === 'youtube_quota_exceeded'
+          ? 429
+          : code === 'youtube_api_not_enabled' || code === 'youtube_channel_required'
+            ? 503
+            : 502;
+      return reply.code(status).send({ error: code });
+    }
   });
 
   app.post<{
@@ -385,7 +376,7 @@ export function registerYoutubeOAuthRoutes(
       return reply.code(400).send({ error: 'youtube_playlist_empty' });
     }
 
-    const tokenResult = await getValidAccessToken(db, oauth, user.id);
+    const tokenResult = await getValidYoutubeAccessToken(db, oauth, user.id);
     if ('error' in tokenResult) {
       const code = tokenResult.error === 'not_connected' ? 'youtube_not_connected' : 'youtube_token_refresh_failed';
       return reply.code(tokenResult.error === 'not_connected' ? 400 : 502).send({ error: code });

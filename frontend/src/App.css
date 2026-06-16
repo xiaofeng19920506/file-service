@@ -6594,6 +6594,151 @@ body.bulletin-slideshow-window {
   margin: 0.75rem 0;
 }
 
+.bulletin-worship-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(280px, 1.2fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 768px) {
+  .bulletin-worship-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.bulletin-worship-intro-panel h3 {
+  margin: 0 0 0.5rem;
+}
+
+.bulletin-worship-intro-panel p {
+  margin: 0 0 0.75rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.bulletin-worship-intro-list {
+  margin: 0 0 1rem;
+  padding-left: 1.2rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.bulletin-worship-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.bulletin-worship-playlist-preview {
+  padding: 1rem;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.bulletin-worship-playlist-preview h4 {
+  margin: 0 0 0.35rem;
+}
+
+.bulletin-worship-playlist-name {
+  margin: 0 0 0.75rem;
+}
+
+.bulletin-worship-track-preview {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.bulletin-worship-track-preview li {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.bulletin-worship-track-preview-order {
+  flex: 0 0 1.5rem;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.bulletin-worship-track-preview-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.bulletin-worship-invite-section {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-light);
+}
+
+.bulletin-worship-import-modal,
+.bulletin-worship-manual-modal {
+  width: min(520px, 92vw);
+}
+
+.bulletin-worship-youtube-pick-list {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  max-height: 280px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.bulletin-worship-youtube-pick {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.bulletin-worship-youtube-pick:has(input:checked) {
+  border-color: var(--accent, #3b82f6);
+  background: color-mix(in srgb, var(--accent, #3b82f6) 8%, transparent);
+}
+
+.bulletin-worship-youtube-pick-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.bulletin-worship-youtube-pick-meta {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.bulletin-worship-manual-url-list {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.bulletin-worship-manual-url-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.bulletin-worship-manual-url-field span {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
 .bulletin-worship-meta {
   margin: 0.35rem 0;
   color: var(--text-secondary);

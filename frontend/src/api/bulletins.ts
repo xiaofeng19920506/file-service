@@ -1,4 +1,5 @@
 import { apiFetch, parseJson } from './http';
+import type { PlaylistDetail } from './playlists';
 import { runBulletinPreviewTask } from '../lib/bulletin-preview-queue';
 
 export type BulletinAnnouncement = {
@@ -268,4 +269,115 @@ export async function inviteBulletinWorshipLeader(
     },
   );
   return parseJson<WorshipPlaylistInvite>(res);
+}
+
+export type BulletinWorshipPlaylistDetail = PlaylistDetail & {
+  bulletin: { id: string; serviceDate: string; serviceTime: string };
+  canEdit?: boolean;
+};
+
+export type BulletinWorshipPlaylistEmpty = {
+  bulletin: WeeklyBulletin;
+  playlist: null;
+  items: [];
+  canEdit: boolean;
+};
+
+export type BulletinWorshipPlaylistResponse =
+  | BulletinWorshipPlaylistDetail
+  | BulletinWorshipPlaylistEmpty;
+
+export async function getBulletinWorshipPlaylist(
+  bulletinId: string,
+): Promise<BulletinWorshipPlaylistResponse> {
+  const res = await apiFetch(`/v1/bulletins/${encodeURIComponent(bulletinId)}/worship-playlist`);
+  return parseJson<BulletinWorshipPlaylistResponse>(res);
+}
+
+export async function openBulletinWorshipPlaylist(
+  bulletinId: string,
+): Promise<BulletinWorshipPlaylistDetail> {
+  const res = await apiFetch(
+    `/v1/bulletins/${encodeURIComponent(bulletinId)}/worship-playlist/open`,
+    { method: 'POST' },
+  );
+  return parseJson<BulletinWorshipPlaylistDetail>(res);
+}
+
+export async function addBulletinWorshipPlaylistItems(
+  bulletinId: string,
+  url: string,
+): Promise<PlaylistDetail & { addedCount: number; skippedCount: number }> {
+  const res = await apiFetch(
+    `/v1/bulletins/${encodeURIComponent(bulletinId)}/worship-playlist/items`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    },
+  );
+  return parseJson<PlaylistDetail & { addedCount: number; skippedCount: number }>(res);
+}
+
+export async function addBulletinWorshipPlaylistItemsByVideos(
+  bulletinId: string,
+  items: { videoId: string; title: string }[],
+): Promise<PlaylistDetail & { addedCount: number; skippedCount: number }> {
+  const res = await apiFetch(
+    `/v1/bulletins/${encodeURIComponent(bulletinId)}/worship-playlist/items`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items }),
+    },
+  );
+  return parseJson<PlaylistDetail & { addedCount: number; skippedCount: number }>(res);
+}
+
+export async function reorderBulletinWorshipPlaylistItems(
+  bulletinId: string,
+  itemIds: string[],
+): Promise<PlaylistDetail> {
+  const res = await apiFetch(
+    `/v1/bulletins/${encodeURIComponent(bulletinId)}/worship-playlist/items/order`,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ itemIds }),
+    },
+  );
+  return parseJson<PlaylistDetail>(res);
+}
+
+export async function removeBulletinWorshipPlaylistItem(
+  bulletinId: string,
+  itemId: string,
+): Promise<void> {
+  const res = await apiFetch(
+    `/v1/bulletins/${encodeURIComponent(bulletinId)}/worship-playlist/items/${encodeURIComponent(itemId)}`,
+    { method: 'DELETE' },
+  );
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    const msg =
+      typeof data === 'object' && data && 'error' in data
+        ? String((data as { error: string }).error)
+        : res.statusText;
+    throw new Error(msg);
+  }
+}
+
+export async function importBulletinWorshipYoutubePlaylist(
+  bulletinId: string,
+  youtubePlaylistId: string,
+): Promise<PlaylistDetail & { addedCount: number; skippedCount: number }> {
+  const res = await apiFetch(
+    `/v1/bulletins/${encodeURIComponent(bulletinId)}/worship-playlist/import-youtube`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ youtubePlaylistId }),
+    },
+  );
+  return parseJson(res);
 }

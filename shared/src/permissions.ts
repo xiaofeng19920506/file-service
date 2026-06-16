@@ -53,6 +53,24 @@ export function canViewBulletin(role: UserRole | null): boolean {
   return isWorshipCapable(role);
 }
 
+/** 敬拜赞美歌单：敬拜团及以上可直接编辑周报绑定的歌单 */
+export function canEditBulletinWorshipSongs(role: UserRole | null): boolean {
+  return canViewBulletin(role);
+}
+
+function isBulletinWorshipPlaylistEditPath(method: string, path: string): boolean {
+  if (!/^\/v1\/bulletins\/[^/]+\/worship-playlist/.test(path)) return false;
+  if (method === 'POST' && /\/worship-playlist\/invite$/.test(path)) return false;
+  if (method === 'POST' && /\/worship-playlist$/.test(path)) return false;
+  return (
+    (method === 'GET' && /\/worship-playlist$/.test(path))
+    || (method === 'POST' && /\/worship-playlist\/open$/.test(path))
+    || (method === 'POST' && /\/worship-playlist\/items$/.test(path))
+    || (method === 'PUT' && /\/worship-playlist\/items\/order$/.test(path))
+    || (method === 'DELETE' && /\/worship-playlist\/items\/[^/]+$/.test(path))
+  );
+}
+
 export function isSearchPath(method: string, path: string): boolean {
   return method === 'GET' && path === '/v1/blobs';
 }
@@ -128,6 +146,7 @@ export function isYoutubeOAuthCallbackPath(method: string, path: string): boolea
 export function isYoutubeExportPath(method: string, path: string): boolean {
   if (isYoutubeOAuthCallbackPath(method, path)) return false;
   if (path.startsWith('/v1/youtube/oauth')) return true;
+  if (path.startsWith('/v1/youtube/playlists')) return true;
   if (method === 'POST' && /^\/v1\/playlists\/[^/]+\/export-youtube$/.test(path)) return true;
   return false;
 }
@@ -149,6 +168,7 @@ export type PathAccessLevel =
   | 'admin'
   | 'youtube_export'
   | 'bulletin_view'
+  | 'bulletin_worship_edit'
   | 'bulletin_manage';
 
 function isPublicInfrastructurePath(path: string): boolean {
@@ -189,6 +209,7 @@ export function resolvePathAccessLevel(method: string, path: string): PathAccess
   if (isAuthEntryPath(method, path)) return 'public';
   if (isYoutubeOAuthCallbackPath(method, path)) return 'public';
   if (isYoutubeExportPath(method, path)) return 'youtube_export';
+  if (isBulletinWorshipPlaylistEditPath(method, path)) return 'bulletin_worship_edit';
   if (isBulletinWritePath(method, path)) return 'bulletin_manage';
   if (isBulletinPath(method, path)) return 'bulletin_view';
   if (isSearchPath(method, path)) return 'search';
@@ -233,6 +254,8 @@ export function roleMeetsAccessLevel(
       return canExportToYoutube(role);
     case 'bulletin_view':
       return canViewBulletin(role);
+    case 'bulletin_worship_edit':
+      return canEditBulletinWorshipSongs(role);
     case 'bulletin_manage':
       return canManageBulletin(role);
     default:
@@ -257,6 +280,7 @@ export function accessDeniedErrorCode(level: PathAccessLevel): string {
     case 'youtube_export':
       return 'youtube_export_forbidden';
     case 'bulletin_view':
+    case 'bulletin_worship_edit':
     case 'bulletin_manage':
       return 'bulletin_forbidden';
     case 'member':

@@ -95,7 +95,7 @@ function AppShellInner({
     if (page === 'worship' && !permissions.canStartWorship) {
       navigate(home);
     }
-    if (page === 'worship-songs' && !permissions.canAccessPlaylists) {
+    if (page === 'worship-songs' && !permissions.canAccessPlaylists && !permissions.canViewBulletin) {
       navigate(home);
     }
   }, [loading, user, page, navigate, permissions]);
@@ -374,7 +374,7 @@ function AppShellWithMenu() {
 
 export default function App() {
   const { user, loading, permissions } = useAuth();
-  const { page, previewBlobId, mergeEditBlobIds, mergeEditTitle, worshipPlaylistId, worshipBulletinId, worshipMode, worshipSongsInviteToken, slideshowSessionId } = useAppPage();
+  const { page, previewBlobId, mergeEditBlobIds, mergeEditTitle, worshipPlaylistId, worshipBulletinId, worshipMode, worshipSongsInviteToken, worshipSongsBulletinId, slideshowSessionId } = useAppPage();
   const libraryUpload = useLibraryUpload();
   const { t } = useI18n();
 
@@ -418,15 +418,12 @@ export default function App() {
     return <BulletinSlideShowPresenterPage sessionId={slideshowSessionId} />;
   }
 
-  if (
-    page === 'worship-songs' &&
-    worshipSongsInviteToken
-  ) {
+  if (page === 'worship-songs' && (worshipSongsInviteToken || worshipSongsBulletinId)) {
     if (!user) {
       window.location.hash = '#/login';
       return <AuthPage />;
     }
-    if (!permissions.canAccessPlaylists) {
+    if (worshipSongsInviteToken && !permissions.canAccessPlaylists) {
       window.location.hash = '#/playlists';
       return (
         <div className="auth-page">
@@ -434,7 +431,20 @@ export default function App() {
         </div>
       );
     }
-    return <WorshipSongsInvitePage inviteToken={worshipSongsInviteToken} />;
+    if (worshipSongsBulletinId && !permissions.canViewBulletin) {
+      window.location.hash = '#/bulletin';
+      return (
+        <div className="auth-page">
+          <p className="auth-loading">{t('auth.checkingSession')}</p>
+        </div>
+      );
+    }
+    return (
+      <WorshipSongsInvitePage
+        inviteToken={worshipSongsInviteToken}
+        bulletinId={worshipSongsBulletinId}
+      />
+    );
   }
 
   if (

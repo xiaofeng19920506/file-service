@@ -1,53 +1,90 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   ensureBulletinWorshipPlaylist,
+  getBulletinWorshipPlaylist,
   inviteBulletinWorshipLeader,
   type WeeklyBulletin,
 } from '../../api/bulletins';
-import { getPlaylist, type PlaylistDetail } from '../../api/playlists';
+import type { PlaylistDetail, PlaylistItem } from '../../api/playlists';
+import ImportYoutubePlaylistModal from './ImportYoutubePlaylistModal';
+import ManualLinksPlaylistModal from './ManualLinksPlaylistModal';
 import { friendlyError } from '../../lib/error-messages';
 import { useI18n } from '../../i18n';
 
 type BulletinWorshipStepProps = {
   draft: WeeklyBulletin;
-  canEdit: boolean;
+  canManage: boolean;
+  canEditSongs: boolean;
+  oauthJustConnected?: boolean;
   onPlaylistReady: (playlistId: string) => void;
 };
 
 export default function BulletinWorshipStep({
   draft,
-  canEdit,
+  canManage,
+  canEditSongs,
+  oauthJustConnected = false,
   onPlaylistReady,
 }: BulletinWorshipStepProps) {
   const { t } = useI18n();
-  const [playlistDetail, setPlaylistDetail] = useState<PlaylistDetail | null>(null);
+  const [items, setItems] = useState<PlaylistItem[]>([]);
+  const [playlistTitle, setPlaylistTitle] = useState('');
   const [inviteUrl, setInviteUrl] = useState('');
   const [email, setEmail] = useState('');
-  const [message, setMessage] = useState('');
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
+  const [youtubeModalOpen, setYoutubeModalOpen] = useState(oauthJustConnected);
+  const [manualModalOpen, setManualModalOpen] = useState(false);
 
-  const loadPlaylist = useCallback(async (playlistId: string) => {
-    const detail = await getPlaylist(playlistId);
-    setPlaylistDetail(detail);
-  }, []);
+  const refreshPlaylist = useCallback(async () => {
+    const data = await getBulletinWorshipPlaylist(draft.id);
+    if (data.playlist) {
+      setItems(data.items);
+      setPlaylistTitle(data.playlist.title);
+      if (draft.servicePlaylistId !== data.playlist.id) {
+        onPlaylistReady(data.playlist.id);
+      }
+    } else {
+      setItems([]);
+      setPlaylistTitle('');
+    }
+  }, [draft.id, draft.servicePlaylistId, onPlaylistReady]);
 
   useEffect(() => {
-    if (!draft.servicePlaylistId) return;
-    void loadPlaylist(draft.servicePlaylistId).catch(() => undefined);
-  }, [draft.servicePlaylistId, loadPlaylist]);
+    void refreshPlaylist().catch(() => undefined);
+  }, [refreshPlaylist, draft.servicePlaylistId]);
+
+  useEffect(() => {
+    if (oauthJustConnected) {
+      setYoutubeModalOpen(true);
+    }
+  }, [oauthJustConnected]);
+
+  const handleImported = (
+    detail: PlaylistDetail,
+    meta: { addedCount: number; skippedCount: number },
+  ) => {
+    setItems(detail.items);
+    setPlaylistTitle(detail.playlist.title);
+    onPlaylistReady(detail.playlist.id);
+    if (meta.addedCount > 0) {
+      setStatus(t('bulletin.worshipImportedCount', { count: meta.addedCount }));
+    } else if (meta.skippedCount > 0) {
+      setStatus(t('worshipSongs.duplicateSkipped'));
+    }
+    void refreshPlaylist();
+  };
 
   const ensurePlaylist = async () => {
     setBusy(true);
     setError(null);
-    setStatus(null);
     try {
       const result = await ensureBulletinWorshipPlaylist(draft.id);
       onPlaylistReady(result.playlist.id);
       setInviteUrl(result.inviteUrl);
-      await loadPlaylist(result.playlist.id);
-      setStatus(t('bulletin.worshipPlaylistReady'));
+      await refreshPlaylist();
     } catch (err) {
       setError(friendlyError(err instanceof Error ? err.message : 'create_playlist_failed', t));
     } finally {
@@ -73,15 +110,12 @@ export default function BulletinWorshipStep({
     if (!email.trim()) return;
     setBusy(true);
     setError(null);
-    setStatus(null);
     try {
       const result = await inviteBulletinWorshipLeader(draft.id, {
         email: email.trim(),
-        message: message.trim() || undefined,
       });
       onPlaylistReady(result.playlist.id);
       setInviteUrl(result.inviteUrl);
-      await loadPlaylist(result.playlist.id);
       setStatus(t('bulletin.worshipInviteSent'));
     } catch (err) {
       setError(friendlyError(err instanceof Error ? err.message : 'email_send_failed', t));
@@ -91,78 +125,127 @@ export default function BulletinWorshipStep({
   };
 
   return (
-    <div className="bulletin-wizard-step">
-      <header className="bulletin-step-header">
-        <h3>{t('bulletin.steps.worshipTitle')}</h3>
-        <p className="bulletin-step-intro">{t('bulletin.steps.worshipIntro')}</p>
-      </header>
-
-      <div className="bulletin-cover-step-fields">
-        <p className="bulletin-worship-meta">
-          {t('bulletin.worshipServiceLabel', { date: draft.serviceDate, time: draft.serviceTime })}
-        </p>
-
-        {playlistDetail ? (
+    <div className="bulletin-wizard-step bulletin-worship-step">
+      <div className="bulletin-worship-layout">
+        <aside className="bulletin-worship-intro-panel">
+          <h3>{t('bulletin.steps.worshipTitle')}</h3>
+          <p>{t('bulletin.worshipPanelIntro')}</p>
+          <ul className="bulletin-worship-intro-list">
+            <li>{t('bulletin.worshipPanelHintYoutube')}</li>
+            <li>{t('bulletin.worshipPanelHintLinks')}</li>
+            <li>{t('bulletin.worshipPanelHintPpt')}</li>
+          </ul>
           <p className="bulletin-worship-meta">
-            {t('bulletin.worshipTrackCount', { count: playlistDetail.items.length })}
+            {t('bulletin.worshipServiceLabel', { date: draft.serviceDate, time: draft.serviceTime })}
           </p>
-        ) : (
-          <p className="playlists-muted">{t('bulletin.worshipNoPlaylist')}</p>
-        )}
-
-        {canEdit && (
-          <div className="bulletin-worship-actions">
-            <button type="button" className="btn-primary" disabled={busy} onClick={() => void ensurePlaylist()}>
-              {busy ? t('bulletin.worshipPreparing') : t('bulletin.worshipPreparePlaylist')}
-            </button>
+          {canManage && (
             <button
               type="button"
-              className="btn-secondary"
-              disabled={busy}
-              onClick={() => void copyInviteLink()}
+              className="btn-secondary btn-sm"
+              onClick={() => setShowInvite((open) => !open)}
             >
-              {t('bulletin.worshipCopyInvite')}
+              {showInvite ? t('bulletin.worshipHideInvite') : t('bulletin.worshipShowInvite')}
             </button>
-          </div>
-        )}
+          )}
+        </aside>
 
-        {canEdit && (
-          <form className="bulletin-worship-invite-form" onSubmit={(e) => void sendInvite(e)}>
-            <label className="bulletin-field">
-              {t('bulletin.worshipInviteEmail')}
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder={t('bulletin.worshipInviteEmailPlaceholder')}
-                disabled={busy}
-              />
-            </label>
-            <label className="bulletin-field">
-              {t('bulletin.worshipInviteMessage')}
-              <textarea
-                rows={3}
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                disabled={busy}
-              />
-            </label>
-            <button type="submit" className="btn-secondary" disabled={busy || !email.trim()}>
-              {t('bulletin.worshipSendInvite')}
-            </button>
-          </form>
-        )}
+        <div className="bulletin-worship-main-panel">
+          {canEditSongs && (
+            <div className="bulletin-worship-action-buttons">
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => setYoutubeModalOpen(true)}
+              >
+                {t('bulletin.worshipImportYoutubeBtn')}
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setManualModalOpen(true)}
+              >
+                {t('bulletin.worshipManualLinksBtn')}
+              </button>
+            </div>
+          )}
 
-        {inviteUrl && canEdit && (
-          <label className="bulletin-field">
-            {t('bulletin.worshipInviteLink')}
-            <input type="text" readOnly value={inviteUrl} onFocus={(e) => e.target.select()} />
-          </label>
-        )}
+          <section className="bulletin-worship-playlist-preview">
+            <h4>
+              {items.length > 0
+                ? t('bulletin.worshipTrackCount', { count: items.length })
+                : t('bulletin.worshipNoPlaylist')}
+            </h4>
+            {playlistTitle && (
+              <p className="playlists-muted bulletin-worship-playlist-name">{playlistTitle}</p>
+            )}
+            {items.length > 0 ? (
+              <ol className="bulletin-worship-track-preview">
+                {items.map((item, index) => (
+                  <li key={item.id}>
+                    <span className="bulletin-worship-track-preview-order">{index + 1}</span>
+                    <span className="bulletin-worship-track-preview-title">{item.title}</span>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="playlists-muted">{t('bulletin.worshipEmptyHint')}</p>
+            )}
+          </section>
 
-        {status && <p className="success-msg">{status}</p>}
-        {error && <p className="error-msg">{error}</p>}
+          {showInvite && canManage && (
+            <section className="bulletin-worship-invite-section">
+              <div className="bulletin-worship-actions">
+                <button
+                  type="button"
+                  className="btn-secondary btn-sm"
+                  disabled={busy}
+                  onClick={() => void copyInviteLink()}
+                >
+                  {t('bulletin.worshipCopyInvite')}
+                </button>
+              </div>
+              <form className="bulletin-worship-invite-form" onSubmit={(e) => void sendInvite(e)}>
+                <label className="bulletin-field">
+                  {t('bulletin.worshipInviteEmail')}
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder={t('bulletin.worshipInviteEmailPlaceholder')}
+                    disabled={busy}
+                  />
+                </label>
+                <button type="submit" className="btn-secondary btn-sm" disabled={busy || !email.trim()}>
+                  {t('bulletin.worshipSendInvite')}
+                </button>
+              </form>
+              {inviteUrl && (
+                <input type="text" readOnly className="playlists-text-input" value={inviteUrl} />
+              )}
+            </section>
+          )}
+
+          {status && <p className="success-msg">{status}</p>}
+          {error && <p className="error-msg">{error}</p>}
+        </div>
       </div>
+
+      {youtubeModalOpen && canEditSongs && (
+        <ImportYoutubePlaylistModal
+          bulletinId={draft.id}
+          oauthJustConnected={oauthJustConnected}
+          onClose={() => setYoutubeModalOpen(false)}
+          onImported={handleImported}
+        />
+      )}
+
+      {manualModalOpen && canEditSongs && (
+        <ManualLinksPlaylistModal
+          bulletinId={draft.id}
+          onClose={() => setManualModalOpen(false)}
+          onImported={handleImported}
+        />
+      )}
     </div>
   );
 }

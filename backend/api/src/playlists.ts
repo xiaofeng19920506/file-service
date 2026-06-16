@@ -321,6 +321,8 @@ function serializePlaylistItem(
   };
 }
 
+export { buildPlaylistDetail, appendVideosToPlaylist };
+
 export function registerPlaylistRoutes(
   app: FastifyInstance,
   opts: { db: Db; env: ApiEnv; audioQueue: Queue },
