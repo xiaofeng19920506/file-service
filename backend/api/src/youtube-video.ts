@@ -2,14 +2,15 @@ import { eq } from 'drizzle-orm';
 import type { Queue } from 'bullmq';
 import {
   blobs,
+  buildYoutubeVideoStatusPayload,
   ensureYoutubeVideoJobs,
-  getVideoCacheMap,
   isValidYoutubeVideoId,
   prioritizeYoutubeVideoJobs,
-  serializeVideoCache,
+  resolveYoutubeVideoStreamInfo,
+  sendRangedObjectStream,
   signAudioStreamToken,
   verifyAudioStreamToken,
-  sendRangedObjectStream,
+  DEFAULT_YOUTUBE_VIDEO_STREAMABLE_MIN_BYTES,
   youtubeVideoCache,
   type ApiEnv,
   type Db,
@@ -52,6 +53,14 @@ export function registerYoutubeVideoRoutes(
 ): void {
   const { db, env, storage, videoQueue } = deps;
 
+  const buildStatus = (videoId: string) => {
+    const { token, expiresAt } = signMediaToken(env, videoId);
+    return {
+      streamUrl: buildStreamUrl(env, videoId, token),
+      expiresAt,
+    };
+  };
+
   app.get<{ Params: { videoId: string } }>(
     '/v1/youtube/videos/:videoId/video',
     async (request, reply) => {
@@ -65,21 +74,7 @@ export function registerYoutubeVideoRoutes(
         .from(youtubeVideoCache)
         .where(eq(youtubeVideoCache.youtubeVideoId, videoId));
 
-      const status = row
-        ? serializeVideoCache(row)
-        : { videoId, status: 'pending' as const, blobId: null, errorCode: null };
-
-      const { token, expiresAt } = signMediaToken(env, videoId);
-
-      if (status.status !== 'ready' || !status.blobId) {
-        return { ...status, streamUrl: null, expiresAt: null };
-      }
-
-      return {
-        ...status,
-        streamUrl: buildStreamUrl(env, videoId, token),
-        expiresAt,
-      };
+      return buildYoutubeVideoStatusPayload(db, storage, row, videoId, buildStatus);
     },
   );
 
@@ -92,19 +87,15 @@ export function registerYoutubeVideoRoutes(
         return reply.code(400).send({ error: 'video_ids_required' });
       }
 
-      const cacheMap = await getVideoCacheMap(db, videoIds);
-      const items = videoIds.map((videoId) => {
-        const status = cacheMap.get(videoId)!;
-        if (status.status !== 'ready' || !status.blobId) {
-          return { ...status, streamUrl: null as string | null, expiresAt: null as string | null };
-        }
-        const { token, expiresAt } = signMediaToken(env, videoId);
-        return {
-          ...status,
-          streamUrl: buildStreamUrl(env, videoId, token),
-          expiresAt,
-        };
-      });
+      const items = await Promise.all(
+        videoIds.map(async (videoId) => {
+          const [row] = await db
+            .select()
+            .from(youtubeVideoCache)
+            .where(eq(youtubeVideoCache.youtubeVideoId, videoId));
+          return buildYoutubeVideoStatusPayload(db, storage, row, videoId, buildStatus);
+        }),
+      );
       return { items };
     },
   );
@@ -144,8 +135,11 @@ export function registerYoutubeVideoRoutes(
         { videoId, title: request.body?.title?.trim() || undefined },
       ]);
 
-      const map = await getVideoCacheMap(db, [videoId]);
-      return map.get(videoId)!;
+      const [row] = await db
+        .select()
+        .from(youtubeVideoCache)
+        .where(eq(youtubeVideoCache.youtubeVideoId, videoId));
+      return buildYoutubeVideoStatusPayload(db, storage, row, videoId, buildStatus);
     },
   );
 
@@ -168,19 +162,34 @@ export function registerYoutubeVideoRoutes(
         .select()
         .from(youtubeVideoCache)
         .where(eq(youtubeVideoCache.youtubeVideoId, videoId));
-      if (!cache || cache.status !== 'ready' || !cache.blobId) {
+      if (!cache?.blobId || (cache.status !== 'ready' && cache.status !== 'processing')) {
         return reply.code(404).send({ error: 'video_not_ready' });
       }
 
       const [blob] = await db.select().from(blobs).where(eq(blobs.id, cache.blobId));
       if (!blob) return reply.code(404).send({ error: 'not_found' });
 
-      return sendRangedObjectStream(reply, storage, {
-        storageKey: blob.storageKey,
-        sizeBytes: blob.sizeBytes,
-        mimeType: blob.mimeType ?? 'video/mp4',
-        filename: blob.originalFilename ?? `${videoId}.mp4`,
-      }, request.headers.range);
+      const info = await resolveYoutubeVideoStreamInfo(
+        storage,
+        cache,
+        blob,
+        DEFAULT_YOUTUBE_VIDEO_STREAMABLE_MIN_BYTES,
+      );
+      if (!info.streamable || info.cachedBytes <= 0) {
+        return reply.code(404).send({ error: 'video_not_ready' });
+      }
+
+      return sendRangedObjectStream(
+        reply,
+        storage,
+        {
+          storageKey: blob.storageKey,
+          sizeBytes: info.cachedBytes,
+          mimeType: blob.mimeType ?? 'video/mp4',
+          filename: blob.originalFilename ?? `${videoId}.mp4`,
+        },
+        request.headers.range,
+      );
     },
   );
 }

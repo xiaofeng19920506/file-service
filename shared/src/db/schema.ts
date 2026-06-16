@@ -165,6 +165,7 @@ export const youtubeVideoCache = pgTable('youtube_video_cache', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   completedAt: timestamp('completed_at', { withTimezone: true }),
+  expectedBytes: bigint('expected_bytes', { mode: 'number' }),
 });
 
 export type YoutubeVideoCacheStatus = 'pending' | 'processing' | 'ready' | 'failed';

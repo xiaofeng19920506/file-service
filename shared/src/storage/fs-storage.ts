@@ -35,6 +35,16 @@ export class FsObjectStorage implements ObjectStorage {
     }
   }
 
+  async statObject(key: string): Promise<number | null> {
+    try {
+      const p = resolveSafePath(this.rootDir, key);
+      const s = await stat(p);
+      return s.isFile() ? s.size : null;
+    } catch {
+      return null;
+    }
+  }
+
   async putObject(key: string, body: Buffer, _contentType?: string): Promise<void> {
     const p = resolveSafePath(this.rootDir, key);
     await mkdir(dirname(p), { recursive: true });

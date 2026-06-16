@@ -4,6 +4,7 @@ import {
   fetchYoutubeVideoStatuses,
   prioritizeVipVideos,
   type VipVideoItemStatus,
+  type YoutubeVideoStatus,
 } from '../api/vip-video';
 
 export type VipVideoTrack = {
@@ -15,6 +16,7 @@ export type VipVideoTrack = {
 };
 
 const POLL_MS = 2000;
+const POLL_MS_PARTIAL = 1000;
 const MAX_POLL_ERRORS = 8;
 
 async function loadVideoStatus(videoId: string) {
@@ -27,8 +29,10 @@ async function loadVideoStatus(videoId: string) {
   return fetchYoutubeVideoStatus(videoId);
 }
 
-function isTerminalStatus(status: VipVideoItemStatus, streamUrl: string | null): boolean {
-  return (status === 'ready' && Boolean(streamUrl)) || status === 'failed';
+function isTerminalStatus(data: YoutubeVideoStatus): boolean {
+  if (data.status === 'failed') return true;
+  if (data.status === 'ready' && data.streamUrl) return true;
+  return false;
 }
 
 export function useVipVideoPlayback() {
@@ -36,25 +40,32 @@ export function useVipVideoPlayback() {
   const [status, setStatus] = useState<VipVideoItemStatus>('pending');
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
+  const [partial, setPartial] = useState(false);
+  const [cachedBytes, setCachedBytes] = useState<number | null>(null);
   const pollErrorCountRef = useRef(0);
   const activeVideoIdRef = useRef<string | null>(null);
+  const cachedBytesRef = useRef(0);
 
-  const applyStatus = useCallback((data: {
-    status: VipVideoItemStatus;
-    streamUrl: string | null;
-    errorCode: string | null;
-  }) => {
+  const applyStatus = useCallback((data: YoutubeVideoStatus) => {
     setStatus(data.status);
     setStreamUrl(data.streamUrl);
     setErrorCode(data.errorCode);
+    setPartial(Boolean(data.partial));
+    setCachedBytes(data.cachedBytes);
+    if (typeof data.cachedBytes === 'number') {
+      cachedBytesRef.current = data.cachedBytes;
+    }
     pollErrorCountRef.current = 0;
   }, []);
 
   const play = useCallback((track: VipVideoTrack) => {
     pollErrorCountRef.current = 0;
+    cachedBytesRef.current = 0;
     activeVideoIdRef.current = track.videoId;
     setCurrent(track);
     setErrorCode(null);
+    setPartial(false);
+    setCachedBytes(null);
     const hinted = track.cacheStatus;
     if (hinted === 'ready' || hinted === 'processing' || hinted === 'failed') {
       setStatus(hinted);
@@ -98,7 +109,7 @@ export function useVipVideoPlayback() {
         const data = await loadVideoStatus(current.videoId);
         if (cancelled) return;
         applyStatus(data);
-        if (isTerminalStatus(data.status, data.streamUrl)) {
+        if (isTerminalStatus(data)) {
           stopPolling();
         }
       } catch (e) {
@@ -120,26 +131,42 @@ export function useVipVideoPlayback() {
     };
 
     void refresh();
+    const interval = partial ? POLL_MS_PARTIAL : POLL_MS;
     timer = window.setInterval(() => {
       void refresh();
-    }, POLL_MS);
+    }, interval);
 
     return () => {
       cancelled = true;
       stopPolling();
     };
-  }, [applyStatus, current?.videoId]);
+  }, [applyStatus, current?.videoId, partial]);
 
-  const isReady = status === 'ready' && Boolean(streamUrl);
+  const isReady = Boolean(streamUrl);
+
+  const refreshForMoreCache = useCallback(async () => {
+    if (!current?.videoId || !partial) return;
+    try {
+      const data = await loadVideoStatus(current.videoId);
+      if (activeVideoIdRef.current !== current.videoId) return;
+      const prev = cachedBytesRef.current;
+      applyStatus(data);
+      return (data.cachedBytes ?? 0) > prev ? data : null;
+    } catch {
+      return null;
+    }
+  }, [applyStatus, current?.videoId, partial]);
 
   const markPlaybackFailed = useCallback(() => {
     setStatus('failed');
     setErrorCode('video_playback_failed');
     setStreamUrl(null);
+    setPartial(false);
   }, []);
 
   const clear = useCallback(() => {
     activeVideoIdRef.current = null;
+    cachedBytesRef.current = 0;
     setCurrent(null);
   }, []);
 
@@ -148,8 +175,11 @@ export function useVipVideoPlayback() {
     status,
     streamUrl,
     errorCode,
+    partial,
+    cachedBytes,
     isReady,
     play,
+    refreshForMoreCache,
     markPlaybackFailed,
     clear,
   };

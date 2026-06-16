@@ -1,6 +1,7 @@
 import type { Readable } from 'node:stream';
 import { createWriteStream } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
+import { HeadObjectCommand } from '@aws-sdk/client-s3';
 import {
   createS3Client,
   ensureBucket,
@@ -43,6 +44,17 @@ export class S3ObjectStorage implements ObjectStorage {
 
   exists(key: string): Promise<boolean> {
     return objectExists(this.client, this.env.bucket, key);
+  }
+
+  async statObject(key: string): Promise<number | null> {
+    try {
+      const out = await this.client.send(
+        new HeadObjectCommand({ Bucket: this.env.bucket, Key: key }),
+      );
+      return typeof out.ContentLength === 'number' ? out.ContentLength : null;
+    } catch {
+      return null;
+    }
   }
 
   putObject(key: string, body: Buffer, contentType?: string): Promise<void> {

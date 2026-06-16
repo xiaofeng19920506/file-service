@@ -1,6 +1,6 @@
-import { readFile, rm, mkdtemp } from 'node:fs/promises';
+import { readFile, rm, mkdtemp, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { Worker } from 'bullmq';
 import { eq } from 'drizzle-orm';
 import {
@@ -8,9 +8,17 @@ import {
   bullmqConnection,
   createDb,
   createObjectStorage,
+  DEFAULT_YOUTUBE_VIDEO_PROGRESSIVE_BYTES,
   extractYoutubeVideoMp4,
+  extractYoutubeVideoMp4ToFile,
+  estimateYoutubeVideoBytes,
+  ensurePartialVideoBlob,
   loadWorkerEnv,
+  markPartialVideoReady,
   persistRawBlob,
+  shouldUseProgressiveVideoDownload,
+  updatePartialVideoCachedBytes,
+  youtubeVideoPartialStorageKey,
   youtubeVideoCache,
 } from '@file-service/shared';
 
@@ -19,6 +27,8 @@ export async function startYoutubeVideoWorker(): Promise<Worker> {
   const db = createDb(env.DATABASE_URL);
   const storage = createObjectStorage(env);
   await storage.ensureReady();
+
+  const progressiveThreshold = DEFAULT_YOUTUBE_VIDEO_PROGRESSIVE_BYTES;
 
   const worker = new Worker(
     YOUTUBE_VIDEO_QUEUE_NAME,
@@ -30,6 +40,56 @@ export async function startYoutubeVideoWorker(): Promise<Worker> {
         .update(youtubeVideoCache)
         .set({ status: 'processing', updatedAt: now, errorCode: null, errorDetail: null })
         .where(eq(youtubeVideoCache.youtubeVideoId, videoId));
+
+      const estimatedBytes = await estimateYoutubeVideoBytes(videoId, env.YT_DLP_PATH);
+      const useProgressive = shouldUseProgressiveVideoDownload(
+        estimatedBytes,
+        progressiveThreshold,
+        env.STORAGE_BACKEND,
+      );
+
+      if (useProgressive && env.STORAGE_BACKEND === 'fs') {
+        const blobId = await ensurePartialVideoBlob(db, videoId, title);
+        const storageKey = youtubeVideoPartialStorageKey(videoId);
+        const outputPath = join(env.LOCAL_STORAGE_DIR, storageKey);
+        await mkdir(dirname(outputPath), { recursive: true });
+
+        await db
+          .update(youtubeVideoCache)
+          .set({
+            status: 'processing',
+            blobId,
+            expectedBytes: estimatedBytes,
+            updatedAt: now,
+            errorCode: null,
+            errorDetail: null,
+          })
+          .where(eq(youtubeVideoCache.youtubeVideoId, videoId));
+
+        try {
+          const finalBytes = await extractYoutubeVideoMp4ToFile(videoId, outputPath, {
+            ytdlpPath: env.YT_DLP_PATH,
+            onProgress: async (bytes) => {
+              await updatePartialVideoCachedBytes(db, blobId, bytes);
+            },
+          });
+          await markPartialVideoReady(db, videoId, blobId, finalBytes, title);
+        } catch (e) {
+          const message = e instanceof Error ? e.message : String(e);
+          await db
+            .update(youtubeVideoCache)
+            .set({
+              status: 'failed',
+              errorCode: 'video_extract_failed',
+              errorDetail: message.slice(0, 500),
+              updatedAt: new Date(),
+            })
+            .where(eq(youtubeVideoCache.youtubeVideoId, videoId));
+          await storage.deleteObject(storageKey).catch(() => undefined);
+          throw e;
+        }
+        return;
+      }
 
       const workRoot = await mkdtemp(join(tmpdir(), 'yt-video-'));
       try {
@@ -52,6 +112,7 @@ export async function startYoutubeVideoWorker(): Promise<Worker> {
             status: 'ready',
             blobId: persisted.blobId,
             title: title ?? null,
+            expectedBytes: estimatedBytes,
             completedAt: new Date(),
             updatedAt: new Date(),
             errorCode: null,

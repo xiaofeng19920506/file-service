@@ -42,6 +42,9 @@ export type YoutubeVideoStatus = {
   streamUrl: string | null;
   expiresAt: string | null;
   errorCode: string | null;
+  cachedBytes: number | null;
+  expectedBytes: number | null;
+  partial: boolean;
 };
 
 export async function fetchYoutubeVideoStatus(videoId: string): Promise<YoutubeVideoStatus> {

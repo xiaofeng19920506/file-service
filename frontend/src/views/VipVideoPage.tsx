@@ -24,7 +24,8 @@ export default function VipVideoPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const watchTopRef = useRef<HTMLDivElement>(null);
   const search = useDebouncedYoutubeSearch({ debounceEnabled: !isMobile });
-  const { current, status, streamUrl, errorCode, isReady, play, markPlaybackFailed, clear } = useVipVideoPlayback();
+  const { current, status, streamUrl, errorCode, partial, isReady, play, refreshForMoreCache, markPlaybackFailed, clear } =
+    useVipVideoPlayback();
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -78,6 +79,20 @@ export default function VipVideoPage() {
   }, [current, errorCode, isReady, status, t]);
 
   const isLoading = Boolean(current) && !isReady && status !== 'failed';
+
+  const handleVideoWaiting = () => {
+    if (!partial || !streamUrl) return;
+    void refreshForMoreCache().then((data) => {
+      if (!data || (data.cachedBytes ?? 0) <= 0) return;
+      const el = videoRef.current;
+      if (!el) return;
+      const t = el.currentTime;
+      el.src = resolveVideoStreamSrc(streamUrl);
+      el.load();
+      el.currentTime = t;
+      if (playing) void el.play().catch(() => setPlaying(false));
+    });
+  };
 
   return (
     <div
@@ -151,6 +166,7 @@ export default function VipVideoPage() {
                     onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
                     onEnded={() => setPlaying(false)}
                     onError={() => markPlaybackFailed()}
+                    onWaiting={handleVideoWaiting}
                   />
                   {isLoading && (
                     <div
