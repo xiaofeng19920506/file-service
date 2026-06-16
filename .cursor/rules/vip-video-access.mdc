@@ -28,6 +28,6 @@ alwaysApply: false
 
 ## VIP 视频缓存编码
 
-- **主格式**：`YOUTUBE_VIDEO_YTDLP_FORMAT`（`shared/src/youtube-video-extract.ts`）仅选 **H.264 (avc) + AAC**，禁止 VP9/HEVC 回退，兼容 iOS / Android / 鸿蒙 WebView。
+- **主格式**：`YOUTUBE_VIDEO_YTDLP_FORMAT`（`shared/src/youtube-video-extract.ts`）仅选 **H.264 (avc) + AAC**，最高 **1080p**（`YOUTUBE_VIDEO_MAX_HEIGHT`），禁止 VP9/HEVC 回退，兼容 iOS / Android / 鸿蒙 WebView。
 - **转码回退**：无原生 H.264 时用 `YOUTUBE_VIDEO_YTDLP_FORMAT_TRANSCODE` + ffmpeg `libx264`（较慢，输出仍为 H.264 MP4）。
 - 黑屏仅有声时前端可 `force` 重缓存（`resetYoutubeVideoForReextract`）。

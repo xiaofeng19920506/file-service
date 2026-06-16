@@ -18,16 +18,23 @@ function watchUrl(videoId: string): string {
   return `https://www.youtube.com/watch?v=${videoId}`;
 }
 
+/** VIP 缓存最高分辨率（H.264，兼容移动端浏览器） */
+export const YOUTUBE_VIDEO_MAX_HEIGHT = 1080;
+
+function ytdlpHeightFilter(): string {
+  return `[height<=${YOUTUBE_VIDEO_MAX_HEIGHT}]`;
+}
+
 /**
  * VIP 缓存主格式：仅 H.264 (avc) + AAC，兼容 iOS / Android / 鸿蒙浏览器。
  * 不含 VP9/HEVC 回退，避免 WebView 黑屏仅有声。
  */
 export const YOUTUBE_VIDEO_YTDLP_FORMAT =
-  'bestvideo[vcodec^=avc1][height<=480]+bestaudio[acodec^=mp4a]/bestvideo[vcodec^=avc][height<=480]+bestaudio[acodec^=mp4a]/bestvideo[vcodec^=avc1][height<=480]+bestaudio/bestvideo[vcodec^=avc][height<=480]+bestaudio';
+  `bestvideo[vcodec^=avc1]${ytdlpHeightFilter()}+bestaudio[acodec^=mp4a]/bestvideo[vcodec^=avc]${ytdlpHeightFilter()}+bestaudio[acodec^=mp4a]/bestvideo[vcodec^=avc1]${ytdlpHeightFilter()}+bestaudio/bestvideo[vcodec^=avc]${ytdlpHeightFilter()}+bestaudio`;
 
 /** 无原生 H.264 流时的转码回退（输出仍为 H.264 MP4，较慢） */
 export const YOUTUBE_VIDEO_YTDLP_FORMAT_TRANSCODE =
-  'bestvideo[height<=480]+bestaudio/best[height<=480]';
+  `bestvideo${ytdlpHeightFilter()}+bestaudio/best${ytdlpHeightFilter()}`;
 
 /** 已选 H.264 源：直接封装，不二次编码 */
 export const YOUTUBE_VIDEO_FFMPEG_COPY_FASTSTART =
@@ -158,7 +165,7 @@ export async function estimateYoutubeVideoBytes(
   }
 }
 
-/** 下载 YouTube 视频为 H.264 MP4（最高 480p，供 VIP 缓存播放） */
+/** 下载 YouTube 视频为 H.264 MP4（最高 1080p，供 VIP 缓存播放） */
 export async function extractYoutubeVideoMp4(
   videoId: string,
   workDir: string,
