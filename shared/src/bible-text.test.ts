@@ -21,7 +21,7 @@ function longText(chars: number): string {
 }
 
 function englishPageVisualLines(page: string[]): number {
-  return page.reduce((sum, line) => sum + estimateEnglishLineVisualLines(line), 0);
+  return page.length;
 }
 
 function assertChinesePageInRange(page: string, isLastPage: boolean) {
@@ -49,7 +49,7 @@ describe('buildScriptureSlideBodies', () => {
     expect(bodies.chinesePages).toHaveLength(1);
     expect(bodies.englishPages).toHaveLength(1);
     expect(bodies.chinesePages[0]).toContain('回答柔和');
-    expect(bodies.englishPages[0]![0]).toContain('gentle answer');
+    expect(bodies.englishPages[0]!.join(' ')).toContain('gentle answer');
   });
 
   it('splits Chinese across multiple pages without truncation', () => {
@@ -108,7 +108,7 @@ describe('buildScriptureSlideBodies', () => {
     const enJoined = bodies.englishPages.flat().join(' ');
     expect(enJoined).toMatch(/^1 word/);
     expect(enJoined).toContain('word');
-    const firstPageLines = estimateEnglishLineVisualLines(bodies.englishPages[0]![0]!);
+    const firstPageLines = englishPageVisualLines(bodies.englishPages[0]!);
     expect(firstPageLines).toBeLessThanOrEqual(SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES);
   });
 
@@ -116,7 +116,7 @@ describe('buildScriptureSlideBodies', () => {
     const passage = await loadScripturePassage('箴言 Proverbs', '15:1-11');
     expect(passage).not.toBeNull();
     const bodies = buildScriptureSlideBodies(passage!);
-    expect(bodies.englishPages.length).toBeGreaterThanOrEqual(1);
+    expect(bodies.englishPages.length).toBeGreaterThanOrEqual(2);
     const lines = englishPageVisualLines(bodies.englishPages[0]!);
     expect(lines).toBeGreaterThanOrEqual(SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES);
     expect(lines).toBeLessThanOrEqual(SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES);

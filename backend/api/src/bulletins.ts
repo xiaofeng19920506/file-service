@@ -42,7 +42,7 @@ const BULLETIN_TEMPLATE_DIR = resolveBulletinTemplateDir();
 
 const slidePreviewCache = new Map<string, Buffer>();
 /** 封面补丁版本；变更后自动失效旧 PNG 缓存 */
-const SLIDE_PREVIEW_PATCH_REV = 'v18';
+const SLIDE_PREVIEW_PATCH_REV = 'v19';
 
 export type BulletinAnnouncementDto = {
   id: string;

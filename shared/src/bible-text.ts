@@ -120,8 +120,8 @@ export const SCRIPTURE_ZH_PAGE_MIN_CHARS =
 export const SCRIPTURE_ZH_PAGE_MAX_CHARS =
   SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES * SCRIPTURE_ZH_CHARS_PER_LINE;
 
-/** 英文 22pt 每行约容纳字符数（按投影实测校准：~68 字符/行） */
-export const SCRIPTURE_EN_CHARS_PER_LINE = 68;
+/** 英文 22pt 每行约容纳字符数（按投影实测校准：~58 字符/行） */
+export const SCRIPTURE_EN_CHARS_PER_LINE = 58;
 
 /** 英文每页视觉行数：最少 13 行、最多 14 行 */
 export const SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES = 13;
@@ -256,6 +256,73 @@ function paginateTextByVisualLines(
   return fillTextPagesFromNext(draft, minLines, maxLines, maxChars, charsPerLine, estimate);
 }
 
+function splitTextToVisualLineChunks(
+  text: string,
+  charsPerLine: number,
+  estimate: LineEstimate,
+): string[] {
+  const trimmed = text.trim();
+  if (!trimmed) return [];
+
+  const chunks: string[] = [];
+  let remaining = trimmed;
+  while (remaining.length > 0) {
+    const [head, tail] = takeHeadVisualLines(remaining, 1, charsPerLine, estimate);
+    if (!head.length) break;
+    chunks.push(head);
+    remaining = tail;
+  }
+  return chunks;
+}
+
+function fillLineChunkPagesFromNext(
+  pages: string[][],
+  minLines: number,
+  maxLines: number,
+): string[][] {
+  const out = pages.map((page) => [...page]);
+
+  for (let i = 0; i < out.length - 1; i++) {
+    while (out[i]!.length < minLines && out[i + 1]?.length) {
+      const room = maxLines - out[i]!.length;
+      if (room <= 0) break;
+
+      const take = Math.min(room, minLines - out[i]!.length, out[i + 1]!.length);
+      if (take <= 0) break;
+
+      out[i]!.push(...out[i + 1]!.splice(0, take));
+    }
+  }
+
+  return out;
+}
+
+function paginateLineChunksToPages(
+  chunks: string[],
+  minLines: number,
+  maxLines: number,
+): string[][] {
+  if (!chunks.length) return [];
+
+  const pages: string[][] = [];
+  let current: string[] = [];
+
+  const flush = () => {
+    if (current.length) {
+      pages.push(current);
+      current = [];
+    }
+  };
+
+  for (const chunk of chunks) {
+    if (current.length >= maxLines) flush();
+    current.push(chunk);
+  }
+  flush();
+
+  return fillLineChunkPagesFromNext(pages, minLines, maxLines);
+}
+
 function paginateChineseVerses(verses: BibleVerse[]): string[] {
   return paginateTextByVisualLines(
     formatChineseVerseBlock(verses),
@@ -268,14 +335,16 @@ function paginateChineseVerses(verses: BibleVerse[]): string[] {
 }
 
 function paginateEnglishVerses(verses: BibleVerse[]): string[][] {
-  return paginateTextByVisualLines(
+  const chunks = splitTextToVisualLineChunks(
     formatEnglishPassageText(verses),
-    SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES,
-    SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES,
-    SCRIPTURE_EN_PAGE_MAX_CHARS,
     SCRIPTURE_EN_CHARS_PER_LINE,
     estimateEnglishLineVisualLines,
-  ).map((page) => [page]);
+  );
+  return paginateLineChunksToPages(
+    chunks,
+    SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES,
+    SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES,
+  );
 }
 
 /** 估算一段英文经文在 slide 上占用的视觉行数 */
