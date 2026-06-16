@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { WeeklyBulletin } from '../../api/bulletins';
+import type { BulletinSlidePreviewParams, WeeklyBulletin } from '../../api/bulletins';
 import { useI18n } from '../../i18n';
 import { nextSundayIso } from '../../lib/bulletin-date';
 import { BULLETIN_WIZARD_STEPS } from '../../lib/bulletin-template-steps';
@@ -21,12 +21,19 @@ export default function BulletinPreviewPanel({ wizardStep, bulletin }: BulletinP
     return [...stepDef.slides, ...(stepDef.companionStaticSlides ?? [])];
   }, [stepDef]);
 
-  const coverPatch = useMemo(
-    () => ({
+  const previewPatch = useMemo(
+    (): BulletinSlidePreviewParams => ({
       serviceDate: bulletin.serviceDate || nextSundayIso(),
       serviceTime: bulletin.serviceTime || '11:00',
+      scriptureBook: bulletin.scriptureBook,
+      scriptureReference: bulletin.scriptureReference,
     }),
-    [bulletin.serviceDate, bulletin.serviceTime],
+    [
+      bulletin.serviceDate,
+      bulletin.serviceTime,
+      bulletin.scriptureBook,
+      bulletin.scriptureReference,
+    ],
   );
 
   return (
@@ -53,7 +60,7 @@ export default function BulletinPreviewPanel({ wizardStep, bulletin }: BulletinP
         open={slideShowOpen}
         onClose={() => setSlideShowOpen(false)}
         initialSlide={highlightSlides[0] ?? 1}
-        patch={coverPatch}
+        patch={previewPatch}
       />
     </div>
   );

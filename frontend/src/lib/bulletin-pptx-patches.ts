@@ -112,12 +112,40 @@ function splitNameLines(names: string, max = 3): string[] {
     .slice(0, max);
 }
 
+function formatScriptureBookRun(book: string): string {
+  const trimmed = book.trim();
+  if (!trimmed) return '';
+  return /\s$/.test(trimmed) ? trimmed : `${trimmed}   `;
+}
+
+function formatScriptureReferenceRun(reference: string): string {
+  const trimmed = reference.trim();
+  if (!trimmed) return '';
+  return trimmed.startsWith(' ') ? trimmed : ` ${trimmed}`;
+}
+
+function buildScripturePatch(bulletin: WeeklyBulletin): SlideTextPatch | null {
+  const book = bulletin.scriptureBook?.trim() ?? '';
+  const reference = bulletin.scriptureReference?.trim() ?? '';
+  if (!book && !reference) return null;
+  const replacements: SlideTextReplacement[] = [];
+  const bookRun = formatScriptureBookRun(book);
+  const refRun = formatScriptureReferenceRun(reference);
+  if (bookRun) replacements.push({ textIndex: 4, text: bookRun });
+  if (refRun) replacements.push({ textIndex: 5, text: refRun });
+  return { slideNumber: 4, replacements };
+}
+
 /** 当前向导步骤应写入 PPT 的补丁（只含本步字段） */
 export function patchesForStep(stepId: string, bulletin: WeeklyBulletin): SlideTextPatch[] {
   switch (stepId) {
     case 'cover':
       if (!bulletin.serviceDate) return [];
       return [buildCoverPatch(bulletin.serviceDate, bulletin.serviceTime)];
+    case 'scripture': {
+      const patch = buildScripturePatch(bulletin);
+      return patch ? [patch] : [];
+    }
     case 'offering': {
       const patches: SlideTextPatch[] = [];
       if (bulletin.lastWeekOfferingDate.trim()) {
@@ -217,7 +245,7 @@ function mergePatches(patches: SlideTextPatch[]): SlideTextPatch[] {
 
 /** 导出 PPT 时合并全部已填字段的补丁 */
 export function patchesFromBulletin(bulletin: WeeklyBulletin): SlideTextPatch[] {
-  const stepIds = ['cover', 'offering', 'birthday', 'announcements', 'verse', 'more'] as const;
+  const stepIds = ['cover', 'scripture', 'offering', 'birthday', 'announcements', 'verse', 'more'] as const;
   return mergePatches(stepIds.flatMap((stepId) => patchesForStep(stepId, bulletin)));
 }
 

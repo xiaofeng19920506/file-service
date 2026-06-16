@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { fetchBulletinSlidePreviewPng, fetchBulletinTemplateMap } from '../../api/bulletins';
+import {
+  fetchBulletinSlidePreviewPng,
+  fetchBulletinTemplateMap,
+  type BulletinSlidePreviewParams,
+} from '../../api/bulletins';
 import { useI18n } from '../../i18n';
 
 const FALLBACK_TOTAL_SLIDES = 38;
@@ -9,7 +13,7 @@ type BulletinSlideShowProps = {
   open: boolean;
   onClose: () => void;
   initialSlide?: number;
-  patch: { serviceDate: string; serviceTime: string };
+  patch: BulletinSlidePreviewParams;
 };
 
 export default function BulletinSlideShow({

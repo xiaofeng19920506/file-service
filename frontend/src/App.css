@@ -6098,6 +6098,13 @@
   min-height: 5rem;
 }
 
+.bulletin-field-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
 .bulletin-deck-preview {
   width: 100%;
   max-height: min(72vh, 900px);

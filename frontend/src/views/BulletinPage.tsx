@@ -16,6 +16,7 @@ import {
   BulletinBirthdayStep,
   BulletinMoreStep,
   BulletinOfferingStep,
+  BulletinScriptureStep,
   BulletinVerseStep,
 } from '../components/bulletin/BulletinWizardSteps';
 import ProgressStepper from '../components/ProgressStepper';
@@ -269,6 +270,8 @@ export default function BulletinPage() {
         testimonyShareDate: draft.testimonyShareDate,
         serviceRosterText: draft.serviceRosterText,
         baptismText: draft.baptismText,
+        scriptureBook: draft.scriptureBook,
+        scriptureReference: draft.scriptureReference,
         verseOfWeek: draft.verseOfWeek,
         weeklyMeetingVariant: draft.weeklyMeetingVariant,
         skipTestimonyWeek: draft.skipTestimonyWeek,
@@ -313,6 +316,18 @@ export default function BulletinPage() {
             onServiceDateChange={handleServiceDateChange}
             onServiceTimeChange={(time) => patchField('serviceTime', time)}
             onSave={handleSaveCover}
+          />
+        );
+      case 'scripture':
+        return (
+          <BulletinScriptureStep
+            {...common}
+            onSave={() =>
+              void handleSaveFields({
+                scriptureBook: draft.scriptureBook,
+                scriptureReference: draft.scriptureReference,
+              })
+            }
           />
         );
       case 'offering':

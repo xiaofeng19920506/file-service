@@ -10,6 +10,7 @@ export type BulletinWizardStep = {
   companionStaticSlides?: readonly number[];
   labelKey:
     | 'bulletin.steps.cover'
+    | 'bulletin.steps.scripture'
     | 'bulletin.steps.offering'
     | 'bulletin.steps.birthday'
     | 'bulletin.steps.announcements'
@@ -28,6 +29,13 @@ export const BULLETIN_WIZARD_STEPS: BulletinWizardStep[] = [
     slides: [1],
     companionStaticSlides: BULLETIN_STATIC_SLIDES_AFTER_COVER,
     labelKey: 'bulletin.steps.cover',
+    enabled: true,
+  },
+  {
+    id: 'scripture',
+    sectionId: 'scripture',
+    slides: [4, 5, 6],
+    labelKey: 'bulletin.steps.scripture',
     enabled: true,
   },
   {

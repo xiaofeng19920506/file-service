@@ -2,7 +2,12 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import JSZip from 'jszip';
-import { patchCoverSlideInPptx, patchCoverDateLineInSlideXml } from './bulletin-pptx-patch.js';
+import {
+  patchBulletinPreviewInPptx,
+  patchCoverSlideInPptx,
+  patchCoverDateLineInSlideXml,
+  patchScriptureSlideInSlideXml,
+} from './bulletin-pptx-patch.js';
 
 const templatePath = join(import.meta.dirname, '../templates/bulletin/06_14_2026.pptx');
 
@@ -48,5 +53,35 @@ describe('patchCoverDateLineInSlideXml', () => {
     expect(block).toContain('06/21/2026');
     expect(block).toContain('11:00');
     expect(block).toContain('主日崇拜');
+  });
+});
+
+describe('patchScriptureSlideInSlideXml', () => {
+  it('updates book and reference runs without changing title', async () => {
+    const tpl = await readFile(templatePath);
+    const zip = await JSZip.loadAsync(tpl);
+    const xml = await zip.file('ppt/slides/slide4.xml')!.async('string');
+    const next = patchScriptureSlideInSlideXml(xml, '以赛亚 Isaiah', '40:1-5');
+    expect(next).toContain('讀經 ');
+    expect(next).toContain('Scripture Reading');
+    expect(next).toContain('以赛亚 Isaiah');
+    expect(next).toContain('40:1-5');
+    expect(next).not.toContain('箴言 Proverbs');
+  });
+
+  it('combines cover and scripture in preview patch', async () => {
+    const tpl = await readFile(templatePath);
+    const patched = await patchBulletinPreviewInPptx(tpl, {
+      serviceDate: '2026-06-21',
+      serviceTime: '11:00',
+      scriptureBook: '约翰福音 John',
+      scriptureReference: '3:16',
+    });
+    const zip = await JSZip.loadAsync(patched);
+    const slide1 = await zip.file('ppt/slides/slide1.xml')!.async('string');
+    const slide4 = await zip.file('ppt/slides/slide4.xml')!.async('string');
+    expect(slide1).toContain('06/21/2026');
+    expect(slide4).toContain('约翰福音 John');
+    expect(slide4).toContain('3:16');
   });
 });

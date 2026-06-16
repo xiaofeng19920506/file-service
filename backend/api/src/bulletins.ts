@@ -11,7 +11,7 @@ import {
   canViewBulletin,
   exportPptxSlidePng,
   normalizeUserRole,
-  patchCoverSlideInPptx,
+  patchBulletinPreviewInPptx,
   renderSlidePngViaService,
   weeklyBulletins,
   type Db,
@@ -38,7 +38,7 @@ const BULLETIN_TEMPLATE_DIR = resolveBulletinTemplateDir();
 
 const slidePreviewCache = new Map<string, Buffer>();
 /** 封面补丁版本；变更后自动失效旧 PNG 缓存 */
-const SLIDE_PREVIEW_PATCH_REV = 'v4';
+const SLIDE_PREVIEW_PATCH_REV = 'v5';
 
 export type BulletinAnnouncementDto = {
   id: string;
@@ -61,6 +61,8 @@ export type WeeklyBulletinDto = {
   testimonyShareDate: string;
   serviceRosterText: string;
   baptismText: string;
+  scriptureBook: string;
+  scriptureReference: string;
   verseOfWeek: string;
   weeklyMeetingVariant: number | null;
   skipTestimonyWeek: boolean;
@@ -115,6 +117,8 @@ async function mapBulletin(
     testimonyShareDate: row.testimonyShareDate,
     serviceRosterText: row.serviceRosterText,
     baptismText: row.baptismText,
+    scriptureBook: row.scriptureBook,
+    scriptureReference: row.scriptureReference,
     verseOfWeek: row.verseOfWeek,
     weeklyMeetingVariant: row.weeklyMeetingVariant,
     skipTestimonyWeek: row.skipTestimonyWeek,
@@ -139,6 +143,8 @@ type BulletinPatchBody = Partial<{
   testimonyShareDate: string;
   serviceRosterText: string;
   baptismText: string;
+  scriptureBook: string;
+  scriptureReference: string;
   verseOfWeek: string;
   weeklyMeetingVariant: number | null;
   skipTestimonyWeek: boolean;
@@ -187,7 +193,12 @@ export function registerBulletinRoutes(
 
   app.get<{
     Params: { slide: string };
-    Querystring: { serviceDate?: string; serviceTime?: string };
+    Querystring: {
+      serviceDate?: string;
+      serviceTime?: string;
+      scriptureBook?: string;
+      scriptureReference?: string;
+    };
   }>('/v1/bulletins/template/slides/:slide/preview.png', async (request, reply) => {
     const user = requireUser(request);
     if (!user || !canViewBulletin(user.role)) {
@@ -201,11 +212,13 @@ export function registerBulletinRoutes(
 
     const serviceDate = request.query.serviceDate?.trim();
     const serviceTime = request.query.serviceTime?.trim() || '11:00';
+    const scriptureBook = request.query.scriptureBook?.trim() ?? '';
+    const scriptureReference = request.query.scriptureReference?.trim() ?? '';
     if (serviceDate && !/^\d{4}-\d{2}-\d{2}$/.test(serviceDate)) {
       return reply.code(400).send({ error: 'invalid_service_date' });
     }
 
-    const cacheKey = `${SLIDE_PREVIEW_PATCH_REV}:${slideNumber}:${serviceDate ?? ''}:${serviceTime}`;
+    const cacheKey = `${SLIDE_PREVIEW_PATCH_REV}:${slideNumber}:${serviceDate ?? ''}:${serviceTime}:${scriptureBook}:${scriptureReference}`;
     const cached = slidePreviewCache.get(cacheKey);
     if (cached) {
       return reply.header('Content-Type', 'image/png').header('X-Preview-Cached', 'true').send(cached);
@@ -214,9 +227,12 @@ export function registerBulletinRoutes(
     const workRoot = await mkdtemp(join(tmpdir(), 'fs-bulletin-preview-'));
     try {
       const templateBuf = await readFile(join(BULLETIN_TEMPLATE_DIR, BULLETIN_TEMPLATE_FILE));
-      const pptxBuf = serviceDate
-        ? await patchCoverSlideInPptx(templateBuf, { serviceDate, serviceTime })
-        : templateBuf;
+      const pptxBuf = await patchBulletinPreviewInPptx(templateBuf, {
+        serviceDate,
+        serviceTime,
+        scriptureBook,
+        scriptureReference,
+      });
 
       const pptxPath = join(workRoot, 'preview.pptx');
       await writeFile(pptxPath, pptxBuf);
@@ -345,6 +361,8 @@ export function registerBulletinRoutes(
       assignText('testimonyShareDate', 'testimonyShareDate');
       assignText('serviceRosterText', 'serviceRosterText');
       assignText('baptismText', 'baptismText');
+      assignText('scriptureBook', 'scriptureBook');
+      assignText('scriptureReference', 'scriptureReference');
       assignText('verseOfWeek', 'verseOfWeek');
       if (body.weeklyMeetingVariant !== undefined) {
         const v = body.weeklyMeetingVariant;

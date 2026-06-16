@@ -10,7 +10,12 @@ const EAGER_SLIDE_COUNT = 3;
 
 type LazySlideItemProps = {
   slideNumber: number;
-  patch: { serviceDate: string; serviceTime: string };
+  patch: {
+    serviceDate: string;
+    serviceTime: string;
+    scriptureBook?: string;
+    scriptureReference?: string;
+  };
   highlight: boolean;
   label: string;
   scrollIntoView: boolean;
@@ -102,8 +107,15 @@ export default function BulletinFullDeckPreview({
     () => ({
       serviceDate: bulletin.serviceDate || nextSundayIso(),
       serviceTime: bulletin.serviceTime || '11:00',
+      scriptureBook: bulletin.scriptureBook,
+      scriptureReference: bulletin.scriptureReference,
     }),
-    [bulletin.serviceDate, bulletin.serviceTime],
+    [
+      bulletin.serviceDate,
+      bulletin.serviceTime,
+      bulletin.scriptureBook,
+      bulletin.scriptureReference,
+    ],
   );
 
   useEffect(() => {

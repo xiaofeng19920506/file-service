@@ -148,6 +148,66 @@ export function layoutCoverDateLineShape(xml: string): string {
   return xml;
 }
 
+/** 读经 slide 4：书名 run 4、经节 run 5（标题「讀經 / Scripture Reading」不改） */
+export function formatScriptureBookRun(book: string): string {
+  const trimmed = book.trim();
+  if (!trimmed) return '';
+  return /\s$/.test(trimmed) ? trimmed : `${trimmed}   `;
+}
+
+export function formatScriptureReferenceRun(reference: string): string {
+  const trimmed = reference.trim();
+  if (!trimmed) return '';
+  return trimmed.startsWith(' ') ? trimmed : ` ${trimmed}`;
+}
+
+export function patchScriptureSlideInSlideXml(
+  xml: string,
+  book: string,
+  reference: string,
+): string {
+  const replacements: TextRunReplacement[] = [];
+  const bookRun = formatScriptureBookRun(book);
+  const refRun = formatScriptureReferenceRun(reference);
+  if (bookRun) replacements.push({ textIndex: 4, text: bookRun });
+  if (refRun) replacements.push({ textIndex: 5, text: refRun });
+  if (!replacements.length) return xml;
+  return applyIndexedTextReplacementsToSlideXml(xml, replacements);
+}
+
+export type BulletinPreviewPatchInput = {
+  serviceDate?: string;
+  serviceTime?: string;
+  scriptureBook?: string;
+  scriptureReference?: string;
+};
+
+/** 预览/导出用：封面 + 读经等可编辑字段 */
+export async function patchBulletinPreviewInPptx(
+  template: Buffer,
+  input: BulletinPreviewPatchInput,
+): Promise<Buffer> {
+  let buf = template;
+  if (input.serviceDate) {
+    buf = await patchCoverSlideInPptx(buf, {
+      serviceDate: input.serviceDate,
+      serviceTime: input.serviceTime,
+    });
+  }
+  const book = input.scriptureBook?.trim() ?? '';
+  const reference = input.scriptureReference?.trim() ?? '';
+  if (!book && !reference) return buf;
+
+  const zip = await JSZip.loadAsync(buf);
+  const slidePath = 'ppt/slides/slide4.xml';
+  const entry = zip.file(slidePath);
+  if (!entry) return buf;
+
+  const xml = await entry.async('string');
+  zip.file(slidePath, patchScriptureSlideInSlideXml(xml, book, reference));
+  return zip.generateAsync({ type: 'nodebuffer' });
+}
+
 export type CoverSlidePatchInput = {
   serviceDate: string;
   serviceTime?: string;

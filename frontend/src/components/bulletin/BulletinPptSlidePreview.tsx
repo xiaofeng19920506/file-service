@@ -6,7 +6,12 @@ import PreviewConversionGuide from '../PreviewConversionGuide';
 type BulletinPptSlidePreviewProps = {
   slideNumber: number;
   /** 封面步骤：仅替换日期/时间文字 */
-  patch?: { serviceDate: string; serviceTime?: string };
+  patch?: {
+    serviceDate: string;
+    serviceTime?: string;
+    scriptureBook?: string;
+    scriptureReference?: string;
+  };
   requireDate?: boolean;
   loading?: boolean;
   emptyLabel: string;
@@ -43,6 +48,8 @@ export default function BulletinPptSlidePreview({
       void fetchBulletinSlidePreviewPng(slideNumber, {
         serviceDate: patch?.serviceDate,
         serviceTime: patch?.serviceTime || '11:00',
+        scriptureBook: patch?.scriptureBook,
+        scriptureReference: patch?.scriptureReference,
       })
         .then((blob) => {
           if (cancelled) return;
@@ -65,7 +72,14 @@ export default function BulletinPptSlidePreview({
       window.clearTimeout(timer);
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [slideNumber, patch?.serviceDate, patch?.serviceTime, requireDate]);
+  }, [
+    slideNumber,
+    patch?.serviceDate,
+    patch?.serviceTime,
+    patch?.scriptureBook,
+    patch?.scriptureReference,
+    requireDate,
+  ]);
 
   const rootClass = `bulletin-slide-preview${large ? ' bulletin-slide-preview--large' : ''}`;
   const showLoading = externalLoading || loading;

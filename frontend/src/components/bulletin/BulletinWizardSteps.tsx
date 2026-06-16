@@ -66,6 +66,28 @@ export type BulletinStepPanelProps = {
   onSave: () => void;
 };
 
+export function BulletinScriptureStep({ draft, canEdit, saving, onPatch, onSave }: BulletinStepPanelProps) {
+  const { t } = useI18n();
+  return (
+    <StepShell titleKey="bulletin.steps.scriptureTitle" introKey="bulletin.steps.scriptureIntro">
+      <TextField
+        label={t('bulletin.scriptureBook')}
+        value={draft.scriptureBook}
+        disabled={!canEdit}
+        onChange={(v) => onPatch('scriptureBook', v)}
+      />
+      <TextField
+        label={t('bulletin.scriptureReference')}
+        value={draft.scriptureReference}
+        disabled={!canEdit}
+        onChange={(v) => onPatch('scriptureReference', v)}
+      />
+      <p className="bulletin-field-hint">{t('bulletin.scriptureHint')}</p>
+      <SaveButton saving={saving} canEdit={canEdit} onSave={onSave} />
+    </StepShell>
+  );
+}
+
 export function BulletinOfferingStep({ draft, canEdit, saving, onPatch, onSave }: BulletinStepPanelProps) {
   const { t } = useI18n();
   return (

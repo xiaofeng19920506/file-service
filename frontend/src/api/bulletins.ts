@@ -22,6 +22,8 @@ export type WeeklyBulletin = {
   testimonyShareDate: string;
   serviceRosterText: string;
   baptismText: string;
+  scriptureBook: string;
+  scriptureReference: string;
   verseOfWeek: string;
   weeklyMeetingVariant: number | null;
   skipTestimonyWeek: boolean;
@@ -45,6 +47,8 @@ export type BulletinPatch = Partial<{
   testimonyShareDate: string;
   serviceRosterText: string;
   baptismText: string;
+  scriptureBook: string;
+  scriptureReference: string;
   verseOfWeek: string;
   weeklyMeetingVariant: number | null;
   skipTestimonyWeek: boolean;
@@ -126,14 +130,23 @@ export async function fetchBulletinTemplateFile(): Promise<Blob> {
   return res.blob();
 }
 
-/** 服务端用 LibreOffice 从原版 PPT 渲染幻灯片 PNG（已按参数补丁封面文字） */
+/** 服务端用 LibreOffice 从原版 PPT 渲染幻灯片 PNG（已按参数补丁封面/读经等文字） */
+export type BulletinSlidePreviewParams = {
+  serviceDate?: string;
+  serviceTime?: string;
+  scriptureBook?: string;
+  scriptureReference?: string;
+};
+
 export async function fetchBulletinSlidePreviewPng(
   slideNumber: number,
-  params: { serviceDate?: string; serviceTime?: string },
+  params: BulletinSlidePreviewParams,
 ): Promise<Blob> {
   const qs = new URLSearchParams();
   if (params.serviceDate) qs.set('serviceDate', params.serviceDate);
   if (params.serviceTime) qs.set('serviceTime', params.serviceTime);
+  if (params.scriptureBook) qs.set('scriptureBook', params.scriptureBook);
+  if (params.scriptureReference) qs.set('scriptureReference', params.scriptureReference);
   const query = qs.toString();
   const res = await runBulletinPreviewTask(() =>
     apiFetch(
