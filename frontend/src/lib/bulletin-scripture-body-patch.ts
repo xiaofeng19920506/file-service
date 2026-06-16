@@ -30,8 +30,8 @@ function replaceShapeBlock(
 const ZH_SHAPE_ID = '294';
 const EN_SHAPE_ID = '299';
 
-/** 中文经文 28pt（原模板 29pt，投影略小一号） */
-const ZH_FONT_SZ = '2800';
+/** 中文经文 29pt（投影可读） */
+const ZH_FONT_SZ = '2900';
 /** 英文经文 22pt（原模板 18.5pt，投影加大两号） */
 const EN_FONT_SZ = '2200';
 

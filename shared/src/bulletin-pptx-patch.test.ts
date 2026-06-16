@@ -105,7 +105,7 @@ describe('patchScriptureSlideInSlideXml', () => {
     expect(combined).toContain('11 ');
     expect(combined).toContain('human hearts');
     expect(slide5).toContain('<a:noAutofit/>');
-    expect(slide5).toContain('sz="2800"');
+    expect(slide5).toContain('sz="2900"');
     expect(slide5).not.toContain('<a:spAutoFit/>');
     expect(slide6).toContain('<a:noAutofit/>');
     expect(slide6).toContain('sz="2200"');

@@ -102,8 +102,8 @@ export type ScriptureSlideBodies = {
   englishPages: string[][];
 };
 
-/** 中文 28pt 每行约容纳字数（偏保守，配合 noAutofit 分页） */
-export const SCRIPTURE_ZH_CHARS_PER_LINE = 19;
+/** 中文 29pt 每行约容纳字数（偏保守，配合 noAutofit 分页） */
+export const SCRIPTURE_ZH_CHARS_PER_LINE = 18;
 
 /** 中文每页约可容纳的视觉行数（含自动换行） */
 export const SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES = 12;
