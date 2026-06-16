@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildScriptureSlideBodies,
   estimateChineseBlockVisualLines,
-  estimateEnglishVerseVisualLines,
+  estimateEnglishLineVisualLines,
   SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES,
   SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES,
   type BibleVerse,
@@ -14,6 +14,10 @@ function verse(n: number, text: string): BibleVerse {
 
 function longText(chars: number): string {
   return '经'.repeat(chars);
+}
+
+function englishPageVisualLines(page: string[]): number {
+  return page.reduce((sum, line) => sum + estimateEnglishLineVisualLines(line), 0);
 }
 
 describe('buildScriptureSlideBodies', () => {
@@ -45,7 +49,7 @@ describe('buildScriptureSlideBodies', () => {
     expect(joined).not.toContain('…');
   });
 
-  it('keeps each Chinese page within the visual line budget', () => {
+  it('keeps each Chinese page within 10 visual lines', () => {
     const zh: BibleVerse[] = [];
     for (let n = 1; n <= 15; n++) {
       zh.push(verse(n, `這是第${n}節經文內容用來測試分頁。`));
@@ -61,6 +65,15 @@ describe('buildScriptureSlideBodies', () => {
     }
   });
 
+  it('splits a single long Chinese block across pages', () => {
+    const bodies = buildScriptureSlideBodies({
+      zh: [verse(1, longText(400))],
+      en: [verse(1, 'line one')],
+    });
+    expect(bodies.chinesePages.length).toBeGreaterThan(1);
+    expect(bodies.chinesePages.join('')).toContain('经');
+  });
+
   it('splits English across multiple pages without truncation', () => {
     const en: BibleVerse[] = [];
     for (let i = 1; i <= SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES * 2 + 3; i++) {
@@ -72,42 +85,38 @@ describe('buildScriptureSlideBodies', () => {
     });
     expect(bodies.englishPages.length).toBeGreaterThan(2);
     const lineCount = bodies.englishPages.reduce((n, page) => n + page.length, 0);
-    expect(lineCount).toBe(en.length);
+    expect(lineCount).toBeGreaterThanOrEqual(en.length);
     expect(bodies.englishPages.flat().join('\n')).not.toContain('…');
   });
 
-  it('splits English when verses wrap to many visual lines', () => {
-    const longVerse = 'word '.repeat(90).trim();
-    const en = [verse(1, longVerse), verse(2, longVerse), verse(3, longVerse), verse(4, longVerse)];
-    const bodies = buildScriptureSlideBodies({
-      zh: [verse(1, '一節')],
-      en,
-    });
-    expect(bodies.englishPages.length).toBeGreaterThan(1);
-    for (const v of en) {
-      expect(bodies.englishPages.flat().join('\n')).toContain(String(v.verse));
-    }
-  });
-
-  it('keeps each English page within the visual line budget', () => {
+  it('keeps each English page within 12 visual lines', () => {
     const en: BibleVerse[] = [];
     for (let i = 1; i <= 30; i++) {
-      en.push(verse(i, `The Lord is my shepherd, I shall not want, verse number ${i}.`));
+      en.push(
+        verse(
+          i,
+          `The Lord is my shepherd, I shall not want, verse number ${i} with extra words.`,
+        ),
+      );
     }
     const bodies = buildScriptureSlideBodies({
       zh: [verse(1, '一節')],
       en,
     });
     for (const page of bodies.englishPages) {
-      const versesOnPage = page.map((line) => {
-        const num = Number.parseInt(line.split(' ')[0] ?? '0', 10);
-        return en.find((v) => v.verse === num)!;
-      });
-      const visualLines = versesOnPage.reduce(
-        (sum, v) => sum + estimateEnglishVerseVisualLines(v),
-        0,
+      expect(englishPageVisualLines(page)).toBeLessThanOrEqual(
+        SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES,
       );
-      expect(visualLines).toBeLessThanOrEqual(SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES);
     }
+  });
+
+  it('splits a single long English verse across pages', () => {
+    const longVerse = 'word '.repeat(160).trim();
+    const bodies = buildScriptureSlideBodies({
+      zh: [verse(1, '一節')],
+      en: [verse(1, longVerse)],
+    });
+    expect(bodies.englishPages.length).toBeGreaterThan(1);
+    expect(bodies.englishPages.flat().join(' ')).toContain('word');
   });
 });
