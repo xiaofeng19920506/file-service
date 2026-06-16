@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { fetchTrendingYoutubeSongs, type TrendingSong } from '../../api/youtube-trending';
 import type { YoutubeSearchResult } from '../../api/youtube-search';
 import { useDebouncedYoutubeSearch } from '../../hooks/useDebouncedYoutubeSearch';
+import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../../hooks/useMediaQuery';
 import type { VipVideoTrack } from '../../hooks/useVipVideoPlayback';
 import { friendlyError } from '../../lib/error-messages';
 import { CloseIcon, SearchIcon } from '../icons';
@@ -30,9 +31,11 @@ export function toVipBrowseItem(row: YoutubeSearchResult | TrendingSong): Browse
 export function VipVideoSearchBar({
   search,
   className = '',
+  isMobile = false,
 }: {
   search: ReturnType<typeof useDebouncedYoutubeSearch>;
   className?: string;
+  isMobile?: boolean;
 }) {
   const { t } = useI18n();
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -51,7 +54,9 @@ export function VipVideoSearchBar({
   };
 
   return (
-    <div className={`search-box vip-video-search-box${className ? ` ${className}` : ''}`}>
+    <div
+      className={`search-box vip-video-search-box${isMobile ? ' search-box--submit-only' : ''}${className ? ` ${className}` : ''}`}
+    >
       <div className={`search-input-wrap${isSearchBusy ? ' search-input-wrap--busy' : ''}`}>
         {isSearchBusy ? (
           <span className="search-input-spinner" aria-hidden />
@@ -67,8 +72,15 @@ export function VipVideoSearchBar({
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
+              if (isMobile) {
+                e.currentTarget.blur();
+                return;
+              }
               submitSearch();
             }
+          }}
+          onBlur={() => {
+            if (isMobile) submitSearch();
           }}
           placeholder={t('vipVideo.searchPlaceholder')}
           enterKeyHint="search"
@@ -91,14 +103,16 @@ export function VipVideoSearchBar({
           </button>
         )}
       </div>
-      <button
-        type="button"
-        className="btn-secondary btn-search"
-        onClick={submitSearch}
-        disabled={isSearchBusy}
-      >
-        {isSearchBusy ? t('search.searching') : t('search.button')}
-      </button>
+      {!isMobile && (
+        <button
+          type="button"
+          className="btn-secondary btn-search"
+          onClick={submitSearch}
+          disabled={isSearchBusy}
+        >
+          {isSearchBusy ? t('search.searching') : t('search.button')}
+        </button>
+      )}
     </div>
   );
 }
@@ -107,20 +121,26 @@ type VipVideoBrowseProps = {
   activeVideoId?: string | null;
   onPlay: (track: VipVideoTrack) => void;
   variant?: 'grid' | 'sidebar';
+  listStyle?: 'grid' | 'row';
   className?: string;
   search: ReturnType<typeof useDebouncedYoutubeSearch>;
   showSearch?: boolean;
+  isMobile?: boolean;
 };
 
 export default function VipVideoBrowse({
   activeVideoId = null,
   onPlay,
   variant = 'grid',
+  listStyle = 'grid',
   className = '',
   search,
   showSearch = true,
+  isMobile: isMobileProp,
 }: VipVideoBrowseProps) {
   const { t } = useI18n();
+  const isMobileHook = useMediaQuery(MOBILE_MEDIA_QUERY);
+  const isMobile = isMobileProp ?? isMobileHook;
   const resultsListRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
@@ -141,11 +161,13 @@ export default function VipVideoBrowse({
     loadMore,
   } = search;
 
+  const effectiveListStyle = variant === 'sidebar' ? 'row' : listStyle;
+
   useEffect(() => {
     let cancelled = false;
     setTrendingLoading(true);
     setTrendingError(null);
-    void fetchTrendingYoutubeSongs(24)
+    void fetchTrendingYoutubeSongs(isMobile ? 20 : 24)
       .then((data) => {
         if (cancelled) return;
         setTrending(data.songs.map(toVipBrowseItem));
@@ -161,12 +183,12 @@ export default function VipVideoBrowse({
     return () => {
       cancelled = true;
     };
-  }, [t]);
+  }, [isMobile, t]);
 
   useEffect(() => {
     const root = resultsListRef.current;
     const target = loadMoreRef.current;
-    if (!root || !target || !hasMore || isSearchBusy || loadMoreLoading) return;
+    if (!target || !hasMore || isSearchBusy || loadMoreLoading) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -174,12 +196,16 @@ export default function VipVideoBrowse({
           void loadMore();
         }
       },
-      { root, rootMargin: '120px', threshold: 0 },
+      {
+        root: isMobile ? null : root,
+        rootMargin: '160px',
+        threshold: 0,
+      },
     );
 
     observer.observe(target);
     return () => observer.disconnect();
-  }, [hasMore, isSearchBusy, loadMore, loadMoreLoading, searchResults.length]);
+  }, [hasMore, isSearchBusy, isMobile, loadMore, loadMoreLoading, searchResults.length]);
 
   const showTrending = searchResults.length === 0 && !isSearchBusy && !searchQuery.trim();
   const displayItems: BrowseItem[] = searchResults.length
@@ -188,11 +214,12 @@ export default function VipVideoBrowse({
 
   const renderCard = (item: BrowseItem) => {
     const active = activeVideoId === item.videoId;
+    const rowLayout = effectiveListStyle === 'row';
     return (
       <button
         key={item.videoId}
         type="button"
-        className={`vip-video-card${active ? ' active' : ''}${variant === 'sidebar' ? ' vip-video-card--sidebar' : ''}`}
+        className={`vip-video-card${active ? ' active' : ''}${rowLayout ? ' vip-video-card--row' : ''}${variant === 'sidebar' ? ' vip-video-card--sidebar' : ''}`}
         onClick={() =>
           onPlay({
             videoId: item.videoId,
@@ -234,15 +261,22 @@ export default function VipVideoBrowse({
   }
 
   return (
-    <section className={`vip-video-browse${className ? ` ${className}` : ''}`} aria-label={t('vipVideo.browse')}>
+    <section
+      className={`vip-video-browse${isMobile ? ' vip-video-browse--mobile' : ''}${effectiveListStyle === 'row' ? ' vip-video-browse--row' : ''}${className ? ` ${className}` : ''}`}
+      aria-label={t('vipVideo.browse')}
+    >
       {showSearch && (
         <div className="vip-video-search-row">
-          <VipVideoSearchBar search={search} />
+          <VipVideoSearchBar search={search} isMobile={isMobile} />
         </div>
       )}
 
       {isSearchBusy && searchQuery.trim() && (
-        <div className="youtube-search-loading-state" role="status" aria-live="polite">
+        <div
+          className={`youtube-search-loading-state${isMobile ? ' youtube-search-loading-state--mobile-home' : ''}`}
+          role="status"
+          aria-live="polite"
+        >
           <span className="youtube-search-loading-spinner" aria-hidden />
           <span className="youtube-search-loading-label">
             {searchPending && !searchLoading ? t('search.preparing') : t('search.searching')}
@@ -258,7 +292,7 @@ export default function VipVideoBrowse({
         <p className="search-empty">{t('playlists.searchNoResults')}</p>
       )}
 
-      {showTrending && !trendingLoading && trending.length > 0 && (
+      {showTrending && !trendingLoading && trending.length > 0 && effectiveListStyle !== 'row' && (
         <h2 className="vip-video-browse-heading">{t('vipVideo.recommended')}</h2>
       )}
 
@@ -267,7 +301,10 @@ export default function VipVideoBrowse({
       )}
 
       {displayItems.length > 0 && (
-        <div ref={resultsListRef} className="vip-video-browse-grid">
+        <div
+          ref={resultsListRef}
+          className={`vip-video-browse-grid${effectiveListStyle === 'row' ? ' vip-video-browse-grid--row' : ''}`}
+        >
           {displayItems.map(renderCard)}
           {(hasMore || loadMoreLoading) && searchResults.length > 0 && (
             <div ref={loadMoreRef} className="vip-video-browse-load-more" aria-hidden={!loadMoreLoading}>

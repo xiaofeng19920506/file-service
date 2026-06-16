@@ -136,6 +136,7 @@ const en: MessageTree = {
     searchPlaceholder: 'Search YouTube videos',
     recommended: 'Recommended',
     upNext: 'Up next',
+    backToBrowse: 'Back to browse',
     loadingTrending: 'Loading recommendations…',
     loading: 'Loading…',
     retry: 'Retry',

@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import VipVideoBrowse, { VipVideoSearchBar } from '../components/vip/VipVideoBrowse';
+import { ChevronLeftIcon } from '../components/icons';
 import { useAuth } from '../auth/AuthContext';
 import { useDebouncedYoutubeSearch } from '../hooks/useDebouncedYoutubeSearch';
+import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 import { useVipVideoPlayback } from '../hooks/useVipVideoPlayback';
 import { friendlyError } from '../lib/error-messages';
 import { useI18n } from '../i18n';
@@ -17,41 +19,57 @@ function formatTime(seconds: number): string {
 export default function VipVideoPage() {
   const { t } = useI18n();
   const { user, logout } = useAuth();
+  const isMobile = useMediaQuery(MOBILE_MEDIA_QUERY);
   const videoRef = useRef<HTMLVideoElement>(null);
   const watchTopRef = useRef<HTMLDivElement>(null);
-  const search = useDebouncedYoutubeSearch();
-  const { current, status, streamUrl, errorCode, isReady, play } = useVipVideoPlayback();
+  const search = useDebouncedYoutubeSearch({ debounceEnabled: !isMobile });
+  const { current, status, streamUrl, errorCode, isReady, play, clear } = useVipVideoPlayback();
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
   useEffect(() => {
     if (!current) return;
-    watchTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (isMobile) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      watchTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
     setPlaying(true);
     setCurrentTime(0);
     setDuration(0);
-  }, [current?.videoId]);
+  }, [current?.videoId, isMobile]);
+
+  const closePlayer = () => {
+    const el = videoRef.current;
+    if (el) {
+      el.pause();
+      el.removeAttribute('src');
+      el.load();
+    }
+    setPlaying(false);
+    clear();
+  };
 
   useEffect(() => {
     const el = videoRef.current;
     if (!el || !streamUrl) return;
     el.src = streamUrl;
     el.load();
-    if (playing) {
+    if (playing && !isMobile) {
       void el.play().catch(() => setPlaying(false));
     }
-  }, [streamUrl, current?.videoId]);
+  }, [streamUrl, current?.videoId, isMobile, playing]);
 
   useEffect(() => {
     const el = videoRef.current;
-    if (!el) return;
+    if (!el || isMobile) return;
     if (playing && isReady) {
       void el.play().catch(() => setPlaying(false));
     } else {
       el.pause();
     }
-  }, [playing, isReady]);
+  }, [playing, isReady, isMobile]);
 
   const statusText = useMemo(() => {
     if (!current) return '';
@@ -63,24 +81,59 @@ export default function VipVideoPage() {
   }, [current, errorCode, isReady, status, t]);
 
   return (
-    <div className="vip-video-page vip-video-page--clone">
-      <header className="vip-video-topbar">
-        <div className="vip-video-brand">
-          <span className="vip-video-brand-mark" aria-hidden>
-            ▶
-          </span>
-          <span className="vip-video-brand-name">{t('vipVideo.brand')}</span>
-        </div>
-        <div className="vip-video-topbar-search">
-          <VipVideoSearchBar search={search} className="vip-video-search-box--topbar" />
-        </div>
+    <div
+      className={`vip-video-page vip-video-page--clone${isMobile ? ' vip-video-page--mobile' : ''}${current ? ' vip-video-page--watching' : ''}`}
+    >
+      <header
+        className={`vip-video-topbar${current && isMobile ? ' vip-video-topbar--watching' : ''}`}
+      >
+        {current && isMobile ? (
+          <div className="vip-video-topbar-start">
+            <button
+              type="button"
+              className="vip-video-back-btn"
+              onClick={closePlayer}
+              aria-label={t('vipVideo.backToBrowse')}
+            >
+              <ChevronLeftIcon />
+            </button>
+            <div className="vip-video-brand vip-video-brand--compact">
+              <span className="vip-video-brand-mark" aria-hidden>
+                ▶
+              </span>
+              <span className="vip-video-brand-name">{t('vipVideo.brand')}</span>
+            </div>
+          </div>
+        ) : (
+          <div className="vip-video-brand">
+            <span className="vip-video-brand-mark" aria-hidden>
+              ▶
+            </span>
+            <span className="vip-video-brand-name">{t('vipVideo.brand')}</span>
+          </div>
+        )}
+        {!(current && isMobile) && (
+          <div className="vip-video-topbar-search">
+            <VipVideoSearchBar
+              search={search}
+              isMobile={isMobile}
+              className="vip-video-search-box--topbar"
+            />
+          </div>
+        )}
         <div className="vip-video-topbar-actions">
-          {user && <span className="vip-video-user">{user.email}</span>}
+          {user && !isMobile && <span className="vip-video-user">{user.email}</span>}
           <button type="button" className="btn-secondary btn-sm" onClick={logout}>
             {t('auth.logout')}
           </button>
         </div>
       </header>
+
+      {current && isMobile && (
+        <div className="vip-video-mobile-watch-title" title={current.title}>
+          {current.title}
+        </div>
+      )}
 
       <div className="vip-video-body">
         {current ? (
@@ -92,7 +145,7 @@ export default function VipVideoPage() {
                     ref={videoRef}
                     className="vip-video-player"
                     playsInline
-                    controls={false}
+                    controls={isMobile}
                     onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
                     onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
                     onEnded={() => setPlaying(false)}
@@ -113,49 +166,73 @@ export default function VipVideoPage() {
                   </div>
                 )}
 
-                <div className="vip-video-watch-meta">
-                  <h1 className="vip-video-watch-title">{current.title}</h1>
-                  {current.channelTitle && (
-                    <p className="vip-video-watch-channel">{current.channelTitle}</p>
-                  )}
-                </div>
+                {!isMobile && (
+                  <>
+                    <div className="vip-video-watch-meta">
+                      <h1 className="vip-video-watch-title">{current.title}</h1>
+                      {current.channelTitle && (
+                        <p className="vip-video-watch-channel">{current.channelTitle}</p>
+                      )}
+                    </div>
 
-                <div className="vip-video-controls">
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    disabled={!isReady}
-                    onClick={() => setPlaying((p) => !p)}
-                  >
-                    {playing ? t('vipVideo.pause') : t('vipVideo.play')}
-                  </button>
-                  <span className="vip-video-time">
-                    {formatTime(currentTime)} / {formatTime(duration)}
-                  </span>
-                </div>
+                    <div className="vip-video-controls">
+                      <button
+                        type="button"
+                        className="btn-primary"
+                        disabled={!isReady}
+                        onClick={() => setPlaying((p) => !p)}
+                      >
+                        {playing ? t('vipVideo.pause') : t('vipVideo.play')}
+                      </button>
+                      <span className="vip-video-time">
+                        {formatTime(currentTime)} / {formatTime(duration)}
+                      </span>
+                    </div>
+                  </>
+                )}
+
+                {isMobile && current.channelTitle && (
+                  <div className="vip-video-watch-meta vip-video-watch-meta--mobile">
+                    <p className="vip-video-watch-channel">{current.channelTitle}</p>
+                  </div>
+                )}
               </section>
 
-              <aside className="vip-video-watch-sidebar">
+              {!isMobile && (
+                <aside className="vip-video-watch-sidebar">
+                  <VipVideoBrowse
+                    variant="sidebar"
+                    activeVideoId={current.videoId}
+                    onPlay={play}
+                    search={search}
+                    isMobile={isMobile}
+                  />
+                </aside>
+              )}
+            </div>
+
+            {isMobile && (
+              <div className="vip-video-watch-below vip-video-watch-below--mobile">
+                <h2 className="vip-video-browse-heading">{t('vipVideo.upNext')}</h2>
                 <VipVideoBrowse
-                  variant="sidebar"
                   activeVideoId={current.videoId}
                   onPlay={play}
                   search={search}
+                  showSearch={false}
+                  isMobile={isMobile}
+                  listStyle="row"
                 />
-              </aside>
-            </div>
-
-            <div className="vip-video-watch-below">
-              <VipVideoBrowse
-                activeVideoId={current.videoId}
-                onPlay={play}
-                search={search}
-                showSearch={false}
-              />
-            </div>
+              </div>
+            )}
           </div>
         ) : (
-          <VipVideoBrowse onPlay={play} search={search} showSearch={false} />
+          <VipVideoBrowse
+            onPlay={play}
+            search={search}
+            showSearch={false}
+            isMobile={isMobile}
+            listStyle="grid"
+          />
         )}
       </div>
     </div>

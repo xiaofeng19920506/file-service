@@ -128,6 +128,7 @@ export default {
     searchPlaceholder: '搜索 YouTube 视频',
     recommended: '推荐',
     upNext: '接下来播放',
+    backToBrowse: '返回浏览',
     loadingTrending: '正在加载推荐…',
     loading: '正在加载…',
     retry: '重试',
