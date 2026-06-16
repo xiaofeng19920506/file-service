@@ -5,6 +5,7 @@
 #   bash scripts/prod-stack.sh stop          # 停止本机 API/Web 进程
 #   bash scripts/prod-stack.sh start         # 迁移 + 启动（使用已有构建）
 #   bash scripts/prod-stack.sh start --build # 先 build:prod 再启动
+#   MP3_WORKER_COUNT=5 VIDEO_WORKER_COUNT=5 bash scripts/prod-stack.sh start
 #   bash scripts/prod-stack.sh status        # 查看端口与容器
 #
 # npm 快捷：
@@ -20,6 +21,8 @@ cd "$ROOT"
 COMPOSE=(docker compose -f "${ROOT}/shared/docker-compose.yml")
 API_PORT="${PORT:-3000}"
 WEB_PORT="${FILE_SERVICE_WEB_PORT:-4000}"
+MP3_WORKER_COUNT="${MP3_WORKER_COUNT:-5}"
+VIDEO_WORKER_COUNT="${VIDEO_WORKER_COUNT:-5}"
 CONCURRENTLY="${ROOT}/node_modules/.bin/concurrently"
 
 RED='\033[0;31m'
@@ -37,7 +40,8 @@ usage() {
 用法: bash scripts/prod-stack.sh <stop|start|status> [--build]
 
   stop              停止本机 API / Worker / Web（:3000 :4000 :5173）
-  start [--build]   启动 Docker(Postgres+Redis+LibreOffice) + 迁移 + API+Worker+Web
+  start [--build]   启动 Docker + 迁移 + API + 1 合并 Worker + 5 音频 + 5 视频 + Web
+                    可用 MP3_WORKER_COUNT / VIDEO_WORKER_COUNT 覆盖默认 5
   status            查看 Docker 容器与端口占用
 
 示例：
@@ -97,6 +101,9 @@ stop_local_processes() {
 
   pkill -f "${ROOT}/backend/api/dist/index.js" 2>/dev/null || true
   pkill -f "${ROOT}/backend/worker/dist/index.js" 2>/dev/null || true
+  pkill -f "${ROOT}/backend/worker/dist/worker-audio.js" 2>/dev/null || true
+  pkill -f "${ROOT}/backend/worker/dist/worker-video.js" 2>/dev/null || true
+  pkill -f "${ROOT}/backend/worker/dist/worker-merge.js" 2>/dev/null || true
   pkill -f "${ROOT}/backend/api/src/index.ts" 2>/dev/null || true
   pkill -f "${ROOT}/backend/worker/src/" 2>/dev/null || true
   pkill -f "${ROOT}/node_modules/.bin/tsx watch backend/" 2>/dev/null || true
@@ -141,7 +148,19 @@ wait_for_api() {
 }
 
 ensure_build() {
-  if [[ ! -f "${ROOT}/backend/api/dist/index.js" ]] || [[ ! -f "${ROOT}/frontend/.next/BUILD_ID" ]]; then
+  local missing=0
+  for f in \
+    "${ROOT}/backend/api/dist/index.js" \
+    "${ROOT}/backend/worker/dist/worker-audio.js" \
+    "${ROOT}/backend/worker/dist/worker-video.js" \
+    "${ROOT}/backend/worker/dist/worker-merge.js" \
+    "${ROOT}/frontend/.next/BUILD_ID"; do
+    if [[ ! -f "$f" ]]; then
+      missing=1
+      break
+    fi
+  done
+  if [[ "$missing" == "1" ]]; then
     warn "缺少生产构建，正在执行 npm run build:prod …"
     npm run build:prod
     return
@@ -149,6 +168,17 @@ ensure_build() {
   if [[ "${1:-}" == "--build" ]]; then
     info "执行 npm run build:prod …"
     npm run build:prod
+  fi
+}
+
+validate_worker_counts() {
+  if ! [[ "$MP3_WORKER_COUNT" =~ ^[1-9][0-9]*$ ]]; then
+    echo "MP3_WORKER_COUNT 必须是正整数，当前: ${MP3_WORKER_COUNT}" >&2
+    exit 1
+  fi
+  if ! [[ "$VIDEO_WORKER_COUNT" =~ ^[1-9][0-9]*$ ]]; then
+    echo "VIDEO_WORKER_COUNT 必须是正整数，当前: ${VIDEO_WORKER_COUNT}" >&2
+    exit 1
   fi
 }
 
@@ -160,6 +190,7 @@ cmd_start() {
 
   need_docker
   load_env
+  validate_worker_counts
 
   info "停止已有本机进程…"
   stop_local_processes
@@ -179,8 +210,32 @@ cmd_start() {
 
   ensure_build "$build_flag"
 
+  local names="api,merge"
+  local colors="blue,magenta"
+  local -a cmds=(
+    "npm run start -w @file-service/api"
+    "node backend/worker/dist/worker-merge.js"
+  )
+  local i
+  for ((i = 1; i <= MP3_WORKER_COUNT; i++)); do
+    names+=",mp3${i}"
+    colors+=",green"
+    cmds+=("node backend/worker/dist/worker-audio.js")
+  done
+  for ((i = 1; i <= VIDEO_WORKER_COUNT; i++)); do
+    names+=",video${i}"
+    colors+=",yellow"
+    cmds+=("node backend/worker/dist/worker-video.js")
+  done
+  names+=",web"
+  colors+=",magenta"
+  cmds+=("PORT=${WEB_PORT} npm run start -w @file-service/web")
+
   echo ""
   info "启动生产栈（API :${API_PORT} · Web :${WEB_PORT} · LibreOffice :3010）"
+  echo "   Worker: 1 合并 + ${MP3_WORKER_COUNT} 音频 + ${VIDEO_WORKER_COUNT} 视频"
+  echo "   MP3 总并发 ≈ ${MP3_WORKER_COUNT} × YOUTUBE_AUDIO_WORKER_CONCURRENCY（见 .env）"
+  echo "   视频总并发 ≈ ${VIDEO_WORKER_COUNT} × YOUTUBE_VIDEO_WORKER_CONCURRENCY（见 .env）"
   echo "   Ctrl+C 停止全部本机进程"
   echo ""
 
@@ -188,10 +243,7 @@ cmd_start() {
   export FILE_SERVICE_WEB_PORT="$WEB_PORT"
   export BACKEND_URL="${FILE_SERVICE_BACKEND_URL:-http://127.0.0.1:${API_PORT}}"
 
-  exec "$CONCURRENTLY" -k -n api,worker,web -c blue,green,magenta \
-    "npm run start -w @file-service/api" \
-    "npm run start -w @file-service/worker" \
-    "PORT=${WEB_PORT} npm run start -w @file-service/web"
+  exec "$CONCURRENTLY" -k -n "$names" -c "$colors" "${cmds[@]}"
 }
 
 cmd_status() {
