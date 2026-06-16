@@ -89,7 +89,7 @@ describe('buildScriptureSlideBodies', () => {
     expect(bodies.englishPages.flat().join('\n')).not.toContain('…');
   });
 
-  it('keeps each English page within 12 visual lines', () => {
+  it('keeps each English page within 13 visual lines', () => {
     const en: BibleVerse[] = [];
     for (let i = 1; i <= 30; i++) {
       en.push(
