@@ -136,6 +136,7 @@ export default {
     noStream: '视频尚未就绪',
     play: '播放',
     pause: '暂停',
+    playerControls: '视频播放控制',
     prev: '上一首',
     next: '下一首',
     tracklist: '曲目',

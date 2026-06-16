@@ -144,6 +144,7 @@ const en: MessageTree = {
     noStream: 'Video not ready yet',
     play: 'Play',
     pause: 'Pause',
+    playerControls: 'Video player controls',
     prev: 'Previous',
     next: 'Next',
     tracklist: 'Tracks',

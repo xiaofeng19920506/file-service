@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import VipVideoBrowse, { VipVideoSearchBar } from '../components/vip/VipVideoBrowse';
+import VipVideoControls from '../components/vip/VipVideoControls';
 import { ChevronLeftIcon } from '../components/icons';
 import { useAuth } from '../auth/AuthContext';
 import { useDebouncedYoutubeSearch } from '../hooks/useDebouncedYoutubeSearch';
@@ -8,14 +9,6 @@ import { useVipVideoPlayback } from '../hooks/useVipVideoPlayback';
 import { friendlyError } from '../lib/error-messages';
 import { resolveVideoStreamSrc } from '../lib/resolve-stream-src';
 import { useI18n } from '../i18n';
-
-function formatTime(seconds: number): string {
-  if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
-  const total = Math.floor(seconds);
-  const m = Math.floor(total / 60);
-  const s = total % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
-}
 
 export default function VipVideoPage() {
   const { t } = useI18n();
@@ -58,20 +51,20 @@ export default function VipVideoPage() {
     if (!el || !streamUrl) return;
     el.src = resolveVideoStreamSrc(streamUrl);
     el.load();
-    if (playing && !isMobile) {
+    if (playing) {
       void el.play().catch(() => setPlaying(false));
     }
-  }, [streamUrl, current?.videoId, isMobile, playing]);
+  }, [streamUrl, current?.videoId, playing]);
 
   useEffect(() => {
     const el = videoRef.current;
-    if (!el || isMobile) return;
+    if (!el) return;
     if (playing && isReady) {
       void el.play().catch(() => setPlaying(false));
     } else {
       el.pause();
     }
-  }, [playing, isReady, isMobile]);
+  }, [playing, isReady]);
 
   const errorText = useMemo(() => {
     if (!current || isReady || status !== 'failed') return '';
@@ -161,9 +154,10 @@ export default function VipVideoPage() {
                     playsInline
                     preload={streamUrl ? 'auto' : 'none'}
                     poster={current.thumbnailUrl ?? undefined}
-                    controls={isMobile && isReady}
                     onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
                     onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+                    onPlay={() => setPlaying(true)}
+                    onPause={() => setPlaying(false)}
                     onEnded={() => setPlaying(false)}
                     onError={() => markPlaybackFailed()}
                     onWaiting={handleVideoWaiting}
@@ -185,43 +179,24 @@ export default function VipVideoPage() {
                   )}
                 </div>
 
-                {!isMobile && (
-                  <>
-                    <div className="vip-video-watch-meta">
-                      <h1 className="vip-video-watch-title">{current.title}</h1>
-                      {current.channelTitle && (
-                        <p className="vip-video-watch-channel">{current.channelTitle}</p>
-                      )}
-                    </div>
+                <VipVideoControls
+                  videoRef={videoRef}
+                  isReady={isReady}
+                  isLoading={isLoading}
+                  playing={playing}
+                  onPlayingChange={setPlaying}
+                  currentTime={currentTime}
+                  duration={duration}
+                  isMobile={isMobile}
+                />
 
-                    <div className="vip-video-controls">
-                      <button
-                        type="button"
-                        className="btn-primary vip-video-play-btn"
-                        disabled={!isReady}
-                        onClick={() => setPlaying((p) => !p)}
-                        aria-busy={isLoading || undefined}
-                        aria-label={
-                          isLoading
-                            ? t('vipVideo.loading')
-                            : playing
-                              ? t('vipVideo.pause')
-                              : t('vipVideo.play')
-                        }
-                      >
-                        {isLoading ? (
-                          <span className="vip-video-loading-spinner vip-video-loading-spinner--btn" aria-hidden />
-                        ) : playing ? (
-                          t('vipVideo.pause')
-                        ) : (
-                          t('vipVideo.play')
-                        )}
-                      </button>
-                      <span className="vip-video-time">
-                        {formatTime(currentTime)} / {formatTime(duration)}
-                      </span>
-                    </div>
-                  </>
+                {!isMobile && (
+                  <div className="vip-video-watch-meta">
+                    <h1 className="vip-video-watch-title">{current.title}</h1>
+                    {current.channelTitle && (
+                      <p className="vip-video-watch-channel">{current.channelTitle}</p>
+                    )}
+                  </div>
                 )}
 
                 {isMobile && current.channelTitle && (

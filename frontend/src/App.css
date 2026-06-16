@@ -7836,17 +7836,43 @@ body.bulletin-slideshow-window {
   color: var(--text-muted);
 }
 
-.vip-video-controls {
+.vip-video-controls-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  width: 100%;
+}
+
+.vip-video-controls-bar .vip-video-seek.audio-progress {
+  padding: 0.4rem 0;
+}
+
+.vip-video-controls-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
 }
 
-.vip-video-time {
-  margin-left: auto;
+.vip-video-controls-row .vip-video-time {
   font-size: 0.85rem;
   color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.vip-video-controls-row .vip-video-volume {
+  margin-left: auto;
+  min-width: 6.5rem;
+  max-width: 10rem;
+}
+
+.vip-video-controls-bar--mobile {
+  padding: 0.45rem var(--page-gutter) 0.25rem;
+}
+
+.vip-video-controls-bar--mobile .vip-video-controls-row .vip-video-volume {
+  max-width: 7.5rem;
 }
 
 .vip-video-now-playing {
