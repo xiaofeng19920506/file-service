@@ -42,7 +42,7 @@ CLOUDFLARE_TUNNEL_HOSTNAME=api.example.com
 | 服务 | bash 脚本 |
 |------|-----------|
 | API + Worker + Docker | `scripts/autostart/api-stack.sh` |
-| Next.js 前端（:3001） | `scripts/autostart/web-stack.sh` |
+| Next.js 前端（:4000） | `scripts/autostart/web-stack.sh` |
 | Cloudflare 隧道 | `scripts/autostart/tunnel.sh` |
 
 ```bash

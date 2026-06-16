@@ -194,7 +194,7 @@ source "${REPO_CONF}"
 export FILE_SERVICE_REPO
 export FILE_SERVICE_ENV="${SUPPORT_DIR}/web.env"
 export FILE_SERVICE_LOG="${WEB_LOG}"
-export FILE_SERVICE_WEB_PORT="${FILE_SERVICE_WEB_PORT:-3001}"
+export FILE_SERVICE_WEB_PORT="${FILE_SERVICE_WEB_PORT:-4000}"
 export FILE_SERVICE_BACKEND_URL="${FILE_SERVICE_BACKEND_URL:-http://127.0.0.1:3000}"
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
 exec "${SUPPORT_DIR}/web-stack.sh"
@@ -259,7 +259,7 @@ cmd_status() {
   echo "=== 前端 (${WEB_PLIST_LABEL}) ==="
   [[ -f "$WEB_PLIST" ]] && echo "plist: 已安装" || echo "plist: 未安装"
   launchctl print "$(gui_domain)/${WEB_PLIST_LABEL}" >/dev/null 2>&1 && echo "状态: 已加载" || echo "状态: 未加载"
-  lsof -i :3001 >/dev/null 2>&1 && echo "Web :3001: 监听中" || echo "Web :3001: 未监听"
+  lsof -i :4000 >/dev/null 2>&1 && echo "Web :4000: 监听中" || echo "Web :4000: 未监听"
 
   echo ""
   echo "=== 健康检查 ==="
@@ -269,13 +269,13 @@ cmd_status() {
     echo "https://${host}/health: 未响应"
   fi
   curl -sf --connect-timeout 3 "http://127.0.0.1:3000/health" >/dev/null 2>&1 && echo "http://127.0.0.1:3000/health: ✓" || echo "http://127.0.0.1:3000/health: 未响应"
-  curl -sf --connect-timeout 3 "http://127.0.0.1:3001/health" >/dev/null 2>&1 && echo "http://127.0.0.1:3001/health: ✓" || echo "http://127.0.0.1:3001/health: 未响应"
+  curl -sf --connect-timeout 3 "http://127.0.0.1:4000/health" >/dev/null 2>&1 && echo "http://127.0.0.1:4000/health: ✓" || echo "http://127.0.0.1:4000/health: 未响应"
   local web_url="${WEB_APP_URL:-}"
   if [[ -n "$web_url" ]]; then
     if curl -sf --connect-timeout 8 "${web_url%/}/health" >/dev/null; then
       echo "${web_url%/}/health: ✓"
     else
-      echo "${web_url%/}/health: 未响应（确认 Cloudflare 已绑定前端域名 → :3001）"
+      echo "${web_url%/}/health: 未响应（确认 Cloudflare 已绑定前端域名 → :4000）"
     fi
   fi
 }
@@ -293,11 +293,11 @@ case "${1:-install-all}" in
 
 全部开机自启已安装（LaunchAgent → bash 脚本）：
   API：  ${SUPPORT_DIR}/api-launch.sh  → api-stack.sh
-  前端：${SUPPORT_DIR}/web-launch.sh  → web-stack.sh（:3001）
+  前端：${SUPPORT_DIR}/web-launch.sh  → web-stack.sh（:4000）
   隧道：${SUPPORT_DIR}/tunnel-launch.sh → tunnel.sh
   日志：${API_LOG} / ${WEB_LOG} / ${TUNNEL_LOG}
 
-请在 Cloudflare 隧道添加 Public Hostname：app.youtvs.com → http://127.0.0.1:3001
+请在 Cloudflare 隧道把前端 Public Hostname 指向 http://127.0.0.1:4000
 请确认 Docker Desktop 已勾选「登录时打开」。
 若自启失败且日志含 Operation not permitted，请将仓库移出 Desktop 或给 /bin/bash 完全磁盘访问权限。
 EOF

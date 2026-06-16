@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 启动 file-service 前端：Next.js 生产模式（默认 :3001，代理到本机 API）
+# 启动 file-service 前端：Next.js 生产模式（默认 :4000，代理到本机 API）
 # 手动：bash scripts/autostart/web-stack.sh
 set -euo pipefail
 
@@ -35,7 +35,7 @@ elif [[ -f "${ROOT}/.env" ]]; then
   set +a
 fi
 
-WEB_PORT="${FILE_SERVICE_WEB_PORT:-3001}"
+WEB_PORT="${FILE_SERVICE_WEB_PORT:-4000}"
 BACKEND_URL="${FILE_SERVICE_BACKEND_URL:-http://127.0.0.1:3000}"
 API_PORT="${PORT:-3000}"
 
