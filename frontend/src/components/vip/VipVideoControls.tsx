@@ -29,6 +29,27 @@ function PlayPauseIcon({ playing }: { playing: boolean }) {
   );
 }
 
+function FullscreenIcon({ exit }: { exit: boolean }) {
+  if (exit) {
+    return (
+      <svg className="vip-video-fs-icon" viewBox="0 0 16 16" aria-hidden>
+        <path
+          fill="currentColor"
+          d="M3 9v4h4v-1H4V9H3zm9-5H9v1h3v3h1V4zm-9 0v1h3V4H3zm9 9h-1v3H9v1h4V9z"
+        />
+      </svg>
+    );
+  }
+  return (
+    <svg className="vip-video-fs-icon" viewBox="0 0 16 16" aria-hidden>
+      <path
+        fill="currentColor"
+        d="M2 6V2h4V1H1v5h1zm8-5v1h4v4h1V1h-5zM1 10h1v4h4v1H1v-5zm13 5v-1h-4v-1h5v5h-1z"
+      />
+    </svg>
+  );
+}
+
 function VolumeIcon({ level, muted }: { level: number; muted: boolean }) {
   if (muted || level === 0) {
     return (
@@ -68,6 +89,8 @@ type VipVideoControlsProps = {
   onPlayingChange: (playing: boolean) => void;
   currentTime: number;
   duration: number;
+  isFullscreen?: boolean;
+  onToggleFullscreen?: () => void;
 };
 
 export default function VipVideoControls({
@@ -78,6 +101,8 @@ export default function VipVideoControls({
   onPlayingChange,
   currentTime,
   duration,
+  isFullscreen = false,
+  onToggleFullscreen,
 }: VipVideoControlsProps) {
   const { t } = useI18n();
   const progressRef = useRef<HTMLDivElement>(null);
@@ -257,6 +282,17 @@ export default function VipVideoControls({
           >
             <VolumeIcon level={volume} muted={muted || volume === 0} />
           </button>
+          {onToggleFullscreen && (
+            <button
+              type="button"
+              className="vip-video-fs-btn"
+              disabled={!isReady}
+              onClick={() => onToggleFullscreen()}
+              aria-label={isFullscreen ? t('vipVideo.exitFullscreen') : t('vipVideo.fullscreen')}
+            >
+              <FullscreenIcon exit={isFullscreen} />
+            </button>
+          )}
         </div>
       </div>
     </div>

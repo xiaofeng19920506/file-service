@@ -152,6 +152,8 @@ const en: MessageTree = {
     statusCaching: 'Caching',
     statusFailed: 'Failed',
     reextractingVideo: 'Video track unavailable. Re-caching in a compatible format…',
+    fullscreen: 'Fullscreen',
+    exitFullscreen: 'Exit fullscreen',
   },
   bulletin: {
     title: 'Sunday bulletin',

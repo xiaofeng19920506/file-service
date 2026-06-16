@@ -144,6 +144,8 @@ export default {
     statusCaching: '缓存中',
     statusFailed: '失败',
     reextractingVideo: '画面无法显示，正在重新缓存兼容格式…',
+    fullscreen: '全屏',
+    exitFullscreen: '退出全屏',
   },
   bulletin: {
     title: '主日周报',

@@ -5,6 +5,7 @@ import { ChevronLeftIcon } from '../components/icons';
 import { useAuth } from '../auth/AuthContext';
 import { useDebouncedYoutubeSearch } from '../hooks/useDebouncedYoutubeSearch';
 import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
+import { useVipVideoFullscreen } from '../hooks/useVipVideoFullscreen';
 import { useVipVideoPlayback } from '../hooks/useVipVideoPlayback';
 import { friendlyError } from '../lib/error-messages';
 import { resolveVideoStreamSrc } from '../lib/resolve-stream-src';
@@ -17,6 +18,7 @@ export default function VipVideoPage() {
   const { user, logout } = useAuth();
   const isMobile = useMediaQuery(MOBILE_MEDIA_QUERY);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const theaterRef = useRef<HTMLDivElement>(null);
   const watchTopRef = useRef<HTMLDivElement>(null);
   const search = useDebouncedYoutubeSearch({ debounceEnabled: !isMobile });
   const { current, status, streamUrl, errorCode, partial, durationSeconds, isReady, play, refreshForMoreCache, markPlaybackFailed, clear } =
@@ -26,6 +28,11 @@ export default function VipVideoPage() {
   const [duration, setDuration] = useState(0);
   const [videoDecodeIssue, setVideoDecodeIssue] = useState(false);
   const reextractAttemptedRef = useRef<string | null>(null);
+
+  const { isFullscreen, toggleFullscreen, exitFullscreen } = useVipVideoFullscreen(
+    theaterRef,
+    videoRef,
+  );
 
   const playbackDuration = useMemo(() => {
     if (Number.isFinite(duration) && duration > 0 && duration !== Infinity) {
@@ -85,6 +92,7 @@ export default function VipVideoPage() {
   }, [current?.videoId, isMobile]);
 
   const closePlayer = () => {
+    void exitFullscreen();
     const el = videoRef.current;
     if (el) {
       el.pause();
@@ -114,6 +122,24 @@ export default function VipVideoPage() {
       el.pause();
     }
   }, [playing, isReady]);
+
+  useEffect(() => {
+    if (!current) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'f' && event.key !== 'F') return;
+      const target = event.target;
+      if (
+        target instanceof HTMLElement
+        && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+      ) {
+        return;
+      }
+      event.preventDefault();
+      void toggleFullscreen();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [current, toggleFullscreen]);
 
   const errorText = useMemo(() => {
     if (!current || isReady || status !== 'failed') return '';
@@ -196,6 +222,10 @@ export default function VipVideoPage() {
           <div ref={watchTopRef} className="vip-video-watch">
             <div className="vip-video-watch-main">
               <section className="vip-video-stage">
+                <div
+                  ref={theaterRef}
+                  className={`vip-video-theater${isFullscreen ? ' vip-video-theater--fullscreen' : ''}`}
+                >
                 <div className="vip-video-player-wrap">
                   <video
                     ref={videoRef}
@@ -258,7 +288,10 @@ export default function VipVideoPage() {
                   onPlayingChange={setPlaying}
                   currentTime={currentTime}
                   duration={playbackDuration}
+                  isFullscreen={isFullscreen}
+                  onToggleFullscreen={() => void toggleFullscreen()}
                 />
+                </div>
 
                 {!isMobile && (
                   <div className="vip-video-watch-meta">
