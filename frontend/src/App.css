@@ -6794,26 +6794,90 @@ body.bulletin-slideshow-window {
   font: inherit;
 }
 
-.bulletin-scripture-reference {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.75rem;
-  align-items: start;
+.bulletin-scripture-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1rem;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 92%, var(--text-primary) 8%);
 }
 
-.bulletin-scripture-reference-chapter {
-  grid-column: 1 / -1;
+.bulletin-scripture-picker-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding-top: 0.15rem;
+  border-top: 1px solid color-mix(in srgb, var(--border-light) 80%, transparent);
 }
 
-.bulletin-scripture-reference-hint {
-  grid-column: 1 / -1;
+.bulletin-scripture-picker-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.bulletin-scripture-picker-label,
+.bulletin-scripture-picker-sublabel {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.bulletin-scripture-picker-sublabel {
+  font-weight: 500;
+}
+
+.bulletin-scripture-picker-select {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.5rem 2.25rem 0.5rem 0.75rem;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  background-color: var(--surface-primary, #fff);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+  background-size: 1rem;
+  color: inherit;
+  font: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.bulletin-scripture-picker-select:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.bulletin-scripture-picker-hint {
   margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
 }
 
-@media (max-width: 640px) {
-  .bulletin-scripture-reference {
-    grid-template-columns: 1fr;
-  }
+.bulletin-scripture-verse-range {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.bulletin-scripture-verse-range-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 0.65rem;
+  align-items: end;
+}
+
+.bulletin-scripture-verse-separator {
+  padding-bottom: 0.72rem;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .bulletin-cover-date-hint {

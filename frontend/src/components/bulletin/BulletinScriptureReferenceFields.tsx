@@ -15,7 +15,7 @@ type BulletinScriptureReferenceFieldsProps = {
   onChange: (reference: string) => void;
 };
 
-function verseOptions(count: number, min = 1): number[] {
+function numberOptions(count: number, min = 1): number[] {
   if (count < min) return [];
   return Array.from({ length: count - min + 1 }, (_, i) => i + min);
 }
@@ -43,16 +43,19 @@ export default function BulletinScriptureReferenceFields({
   };
 
   if (!book) {
-    return <p className="bulletin-field-hint">{t('bulletin.scriptureSelectBookFirst')}</p>;
+    return (
+      <p className="bulletin-scripture-picker-hint">{t('bulletin.scriptureSelectBookFirst')}</p>
+    );
   }
 
   const hasChapter = parsed !== null;
 
   return (
-    <div className="bulletin-scripture-reference">
-      <label className="bulletin-field bulletin-scripture-reference-chapter">
-        {t('bulletin.scriptureChapter')}
+    <div className="bulletin-scripture-picker-body">
+      <label className="bulletin-scripture-picker-field">
+        <span className="bulletin-scripture-picker-label">{t('bulletin.scriptureChapter')}</span>
         <select
+          className="bulletin-scripture-picker-select"
           value={parsed?.chapter ?? ''}
           disabled={disabled}
           onChange={(e) => {
@@ -65,58 +68,67 @@ export default function BulletinScriptureReferenceFields({
           }}
         >
           <option value="">{t('bulletin.scriptureChapterPlaceholder')}</option>
-          {verseOptions(chapterCount).map((chapter) => (
+          {numberOptions(chapterCount).map((chapter) => (
             <option key={chapter} value={chapter}>
-              {t('bulletin.scriptureChapterOption', { chapter })}
+              {chapter}
             </option>
           ))}
         </select>
       </label>
 
       {!hasChapter ? (
-        <p className="bulletin-field-hint bulletin-scripture-reference-hint">
-          {t('bulletin.scriptureSelectChapterFirst')}
-        </p>
+        <p className="bulletin-scripture-picker-hint">{t('bulletin.scriptureSelectChapterFirst')}</p>
       ) : (
-        <>
-          <label className="bulletin-field">
-            {t('bulletin.scriptureStartVerse')}
-            <select
-              value={parsed.startVerse}
-              disabled={disabled}
-              onChange={(e) => {
-                const startVerse = Number(e.target.value);
-                if (!startVerse) return;
-                apply({ startVerse, endVerse: Math.max(parsed.endVerse, startVerse) });
-              }}
-            >
-              {verseOptions(verseCount).map((verse) => (
-                <option key={verse} value={verse}>
-                  {t('bulletin.scriptureVerseOption', { verse })}
-                </option>
-              ))}
-            </select>
-          </label>
+        <div className="bulletin-scripture-verse-range">
+          <span className="bulletin-scripture-picker-label bulletin-scripture-verse-range-title">
+            {t('bulletin.scriptureReference')}
+          </span>
+          <div className="bulletin-scripture-verse-range-row">
+            <label className="bulletin-scripture-picker-field bulletin-scripture-picker-field--compact">
+              <span className="bulletin-scripture-picker-sublabel">{t('bulletin.scriptureStartVerse')}</span>
+              <select
+                className="bulletin-scripture-picker-select"
+                value={parsed.startVerse}
+                disabled={disabled}
+                onChange={(e) => {
+                  const startVerse = Number(e.target.value);
+                  if (!startVerse) return;
+                  apply({ startVerse, endVerse: Math.max(parsed.endVerse, startVerse) });
+                }}
+              >
+                {numberOptions(verseCount).map((verse) => (
+                  <option key={verse} value={verse}>
+                    {verse}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-          <label className="bulletin-field">
-            {t('bulletin.scriptureEndVerse')}
-            <select
-              value={parsed.endVerse}
-              disabled={disabled}
-              onChange={(e) => {
-                const endVerse = Number(e.target.value);
-                if (!endVerse) return;
-                apply({ endVerse });
-              }}
-            >
-              {verseOptions(verseCount, parsed.startVerse).map((verse) => (
-                <option key={verse} value={verse}>
-                  {t('bulletin.scriptureVerseOption', { verse })}
-                </option>
-              ))}
-            </select>
-          </label>
-        </>
+            <span className="bulletin-scripture-verse-separator" aria-hidden>
+              —
+            </span>
+
+            <label className="bulletin-scripture-picker-field bulletin-scripture-picker-field--compact">
+              <span className="bulletin-scripture-picker-sublabel">{t('bulletin.scriptureEndVerse')}</span>
+              <select
+                className="bulletin-scripture-picker-select"
+                value={parsed.endVerse}
+                disabled={disabled}
+                onChange={(e) => {
+                  const endVerse = Number(e.target.value);
+                  if (!endVerse) return;
+                  apply({ endVerse });
+                }}
+              >
+                {numberOptions(verseCount, parsed.startVerse).map((verse) => (
+                  <option key={verse} value={verse}>
+                    {verse}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </div>
       )}
     </div>
   );

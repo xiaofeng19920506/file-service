@@ -56,9 +56,14 @@ type SelectFieldProps = {
 function SelectField({ label, value, disabled, placeholder, options, onChange }: SelectFieldProps) {
   const hasCustomValue = Boolean(value) && !options.includes(value);
   return (
-    <label className="bulletin-field">
-      {label}
-      <select value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)}>
+    <label className="bulletin-scripture-picker-field">
+      <span className="bulletin-scripture-picker-label">{label}</span>
+      <select
+        className="bulletin-scripture-picker-select"
+        value={value}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value)}
+      >
         <option value="">{placeholder}</option>
         {options.map((option) => (
           <option key={option} value={option}>
@@ -101,23 +106,25 @@ export function BulletinScriptureStep({ draft, canEdit, saving, onPatch, onSave 
   const { t } = useI18n();
   return (
     <StepShell titleKey="bulletin.steps.scriptureTitle" introKey="bulletin.steps.scriptureIntro">
-      <SelectField
-        label={t('bulletin.scriptureBook')}
-        value={draft.scriptureBook}
-        disabled={!canEdit}
-        placeholder={t('bulletin.scriptureBookPlaceholder')}
-        options={BIBLE_BOOKS}
-        onChange={(v) => {
-          if (v !== draft.scriptureBook) onPatch('scriptureReference', '');
-          onPatch('scriptureBook', v);
-        }}
-      />
-      <BulletinScriptureReferenceFields
-        book={draft.scriptureBook}
-        reference={draft.scriptureReference}
-        disabled={!canEdit}
-        onChange={(v) => onPatch('scriptureReference', v)}
-      />
+      <div className="bulletin-scripture-picker">
+        <SelectField
+          label={t('bulletin.scriptureBook')}
+          value={draft.scriptureBook}
+          disabled={!canEdit}
+          placeholder={t('bulletin.scriptureBookPlaceholder')}
+          options={BIBLE_BOOKS}
+          onChange={(v) => {
+            if (v !== draft.scriptureBook) onPatch('scriptureReference', '');
+            onPatch('scriptureBook', v);
+          }}
+        />
+        <BulletinScriptureReferenceFields
+          book={draft.scriptureBook}
+          reference={draft.scriptureReference}
+          disabled={!canEdit}
+          onChange={(v) => onPatch('scriptureReference', v)}
+        />
+      </div>
       <p className="bulletin-field-hint">{t('bulletin.scriptureHint')}</p>
       <SaveButton saving={saving} canEdit={canEdit} onSave={onSave} />
     </StepShell>
