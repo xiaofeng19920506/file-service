@@ -4,6 +4,7 @@ import {
   YOUTUBE_SEARCH_PAGE_SIZE,
   type YoutubeSearchResult,
 } from '../api/youtube-search';
+import { recordYoutubeSearch } from '../api/youtube-recommendations';
 import { friendlyError } from '../lib/error-messages';
 import { useI18n } from '../i18n';
 
@@ -102,6 +103,7 @@ export function useDebouncedYoutubeSearch(options: UseDebouncedYoutubeSearchOpti
       setLoadMoreLoading(false);
       setSearchResults([]);
       resetPagination();
+      void recordYoutubeSearch(trimmed).catch(() => undefined);
       try {
         const data = await searchYoutubeVideos(trimmed, { limit: YOUTUBE_SEARCH_PAGE_SIZE });
         if (id !== requestIdRef.current) return;

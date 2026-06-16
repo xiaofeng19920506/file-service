@@ -4,9 +4,10 @@ import VipVideoControls from '../components/vip/VipVideoControls';
 import { ChevronLeftIcon } from '../components/icons';
 import { useAuth } from '../auth/AuthContext';
 import { useDebouncedYoutubeSearch } from '../hooks/useDebouncedYoutubeSearch';
+import { useRecordYoutubePlay } from '../hooks/useRecordYoutubePlay';
 import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 import { useVipVideoFullscreen } from '../hooks/useVipVideoFullscreen';
-import { useVipVideoPlayback } from '../hooks/useVipVideoPlayback';
+import { useVipVideoPlayback, type VipVideoTrack } from '../hooks/useVipVideoPlayback';
 import { friendlyError } from '../lib/error-messages';
 import { resolveVideoStreamSrc } from '../lib/resolve-stream-src';
 import { resolveYoutubeThumbnailUrl } from '../lib/youtube-thumbnail';
@@ -28,6 +29,35 @@ export default function VipVideoPage() {
   const [duration, setDuration] = useState(0);
   const [videoDecodeIssue, setVideoDecodeIssue] = useState(false);
   const reextractAttemptedRef = useRef<string | null>(null);
+  const [recommendationsRefreshKey, setRecommendationsRefreshKey] = useState(0);
+  const prevSearchLoadingRef = useRef(false);
+
+  const bumpRecommendations = useCallback(() => {
+    setRecommendationsRefreshKey((value) => value + 1);
+  }, []);
+
+  const handlePlay = useCallback(
+    (track: VipVideoTrack) => {
+      play(track);
+      window.setTimeout(() => bumpRecommendations(), 500);
+    },
+    [play, bumpRecommendations],
+  );
+
+  useRecordYoutubePlay({
+    videoId: current?.videoId,
+    title: current?.title,
+    channelTitle: current?.channelTitle,
+    playing,
+    enabled: Boolean(current),
+  });
+
+  useEffect(() => {
+    if (prevSearchLoadingRef.current && !search.searchLoading && search.hasSearched) {
+      bumpRecommendations();
+    }
+    prevSearchLoadingRef.current = search.searchLoading;
+  }, [search.searchLoading, search.hasSearched, bumpRecommendations]);
 
   const { isFullscreen, toggleFullscreen, exitFullscreen } = useVipVideoFullscreen(
     theaterRef,
@@ -323,9 +353,10 @@ export default function VipVideoPage() {
                   <VipVideoBrowse
                     variant="sidebar"
                     activeVideoId={current.videoId}
-                    onPlay={play}
+                    onPlay={handlePlay}
                     search={search}
                     isMobile={isMobile}
+                    recommendationsRefreshKey={recommendationsRefreshKey}
                   />
                 </aside>
               )}
@@ -336,22 +367,24 @@ export default function VipVideoPage() {
                 <h2 className="vip-video-browse-heading">{t('vipVideo.upNext')}</h2>
                 <VipVideoBrowse
                   activeVideoId={current.videoId}
-                  onPlay={play}
+                  onPlay={handlePlay}
                   search={search}
                   showSearch={false}
                   isMobile={isMobile}
                   listStyle="row"
+                  recommendationsRefreshKey={recommendationsRefreshKey}
                 />
               </div>
             )}
           </div>
         ) : (
           <VipVideoBrowse
-            onPlay={play}
+            onPlay={handlePlay}
             search={search}
             showSearch={false}
             isMobile={isMobile}
             listStyle="grid"
+            recommendationsRefreshKey={recommendationsRefreshKey}
           />
         )}
       </div>

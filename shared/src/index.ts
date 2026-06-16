@@ -23,6 +23,8 @@ export * from './youtube.js';
 export * from './youtube-search.js';
 export * from './youtube-search-suggest.js';
 export * from './youtube-trending.js';
+export * from './youtube-user-activity.js';
+export * from './youtube-recommendations.js';
 export * from './youtube-captions.js';
 export * from './audio-stream-token.js';
 export * from './youtube-audio-extract.js';

@@ -1,6 +1,7 @@
 import { desc, eq, sql } from 'drizzle-orm';
 import { isValidYoutubeVideoId } from './youtube-audio-extract.js';
 import { getUserLibraryVideoIdSet } from './playlist-video-ids.js';
+import { recordYoutubeUserPlay } from './youtube-user-activity.js';
 import { playlistItems, youtubeVideoDailyPlays, type Db } from './db/index.js';
 
 export type TrendingSong = {
@@ -28,7 +29,7 @@ function todayUtcDateString(): string {
 
 export async function recordYoutubeVideoPlay(
   db: Db,
-  input: { videoId: string; title: string; channelTitle?: string | null },
+  input: { videoId: string; title: string; channelTitle?: string | null; userId?: string },
 ): Promise<void> {
   const videoId = input.videoId.trim();
   const title = input.title.trim();
@@ -54,6 +55,10 @@ export async function recordYoutubeVideoPlay(
         channelTitle,
       },
     });
+
+  if (input.userId) {
+    await recordYoutubeUserPlay(db, input.userId, { videoId, title, channelTitle });
+  }
 }
 
 async function fetchTodayTrending(db: Db, limit: number): Promise<Omit<TrendingSong, 'inLibrary'>[]> {

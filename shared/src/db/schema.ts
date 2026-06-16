@@ -185,6 +185,26 @@ export const youtubeVideoDailyPlays = pgTable(
   }),
 );
 
+export const youtubeUserPlays = pgTable('youtube_user_plays', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  youtubeVideoId: text('youtube_video_id').notNull(),
+  title: text('title').notNull(),
+  channelTitle: text('channel_title'),
+  playedAt: timestamp('played_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const youtubeUserSearches = pgTable('youtube_user_searches', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  query: text('query').notNull(),
+  searchedAt: timestamp('searched_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const userSubscriptions = pgTable('user_subscriptions', {
   userId: uuid('user_id')
     .primaryKey()

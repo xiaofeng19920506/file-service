@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { fetchTrendingYoutubeSongs, type TrendingSong } from '../../api/youtube-trending';
+import {
+  fetchYoutubeRecommendations,
+  type RecommendationScope,
+  type TrendingSong,
+} from '../../api/youtube-recommendations';
 import type { YoutubeSearchResult, YoutubeVideoCacheStatus } from '../../api/youtube-search';
 import { fetchYoutubeVideoStatuses } from '../../api/vip-video';
 import { useDebouncedYoutubeSearch } from '../../hooks/useDebouncedYoutubeSearch';
@@ -197,6 +201,8 @@ type VipVideoBrowseProps = {
   search: ReturnType<typeof useDebouncedYoutubeSearch>;
   showSearch?: boolean;
   isMobile?: boolean;
+  /** 变化时重新拉取个性化推荐 */
+  recommendationsRefreshKey?: number;
 };
 
 export default function VipVideoBrowse({
@@ -208,6 +214,7 @@ export default function VipVideoBrowse({
   search,
   showSearch = true,
   isMobile: isMobileProp,
+  recommendationsRefreshKey = 0,
 }: VipVideoBrowseProps) {
   const { t } = useI18n();
   const isMobileHook = useMediaQuery(MOBILE_MEDIA_QUERY);
@@ -215,9 +222,10 @@ export default function VipVideoBrowse({
   const resultsListRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  const [trending, setTrending] = useState<BrowseItem[]>([]);
-  const [trendingLoading, setTrendingLoading] = useState(true);
-  const [trendingError, setTrendingError] = useState<string | null>(null);
+  const [recommended, setRecommended] = useState<BrowseItem[]>([]);
+  const [recommendationScope, setRecommendationScope] = useState<RecommendationScope>('popular');
+  const [recommendationsLoading, setRecommendationsLoading] = useState(true);
+  const [recommendationsError, setRecommendationsError] = useState<string | null>(null);
   const [videoStatusById, setVideoStatusById] = useState<
     Record<string, YoutubeVideoCacheStatus>
   >({});
@@ -239,25 +247,28 @@ export default function VipVideoBrowse({
 
   useEffect(() => {
     let cancelled = false;
-    setTrendingLoading(true);
-    setTrendingError(null);
-    void fetchTrendingYoutubeSongs(isMobile ? 20 : 24)
+    setRecommendationsLoading(true);
+    setRecommendationsError(null);
+    void fetchYoutubeRecommendations(isMobile ? 20 : 24)
       .then((data) => {
         if (cancelled) return;
-        setTrending(data.songs.map(toVipBrowseItem));
+        setRecommended(data.songs.map(toVipBrowseItem));
+        setRecommendationScope(data.scope);
       })
       .catch((e) => {
         if (cancelled) return;
-        setTrending([]);
-        setTrendingError(friendlyError(e instanceof Error ? e.message : 'load_trending_failed', t));
+        setRecommended([]);
+        setRecommendationsError(
+          friendlyError(e instanceof Error ? e.message : 'load_recommendations_failed', t),
+        );
       })
       .finally(() => {
-        if (!cancelled) setTrendingLoading(false);
+        if (!cancelled) setRecommendationsLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [isMobile, t]);
+  }, [isMobile, recommendationsRefreshKey, t]);
 
   useEffect(() => {
     const root = resultsListRef.current;
@@ -281,10 +292,17 @@ export default function VipVideoBrowse({
     return () => observer.disconnect();
   }, [hasMore, isSearchBusy, isMobile, loadMore, loadMoreLoading, searchResults.length]);
 
-  const showTrending = searchResults.length === 0 && !isSearchBusy && !searchQuery.trim();
+  const showRecommendations = searchResults.length === 0 && !isSearchBusy && !searchQuery.trim();
   const displayItems: BrowseItem[] = searchResults.length
     ? searchResults.map(toVipBrowseItem)
-    : trending;
+    : recommended;
+
+  const recommendationHeading = (() => {
+    if (recommendationScope === 'personalized') return t('vipVideo.recommendedForYou');
+    if (recommendationScope === 'today') return t('vipVideo.recommendedToday');
+    if (recommendationScope === 'all_time') return t('vipVideo.recommendedAllTime');
+    return t('vipVideo.recommended');
+  })();
 
   useEffect(() => {
     const fromResults: Record<string, YoutubeVideoCacheStatus> = {};
@@ -410,20 +428,20 @@ export default function VipVideoBrowse({
         </div>
       )}
 
-      {(searchError || trendingError) && (
-        <p className="error-msg vip-video-browse-error">{searchError ?? trendingError}</p>
+      {(searchError || recommendationsError) && (
+        <p className="error-msg vip-video-browse-error">{searchError ?? recommendationsError}</p>
       )}
 
       {!isSearchBusy && hasSearched && searchResults.length === 0 && !searchError && (
         <p className="search-empty">{t('playlists.searchNoResults')}</p>
       )}
 
-      {showTrending && !trendingLoading && trending.length > 0 && effectiveListStyle !== 'row' && (
-        <h2 className="vip-video-browse-heading">{t('vipVideo.recommended')}</h2>
+      {showRecommendations && !recommendationsLoading && recommended.length > 0 && effectiveListStyle !== 'row' && (
+        <h2 className="vip-video-browse-heading">{recommendationHeading}</h2>
       )}
 
-      {showTrending && trendingLoading && (
-        <p className="vip-video-browse-muted">{t('vipVideo.loadingTrending')}</p>
+      {showRecommendations && recommendationsLoading && (
+        <p className="vip-video-browse-muted">{t('vipVideo.loadingRecommendations')}</p>
       )}
 
       {displayItems.length > 0 && (
