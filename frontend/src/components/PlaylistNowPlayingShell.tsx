@@ -18,6 +18,7 @@ type PlaylistNowPlayingShellProps = {
   playbackOrderOpen?: boolean;
   playbackMode: PlaylistPlaybackMode;
   onPlaybackModeChange: (mode: PlaylistPlaybackMode) => void;
+  canPlayPlaylistVideo?: boolean;
   children: ReactNode;
 };
 
@@ -33,6 +34,7 @@ export default function PlaylistNowPlayingShell({
   playbackOrderOpen = false,
   playbackMode,
   onPlaybackModeChange,
+  canPlayPlaylistVideo = true,
   children,
 }: PlaylistNowPlayingShellProps) {
   const { t } = useI18n();
@@ -56,6 +58,7 @@ export default function PlaylistNowPlayingShell({
         <p className="playlist-np-mobile-playlist mobile-only">{playlistTitle}</p>
 
         <div className="playlist-now-playing-header-end">
+          {canPlayPlaylistVideo && (
           <div
             className="playlist-np-mode-switch desktop-only"
             role="group"
@@ -78,6 +81,7 @@ export default function PlaylistNowPlayingShell({
               {t('playlists.playbackVideo')}
             </button>
           </div>
+          )}
           <button
             type="button"
             className="playlist-np-queue-btn desktop-only"
@@ -86,6 +90,7 @@ export default function PlaylistNowPlayingShell({
           >
             <QueueIcon />
           </button>
+          {canPlayPlaylistVideo && (
           <div
             className="playlist-np-mode-switch mobile-only"
             role="group"
@@ -108,6 +113,7 @@ export default function PlaylistNowPlayingShell({
               {t('playlists.playbackVideo')}
             </button>
           </div>
+          )}
         </div>
       </header>
 
@@ -121,6 +127,7 @@ export default function PlaylistNowPlayingShell({
         playbackOrderOpen={playbackOrderOpen}
         playbackMode={playbackMode}
         onPlaybackModeChange={onPlaybackModeChange}
+        canPlayPlaylistVideo={canPlayPlaylistVideo}
       />
     </div>
   );

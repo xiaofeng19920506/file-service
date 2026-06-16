@@ -13,6 +13,7 @@ type PlaylistPlayerBottomChromeProps = {
   playbackOrderOpen?: boolean;
   playbackMode: PlaylistPlaybackMode;
   onPlaybackModeChange: (mode: PlaylistPlaybackMode) => void;
+  canPlayPlaylistVideo?: boolean;
 };
 
 export default function PlaylistPlayerBottomChrome({
@@ -25,6 +26,7 @@ export default function PlaylistPlayerBottomChrome({
   playbackOrderOpen = false,
   playbackMode,
   onPlaybackModeChange,
+  canPlayPlaylistVideo = true,
 }: PlaylistPlayerBottomChromeProps) {
   const { t } = useI18n();
 
@@ -59,6 +61,7 @@ export default function PlaylistPlayerBottomChrome({
         )}
       </div>
 
+      {canPlayPlaylistVideo && (
       <div className="playlist-chrome-actions" role="group" aria-label={t('playlists.playbackMode')}>
         <div className="playlist-chrome-mode">
           <button
@@ -79,6 +82,7 @@ export default function PlaylistPlayerBottomChrome({
           </button>
         </div>
       </div>
+      )}
     </nav>
   );
 }

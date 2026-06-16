@@ -6,16 +6,22 @@ alwaysApply: false
 
 # VIP 视频访问权限
 
-## 谁可以访问
+## 谁可以访问 VIP 页（`#/vip`）
 
 - **角色**：`vip`、`admin`（`canAccessVipVideo`）
 - **路由**：`#/vip` → `VipVideoPage`
 - **API**：`resolvePathAccessLevel` 为 `vip_video` 的路径（视频缓存/流、VIP 搜索与热门等）
 
-`admin` 与 `vip` 同等可访问 VIP 视频能力；`isVipOnlyRole` 仅 `vip`（登录后强制留在 VIP 页）。
+## 播放列表：视频 vs 仅音频
+
+- **`canPlayPlaylistVideo`**：`worship_team` / `creator` / `admin` / `vip` 可切换 YouTube **视频**模式；**`member` 仅 MP3 音频**，无视频切换、不挂载 `YoutubePlaylistPlayer`。
+- 权限定义：`shared/src/permissions.ts`；前端 `permissionsForRole` 暴露 `canPlayPlaylistVideo`。
+
+`isVipOnlyRole` 仅 `vip`（登录后强制留在 VIP 页）。
 
 ## 实现约定
 
-- 权限单一来源：`shared/src/permissions.ts` 的 `canAccessVipVideo`；前端 `frontend/src/lib/permissions.ts` 保持相同逻辑。
-- 导航：`PageNavTabs` 在 `canAccessVipVideo` 为真时展示「VIP」入口（管理员与 VIP 用户均可见）。
-- 勿将 VIP 视频 API 降级为仅 `vip`；扩展访问角色时同步改 shared、前端 permissions、测试与导航。
+- 权限单一来源：`shared/src/permissions.ts`；前端 `frontend/src/lib/permissions.ts` 保持相同逻辑。
+- 导航：`PageNavTabs` 在 `canAccessVipVideo` 为真时展示「VIP」入口。
+- 播放列表：`readPlaylistPlaybackMode(canPlayPlaylistVideo)`，成员恒为 `audio`。
+- 扩展访问角色时同步改 shared、前端 permissions、测试与 UI 门禁。

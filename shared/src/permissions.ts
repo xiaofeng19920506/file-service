@@ -64,6 +64,11 @@ export function canAccessVipVideo(role: UserRole | null): boolean {
   return role === 'vip' || role === 'admin';
 }
 
+/** 播放列表 YouTube 视频模式（iframe）；普通成员仅 MP3 */
+export function canPlayPlaylistVideo(role: UserRole | null): boolean {
+  return role === 'vip' || isWorshipCapable(role);
+}
+
 export function isVipOnlyRole(role: UserRole | null): boolean {
   return role === 'vip';
 }

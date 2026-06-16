@@ -2,7 +2,8 @@ export type PlaylistPlaybackMode = 'audio' | 'video';
 
 const STORAGE_KEY = 'playlist-playback-mode';
 
-export function readPlaylistPlaybackMode(): PlaylistPlaybackMode {
+export function readPlaylistPlaybackMode(canPlayVideo = true): PlaylistPlaybackMode {
+  if (!canPlayVideo) return 'audio';
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw === 'audio' || raw === 'video') return raw;

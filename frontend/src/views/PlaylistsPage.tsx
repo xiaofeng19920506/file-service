@@ -107,6 +107,7 @@ export default function PlaylistsPage({
 }: PlaylistsPageProps) {
   const { t, locale } = useI18n();
   const { permissions, role } = useAuth();
+  const canPlayPlaylistVideo = permissions.canPlayPlaylistVideo;
   const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
   const [libraryVideoIds, setLibraryVideoIds] = useState<Set<string>>(() => new Set());
   const [detail, setDetail] = useState<PlaylistDetail | null>(null);
@@ -181,7 +182,9 @@ export default function PlaylistsPage({
     modalTitle?: string;
   } | null>(null);
   const [savingRename, setSavingRename] = useState(false);
-  const [playbackMode, setPlaybackMode] = useState<PlaylistPlaybackMode>(readPlaylistPlaybackMode);
+  const [playbackMode, setPlaybackMode] = useState<PlaylistPlaybackMode>(() =>
+    readPlaylistPlaybackMode(canPlayPlaylistVideo),
+  );
   const [shuffleOrder, setShuffleOrder] = useState<number[]>([]);
   const [shuffleCursor, setShuffleCursor] = useState(0);
   const shuffleOrderRef = useRef<number[]>([]);
@@ -201,6 +204,12 @@ export default function PlaylistsPage({
   const [homePreviewAudio, setHomePreviewAudio] = useState<YoutubeAudioStatus | undefined>();
   const [homePreviewAddOpen, setHomePreviewAddOpen] = useState(false);
   const [homePreviewAdding, setHomePreviewAdding] = useState(false);
+
+  useEffect(() => {
+    if (canPlayPlaylistVideo || playbackMode === 'audio') return;
+    setPlaybackMode('audio');
+    writePlaylistPlaybackMode('audio');
+  }, [canPlayPlaylistVideo, playbackMode]);
 
   useEffect(() => {
     if (oauthHandledRef.current) return;
@@ -903,7 +912,7 @@ export default function PlaylistsPage({
     [detail?.items],
   );
   const showPlayer = playerEngaged && playerItems.length > 0;
-  const youtubeWatchActive = showPlayer && playbackMode === 'video';
+  const youtubeWatchActive = showPlayer && playbackMode === 'video' && canPlayPlaylistVideo;
   const youtubeWatchMobile = youtubeWatchActive && isMobileViewport;
   const youtubeWatchDesktop = youtubeWatchActive && !isMobileViewport;
   const audioWatchActive = showPlayer && playbackMode === 'audio';
@@ -1011,6 +1020,7 @@ export default function PlaylistsPage({
   );
 
   const onPlaybackModeChange = (mode: PlaylistPlaybackMode) => {
+    if (mode === 'video' && !canPlayPlaylistVideo) return;
     setPlaybackMode(mode);
     writePlaylistPlaybackMode(mode);
     if (!detail?.items.length) return;
@@ -1034,7 +1044,9 @@ export default function PlaylistsPage({
     setTracksEditMode((open) => !open);
   };
 
-  const renderPlaybackModeToggle = (className = 'playlists-playback-mode') => (
+  const renderPlaybackModeToggle = (className = 'playlists-playback-mode') => {
+    if (!canPlayPlaylistVideo) return null;
+    return (
     <div className={className} role="group" aria-label={t('playlists.playbackMode')}>
       <button
         type="button"
@@ -1053,11 +1065,12 @@ export default function PlaylistsPage({
         {t('playlists.playbackVideo')}
       </button>
     </div>
-  );
+    );
+  };
 
   const renderMobileDetailToolbar = (hasTracks: boolean) => (
     <div className="playlists-mobile-detail-toolbar mobile-only">
-      {hasTracks && (
+      {hasTracks && canPlayPlaylistVideo && (
         <div className="playlists-mobile-playback-mode-row">
           <span className="playlists-mobile-playback-mode-label">{t('playlists.playbackMode')}</span>
           {renderPlaybackModeToggle('playlists-mobile-watch-mode')}
@@ -1665,7 +1678,7 @@ export default function PlaylistsPage({
 
                       {showPlayer && playbackMode === 'audio' && renderAudioPlayer('inline')}
 
-                      {showPlayer && playbackMode === 'video' && (
+                      {showPlayer && playbackMode === 'video' && canPlayPlaylistVideo && (
                         <YoutubePlaylistPlayer
                           items={playerItems}
                           activeIndex={activeIndex}

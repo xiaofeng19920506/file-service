@@ -3,6 +3,7 @@ import { isPublicApiPath } from './api-key.js';
 import {
   accessDeniedErrorCode,
   canAccessVipVideo,
+  canPlayPlaylistVideo,
   isUnauthenticatedAccessAllowed,
   resolvePathAccessLevel,
   roleMeetsAccessLevel,
@@ -106,6 +107,17 @@ describe('canAccessVipVideo', () => {
     expect(canAccessVipVideo('worship_team')).toBe(false);
     expect(canAccessVipVideo('creator')).toBe(false);
     expect(canAccessVipVideo(null)).toBe(false);
+  });
+});
+
+describe('canPlayPlaylistVideo', () => {
+  it('allows worship team and above plus vip; denies member', () => {
+    expect(canPlayPlaylistVideo('member')).toBe(false);
+    expect(canPlayPlaylistVideo('worship_team')).toBe(true);
+    expect(canPlayPlaylistVideo('creator')).toBe(true);
+    expect(canPlayPlaylistVideo('admin')).toBe(true);
+    expect(canPlayPlaylistVideo('vip')).toBe(true);
+    expect(canPlayPlaylistVideo(null)).toBe(false);
   });
 });
 

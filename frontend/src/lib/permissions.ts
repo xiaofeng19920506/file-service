@@ -61,6 +61,11 @@ export function canAccessVipVideo(role: UserRole | null): boolean {
   return role === 'vip' || role === 'admin';
 }
 
+/** 播放列表 YouTube 视频模式；普通成员（member）仅可 MP3 */
+export function canPlayPlaylistVideo(role: UserRole | null): boolean {
+  return role === 'vip' || isWorshipCapable(role);
+}
+
 export function isVipOnlyRole(role: UserRole | null): boolean {
   return role === 'vip';
 }
@@ -84,6 +89,7 @@ export function permissionsForRole(role: UserRole | null) {
     canEditBulletinWorshipSongs: canEditBulletinWorshipSongs(normalized),
     canStartWorship: canStartWorship(normalized),
     canAccessVipVideo: canAccessVipVideo(normalized),
+    canPlayPlaylistVideo: canPlayPlaylistVideo(normalized),
     isVipOnly: isVipOnlyRole(normalized),
   };
 }
