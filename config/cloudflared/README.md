@@ -47,6 +47,8 @@ CLOUDFLARE_TUNNEL_HOSTNAME=api.example.com
 
 ```bash
 npm run tunnel:install-launchagent      # 安装 API + 前端 + 隧道（推荐）
+
+双前端示例：`frontend.youtvs.com`（本机 :4000 + 隧道）与 `*.vercel.app`（Vercel）；`.env` 的 `CORS_ORIGIN` 填两个地址。
 npm run tunnel:launchagent-status       # 查看状态
 npm run api:autostart                   # 手动启动 API 栈
 npm run tunnel:autostart                # 手动启动隧道

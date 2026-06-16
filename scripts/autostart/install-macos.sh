@@ -297,7 +297,8 @@ case "${1:-install-all}" in
   隧道：${SUPPORT_DIR}/tunnel-launch.sh → tunnel.sh
   日志：${API_LOG} / ${WEB_LOG} / ${TUNNEL_LOG}
 
-请在 Cloudflare 隧道把前端 Public Hostname 指向 http://127.0.0.1:4000
+请在 Cloudflare 隧道添加 Public Hostname：frontend.youtvs.com → http://127.0.0.1:4000
+（Vercel 前端无需隧道；.env 中 CORS_ORIGIN 同时包含两个前端域名）
 请确认 Docker Desktop 已勾选「登录时打开」。
 若自启失败且日志含 Operation not permitted，请将仓库移出 Desktop 或给 /bin/bash 完全磁盘访问权限。
 EOF
