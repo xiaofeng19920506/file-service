@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { englishBookNameFromLabel, nivBookFileName } from './bible-book-id.js';
+import { englishBookNameFromLabel, nivBookFileName, chiunBookFileName } from './bible-book-id.js';
 import { parseScriptureReference } from './scripture-reference.js';
 
 export type BibleVerse = {
@@ -66,7 +66,7 @@ export async function loadScripturePassage(
   if (!parsed || !englishBook) return null;
 
   const [zhBook, enBook] = await Promise.all([
-    readBookJson(join(dataRoot, 'zh-chiun'), englishBook),
+    readBookJson(join(dataRoot, 'zh-chiun'), chiunBookFileName(englishBook)),
     readBookJson(join(dataRoot, 'en-niv'), nivBookFileName(englishBook)),
   ]);
 

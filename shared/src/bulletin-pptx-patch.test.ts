@@ -99,4 +99,15 @@ describe('patchScriptureSlideInSlideXml', () => {
     expect(slide6).toContain('gentle answer');
     expect(slide6).toContain('human hearts');
   });
+
+  it('resolves numbered books for ChiUn filenames', async () => {
+    const tpl = await readFile(templatePath);
+    const patched = await patchBulletinPreviewInPptx(tpl, {
+      scriptureBook: '诗篇 Psalms',
+      scriptureReference: '150:1-6',
+    });
+    const zip = await JSZip.loadAsync(patched);
+    const slide5 = await zip.file('ppt/slides/slide5.xml')!.async('string');
+    expect(slide5).toContain('讚美耶和華');
+  });
 });
