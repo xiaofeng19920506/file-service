@@ -132,6 +132,7 @@ export function isEditPath(method: string, path: string): boolean {
 export function isAdminUserManagePath(method: string, path: string): boolean {
   if (method === 'GET' && path === '/v1/admin/users') return true;
   if (method === 'PATCH' && /^\/v1\/admin\/users\/[^/]+$/.test(path)) return true;
+  if (method === 'DELETE' && /^\/v1\/admin\/users\/[^/]+$/.test(path)) return true;
   return false;
 }
 

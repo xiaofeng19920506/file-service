@@ -381,6 +381,8 @@ const en: MessageTree = {
     usersSaved: 'Saved',
     usersYou: 'You',
     cannotChangeOwnRole: 'You cannot change your own role',
+    deleteUserConfirm:
+      'Delete user “{name}” ({email})? Their playlists, bulletins, and related data will be removed. This cannot be undone.',
     usersRegistered: 'Registered {time}',
   },
   nav: {
@@ -823,6 +825,8 @@ const en: MessageTree = {
     invalid_role: 'Invalid role',
     last_admin_required: 'At least one admin must remain — cannot demote',
     cannot_change_own_role: 'You cannot change your own role',
+    cannot_delete_self: 'You cannot delete your own account here',
+    delete_user_failed: 'Failed to delete user',
     no_changes: 'No changes to save',
     youtube_not_configured: 'YouTube API is not configured on the server',
     invalid_youtube_url: 'Unrecognized YouTube URL',

@@ -29,6 +29,7 @@ describe('resolvePathAccessLevel', () => {
     expect(resolvePathAccessLevel('POST', '/v1/jobs')).toBe('merge');
     expect(resolvePathAccessLevel('DELETE', '/v1/blobs/x')).toBe('admin');
     expect(resolvePathAccessLevel('GET', '/v1/admin/users')).toBe('admin');
+    expect(resolvePathAccessLevel('DELETE', '/v1/admin/users/user-1')).toBe('admin');
     expect(resolvePathAccessLevel('GET', '/v1/auth/session')).toBe('member');
     expect(resolvePathAccessLevel('GET', '/v1/youtube/oauth/status')).toBe('youtube_export');
     expect(resolvePathAccessLevel('POST', '/v1/playlists/x/export-youtube')).toBe('youtube_export');

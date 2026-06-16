@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { listAdminUsers, updateAdminUser, type AdminUserRecord } from '../api/admin-users';
+import { listAdminUsers, updateAdminUser, deleteAdminUser, type AdminUserRecord } from '../api/admin-users';
 import AdminTableFilter from './AdminTableFilter';
 import AdminTablePagination from './AdminTablePagination';
 import { useAuth } from '../auth/AuthContext';
@@ -57,6 +57,7 @@ export default function AdminUserSection() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
 
   const loadUsers = useCallback(async () => {
@@ -144,6 +145,32 @@ export default function AdminUserSection() {
       setError(friendlyError(err instanceof Error ? err.message : 'update_user_failed', t));
     } finally {
       setSavingId(null);
+    }
+  };
+
+  const deleteUser = async (row: AdminUserRecord) => {
+    if (row.id === currentUser?.id) return;
+
+    const displayName = formatUserDisplayName(row) || row.email;
+    if (!window.confirm(t('admin.deleteUserConfirm', { name: displayName, email: row.email }))) {
+      return;
+    }
+
+    setDeletingId(row.id);
+    setError(null);
+    setSavedId(null);
+    try {
+      await deleteAdminUser(row.id);
+      setUsers((prev) => prev.filter((u) => u.id !== row.id));
+      setDrafts((prev) => {
+        const next = { ...prev };
+        delete next[row.id];
+        return next;
+      });
+    } catch (err) {
+      setError(friendlyError(err instanceof Error ? err.message : 'delete_user_failed', t));
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -251,14 +278,26 @@ export default function AdminUserSection() {
                       {formatDate(row.createdAt, locale)}
                     </td>
                     <td className="admin-table-actions-col" data-label={t('admin.colActions')}>
-                      <button
-                        type="button"
-                        className="btn-primary btn-sm"
-                        disabled={!dirty || savingId === row.id || !isNameValid(draft)}
-                        onClick={() => void saveUser(row)}
-                      >
-                        {savingId === row.id ? t('admin.usersSaving') : t('admin.usersSave')}
-                      </button>
+                      <div className="admin-table-actions">
+                        <button
+                          type="button"
+                          className="btn-primary btn-sm"
+                          disabled={!dirty || savingId === row.id || deletingId === row.id || !isNameValid(draft)}
+                          onClick={() => void saveUser(row)}
+                        >
+                          {savingId === row.id ? t('admin.usersSaving') : t('admin.usersSave')}
+                        </button>
+                        {!isSelf && (
+                          <button
+                            type="button"
+                            className="btn-danger btn-sm"
+                            disabled={deletingId === row.id || savingId === row.id}
+                            onClick={() => void deleteUser(row)}
+                          >
+                            {deletingId === row.id ? t('admin.deleting') : t('admin.delete')}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

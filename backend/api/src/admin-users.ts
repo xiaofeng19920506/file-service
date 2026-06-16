@@ -98,4 +98,26 @@ export function registerAdminUserRoutes(app: FastifyInstance, deps: { db: Db }):
 
     return { user: publicUserPayload(row) };
   });
+
+  app.delete<{ Params: { id: string } }>('/v1/admin/users/:id', async (request, reply) => {
+    const targetId = request.params.id;
+    const actorId = request.authUser?.id;
+
+    if (actorId && actorId === targetId) {
+      return reply.code(403).send({ error: 'cannot_delete_self' });
+    }
+
+    const [target] = await db.select().from(users).where(eq(users.id, targetId));
+    if (!target) return reply.code(404).send({ error: 'user_not_found' });
+
+    if (normalizeUserRole(target.role) === 'admin') {
+      const adminCount = await countAdmins(db);
+      if (adminCount <= 1) {
+        return reply.code(403).send({ error: 'last_admin_required' });
+      }
+    }
+
+    await db.delete(users).where(eq(users.id, targetId));
+    return { ok: true };
+  });
 }

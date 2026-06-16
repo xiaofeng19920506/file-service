@@ -373,6 +373,7 @@ export default {
     usersSaved: '已保存',
     usersYou: '当前账号',
     cannotChangeOwnRole: '不能修改自己的角色',
+    deleteUserConfirm: '确定删除用户「{name}」（{email}）？其播放列表与周报等关联数据将一并移除，此操作不可撤销。',
     usersRegistered: '注册于 {time}',
   },
   nav: {
@@ -813,6 +814,8 @@ export default {
     invalid_role: '无效的角色',
     last_admin_required: '至少需要保留一名管理员，无法降级',
     cannot_change_own_role: '不能修改自己的角色',
+    cannot_delete_self: '不能删除当前登录账号',
+    delete_user_failed: '删除用户失败',
     no_changes: '没有可保存的更改',
     youtube_not_configured: '服务器未配置 YouTube API，请联系管理员',
     invalid_youtube_url: '无法识别的 YouTube 链接',

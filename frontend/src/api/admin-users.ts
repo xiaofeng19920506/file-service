@@ -28,3 +28,17 @@ export async function updateAdminUser(
   const data = await parseJson<{ user: AdminUserRecord }>(res);
   return data.user;
 }
+
+export async function deleteAdminUser(userId: string): Promise<void> {
+  const res = await apiFetch(`/v1/admin/users/${encodeURIComponent(userId)}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    const msg =
+      typeof data === 'object' && data && 'error' in data
+        ? String((data as { error: string }).error)
+        : res.statusText;
+    throw new Error(msg);
+  }
+}
