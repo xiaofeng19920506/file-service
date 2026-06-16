@@ -42,10 +42,11 @@ CLOUDFLARE_TUNNEL_HOSTNAME=api.example.com
 | 服务 | bash 脚本 |
 |------|-----------|
 | API + Worker + Docker | `scripts/autostart/api-stack.sh` |
+| Next.js 前端（:3001） | `scripts/autostart/web-stack.sh` |
 | Cloudflare 隧道 | `scripts/autostart/tunnel.sh` |
 
 ```bash
-npm run tunnel:install-launchagent      # 安装 API + 隧道（推荐）
+npm run tunnel:install-launchagent      # 安装 API + 前端 + 隧道（推荐）
 npm run tunnel:launchagent-status       # 查看状态
 npm run api:autostart                   # 手动启动 API 栈
 npm run tunnel:autostart                # 手动启动隧道

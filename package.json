@@ -52,10 +52,12 @@
     "tunnel:install-launchagent": "bash scripts/autostart/install-macos.sh install-all",
     "tunnel:install-launchagent:tunnel": "bash scripts/autostart/install-macos.sh install-tunnel",
     "tunnel:install-launchagent:api": "bash scripts/autostart/install-macos.sh install-api",
+    "tunnel:install-launchagent:web": "bash scripts/autostart/install-macos.sh install-web",
     "tunnel:uninstall-launchagent": "bash scripts/autostart/uninstall-macos.sh",
     "tunnel:launchagent-status": "bash scripts/autostart/install-macos.sh status",
     "tunnel:autostart": "bash scripts/autostart/tunnel.sh",
     "api:autostart": "bash scripts/autostart/api-stack.sh",
+    "web:autostart": "bash scripts/autostart/web-stack.sh",
     "seed:app-store-review": "tsx scripts/seed-app-store-review.ts"
   },
   "devDependencies": {
