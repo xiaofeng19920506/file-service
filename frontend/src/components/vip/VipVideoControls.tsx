@@ -14,6 +14,21 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+function PlayPauseIcon({ playing }: { playing: boolean }) {
+  if (playing) {
+    return (
+      <svg className="vip-video-play-icon" viewBox="0 0 16 16" aria-hidden>
+        <path fill="currentColor" d="M3.5 2.5h3v11h-3v-11zm6 0h3v11h-3v-11z" />
+      </svg>
+    );
+  }
+  return (
+    <svg className="vip-video-play-icon" viewBox="0 0 16 16" aria-hidden>
+      <path fill="currentColor" d="M4.2 2.4 13 8l-8.8 5.6V2.4z" />
+    </svg>
+  );
+}
+
 function VolumeIcon({ level, muted }: { level: number; muted: boolean }) {
   if (muted || level === 0) {
     return (
@@ -198,10 +213,8 @@ export default function VipVideoControls({
         >
           {isLoading ? (
             <span className="vip-video-loading-spinner vip-video-loading-spinner--btn" aria-hidden />
-          ) : playing ? (
-            '▮▮'
           ) : (
-            '▶'
+            <PlayPauseIcon playing={playing} />
           )}
         </button>
 
