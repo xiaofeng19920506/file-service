@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  fetchYoutubeVideoStatus,
+  fetchYoutubeVideoStatuses,
   prioritizeVipVideos,
   type VipVideoItemStatus,
 } from '../api/vip-video';
@@ -30,27 +30,46 @@ export function useVipVideoPlayback() {
     if (!current) return;
 
     let cancelled = false;
+    let timer: number | undefined;
+
+    const stopPolling = () => {
+      if (timer !== undefined) {
+        window.clearInterval(timer);
+        timer = undefined;
+      }
+    };
 
     const refresh = async () => {
       try {
-        const data = await fetchYoutubeVideoStatus(current.videoId);
-        if (cancelled) return;
+        const items = await fetchYoutubeVideoStatuses([current.videoId]);
+        const data = items[0];
+        if (cancelled || !data) return;
         setStatus(data.status);
         setStreamUrl(data.streamUrl);
         setErrorCode(data.errorCode);
-      } catch {
-        // 忽略瞬时错误（如 429 限流），避免误显示为缓存失败
+        if ((data.status === 'ready' && data.streamUrl) || data.status === 'failed') {
+          stopPolling();
+        }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : '';
+        if (msg === 'vip_forbidden' || msg === 'unauthorized' || msg === 'session_invalid') {
+          if (!cancelled) {
+            setStatus('failed');
+            setErrorCode(msg);
+            stopPolling();
+          }
+        }
       }
     };
 
     void refresh();
-    const timer = window.setInterval(() => {
+    timer = window.setInterval(() => {
       void refresh();
-    }, 4000);
+    }, 2000);
 
     return () => {
       cancelled = true;
-      window.clearInterval(timer);
+      stopPolling();
     };
   }, [current?.videoId]);
 

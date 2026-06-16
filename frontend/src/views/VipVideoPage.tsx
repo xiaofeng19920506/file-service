@@ -71,14 +71,12 @@ export default function VipVideoPage() {
     }
   }, [playing, isReady, isMobile]);
 
-  const statusText = useMemo(() => {
-    if (!current) return '';
-    if (isReady) return '';
-    if (status === 'failed') {
-      return friendlyError(errorCode ?? 'video_extract_failed', t);
-    }
-    return t('vipVideo.caching', { title: current.title });
+  const errorText = useMemo(() => {
+    if (!current || isReady || status !== 'failed') return '';
+    return friendlyError(errorCode ?? 'video_extract_failed', t);
   }, [current, errorCode, isReady, status, t]);
+
+  const isLoading = Boolean(current) && !isReady && status !== 'failed';
 
   return (
     <div
@@ -159,9 +157,17 @@ export default function VipVideoPage() {
                         alt=""
                       />
                     )}
-                    <div className="vip-video-placeholder-overlay">
-                      <span className="youtube-search-loading-spinner" aria-hidden />
-                      <p>{statusText || t('vipVideo.noStream')}</p>
+                    <div
+                      className="vip-video-placeholder-overlay"
+                      role={isLoading ? 'status' : undefined}
+                      aria-busy={isLoading || undefined}
+                      aria-label={isLoading ? t('vipVideo.loading') : undefined}
+                    >
+                      {isLoading ? (
+                        <span className="vip-video-loading-spinner" aria-hidden />
+                      ) : (
+                        <p className="vip-video-placeholder-error">{errorText}</p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -178,11 +184,25 @@ export default function VipVideoPage() {
                     <div className="vip-video-controls">
                       <button
                         type="button"
-                        className="btn-primary"
+                        className="btn-primary vip-video-play-btn"
                         disabled={!isReady}
                         onClick={() => setPlaying((p) => !p)}
+                        aria-busy={isLoading || undefined}
+                        aria-label={
+                          isLoading
+                            ? t('vipVideo.loading')
+                            : playing
+                              ? t('vipVideo.pause')
+                              : t('vipVideo.play')
+                        }
                       >
-                        {playing ? t('vipVideo.pause') : t('vipVideo.play')}
+                        {isLoading ? (
+                          <span className="vip-video-loading-spinner vip-video-loading-spinner--btn" aria-hidden />
+                        ) : playing ? (
+                          t('vipVideo.pause')
+                        ) : (
+                          t('vipVideo.play')
+                        )}
                       </button>
                       <span className="vip-video-time">
                         {formatTime(currentTime)} / {formatTime(duration)}
