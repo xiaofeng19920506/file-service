@@ -2,7 +2,7 @@
 # 安装 / 卸载 / 查看 macOS 开机自启（隧道 + API 栈）
 #
 # 用法：
-#   ./scripts/autostart/install-macos.sh install-all   # API + 隧道（推荐；前端走 Vercel 时无需 install-web）
+#   ./scripts/autostart/install-macos.sh install-all   # API + 前端 + 隧道（推荐）
 #   ./scripts/autostart/install-macos.sh install-tunnel
 #   ./scripts/autostart/install-macos.sh install-api
 #   ./scripts/autostart/install-macos.sh install-web
@@ -284,6 +284,8 @@ case "${1:-install-all}" in
   install-all)
     install_api
     sleep 2
+    install_web
+    sleep 2
     install_tunnel
     sleep 5
     cmd_status
@@ -291,10 +293,11 @@ case "${1:-install-all}" in
 
 全部开机自启已安装（LaunchAgent → bash 脚本）：
   API：  ${SUPPORT_DIR}/api-launch.sh  → api-stack.sh
+  前端：${SUPPORT_DIR}/web-launch.sh  → web-stack.sh（:4000）
   隧道：${SUPPORT_DIR}/tunnel-launch.sh → tunnel.sh
-  日志：${API_LOG} / ${TUNNEL_LOG}
+  日志：${API_LOG} / ${WEB_LOG} / ${TUNNEL_LOG}
 
-前端使用 Vercel 部署时无需 install-web。本机可选：npm run tunnel:install-launchagent:web
+请在 Cloudflare 隧道把前端 Public Hostname 指向 http://127.0.0.1:4000
 请确认 Docker Desktop 已勾选「登录时打开」。
 若自启失败且日志含 Operation not permitted，请将仓库移出 Desktop 或给 /bin/bash 完全磁盘访问权限。
 EOF
