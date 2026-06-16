@@ -100,6 +100,34 @@ describe('patchScriptureSlideInSlideXml', () => {
     expect(slide6).toContain('human hearts');
   });
 
+  it('inserts extra slides for long scripture without ellipsis', async () => {
+    const tpl = await readFile(templatePath);
+    const patched = await patchBulletinPreviewInPptx(tpl, {
+      scriptureBook: '诗篇 Psalms',
+      scriptureReference: '119:1-40',
+    });
+    const zip = await JSZip.loadAsync(patched);
+    const pres = await zip.file('ppt/presentation.xml')!.async('string');
+    const sldCount = (pres.match(/<p:sldId /g) ?? []).length;
+    expect(sldCount).toBeGreaterThan(38);
+
+    const slidePaths = Object.keys(zip.files).filter((n) => /^ppt\/slides\/slide\d+\.xml$/.test(n));
+    let zhHits = 0;
+    let enHits = 0;
+    for (const path of slidePaths) {
+      const xml = await zip.file(path)!.async('string');
+      if (xml.includes('法度') || xml.includes('律例')) zhHits++;
+      if (xml.includes('statutes') || xml.includes('precepts')) enHits++;
+    }
+    expect(zhHits).toBeGreaterThan(1);
+    expect(enHits).toBeGreaterThan(1);
+
+    const allZh = slidePaths.map(async (p) => zip.file(p)!.async('string'));
+    const combined = (await Promise.all(allZh)).join('');
+    expect(combined).not.toContain('…');
+    expect(combined).toContain('40 ');
+  });
+
   it('resolves numbered books for ChiUn filenames', async () => {
     const tpl = await readFile(templatePath);
     const patched = await patchBulletinPreviewInPptx(tpl, {

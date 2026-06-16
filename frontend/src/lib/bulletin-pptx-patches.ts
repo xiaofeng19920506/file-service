@@ -1,4 +1,4 @@
-import type { WeeklyBulletin } from '../api/bulletins';
+import type { WeeklyBulletin, ScriptureSlideBodies } from '../api/bulletins';
 import { fetchScriptureSlideBodies } from '../api/bulletins';
 import { formatBulletinCoverDate } from './bulletin-date';
 import {
@@ -9,6 +9,7 @@ import {
   applyIndexedTextReplacementsToSlideXml,
   parsePptxSlidesDetailed,
 } from './pptx-preview';
+import { expandScriptureSlidesInPptx } from './bulletin-scripture-pptx-expand';
 import JSZip from 'jszip';
 
 /** 原版模板文件名（`06_14_2026.pptx`，背景与图片均以此为准） */
@@ -263,21 +264,26 @@ function mergePatches(patches: SlideTextPatch[]): SlideTextPatch[] {
     .sort((a, b) => a.slideNumber - b.slideNumber);
 }
 
-async function scriptureBodyPatches(bulletin: WeeklyBulletin): Promise<SlideTextPatch[]> {
+async function fetchScriptureBodiesForBulletin(
+  bulletin: WeeklyBulletin,
+): Promise<ScriptureSlideBodies | null> {
   const book = bulletin.scriptureBook?.trim() ?? '';
   const reference = bulletin.scriptureReference?.trim() ?? '';
-  if (!book || !reference) return [];
-  const bodies = await fetchScriptureSlideBodies(book, reference);
-  if (!bodies) return [];
+  if (!book || !reference) return null;
+  return fetchScriptureSlideBodies(book, reference);
+}
+
+function scriptureBodyPatchesFromBodies(bodies: ScriptureSlideBodies): SlideTextPatch[] {
   return [
-    { slideNumber: 5, replacements: [], scriptureChineseBody: bodies.slide5Chinese },
+    {
+      slideNumber: 5,
+      replacements: [],
+      scriptureChineseBody: bodies.chinesePages[0] ?? '',
+    },
     {
       slideNumber: 6,
       replacements: [],
-      scriptureSlide6: {
-        chinese: bodies.slide6Chinese,
-        englishLines: bodies.slide6English,
-      },
+      scriptureSlide6: { englishLines: bodies.englishPages[0] ?? [] },
     },
   ];
 }
@@ -285,17 +291,40 @@ async function scriptureBodyPatches(bulletin: WeeklyBulletin): Promise<SlideText
 export async function patchesForStepAsync(
   stepId: string,
   bulletin: WeeklyBulletin,
+  scriptureBodies?: ScriptureSlideBodies | null,
 ): Promise<SlideTextPatch[]> {
   const base = patchesForStep(stepId, bulletin);
   if (stepId !== 'scripture') return base;
-  return [...base, ...(await scriptureBodyPatches(bulletin))];
+  const bodies = scriptureBodies ?? (await fetchScriptureBodiesForBulletin(bulletin));
+  if (!bodies) return base;
+  return [...base, ...scriptureBodyPatchesFromBodies(bodies)];
 }
 
 /** 导出 PPT 时合并全部已填字段的补丁 */
-export async function patchesFromBulletin(bulletin: WeeklyBulletin): Promise<SlideTextPatch[]> {
+export async function patchesFromBulletin(bulletin: WeeklyBulletin): Promise<{
+  patches: SlideTextPatch[];
+  scriptureBodies: ScriptureSlideBodies | null;
+}> {
+  const scriptureBodies = await fetchScriptureBodiesForBulletin(bulletin);
   const stepIds = ['cover', 'scripture', 'offering', 'birthday', 'announcements', 'verse', 'more'] as const;
-  const groups = await Promise.all(stepIds.map((stepId) => patchesForStepAsync(stepId, bulletin)));
-  return mergePatches(groups.flat());
+  const groups = await Promise.all(
+    stepIds.map((stepId) => patchesForStepAsync(stepId, bulletin, scriptureBodies)),
+  );
+  return { patches: mergePatches(groups.flat()), scriptureBodies };
+}
+
+/** 应用文字补丁并在读经段按需复制额外幻灯片 */
+export async function applyBulletinPatches(
+  templateBlob: Blob,
+  patches: SlideTextPatch[],
+  scriptureBodies: ScriptureSlideBodies | null,
+  filename: string,
+): Promise<File> {
+  let file = await applySlidePatches(templateBlob, patches, filename);
+  if (scriptureBodies) {
+    file = await expandScriptureSlidesInPptx(file, scriptureBodies);
+  }
+  return file;
 }
 
 export async function applySlidePatches(

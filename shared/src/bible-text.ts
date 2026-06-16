@@ -96,15 +96,22 @@ export function formatEnglishVerseLine(verse: BibleVerse): string {
 }
 
 export type ScriptureSlideBodies = {
-  slide5Chinese: string;
-  slide6Chinese: string | null;
-  slide6English: string[] | null;
+  /** 中文经文页（slide 5 模板，可继续复制） */
+  chinesePages: string[];
+  /** 英文经文页（slide 6 模板，每页多行） */
+  englishPages: string[][];
 };
 
-/** 第 5 页放不下的中文续到第 6 页；第 6 页无中文溢出时显示英文 */
-export const SCRIPTURE_SLIDE5_ZH_MAX_CHARS = 260;
-export const SCRIPTURE_SLIDE6_ZH_MAX_CHARS = 260;
-export const SCRIPTURE_SLIDE6_EN_MAX_LINES = 14;
+/** 中文每页约 260 字；英文每页约 14 节 */
+export const SCRIPTURE_ZH_PAGE_MAX_CHARS = 260;
+export const SCRIPTURE_EN_PAGE_MAX_LINES = 14;
+
+/** @deprecated 使用 SCRIPTURE_ZH_PAGE_MAX_CHARS */
+export const SCRIPTURE_SLIDE5_ZH_MAX_CHARS = SCRIPTURE_ZH_PAGE_MAX_CHARS;
+/** @deprecated 使用 SCRIPTURE_ZH_PAGE_MAX_CHARS */
+export const SCRIPTURE_SLIDE6_ZH_MAX_CHARS = SCRIPTURE_ZH_PAGE_MAX_CHARS;
+/** @deprecated 使用 SCRIPTURE_EN_PAGE_MAX_LINES */
+export const SCRIPTURE_SLIDE6_EN_MAX_LINES = SCRIPTURE_EN_PAGE_MAX_LINES;
 
 function splitVersesByCharLimit(verses: BibleVerse[], maxChars: number): [BibleVerse[], BibleVerse[]] {
   const first: BibleVerse[] = [];
@@ -119,35 +126,35 @@ function splitVersesByCharLimit(verses: BibleVerse[], maxChars: number): [BibleV
   return [first, verses.slice(first.length)];
 }
 
-export function buildScriptureSlideBodies(passage: BiblePassage): ScriptureSlideBodies {
-  const [slide5ZhVerses, slide6ZhRemainder] = splitVersesByCharLimit(
-    passage.zh,
-    SCRIPTURE_SLIDE5_ZH_MAX_CHARS,
-  );
-
-  let slide6Chinese: string | null = null;
-  let slide6English: string[] | null = null;
-
-  if (slide6ZhRemainder.length) {
-    const [chunk, overflow] = splitVersesByCharLimit(slide6ZhRemainder, SCRIPTURE_SLIDE6_ZH_MAX_CHARS);
-    slide6Chinese = formatChineseVerseBlock(chunk);
-    if (overflow.length) {
-      slide6Chinese += ` …${overflow[0].verse}节起`;
+function paginateChineseVerses(verses: BibleVerse[], maxChars: number): string[] {
+  if (!verses.length) return [];
+  const pages: string[] = [];
+  let remaining = verses;
+  while (remaining.length > 0) {
+    const [chunk, rest] = splitVersesByCharLimit(remaining, maxChars);
+    if (!chunk.length) {
+      pages.push(formatChineseVerseBlock([remaining[0]!]));
+      remaining = remaining.slice(1);
+      continue;
     }
-  } else {
-    slide6English = passage.en
-      .slice(0, SCRIPTURE_SLIDE6_EN_MAX_LINES)
-      .map(formatEnglishVerseLine);
-    if (passage.en.length > SCRIPTURE_SLIDE6_EN_MAX_LINES) {
-      const last = slide6English[slide6English.length - 1];
-      slide6English[slide6English.length - 1] = `${last} …`;
-    }
+    pages.push(formatChineseVerseBlock(chunk));
+    remaining = rest;
   }
+  return pages;
+}
 
+function paginateEnglishVerses(verses: BibleVerse[], maxLines: number): string[][] {
+  const pages: string[][] = [];
+  for (let i = 0; i < verses.length; i += maxLines) {
+    pages.push(verses.slice(i, i + maxLines).map(formatEnglishVerseLine));
+  }
+  return pages;
+}
+
+export function buildScriptureSlideBodies(passage: BiblePassage): ScriptureSlideBodies {
   return {
-    slide5Chinese: formatChineseVerseBlock(slide5ZhVerses),
-    slide6Chinese,
-    slide6English,
+    chinesePages: paginateChineseVerses(passage.zh, SCRIPTURE_ZH_PAGE_MAX_CHARS),
+    englishPages: paginateEnglishVerses(passage.en, SCRIPTURE_EN_PAGE_MAX_LINES),
   };
 }
 

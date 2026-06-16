@@ -131,9 +131,8 @@ export async function fetchBulletinTemplateFile(): Promise<Blob> {
 }
 
 export type ScriptureSlideBodies = {
-  slide5Chinese: string;
-  slide6Chinese: string | null;
-  slide6English: string[] | null;
+  chinesePages: string[];
+  englishPages: string[][];
 };
 
 export async function fetchScriptureSlideBodies(

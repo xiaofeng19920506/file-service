@@ -1,9 +1,6 @@
 import JSZip from 'jszip';
 import { resolveScriptureSlideBodies } from './bible-text.js';
-import {
-  patchChineseScriptureBodyInSlideXml,
-  patchSlide6ScriptureBodyInSlideXml,
-} from './bulletin-scripture-body-patch.js';
+import { applyScripturePagesToZip } from './bulletin-scripture-pptx.js';
 
 /** PPT 封面日期格式：06/14/2026 */
 export function formatBulletinCoverDate(isoDate: string): string {
@@ -216,22 +213,7 @@ export async function patchBulletinPreviewInPptx(
   if (book && reference) {
     const bodies = await resolveScriptureSlideBodies(book, reference);
     if (bodies) {
-      const slide5 = zip.file('ppt/slides/slide5.xml');
-      if (slide5) {
-        const xml = await slide5.async('string');
-        zip.file(
-          'ppt/slides/slide5.xml',
-          patchChineseScriptureBodyInSlideXml(xml, bodies.slide5Chinese),
-        );
-      }
-      const slide6 = zip.file('ppt/slides/slide6.xml');
-      if (slide6) {
-        const xml = await slide6.async('string');
-        zip.file(
-          'ppt/slides/slide6.xml',
-          patchSlide6ScriptureBodyInSlideXml(xml, bodies.slide6Chinese, bodies.slide6English),
-        );
-      }
+      await applyScripturePagesToZip(zip, bodies.chinesePages, bodies.englishPages);
     }
   }
 

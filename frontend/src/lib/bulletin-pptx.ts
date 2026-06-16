@@ -1,8 +1,7 @@
 import type { WeeklyBulletin } from '../api/bulletins';
 import {
-  applySlidePatches,
+  applyBulletinPatches,
   patchesFromBulletin,
-  type SlideTextPatch,
 } from './bulletin-pptx-patches';
 import { deleteSlidesFromPptx } from './pptx-preview';
 
@@ -26,10 +25,10 @@ export async function generateBulletinPptx(
   templateBlob: Blob,
   bulletin: WeeklyBulletin,
 ): Promise<File> {
-  const patches: SlideTextPatch[] = await patchesFromBulletin(bulletin);
+  const { patches, scriptureBodies } = await patchesFromBulletin(bulletin);
   const filename = `bulletin-${bulletin.serviceDate}.pptx`;
 
-  let file = await applySlidePatches(templateBlob, patches, filename);
+  let file = await applyBulletinPatches(templateBlob, patches, scriptureBodies, filename);
 
   const deletePaths = slidesToDelete(bulletin);
   if (deletePaths.length) {

@@ -1,6 +1,7 @@
 import { fetchBulletinTemplateFile } from '../api/bulletins';
 import type { WeeklyBulletin } from '../api/bulletins';
-import { BULLETIN_TEMPLATE_FILENAME, applySlidePatches, patchesForStepAsync } from './bulletin-pptx-patches';
+import { BULLETIN_TEMPLATE_FILENAME, applyBulletinPatches, applySlidePatches, patchesForStepAsync, type SlideTextPatch } from './bulletin-pptx-patches';
+import { fetchScriptureSlideBodies } from '../api/bulletins';
 import { buildBulletinPptxFile } from './bulletin-publish';
 import { parsePptxSlidesDetailed, type EditableSlide } from './pptx-preview';
 
@@ -21,7 +22,7 @@ export async function previewTemplateSlides(slideNumbers: number[]): Promise<Edi
  */
 export async function previewPatchedSlides(
   slideNumbers: number[],
-  patches: Parameters<typeof applySlidePatches>[1],
+  patches: SlideTextPatch[],
 ): Promise<EditableSlide[]> {
   if (!slideNumbers.length) return [];
   const template = await fetchBulletinTemplateFile();
@@ -40,9 +41,23 @@ export async function previewStepPptxBlob(
   bulletin: WeeklyBulletin,
 ): Promise<Blob> {
   const template = await fetchBulletinTemplateFile();
-  const patches = await patchesForStepAsync(stepId, bulletin);
+  const scriptureBodies =
+    stepId === 'scripture'
+      ? await (async () => {
+          const book = bulletin.scriptureBook?.trim() ?? '';
+          const reference = bulletin.scriptureReference?.trim() ?? '';
+          if (!book || !reference) return null;
+          return fetchScriptureSlideBodies(book, reference);
+        })()
+      : null;
+  const patches = await patchesForStepAsync(stepId, bulletin, scriptureBodies);
   if (!patches.length) return template;
-  return applySlidePatches(template, patches, 'bulletin-preview.pptx');
+  return applyBulletinPatches(
+    template,
+    patches,
+    stepId === 'scripture' ? scriptureBodies : null,
+    'bulletin-preview.pptx',
+  );
 }
 
 /** 当前向导步骤的预览：只应用本步字段补丁 */
@@ -51,11 +66,13 @@ export async function previewStepSlides(
   bulletin: WeeklyBulletin,
   slideNumbers: number[],
 ): Promise<EditableSlide[]> {
-  const patches = await patchesForStepAsync(stepId, bulletin);
-  if (!patches.length) {
-    return previewTemplateSlides(slideNumbers);
-  }
-  return previewPatchedSlides(slideNumbers, patches);
+  const file = await previewStepPptxBlob(stepId, bulletin);
+  const parsed = await parsePptxSlidesDetailed(file, {
+    sourceFile: 'bulletin-preview.pptx',
+  });
+  return slideNumbers
+    .map((n) => parsed.find((s) => s.slideInFile === n))
+    .filter((s): s is EditableSlide => Boolean(s));
 }
 
 export async function rebuildBulletinSlides(bulletin: WeeklyBulletin): Promise<EditableSlide[]> {
