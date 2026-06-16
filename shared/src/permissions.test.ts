@@ -30,7 +30,7 @@ describe('resolvePathAccessLevel', () => {
     expect(resolvePathAccessLevel('DELETE', '/v1/blobs/x')).toBe('admin');
     expect(resolvePathAccessLevel('GET', '/v1/admin/users')).toBe('admin');
     expect(resolvePathAccessLevel('DELETE', '/v1/admin/users/user-1')).toBe('admin');
-    expect(resolvePathAccessLevel('GET', '/v1/auth/session')).toBe('member');
+    expect(resolvePathAccessLevel('GET', '/v1/auth/session')).toBe('session');
     expect(resolvePathAccessLevel('GET', '/v1/youtube/oauth/status')).toBe('youtube_export');
     expect(resolvePathAccessLevel('POST', '/v1/playlists/x/export-youtube')).toBe('youtube_export');
     expect(resolvePathAccessLevel('GET', '/v1/youtube/oauth/callback')).toBe('public');
@@ -56,6 +56,18 @@ describe('roleMeetsAccessLevel', () => {
   it('enforces member login', () => {
     expect(roleMeetsAccessLevel('member', null)).toBe(false);
     expect(roleMeetsAccessLevel('member', 'member')).toBe(true);
+    expect(roleMeetsAccessLevel('member', 'vip')).toBe(false);
+  });
+
+  it('allows vip video for vip role only', () => {
+    expect(roleMeetsAccessLevel('vip_video', 'vip')).toBe(true);
+    expect(roleMeetsAccessLevel('vip_video', 'member')).toBe(false);
+    expect(roleMeetsAccessLevel('vip_video', 'admin')).toBe(true);
+  });
+
+  it('allows session for vip', () => {
+    expect(roleMeetsAccessLevel('session', 'vip')).toBe(true);
+    expect(roleMeetsAccessLevel('session', null)).toBe(false);
   });
 
   it('enforces merge for worship team', () => {

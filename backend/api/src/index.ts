@@ -18,6 +18,7 @@ import {
   createObjectStorage,
   MERGE_QUEUE_NAME,
   YOUTUBE_AUDIO_QUEUE_NAME,
+  YOUTUBE_VIDEO_QUEUE_NAME,
   signDownloadToken,
   verifyDownloadToken,
   bullmqConnection,
@@ -49,6 +50,8 @@ import { registerAdminUserRoutes } from './admin-users.js';
 import { registerPlaylistRoutes } from './playlists.js';
 import { registerYoutubeCaptionRoutes } from './youtube-captions.js';
 import { registerYoutubeAudioRoutes } from './youtube-audio.js';
+import { registerYoutubeVideoRoutes } from './youtube-video.js';
+import { registerVipRoutes } from './vip.js';
 import { registerYoutubeOAuthRoutes } from './youtube-oauth.js';
 import { registerYoutubeSearchRoutes } from './youtube-search.js';
 import { registerYoutubeTrendingRoutes } from './youtube-trending.js';
@@ -71,6 +74,9 @@ async function buildApp() {
     connection: bullmqConnection(env.REDIS_URL),
   });
   const audioQueue = new Queue(YOUTUBE_AUDIO_QUEUE_NAME, {
+    connection: bullmqConnection(env.REDIS_URL),
+  });
+  const videoQueue = new Queue(YOUTUBE_VIDEO_QUEUE_NAME, {
     connection: bullmqConnection(env.REDIS_URL),
   });
 
@@ -103,6 +109,8 @@ async function buildApp() {
   registerPlaylistRoutes(app, { db, env, audioQueue });
   registerYoutubeCaptionRoutes(app);
   registerYoutubeAudioRoutes(app, { db, env, storage, audioQueue });
+  registerYoutubeVideoRoutes(app, { db, env, storage, videoQueue });
+  registerVipRoutes(app, { db, env, videoQueue });
   registerYoutubeOAuthRoutes(app, { db, env });
   registerYoutubeSearchRoutes(app, { db, env });
   registerYoutubeTrendingRoutes(app, { db });

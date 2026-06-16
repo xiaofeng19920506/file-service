@@ -13,6 +13,7 @@ import WorshipSongsInvitePage from './views/WorshipSongsInvitePage';
 import BulletinSlideShowPresenterPage from './views/BulletinSlideShowPresenterPage';
 import BulletinSlideShowProjectorPage from './views/BulletinSlideShowProjectorPage';
 import WorshipLivePage from './views/WorshipLivePage';
+import VipVideoPage from './views/VipVideoPage';
 import UploadConfirmPage from './views/UploadConfirmPage';
 import { useLibraryUpload } from './hooks/useLibraryUpload';
 import PageNavTabs from './components/PageNavTabs';
@@ -94,6 +95,15 @@ function AppShellInner({
     }
     if (page === 'worship' && !permissions.canStartWorship) {
       navigate(home);
+    }
+    if (page === 'vip-video' && !permissions.canAccessVipVideo) {
+      navigate(home);
+      return;
+    }
+    if (permissions.isVipOnly && page !== 'vip-video') {
+      if (window.location.hash !== '#/vip') {
+        window.location.hash = '#/vip';
+      }
     }
     if (page === 'worship-songs' && !permissions.canAccessPlaylists && !permissions.canViewBulletin) {
       navigate(home);
@@ -388,6 +398,23 @@ export default function App() {
 
   if (page === 'login' && !user) {
     return <AuthPage />;
+  }
+
+  if (page === 'vip-video') {
+    if (!user) {
+      window.location.hash = '#/login';
+      return <AuthPage />;
+    }
+    if (!permissions.canAccessVipVideo) {
+      const home = homePageForPermissions(permissions);
+      window.location.hash = home === 'vip-video' ? '#/vip' : `#/${home}`;
+      return (
+        <div className="auth-page">
+          <p className="auth-loading">{t('auth.checkingSession')}</p>
+        </div>
+      );
+    }
+    return <VipVideoPage />;
   }
 
   if (page === 'preview' && previewBlobId && permissions.canDownload) {

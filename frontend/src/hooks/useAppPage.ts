@@ -17,7 +17,8 @@ export type AppPage =
   | 'bulletin-slideshow-projector'
   | 'worship'
   | 'worship-songs'
-  | 'worship-live';
+  | 'worship-live'
+  | 'vip-video';
 
 export type AppRoute = {
   page: AppPage;
@@ -143,6 +144,7 @@ function routeFromHash(rawHash: string): AppRoute {
   }
   if (hash === '#/bulletin' || hash.startsWith('#/bulletin?')) return { page: 'bulletin' };
   if (hash === '#/login') return { page: 'login' };
+  if (hash === '#/vip' || hash.startsWith('#/vip?')) return { page: 'vip-video' };
   if (hash.startsWith('#/library')) return { page: 'library' };
   return { page: APP_HOME_PAGE };
 }
@@ -176,7 +178,9 @@ export function useAppPage() {
                 ? '#/bulletin'
                 : next === 'worship'
                   ? '#/worship'
-                  : next === 'login'
+                  : next === 'vip-video'
+                    ? '#/vip'
+                    : next === 'login'
                 ? '#/login'
                 : '#/library';
     if (window.location.hash !== hash) {

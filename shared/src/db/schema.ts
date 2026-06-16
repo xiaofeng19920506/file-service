@@ -42,7 +42,7 @@ export const userLoginDevices = pgTable('user_login_devices', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-export type UserRole = 'member' | 'worship_team' | 'creator' | 'admin';
+export type UserRole = 'member' | 'worship_team' | 'creator' | 'admin' | 'vip';
 
 export const blobs = pgTable('blobs', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -154,6 +154,21 @@ export const youtubeAudioCache = pgTable('youtube_audio_cache', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   completedAt: timestamp('completed_at', { withTimezone: true }),
 });
+
+export const youtubeVideoCache = pgTable('youtube_video_cache', {
+  youtubeVideoId: text('youtube_video_id').primaryKey(),
+  status: text('status').notNull().default('pending'),
+  blobId: uuid('blob_id').references(() => blobs.id, { onDelete: 'set null' }),
+  title: text('title'),
+  errorCode: text('error_code'),
+  errorDetail: text('error_detail'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+});
+
+export type YoutubeVideoCacheStatus = 'pending' | 'processing' | 'ready' | 'failed';
+export type YoutubeVideoCacheRow = typeof youtubeVideoCache.$inferSelect;
 
 export const youtubeVideoDailyPlays = pgTable(
   'youtube_video_daily_plays',

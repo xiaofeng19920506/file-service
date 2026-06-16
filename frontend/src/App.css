@@ -7358,3 +7358,159 @@ body.bulletin-slideshow-window {
   border-top: 1px solid var(--border-light);
   padding: 0.5rem 0.75rem 0.75rem;
 }
+
+.vip-video-page {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.vip-video-page--centered {
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  gap: 1rem;
+}
+
+.vip-video-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.vip-video-header h1 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.vip-video-subtitle {
+  margin: 0.25rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.vip-video-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.vip-video-user {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.vip-video-main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
+  gap: 1rem;
+  padding: 1rem;
+  min-height: 0;
+}
+
+.vip-video-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.vip-video-player {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: 12px;
+  object-fit: contain;
+}
+
+.vip-video-placeholder {
+  aspect-ratio: 16 / 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-elevated);
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.vip-video-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.vip-video-time {
+  margin-left: auto;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.vip-video-now-playing {
+  margin: 0;
+  font-weight: 600;
+}
+
+.vip-video-tracklist {
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 0.75rem;
+}
+
+.vip-video-tracklist h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.vip-video-tracklist ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.vip-video-track {
+  width: 100%;
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  padding: 0.5rem 0.65rem;
+  cursor: pointer;
+  color: inherit;
+}
+
+.vip-video-track.active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.vip-video-track-title {
+  display: block;
+  font-size: 0.92rem;
+}
+
+.vip-video-track-meta {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+
+@media (max-width: 900px) {
+  .vip-video-main {
+    grid-template-columns: 1fr;
+  }
+}

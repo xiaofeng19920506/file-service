@@ -42,10 +42,14 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function goHomeAfterAuth(): void {
-  if (window.location.hash === '#/login' || window.location.hash === '' || window.location.hash === '#/' || window.location.hash === '#') {
-    window.location.hash = '#/playlists';
+function goHomeAfterAuth(user?: { role: string } | null): void {
+  const hash = window.location.hash;
+  if (hash !== '#/login' && hash !== '' && hash !== '#/' && hash !== '#') return;
+  if (user && normalizeUserRole(user.role) === 'vip') {
+    window.location.hash = '#/vip';
+    return;
   }
+  window.location.hash = '#/playlists';
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -73,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(verified ?? getCachedUser());
       setLoading(false);
       if ((verified ?? getCachedUser()) && window.location.hash === '#/login') {
-        goHomeAfterAuth();
+        goHomeAfterAuth(verified ?? getCachedUser());
       }
     })();
 
@@ -85,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const session = await loginUser({ email, password });
     setUser(session.user);
-    goHomeAfterAuth();
+    goHomeAfterAuth(session.user);
   }, []);
 
   const register = useCallback(
@@ -104,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }) => {
       const session = await registerUser(input);
       setUser(session.user);
-      goHomeAfterAuth();
+      goHomeAfterAuth(session.user);
     },
     [],
   );
@@ -112,9 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     logoutUser();
     setUser(null);
-    if (window.location.hash !== '#/playlists') {
-      window.location.hash = '#/playlists';
-    }
+    window.location.hash = '#/login';
   }, []);
 
   const refreshSession = useCallback(async () => {

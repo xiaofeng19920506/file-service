@@ -2,9 +2,11 @@ import type { UserRole } from './db/schema.js';
 
 export type { UserRole };
 
-const VALID_ROLES: UserRole[] = ['member', 'worship_team', 'creator', 'admin'];
+const VALID_ROLES: UserRole[] = ['member', 'worship_team', 'creator', 'admin', 'vip'];
 export function normalizeUserRole(raw: string | null | undefined): UserRole {
-  if (raw === 'admin' || raw === 'worship_team' || raw === 'creator' || raw === 'member') return raw;
+  if (raw === 'admin' || raw === 'worship_team' || raw === 'creator' || raw === 'member' || raw === 'vip') {
+    return raw;
+  }
   if (raw === 'user') return 'member';
   return 'member';
 }
@@ -58,6 +60,14 @@ export function canEditBulletinWorshipSongs(role: UserRole | null): boolean {
   return canViewBulletin(role);
 }
 
+export function canAccessVipVideo(role: UserRole | null): boolean {
+  return role === 'vip' || role === 'admin';
+}
+
+export function isVipOnlyRole(role: UserRole | null): boolean {
+  return role === 'vip';
+}
+
 function isBulletinWorshipPlaylistEditPath(method: string, path: string): boolean {
   if (!/^\/v1\/bulletins\/[^/]+\/worship-playlist/.test(path)) return false;
   if (method === 'POST' && /\/worship-playlist\/invite$/.test(path)) return false;
@@ -83,6 +93,14 @@ export function isPlaylistPath(method: string, path: string): boolean {
   if (method === 'GET' && /^\/v1\/youtube\/videos\/[^/]+\/captions$/.test(path)) return true;
   if (method === 'POST' && path === '/v1/youtube/audio/prioritize') return true;
   if (/^\/v1\/youtube\/videos\/[^/]+\/audio/.test(path)) return true;
+  return false;
+}
+
+export function isVipVideoPath(method: string, path: string): boolean {
+  if (method === 'GET' && path === '/v1/vip/playlist') return true;
+  if (method === 'POST' && path === '/v1/youtube/video/prioritize') return true;
+  if (method === 'GET' && /^\/v1\/youtube\/videos\/[^/]+\/video$/.test(path)) return true;
+  if (method === 'POST' && /^\/v1\/youtube\/videos\/[^/]+\/video\/extract$/.test(path)) return true;
   return false;
 }
 
@@ -170,7 +188,9 @@ export type PathAccessLevel =
   | 'youtube_export'
   | 'bulletin_view'
   | 'bulletin_worship_edit'
-  | 'bulletin_manage';
+  | 'bulletin_manage'
+  | 'vip_video'
+  | 'session';
 
 function isPublicInfrastructurePath(path: string): boolean {
   return path === '/health' || path === '/ready' || path === '/docs' || path.startsWith('/docs/');
@@ -186,6 +206,10 @@ function isSignedAudioStreamPath(method: string, path: string): boolean {
 
 function isSignedAudioPreviewPath(method: string, path: string): boolean {
   return method === 'GET' && /^\/v1\/youtube\/videos\/[^/]+\/audio\/preview$/.test(path);
+}
+
+function isSignedVideoStreamPath(method: string, path: string): boolean {
+  return method === 'GET' && /^\/v1\/youtube\/videos\/[^/]+\/video\/stream$/.test(path);
 }
 
 function isAuthEntryPath(method: string, path: string): boolean {
@@ -207,8 +231,10 @@ export function resolvePathAccessLevel(method: string, path: string): PathAccess
   if (isSignedMergeDownloadPath(method, path)) return 'public';
   if (isSignedAudioStreamPath(method, path)) return 'public';
   if (isSignedAudioPreviewPath(method, path)) return 'public';
+  if (isSignedVideoStreamPath(method, path)) return 'public';
   if (isAuthEntryPath(method, path)) return 'public';
   if (isYoutubeOAuthCallbackPath(method, path)) return 'public';
+  if (isVipVideoPath(method, path)) return 'vip_video';
   if (isYoutubeExportPath(method, path)) return 'youtube_export';
   if (isBulletinWorshipPlaylistEditPath(method, path)) return 'bulletin_worship_edit';
   if (isBulletinWritePath(method, path)) return 'bulletin_manage';
@@ -219,7 +245,7 @@ export function resolvePathAccessLevel(method: string, path: string): PathAccess
   if (isPlaylistPath(method, path)) return 'playlist';
   if (isMergePath(method, path)) return 'merge';
   if (isDownloadPath(method, path)) return 'download';
-  if (isSessionPath(method, path)) return 'member';
+  if (isSessionPath(method, path)) return 'session';
   if (path.startsWith('/v1/')) return 'member';
   return 'public';
 }
@@ -259,6 +285,16 @@ export function roleMeetsAccessLevel(
       return canEditBulletinWorshipSongs(role);
     case 'bulletin_manage':
       return canManageBulletin(role);
+    case 'vip_video':
+      return canAccessVipVideo(role);
+    case 'session':
+      return (
+        role === 'member'
+        || role === 'worship_team'
+        || role === 'creator'
+        || role === 'admin'
+        || role === 'vip'
+      );
     default:
       return false;
   }
@@ -284,6 +320,10 @@ export function accessDeniedErrorCode(level: PathAccessLevel): string {
     case 'bulletin_worship_edit':
     case 'bulletin_manage':
       return 'bulletin_forbidden';
+    case 'vip_video':
+      return 'vip_forbidden';
+    case 'session':
+      return 'unauthorized';
     case 'member':
       return 'unauthorized';
     default:

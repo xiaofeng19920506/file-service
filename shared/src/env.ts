@@ -43,6 +43,8 @@ const apiFs = z.object({
   GOOGLE_OAUTH_REDIRECT_URI: z.string().url().optional(),
   YT_DLP_PATH: z.string().default('yt-dlp'),
   WEB_APP_URL: z.string().url().optional(),
+  /** VIP 用户专属播放列表 UUID */
+  VIP_PLAYLIST_ID: z.string().uuid().optional(),
   SHARE_LINK_TTL_SECONDS: z.coerce.number().int().positive().default(604_800),
   SMTP_HOST: z.string().min(1).optional(),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
@@ -95,6 +97,8 @@ const apiS3 = z.object({
   GOOGLE_OAUTH_REDIRECT_URI: z.string().url().optional(),
   YT_DLP_PATH: z.string().default('yt-dlp'),
   WEB_APP_URL: z.string().url().optional(),
+  /** VIP 用户专属播放列表 UUID */
+  VIP_PLAYLIST_ID: z.string().uuid().optional(),
   SHARE_LINK_TTL_SECONDS: z.coerce.number().int().positive().default(604_800),
   SMTP_HOST: z.string().min(1).optional(),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
@@ -131,6 +135,7 @@ const workerFs = z.object({
   SOFFICE_PATH: z.string().default('soffice'),
   WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
   YOUTUBE_AUDIO_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
+  YOUTUBE_VIDEO_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
   YT_DLP_PATH: z.string().default('yt-dlp'),
   WEBHOOK_SECRET: z.string().min(8).optional(),
 });
@@ -148,6 +153,7 @@ const workerS3 = z.object({
   SOFFICE_PATH: z.string().default('soffice'),
   WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
   YOUTUBE_AUDIO_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
+  YOUTUBE_VIDEO_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
   YT_DLP_PATH: z.string().default('yt-dlp'),
   WEBHOOK_SECRET: z.string().min(8).optional(),
 });
@@ -171,6 +177,7 @@ export function loadWorkerEnv(
 
 export const MERGE_QUEUE_NAME = 'merge-presentation';
 export { YOUTUBE_AUDIO_QUEUE_NAME } from './youtube-audio-cache.js';
+export { YOUTUBE_VIDEO_QUEUE_NAME } from './youtube-video-cache.js';
 
 const previewSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3010),
