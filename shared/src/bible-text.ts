@@ -102,59 +102,93 @@ export type ScriptureSlideBodies = {
   englishPages: string[][];
 };
 
-/** 中文每页约 260 字；英文每页约 14 节 */
-export const SCRIPTURE_ZH_PAGE_MAX_CHARS = 260;
-export const SCRIPTURE_EN_PAGE_MAX_LINES = 14;
+/** 中文 29pt 每行约容纳字数（保守，投影可读） */
+export const SCRIPTURE_ZH_CHARS_PER_LINE = 18;
+
+/** 中文每页约可容纳的视觉行数（含自动换行） */
+export const SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES = 12;
+
+/** @deprecated 使用 SCRIPTURE_ZH_CHARS_PER_LINE / SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES */
+export const SCRIPTURE_ZH_PAGE_MAX_CHARS = SCRIPTURE_ZH_CHARS_PER_LINE * SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES;
+
+/** 英文文本框每行约容纳字符数（18.5pt，偏保守避免底部裁切） */
+export const SCRIPTURE_EN_CHARS_PER_LINE = 64;
+
+/** 英文每页约可容纳的视觉行数（含节内自动换行） */
+export const SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES = 12;
+
+/** @deprecated 使用 SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES */
+export const SCRIPTURE_EN_PAGE_MAX_LINES = SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES;
 
 /** @deprecated 使用 SCRIPTURE_ZH_PAGE_MAX_CHARS */
 export const SCRIPTURE_SLIDE5_ZH_MAX_CHARS = SCRIPTURE_ZH_PAGE_MAX_CHARS;
 /** @deprecated 使用 SCRIPTURE_ZH_PAGE_MAX_CHARS */
 export const SCRIPTURE_SLIDE6_ZH_MAX_CHARS = SCRIPTURE_ZH_PAGE_MAX_CHARS;
-/** @deprecated 使用 SCRIPTURE_EN_PAGE_MAX_LINES */
-export const SCRIPTURE_SLIDE6_EN_MAX_LINES = SCRIPTURE_EN_PAGE_MAX_LINES;
+/** @deprecated 使用 SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES */
+export const SCRIPTURE_SLIDE6_EN_MAX_LINES = SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES;
 
-function splitVersesByCharLimit(verses: BibleVerse[], maxChars: number): [BibleVerse[], BibleVerse[]] {
-  const first: BibleVerse[] = [];
-  let used = 0;
-  for (const verse of verses) {
-    const piece = `${verse.verse} ${verse.text}`;
-    const extra = first.length ? 1 : 0;
-    if (first.length && used + extra + piece.length > maxChars) break;
-    first.push(verse);
-    used += extra + piece.length;
-  }
-  return [first, verses.slice(first.length)];
+/** 估算一段中文经文块在 slide 上占用的视觉行数 */
+export function estimateChineseBlockVisualLines(text: string): number {
+  const trimmed = text.trim();
+  if (!trimmed) return 0;
+  return Math.max(1, Math.ceil(trimmed.length / SCRIPTURE_ZH_CHARS_PER_LINE));
 }
 
-function paginateChineseVerses(verses: BibleVerse[], maxChars: number): string[] {
+function paginateChineseVerses(verses: BibleVerse[]): string[] {
   if (!verses.length) return [];
   const pages: string[] = [];
-  let remaining = verses;
-  while (remaining.length > 0) {
-    const [chunk, rest] = splitVersesByCharLimit(remaining, maxChars);
-    if (!chunk.length) {
-      pages.push(formatChineseVerseBlock([remaining[0]!]));
-      remaining = remaining.slice(1);
-      continue;
+  let current: BibleVerse[] = [];
+
+  for (const verse of verses) {
+    const candidate = [...current, verse];
+    const block = formatChineseVerseBlock(candidate);
+    const lines = estimateChineseBlockVisualLines(block);
+
+    if (current.length > 0 && lines > SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES) {
+      pages.push(formatChineseVerseBlock(current));
+      current = [verse];
+    } else {
+      current = candidate;
     }
-    pages.push(formatChineseVerseBlock(chunk));
-    remaining = rest;
   }
+
+  if (current.length) pages.push(formatChineseVerseBlock(current));
   return pages;
 }
 
-function paginateEnglishVerses(verses: BibleVerse[], maxLines: number): string[][] {
+/** 估算一节英文经文在 slide 上占用的视觉行数 */
+export function estimateEnglishVerseVisualLines(verse: BibleVerse): number {
+  const line = formatEnglishVerseLine(verse);
+  return Math.max(1, Math.ceil(line.length / SCRIPTURE_EN_CHARS_PER_LINE));
+}
+
+function paginateEnglishVerses(verses: BibleVerse[]): string[][] {
   const pages: string[][] = [];
-  for (let i = 0; i < verses.length; i += maxLines) {
-    pages.push(verses.slice(i, i + maxLines).map(formatEnglishVerseLine));
+  let current: string[] = [];
+  let usedLines = 0;
+
+  for (const verse of verses) {
+    const formatted = formatEnglishVerseLine(verse);
+    const cost = estimateEnglishVerseVisualLines(verse);
+
+    if (current.length > 0 && usedLines + cost > SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES) {
+      pages.push(current);
+      current = [formatted];
+      usedLines = cost;
+    } else {
+      current.push(formatted);
+      usedLines += cost;
+    }
   }
+
+  if (current.length) pages.push(current);
   return pages;
 }
 
 export function buildScriptureSlideBodies(passage: BiblePassage): ScriptureSlideBodies {
   return {
-    chinesePages: paginateChineseVerses(passage.zh, SCRIPTURE_ZH_PAGE_MAX_CHARS),
-    englishPages: paginateEnglishVerses(passage.en, SCRIPTURE_EN_PAGE_MAX_LINES),
+    chinesePages: paginateChineseVerses(passage.zh),
+    englishPages: paginateEnglishVerses(passage.en),
   };
 }
 

@@ -95,9 +95,19 @@ describe('patchScriptureSlideInSlideXml', () => {
     const slide5 = await zip.file('ppt/slides/slide5.xml')!.async('string');
     const slide6 = await zip.file('ppt/slides/slide6.xml')!.async('string');
     expect(slide5).toContain('回答柔和');
-    expect(slide5).toContain('11 ');
     expect(slide6).toContain('gentle answer');
-    expect(slide6).toContain('human hearts');
+    const allSlideXml = await Promise.all(
+      Object.keys(zip.files)
+        .filter((n) => /^ppt\/slides\/slide\d+\.xml$/.test(n))
+        .map((p) => zip.file(p)!.async('string')),
+    );
+    const combined = allSlideXml.join('');
+    expect(combined).toContain('11 ');
+    expect(combined).toContain('human hearts');
+    expect(slide5).toContain('<a:noAutofit/>');
+    expect(slide5).not.toContain('<a:spAutoFit/>');
+    expect(slide6).toContain('<a:noAutofit/>');
+    expect(slide6).not.toContain('<a:spAutoFit/>');
   });
 
   it('inserts extra slides for long scripture without ellipsis', async () => {

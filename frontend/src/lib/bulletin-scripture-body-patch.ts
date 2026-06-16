@@ -53,7 +53,7 @@ function buildChineseTxBody(text: string): string {
   return [
     '<p:txBody>',
     '<a:bodyPr anchorCtr="0" anchor="t" bIns="91425" lIns="91425" spcFirstLastPara="1" rIns="91425" wrap="square" tIns="91425">',
-    '<a:spAutoFit/>',
+    '<a:noAutofit/>',
     '</a:bodyPr>',
     '<a:lstStyle/>',
     paragraph,
@@ -86,7 +86,7 @@ function buildEnglishTxBody(lines: string[]): string {
   return [
     '<p:txBody>',
     '<a:bodyPr anchorCtr="0" anchor="t" bIns="91425" lIns="91425" spcFirstLastPara="1" rIns="91425" wrap="square" tIns="91425">',
-    '<a:spAutoFit/>',
+    '<a:noAutofit/>',
     '</a:bodyPr>',
     '<a:lstStyle/>',
     lines.map(buildEnglishParagraph).join(''),
