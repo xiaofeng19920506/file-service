@@ -87,12 +87,16 @@ export function isSearchPath(method: string, path: string): boolean {
 
 export function isPlaylistPath(method: string, path: string): boolean {
   if (path.startsWith('/v1/playlists')) return true;
-  if (method === 'GET' && path === '/v1/youtube/search') return true;
-  if (method === 'GET' && path === '/v1/youtube/trending') return true;
   if (method === 'POST' && path === '/v1/youtube/plays') return true;
   if (method === 'GET' && /^\/v1\/youtube\/videos\/[^/]+\/captions$/.test(path)) return true;
   if (method === 'POST' && path === '/v1/youtube/audio/prioritize') return true;
   if (/^\/v1\/youtube\/videos\/[^/]+\/audio/.test(path)) return true;
+  return false;
+}
+
+export function isYoutubeBrowsePath(method: string, path: string): boolean {
+  if (method === 'GET' && path === '/v1/youtube/search') return true;
+  if (method === 'GET' && path === '/v1/youtube/trending') return true;
   return false;
 }
 
@@ -190,6 +194,7 @@ export type PathAccessLevel =
   | 'bulletin_worship_edit'
   | 'bulletin_manage'
   | 'vip_video'
+  | 'youtube_browse'
   | 'session';
 
 function isPublicInfrastructurePath(path: string): boolean {
@@ -235,6 +240,7 @@ export function resolvePathAccessLevel(method: string, path: string): PathAccess
   if (isAuthEntryPath(method, path)) return 'public';
   if (isYoutubeOAuthCallbackPath(method, path)) return 'public';
   if (isVipVideoPath(method, path)) return 'vip_video';
+  if (isYoutubeBrowsePath(method, path)) return 'youtube_browse';
   if (isYoutubeExportPath(method, path)) return 'youtube_export';
   if (isBulletinWorshipPlaylistEditPath(method, path)) return 'bulletin_worship_edit';
   if (isBulletinWritePath(method, path)) return 'bulletin_manage';
@@ -287,6 +293,8 @@ export function roleMeetsAccessLevel(
       return canManageBulletin(role);
     case 'vip_video':
       return canAccessVipVideo(role);
+    case 'youtube_browse':
+      return canAccessPlaylists(role) || canAccessVipVideo(role);
     case 'session':
       return (
         role === 'member'
@@ -322,6 +330,8 @@ export function accessDeniedErrorCode(level: PathAccessLevel): string {
       return 'bulletin_forbidden';
     case 'vip_video':
       return 'vip_forbidden';
+    case 'youtube_browse':
+      return 'playlist_forbidden';
     case 'session':
       return 'unauthorized';
     case 'member':

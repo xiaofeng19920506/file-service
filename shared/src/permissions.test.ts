@@ -26,6 +26,8 @@ describe('resolvePathAccessLevel', () => {
     expect(resolvePathAccessLevel('GET', '/v1/blobs/x/content')).toBe('download');
     expect(resolvePathAccessLevel('POST', '/v1/uploads')).toBe('upload');
     expect(resolvePathAccessLevel('GET', '/v1/playlists')).toBe('playlist');
+    expect(resolvePathAccessLevel('GET', '/v1/youtube/search')).toBe('youtube_browse');
+    expect(resolvePathAccessLevel('GET', '/v1/youtube/trending')).toBe('youtube_browse');
     expect(resolvePathAccessLevel('POST', '/v1/jobs')).toBe('merge');
     expect(resolvePathAccessLevel('DELETE', '/v1/blobs/x')).toBe('admin');
     expect(resolvePathAccessLevel('GET', '/v1/admin/users')).toBe('admin');
@@ -63,6 +65,13 @@ describe('roleMeetsAccessLevel', () => {
     expect(roleMeetsAccessLevel('vip_video', 'vip')).toBe(true);
     expect(roleMeetsAccessLevel('vip_video', 'member')).toBe(false);
     expect(roleMeetsAccessLevel('vip_video', 'admin')).toBe(true);
+  });
+
+  it('allows youtube browse for vip and playlist roles', () => {
+    expect(roleMeetsAccessLevel('youtube_browse', 'vip')).toBe(true);
+    expect(roleMeetsAccessLevel('youtube_browse', 'member')).toBe(true);
+    expect(roleMeetsAccessLevel('youtube_browse', 'worship_team')).toBe(true);
+    expect(roleMeetsAccessLevel('youtube_browse', null)).toBe(false);
   });
 
   it('allows session for vip', () => {
