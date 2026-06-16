@@ -31,7 +31,7 @@ export default function ProgressStepper({
           const isCurrent = index === currentIndex;
           const isComplete = index < currentIndex;
           const isDisabled = step.enabled === false;
-          const canSelect = !isDisabled && onStepSelect && index <= currentIndex;
+          const canSelect = !isDisabled && Boolean(onStepSelect);
 
           return (
             <li
@@ -42,7 +42,7 @@ export default function ProgressStepper({
                 <button
                   type="button"
                   className="progress-stepper-btn"
-                  onClick={() => onStepSelect(index)}
+                  onClick={() => onStepSelect?.(index)}
                   aria-current={isCurrent ? 'step' : undefined}
                 >
                   <span className="progress-stepper-index">{index + 1}</span>

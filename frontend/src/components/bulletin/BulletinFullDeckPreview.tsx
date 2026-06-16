@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { RefObject } from 'react';
 import { fetchBulletinTemplateMap, type WeeklyBulletin } from '../../api/bulletins';
 import { useI18n } from '../../i18n';
 import { nextSundayIso } from '../../lib/bulletin-date';
 import BulletinPptSlidePreview from './BulletinPptSlidePreview';
 
 const FALLBACK_TOTAL_SLIDES = 38;
+const EAGER_SLIDE_COUNT = 3;
 
 type LazySlideItemProps = {
   slideNumber: number;
@@ -13,6 +15,8 @@ type LazySlideItemProps = {
   label: string;
   scrollIntoView: boolean;
   emptyLabel: string;
+  scrollRoot: RefObject<HTMLElement | null>;
+  eager?: boolean;
 };
 
 function LazySlideItem({
@@ -22,22 +26,30 @@ function LazySlideItem({
   label,
   scrollIntoView,
   emptyLabel,
+  scrollRoot,
+  eager,
 }: LazySlideItemProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(Boolean(eager));
 
   useEffect(() => {
+    if (eager) {
+      setVisible(true);
+      return;
+    }
     const el = ref.current;
     if (!el) return;
+
+    const root = scrollRoot.current;
     const io = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) setVisible(true);
       },
-      { rootMargin: '320px 0px' },
+      { root, rootMargin: '240px 0px', threshold: 0.01 },
     );
     io.observe(el);
     return () => io.disconnect();
-  }, []);
+  }, [eager, scrollRoot]);
 
   useEffect(() => {
     if (scrollIntoView && ref.current) {
@@ -81,6 +93,7 @@ export default function BulletinFullDeckPreview({
   highlightSlides = [],
 }: BulletinFullDeckPreviewProps) {
   const { t } = useI18n();
+  const scrollRootRef = useRef<HTMLDivElement>(null);
   const [totalSlides, setTotalSlides] = useState(FALLBACK_TOTAL_SLIDES);
   const highlightSet = useMemo(() => new Set(highlightSlides), [highlightSlides]);
   const scrollTarget = highlightSlides[0];
@@ -111,7 +124,7 @@ export default function BulletinFullDeckPreview({
   );
 
   return (
-    <div className="bulletin-deck-preview">
+    <div ref={scrollRootRef} className="bulletin-deck-preview">
       <p className="bulletin-deck-preview-meta">
         {t('bulletin.previewDeckMeta', { count: totalSlides })}
         {highlightSlides.length > 0 ? ` · ${t('bulletin.previewDeckHighlightNote')}` : ''}
@@ -125,6 +138,8 @@ export default function BulletinFullDeckPreview({
           label={t('bulletin.previewSlideSingle', { page })}
           scrollIntoView={page === scrollTarget}
           emptyLabel={t('bulletin.coverPreviewEmpty')}
+          scrollRoot={scrollRootRef}
+          eager={page <= EAGER_SLIDE_COUNT}
         />
       ))}
     </div>

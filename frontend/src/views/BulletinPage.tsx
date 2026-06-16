@@ -11,6 +11,13 @@ import {
 import { useAuth } from '../auth/AuthContext';
 import BulletinCoverStep from '../components/bulletin/BulletinCoverStep';
 import BulletinPreviewPanel from '../components/bulletin/BulletinPreviewPanel';
+import {
+  BulletinAnnouncementsStep,
+  BulletinBirthdayStep,
+  BulletinMoreStep,
+  BulletinOfferingStep,
+  BulletinVerseStep,
+} from '../components/bulletin/BulletinWizardSteps';
 import ProgressStepper from '../components/ProgressStepper';
 import { useBulletinRealtime } from '../hooks/useBulletinRealtime';
 import { useI18n } from '../i18n';
@@ -26,13 +33,24 @@ function emptyAnnouncement(): AnnouncementDraft {
 }
 
 function toDrafts(bulletin: WeeklyBulletin): AnnouncementDraft[] {
-  if (!bulletin.announcements.length) return [emptyAnnouncement()];
-  return bulletin.announcements.map((a) => ({
-    key: a.id,
-    category: a.category,
-    title: a.title,
-    body: a.body,
-  }));
+  const slots = [
+    { category: 'thanks', title: '', body: '' },
+    { category: 'celebration', title: '', body: '' },
+    { category: 'baptism', title: '', body: '' },
+  ] as const;
+  if (!bulletin.announcements.length) {
+    return slots.map((slot) => ({ key: crypto.randomUUID(), ...slot }));
+  }
+  return slots.map((slot, index) => {
+    const item = bulletin.announcements[index];
+    if (!item) return { key: crypto.randomUUID(), ...slot };
+    return {
+      key: item.id,
+      category: item.category || slot.category,
+      title: item.title,
+      body: item.body,
+    };
+  });
 }
 
 export default function BulletinPage() {
@@ -164,6 +182,34 @@ export default function BulletinPage() {
     }
   };
 
+  const handleSaveFields = async (
+    patch: Parameters<typeof updateBulletin>[1],
+    withAnnouncements = false,
+  ) => {
+    if (!canManage || !draft) return;
+    try {
+      setSaving(true);
+      setError(null);
+      let updated = await updateBulletin(draft.id, patch);
+      if (withAnnouncements) {
+        updated = await saveBulletinAnnouncements(
+          updated.id,
+          announcements
+            .filter((a) => a.body.trim() || (a.title ?? '').trim())
+            .map(({ category, title, body }) => ({ category, title, body })),
+        );
+      }
+      setDraft(updated);
+      setAnnouncements(toDrafts(updated));
+      await refreshList();
+      setMessage(t('bulletin.saved'));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleCreate = async () => {
     if (!canManage) return;
     try {
@@ -249,21 +295,86 @@ export default function BulletinPage() {
   const renderStepPanel = () => {
     if (!draft) return null;
 
-    if (currentStepDef?.id === 'cover') {
-      return (
-        <BulletinCoverStep
-          serviceDate={draft.serviceDate}
-          serviceTime={draft.serviceTime}
-          canEdit={canManage}
-          saving={saving}
-          onServiceDateChange={handleServiceDateChange}
-          onServiceTimeChange={(time) => patchField('serviceTime', time)}
-          onSave={handleSaveCover}
-        />
-      );
-    }
+    const common = {
+      draft,
+      canEdit: canManage,
+      saving,
+      onPatch: patchField,
+    };
 
-    return <p className="bulletin-step-placeholder">{t('bulletin.steps.comingSoon')}</p>;
+    switch (currentStepDef?.id) {
+      case 'cover':
+        return (
+          <BulletinCoverStep
+            serviceDate={draft.serviceDate}
+            serviceTime={draft.serviceTime}
+            canEdit={canManage}
+            saving={saving}
+            onServiceDateChange={handleServiceDateChange}
+            onServiceTimeChange={(time) => patchField('serviceTime', time)}
+            onSave={handleSaveCover}
+          />
+        );
+      case 'offering':
+        return (
+          <BulletinOfferingStep
+            {...common}
+            onSave={() =>
+              void handleSaveFields({
+                lastWeekOfferingDate: draft.lastWeekOfferingDate,
+                offeringQuarterLabel: draft.offeringQuarterLabel,
+              })
+            }
+          />
+        );
+      case 'birthday':
+        return (
+          <BulletinBirthdayStep
+            {...common}
+            onSave={() =>
+              void handleSaveFields({
+                birthdayMonth: draft.birthdayMonth,
+                birthdayNames: draft.birthdayNames,
+              })
+            }
+          />
+        );
+      case 'announcements':
+        return (
+          <BulletinAnnouncementsStep
+            {...common}
+            announcements={announcements}
+            onAnnouncementsChange={setAnnouncements}
+            onSave={() => void handleSaveFields({}, true)}
+          />
+        );
+      case 'verse':
+        return (
+          <BulletinVerseStep
+            {...common}
+            onSave={() => void handleSaveFields({ verseOfWeek: draft.verseOfWeek })}
+          />
+        );
+      case 'more':
+        return (
+          <BulletinMoreStep
+            {...common}
+            onSave={() =>
+              void handleSaveFields({
+                staffMeetingDate: draft.staffMeetingDate,
+                testimonyShareDate: draft.testimonyShareDate,
+                serviceRosterText: draft.serviceRosterText,
+                baptismText: draft.baptismText,
+                weeklyMeetingVariant: draft.weeklyMeetingVariant,
+                skipTestimonyWeek: draft.skipTestimonyWeek,
+                skipDepartmentReports: draft.skipDepartmentReports,
+              })
+            }
+          />
+        );
+      default:
+        return <p className="bulletin-step-placeholder">{t('bulletin.steps.comingSoon')}</p>;
+    }
   };
 
   if (loading) {
