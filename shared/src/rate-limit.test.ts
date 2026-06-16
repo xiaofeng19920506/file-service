@@ -18,6 +18,12 @@ describe('shouldSkipRateLimit', () => {
   it('skips public download', () => {
     expect(shouldSkipRateLimit('GET', '/v1/jobs/abc/download')).toBe(true);
   });
+
+  it('skips vip video status polling', () => {
+    expect(shouldSkipRateLimit('GET', '/v1/youtube/videos/abc123/video')).toBe(true);
+    expect(shouldSkipRateLimit('GET', '/v1/youtube/videos/abc123/video/stream')).toBe(false);
+    expect(shouldSkipRateLimit('POST', '/v1/youtube/video/status')).toBe(true);
+  });
 });
 
 describe('isUploadRateLimitPath', () => {

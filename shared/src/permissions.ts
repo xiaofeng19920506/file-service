@@ -103,6 +103,7 @@ export function isYoutubeBrowsePath(method: string, path: string): boolean {
 export function isVipVideoPath(method: string, path: string): boolean {
   if (method === 'GET' && path === '/v1/vip/playlist') return true;
   if (method === 'POST' && path === '/v1/youtube/video/prioritize') return true;
+  if (method === 'POST' && path === '/v1/youtube/video/status') return true;
   if (method === 'GET' && /^\/v1\/youtube\/videos\/[^/]+\/video$/.test(path)) return true;
   if (method === 'POST' && /^\/v1\/youtube\/videos\/[^/]+\/video\/extract$/.test(path)) return true;
   return false;

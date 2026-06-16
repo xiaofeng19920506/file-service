@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { fetchTrendingYoutubeSongs, type TrendingSong } from '../../api/youtube-trending';
 import type { YoutubeSearchResult, YoutubeVideoCacheStatus } from '../../api/youtube-search';
-import { fetchYoutubeVideoStatus } from '../../api/vip-video';
+import { fetchYoutubeVideoStatuses } from '../../api/vip-video';
 import { useDebouncedYoutubeSearch } from '../../hooks/useDebouncedYoutubeSearch';
 import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../../hooks/useMediaQuery';
 import type { VipVideoTrack } from '../../hooks/useVipVideoPlayback';
@@ -238,28 +238,18 @@ export default function VipVideoBrowse({
     if (!cachingIds.length) return;
 
     const refresh = () => {
-      void Promise.all(
-        cachingIds.slice(0, 12).map(async (videoId) => {
-          try {
-            const data = await fetchYoutubeVideoStatus(videoId);
-            return [videoId, data.status] as const;
-          } catch {
-            return null;
-          }
-        }),
-      ).then((pairs) => {
-        const updates = pairs.filter((p): p is readonly [string, YoutubeVideoCacheStatus] => p !== null);
-        if (!updates.length) return;
+      void fetchYoutubeVideoStatuses(cachingIds).then((items) => {
+        if (!items.length) return;
         setVideoStatusById((prev) => {
           const next = { ...prev };
-          for (const [id, status] of updates) next[id] = status;
+          for (const row of items) next[row.videoId] = row.status;
           return next;
         });
       });
     };
 
     void refresh();
-    const timer = window.setInterval(refresh, 5000);
+    const timer = window.setInterval(refresh, 6000);
     return () => window.clearInterval(timer);
   }, [displayItems, videoStatusById]);
 

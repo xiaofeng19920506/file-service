@@ -39,7 +39,7 @@ export function useVipVideoPlayback() {
         setStreamUrl(data.streamUrl);
         setErrorCode(data.errorCode);
       } catch {
-        if (!cancelled) setStatus('failed');
+        // 忽略瞬时错误（如 429 限流），避免误显示为缓存失败
       }
     };
 

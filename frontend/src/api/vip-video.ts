@@ -36,13 +36,27 @@ export async function prioritizeVipVideos(
   await parseJson(res);
 }
 
-export async function fetchYoutubeVideoStatus(videoId: string): Promise<{
+export type YoutubeVideoStatus = {
   videoId: string;
   status: VipVideoItemStatus;
   streamUrl: string | null;
   expiresAt: string | null;
   errorCode: string | null;
-}> {
+};
+
+export async function fetchYoutubeVideoStatus(videoId: string): Promise<YoutubeVideoStatus> {
   const res = await apiFetch(`/v1/youtube/videos/${encodeURIComponent(videoId)}/video`);
   return parseJson(res);
+}
+
+export async function fetchYoutubeVideoStatuses(videoIds: string[]): Promise<YoutubeVideoStatus[]> {
+  const ids = [...new Set(videoIds.filter(Boolean))].slice(0, 20);
+  if (!ids.length) return [];
+  const res = await apiFetch('/v1/youtube/video/status', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ videoIds: ids }),
+  });
+  const data = await parseJson<{ items: YoutubeVideoStatus[] }>(res);
+  return data.items;
 }

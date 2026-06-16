@@ -96,5 +96,12 @@ export async function startYoutubeVideoWorker(): Promise<Worker> {
     console.error('youtube video job failed', job?.id, err);
   });
 
+  console.log(
+    'worker listening',
+    YOUTUBE_VIDEO_QUEUE_NAME,
+    'concurrency=',
+    env.YOUTUBE_VIDEO_WORKER_CONCURRENCY,
+  );
+
   return worker;
 }

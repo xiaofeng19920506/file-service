@@ -82,6 +82,32 @@ export function registerYoutubeVideoRoutes(
     },
   );
 
+  app.post<{ Body: { videoIds?: string[] } }>(
+    '/v1/youtube/video/status',
+    async (request, reply) => {
+      const raw = request.body?.videoIds ?? [];
+      const videoIds = [...new Set(raw.filter(isValidYoutubeVideoId))].slice(0, 20);
+      if (!videoIds.length) {
+        return reply.code(400).send({ error: 'video_ids_required' });
+      }
+
+      const cacheMap = await getVideoCacheMap(db, videoIds);
+      const items = videoIds.map((videoId) => {
+        const status = cacheMap.get(videoId)!;
+        if (status.status !== 'ready' || !status.blobId) {
+          return { ...status, streamUrl: null as string | null, expiresAt: null as string | null };
+        }
+        const { token, expiresAt } = signMediaToken(env, videoId);
+        return {
+          ...status,
+          streamUrl: buildStreamUrl(env, videoId, token),
+          expiresAt,
+        };
+      });
+      return { items };
+    },
+  );
+
   app.post<{ Body: { videoIds?: string[]; entries?: { videoId: string; title?: string }[] } }>(
     '/v1/youtube/video/prioritize',
     async (request, reply) => {
