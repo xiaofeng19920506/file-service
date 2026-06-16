@@ -198,6 +198,10 @@ const en: MessageTree = {
     previewStaticPreService: 'PPT page {page} · Chair pre-service prayer',
     previewPrev: 'Previous',
     previewNext: 'Next',
+    startSlideShow: 'Slide show',
+    slideShowExit: 'Exit slide show',
+    slideShowFullscreen: 'Fullscreen',
+    slideShowHint: '← → or Space to advance · click left/right on slide · Esc exit · F fullscreen',
     steps: {
       cover: 'Cover date',
       coverTitle: 'Cover · service date',

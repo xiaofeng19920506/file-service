@@ -190,6 +190,10 @@ export default {
     previewSectionLabel: 'PPT 第 {pages} 页',
     previewPrev: '上一张',
     previewNext: '下一张',
+    startSlideShow: '幻灯片放映',
+    slideShowExit: '退出放映',
+    slideShowFullscreen: '全屏',
+    slideShowHint: '← → 或空格翻页 · 点击画面左右区域翻页 · Esc 退出 · F 全屏',
     steps: {
       cover: '封面日期',
       coverTitle: '封面 · 主日日期',
