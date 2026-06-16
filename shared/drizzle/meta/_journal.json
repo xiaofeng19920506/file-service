@@ -134,6 +134,13 @@
       "when": 1750608000000,
       "tag": "0019_bulletin_scripture_preferences",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1750694400000,
+      "tag": "0020_bulletin_service_playlist",
+      "breakpoints": true
     }
   ]
 }
