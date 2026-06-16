@@ -36,6 +36,15 @@ export async function prioritizeVipVideos(
   await parseJson(res);
 }
 
+export async function requestVipVideoReextract(videoId: string, title?: string): Promise<void> {
+  const res = await apiFetch(`/v1/youtube/videos/${encodeURIComponent(videoId)}/video/extract`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, force: true }),
+  });
+  await parseJson(res);
+}
+
 export type YoutubeVideoStatus = {
   videoId: string;
   status: VipVideoItemStatus;

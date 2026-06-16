@@ -18,7 +18,11 @@ function watchUrl(videoId: string): string {
   return `https://www.youtube.com/watch?v=${videoId}`;
 }
 
-const YTDLP_FORMAT = 'bv*[height<=480]+ba/b[height<=480]/b';
+/** 优先 H.264+AAC，兼容安卓浏览器（HEVC/VP9 在 WebView 中易黑屏仅有声） */
+export const YOUTUBE_VIDEO_YTDLP_FORMAT =
+  'bestvideo[vcodec^=avc1][height<=480]+bestaudio[acodec^=mp4a]/bestvideo[vcodec^=avc][height<=480]+bestaudio[acodec^=mp4a]/best[height<=480][vcodec^=avc]/best[height<=480]';
+
+const YTDLP_FORMAT = YOUTUBE_VIDEO_YTDLP_FORMAT;
 
 /** 预估下载体积（字节）；失败时返回 null */
 export async function estimateYoutubeVideoBytes(
@@ -61,6 +65,8 @@ export async function extractYoutubeVideoMp4(
         YTDLP_FORMAT,
         '--merge-output-format',
         'mp4',
+        '--postprocessor-args',
+        'ffmpeg:-movflags +faststart',
         '-o',
         outputTemplate,
         ...ytdlpSharedArgs(playerClient),

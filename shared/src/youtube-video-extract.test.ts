@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { shouldUseProgressiveVideoDownload } from './youtube-video-extract.js';
+import {
+  shouldUseProgressiveVideoDownload,
+  YOUTUBE_VIDEO_YTDLP_FORMAT,
+} from './youtube-video-extract.js';
 import { DEFAULT_YOUTUBE_VIDEO_PROGRESSIVE_BYTES } from './youtube-video-storage.js';
+
+describe('YOUTUBE_VIDEO_YTDLP_FORMAT', () => {
+  it('prefers H.264 for browser playback', () => {
+    expect(YOUTUBE_VIDEO_YTDLP_FORMAT).toContain('avc1');
+  });
+});
 
 describe('shouldUseProgressiveVideoDownload', () => {
   it('enables progressive for large files on fs storage', () => {

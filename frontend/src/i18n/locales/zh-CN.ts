@@ -143,6 +143,7 @@ export default {
     statusReady: '可播放',
     statusCaching: '缓存中',
     statusFailed: '失败',
+    reextractingVideo: '画面无法显示，正在重新缓存兼容格式…',
   },
   bulletin: {
     title: '主日周报',

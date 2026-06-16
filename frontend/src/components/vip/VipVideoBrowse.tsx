@@ -6,6 +6,7 @@ import { useDebouncedYoutubeSearch } from '../../hooks/useDebouncedYoutubeSearch
 import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../../hooks/useMediaQuery';
 import type { VipVideoTrack } from '../../hooks/useVipVideoPlayback';
 import { friendlyError } from '../../lib/error-messages';
+import { resolveYoutubeThumbnailUrl } from '../../lib/youtube-thumbnail';
 import { CloseIcon, SearchIcon } from '../icons';
 import { useI18n } from '../../i18n';
 
@@ -18,10 +19,10 @@ type BrowseItem = {
 };
 
 export function toVipBrowseItem(row: YoutubeSearchResult | TrendingSong): BrowseItem {
-  const thumbnailUrl =
-    'thumbnailUrl' in row && row.thumbnailUrl
-      ? row.thumbnailUrl
-      : `https://i.ytimg.com/vi/${row.videoId}/mqdefault.jpg`;
+  const thumbnailUrl = resolveYoutubeThumbnailUrl(
+    row.videoId,
+    'thumbnailUrl' in row ? row.thumbnailUrl : null,
+  );
   return {
     videoId: row.videoId,
     title: row.title,
@@ -283,7 +284,7 @@ export default function VipVideoBrowse({
         <span className="vip-video-card-thumb-wrap">
           <img
             className="vip-video-card-thumb"
-            src={item.thumbnailUrl ?? `https://i.ytimg.com/vi/${item.videoId}/mqdefault.jpg`}
+            src={item.thumbnailUrl ?? resolveYoutubeThumbnailUrl(item.videoId)}
             alt=""
             loading="lazy"
           />

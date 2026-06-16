@@ -151,6 +151,7 @@ const en: MessageTree = {
     statusReady: 'Ready',
     statusCaching: 'Caching',
     statusFailed: 'Failed',
+    reextractingVideo: 'Video track unavailable. Re-caching in a compatible format…',
   },
   bulletin: {
     title: 'Sunday bulletin',

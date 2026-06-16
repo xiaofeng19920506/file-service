@@ -6,6 +6,7 @@ import {
   ensureYoutubeVideoJobs,
   isValidYoutubeVideoId,
   prioritizeYoutubeVideoJobs,
+  resetYoutubeVideoForReextract,
   resolveYoutubeVideoStreamInfo,
   sendRangedObjectStream,
   signAudioStreamToken,
@@ -123,12 +124,41 @@ export function registerYoutubeVideoRoutes(
     },
   );
 
-  app.post<{ Params: { videoId: string }; Body: { title?: string } }>(
+  app.get<{ Params: { videoId: string }; Querystring: { quality?: string } }>(
+    '/v1/youtube/thumbnails/:videoId',
+    async (request, reply) => {
+      const videoId = request.params.videoId;
+      if (!isValidYoutubeVideoId(videoId)) {
+        return reply.code(400).send({ error: 'invalid_video_id' });
+      }
+
+      const allowed = new Set(['default', 'mqdefault', 'hqdefault', 'sddefault', 'maxresdefault']);
+      const quality = request.query.quality ?? 'mqdefault';
+      const q = allowed.has(quality) ? quality : 'mqdefault';
+      const upstream = `https://i.ytimg.com/vi/${videoId}/${q}.jpg`;
+
+      const res = await fetch(upstream, { redirect: 'follow' });
+      if (!res.ok) {
+        return reply.code(502).send({ error: 'thumbnail_unavailable' });
+      }
+
+      const body = Buffer.from(await res.arrayBuffer());
+      reply.header('Content-Type', res.headers.get('content-type') ?? 'image/jpeg');
+      reply.header('Cache-Control', 'public, max-age=86400');
+      return reply.send(body);
+    },
+  );
+
+  app.post<{ Params: { videoId: string }; Body: { title?: string; force?: boolean } }>(
     '/v1/youtube/videos/:videoId/video/extract',
     async (request, reply) => {
       const videoId = request.params.videoId;
       if (!isValidYoutubeVideoId(videoId)) {
         return reply.code(400).send({ error: 'invalid_video_id' });
+      }
+
+      if (request.body?.force) {
+        await resetYoutubeVideoForReextract(db, storage, videoId);
       }
 
       await ensureYoutubeVideoJobs(db, videoQueue, [

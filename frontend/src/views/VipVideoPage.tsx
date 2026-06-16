@@ -8,6 +8,8 @@ import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 import { useVipVideoPlayback } from '../hooks/useVipVideoPlayback';
 import { friendlyError } from '../lib/error-messages';
 import { resolveVideoStreamSrc } from '../lib/resolve-stream-src';
+import { resolveYoutubeThumbnailUrl } from '../lib/youtube-thumbnail';
+import { requestVipVideoReextract } from '../api/vip-video';
 import { useI18n } from '../i18n';
 
 export default function VipVideoPage() {
@@ -22,6 +24,8 @@ export default function VipVideoPage() {
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [videoDecodeIssue, setVideoDecodeIssue] = useState(false);
+  const reextractAttemptedRef = useRef<string | null>(null);
 
   const playbackDuration = useMemo(() => {
     if (Number.isFinite(duration) && duration > 0 && duration !== Infinity) {
@@ -40,6 +44,32 @@ export default function VipVideoPage() {
     }
   }, []);
 
+  const inspectVideoPlayback = useCallback(
+    (el: HTMLVideoElement) => {
+      syncDurationFromVideo(el);
+      const noVideoTrack =
+        el.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA
+        && el.currentTime > 0.75
+        && el.videoWidth === 0
+        && el.videoHeight === 0;
+
+      if (!noVideoTrack) {
+        setVideoDecodeIssue(false);
+        return;
+      }
+
+      setVideoDecodeIssue(true);
+      if (!current?.videoId || reextractAttemptedRef.current === current.videoId) return;
+      reextractAttemptedRef.current = current.videoId;
+      void requestVipVideoReextract(current.videoId, current.title).catch(() => undefined);
+    },
+    [current?.videoId, current?.title, syncDurationFromVideo],
+  );
+
+  const posterSrc = current
+    ? resolveYoutubeThumbnailUrl(current.videoId, current.thumbnailUrl)
+    : undefined;
+
   useEffect(() => {
     if (!current) return;
     if (isMobile) {
@@ -50,6 +80,8 @@ export default function VipVideoPage() {
     setPlaying(true);
     setCurrentTime(0);
     setDuration(0);
+    setVideoDecodeIssue(false);
+    reextractAttemptedRef.current = null;
   }, [current?.videoId, isMobile]);
 
   const closePlayer = () => {
@@ -170,21 +202,37 @@ export default function VipVideoPage() {
                     className="vip-video-player"
                     playsInline
                     preload={streamUrl ? 'auto' : 'none'}
-                    poster={current.thumbnailUrl ?? undefined}
+                    poster={posterSrc}
                     onTimeUpdate={(e) => {
                       setCurrentTime(e.currentTarget.currentTime);
-                      syncDurationFromVideo(e.currentTarget);
+                      inspectVideoPlayback(e.currentTarget);
                     }}
-                    onLoadedMetadata={(e) => syncDurationFromVideo(e.currentTarget)}
-                    onDurationChange={(e) => syncDurationFromVideo(e.currentTarget)}
-                    onLoadedData={(e) => syncDurationFromVideo(e.currentTarget)}
-                    onCanPlay={(e) => syncDurationFromVideo(e.currentTarget)}
+                    onLoadedMetadata={(e) => inspectVideoPlayback(e.currentTarget)}
+                    onDurationChange={(e) => inspectVideoPlayback(e.currentTarget)}
+                    onLoadedData={(e) => inspectVideoPlayback(e.currentTarget)}
+                    onCanPlay={(e) => inspectVideoPlayback(e.currentTarget)}
                     onPlay={() => setPlaying(true)}
                     onPause={() => setPlaying(false)}
                     onEnded={() => setPlaying(false)}
                     onError={() => markPlaybackFailed()}
                     onWaiting={handleVideoWaiting}
                   />
+                  {videoDecodeIssue && posterSrc && (
+                    <img
+                      className="vip-video-poster-fallback"
+                      src={posterSrc}
+                      alt=""
+                      aria-hidden
+                    />
+                  )}
+                  {videoDecodeIssue && (
+                    <div
+                      className="vip-video-placeholder-overlay vip-video-placeholder-overlay--player vip-video-placeholder-overlay--decode"
+                      role="status"
+                    >
+                      <p className="vip-video-decode-hint">{t('vipVideo.reextractingVideo')}</p>
+                    </div>
+                  )}
                   {isLoading && (
                     <div
                       className="vip-video-placeholder-overlay vip-video-placeholder-overlay--player"

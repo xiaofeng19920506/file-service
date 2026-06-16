@@ -1,11 +1,14 @@
 import { eq, inArray } from 'drizzle-orm';
 import type { Db } from './db/index.js';
 import {
+  blobs,
   youtubeVideoCache,
   type YoutubeVideoCacheRow,
   type YoutubeVideoCacheStatus,
 } from './db/schema.js';
+import type { ObjectStorage } from './storage/types.js';
 import { isValidYoutubeVideoId } from './youtube-video-extract.js';
+import { youtubeVideoPartialStorageKey } from './youtube-video-storage.js';
 
 export const YOUTUBE_VIDEO_QUEUE_NAME = 'youtube-video-extract';
 
@@ -284,4 +287,42 @@ async function enqueueVideoJob(
     { videoId, title: title ?? null },
     { jobId, priority, removeOnComplete: 50, removeOnFail: 30 },
   );
+}
+
+/** 删除已缓存文件并回到 pending，用于不兼容编码（安卓黑屏仅有声）时强制重下 H.264 */
+export async function resetYoutubeVideoForReextract(
+  db: Db,
+  storage: ObjectStorage,
+  videoId: string,
+): Promise<void> {
+  if (!isValidYoutubeVideoId(videoId)) return;
+
+  const [row] = await db
+    .select()
+    .from(youtubeVideoCache)
+    .where(eq(youtubeVideoCache.youtubeVideoId, videoId));
+
+  if (row?.blobId) {
+    const [blob] = await db.select().from(blobs).where(eq(blobs.id, row.blobId));
+    if (blob?.storageKey) {
+      await storage.deleteObject(blob.storageKey).catch(() => undefined);
+    }
+  }
+
+  await storage.deleteObject(youtubeVideoPartialStorageKey(videoId)).catch(() => undefined);
+
+  if (row) {
+    await db
+      .update(youtubeVideoCache)
+      .set({
+        status: 'pending',
+        blobId: null,
+        errorCode: null,
+        errorDetail: 'codec_reextract',
+        expectedBytes: null,
+        completedAt: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(youtubeVideoCache.youtubeVideoId, videoId));
+  }
 }
