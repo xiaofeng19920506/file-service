@@ -1,6 +1,12 @@
 import { config } from 'dotenv';
 import { existsSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname, isAbsolute, resolve } from 'node:path';
+
+function resolveRelativeStorageDir(envDir: string): void {
+  const storageDir = process.env.LOCAL_STORAGE_DIR?.trim();
+  if (!storageDir || isAbsolute(storageDir)) return;
+  process.env.LOCAL_STORAGE_DIR = resolve(envDir, storageDir);
+}
 
 /** 从 cwd 向上查找 .env 并加载（不覆盖已有环境变量） */
 export function loadEnvFile(): void {
@@ -11,6 +17,7 @@ export function loadEnvFile(): void {
     const envPath = resolve(dir, '.env');
     if (existsSync(envPath)) {
       config({ path: envPath, override: false });
+      resolveRelativeStorageDir(dirname(envPath));
       process.env.DOTENV_LOADED = '1';
       return;
     }

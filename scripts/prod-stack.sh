@@ -213,23 +213,23 @@ cmd_start() {
   local names="api,merge"
   local colors="blue,magenta"
   local -a cmds=(
-    "npm run start -w @file-service/api"
-    "node backend/worker/dist/worker-merge.js"
+    "cd '${ROOT}' && node backend/api/dist/index.js"
+    "cd '${ROOT}' && node backend/worker/dist/worker-merge.js"
   )
   local i
   for ((i = 1; i <= MP3_WORKER_COUNT; i++)); do
     names+=",mp3${i}"
     colors+=",green"
-    cmds+=("node backend/worker/dist/worker-audio.js")
+    cmds+=("cd '${ROOT}' && node backend/worker/dist/worker-audio.js")
   done
   for ((i = 1; i <= VIDEO_WORKER_COUNT; i++)); do
     names+=",video${i}"
     colors+=",yellow"
-    cmds+=("node backend/worker/dist/worker-video.js")
+    cmds+=("cd '${ROOT}' && node backend/worker/dist/worker-video.js")
   done
   names+=",web"
   colors+=",magenta"
-  cmds+=("PORT=${WEB_PORT} npm run start -w @file-service/web")
+  cmds+=("cd '${ROOT}/frontend' && PORT=${WEB_PORT} npm run start")
 
   echo ""
   info "启动生产栈（API :${API_PORT} · Web :${WEB_PORT} · LibreOffice :3010）"
