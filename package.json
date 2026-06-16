@@ -59,6 +59,10 @@
     "tunnel:autostart": "bash scripts/autostart/tunnel.sh",
     "api:autostart": "bash scripts/autostart/api-stack.sh",
     "web:autostart": "bash scripts/autostart/web-stack.sh",
+    "prod:stop": "bash scripts/prod-stack.sh stop",
+    "prod:start": "bash scripts/prod-stack.sh start",
+    "prod:start:build": "bash scripts/prod-stack.sh start --build",
+    "prod:status": "bash scripts/prod-stack.sh status",
     "seed:app-store-review": "tsx scripts/seed-app-store-review.ts"
   },
   "devDependencies": {
