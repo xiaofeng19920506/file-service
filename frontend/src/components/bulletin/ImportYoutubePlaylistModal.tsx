@@ -120,62 +120,45 @@ export default function ImportYoutubePlaylistModal({
         </header>
 
         <div className="metadata-modal-body">
-          <p className="playlists-muted">{t('bulletin.worshipImportYoutubeIntro')}</p>
-
           {loadingStatus ? (
-            <p className="playlists-muted">{t('playlists.exportYoutubeLoading')}</p>
+            <p className="playlists-muted">{t('bulletin.worshipImportYoutubeLoadingLists')}</p>
           ) : !status?.configured ? (
-            <p className="export-youtube-notice">{t('playlists.exportYoutubeNotConfigured')}</p>
+            <p className="playlists-muted">{t('bulletin.worshipImportYoutubeUnavailable')}</p>
           ) : !status.connected ? (
-            <>
-              <p className="export-youtube-notice">{t('bulletin.worshipImportYoutubeConnectHint')}</p>
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={() => void handleConnect()}
-                disabled={connecting}
-              >
-                {connecting ? t('playlists.exportYoutubeConnecting') : t('bulletin.worshipImportYoutubeConnect')}
-              </button>
-            </>
+            <button
+              type="button"
+              className="btn-primary bulletin-worship-action-btn"
+              onClick={() => void handleConnect()}
+              disabled={connecting}
+            >
+              {connecting ? t('playlists.exportYoutubeConnecting') : t('bulletin.worshipImportYoutubeConnect')}
+            </button>
           ) : !status.dataApiReady ? (
-            <>
-              <p className="error-msg">
-                {friendlyError(status.dataApiError ?? 'youtube_api_not_enabled', t)}
-              </p>
-              <p className="export-youtube-hint">{t('playlists.exportYoutubeApiEnableHint')}</p>
-            </>
+            <p className="error-msg">{t('bulletin.worshipImportYoutubeUnavailable')}</p>
           ) : loadingPlaylists ? (
             <p className="playlists-muted">{t('bulletin.worshipImportYoutubeLoadingLists')}</p>
           ) : playlists.length === 0 ? (
             <p className="playlists-muted">{t('bulletin.worshipImportYoutubeEmpty')}</p>
           ) : (
-            <>
-              <p className="export-youtube-notice">
-                {t('bulletin.worshipImportYoutubeConnected', {
-                  email: status.googleAccountEmail ?? status.channelTitle ?? '',
-                })}
-              </p>
-              <ul className="bulletin-worship-youtube-pick-list">
-                {playlists.map((row) => (
-                  <li key={row.id}>
-                    <label className="bulletin-worship-youtube-pick">
-                      <input
-                        type="radio"
-                        name="youtube-playlist"
-                        checked={selectedId === row.id}
-                        onChange={() => setSelectedId(row.id)}
-                        disabled={importing}
-                      />
-                      <span className="bulletin-worship-youtube-pick-title">{row.title}</span>
-                      <span className="bulletin-worship-youtube-pick-meta">
-                        {t('bulletin.worshipImportYoutubeTrackCount', { count: row.itemCount })}
-                      </span>
-                    </label>
-                  </li>
-                ))}
-              </ul>
-            </>
+            <ul className="bulletin-worship-youtube-pick-list">
+              {playlists.map((row) => (
+                <li key={row.id}>
+                  <label className="bulletin-worship-youtube-pick">
+                    <input
+                      type="radio"
+                      name="youtube-playlist"
+                      checked={selectedId === row.id}
+                      onChange={() => setSelectedId(row.id)}
+                      disabled={importing}
+                    />
+                    <span className="bulletin-worship-youtube-pick-title">{row.title}</span>
+                    <span className="bulletin-worship-youtube-pick-meta">
+                      {t('bulletin.worshipImportYoutubeTrackCount', { count: row.itemCount })}
+                    </span>
+                  </label>
+                </li>
+              ))}
+            </ul>
           )}
 
           {error && <p className="error-msg">{error}</p>}

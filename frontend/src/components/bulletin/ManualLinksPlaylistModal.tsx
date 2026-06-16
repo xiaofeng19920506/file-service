@@ -91,8 +91,6 @@ export default function ManualLinksPlaylistModal({
         </header>
 
         <div className="metadata-modal-body">
-          <p className="playlists-muted">{t('bulletin.worshipManualLinksIntro')}</p>
-
           <ol className="bulletin-worship-manual-url-list">
             {urls.map((url, index) => (
               <li key={index}>
