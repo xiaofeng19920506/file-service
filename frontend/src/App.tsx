@@ -9,6 +9,8 @@ import MergePage from './views/MergePage';
 import PlaylistsPage from './views/PlaylistsPage';
 import BulletinPage from './views/BulletinPage';
 import WorshipPage from './views/WorshipPage';
+import BulletinSlideShowPresenterPage from './views/BulletinSlideShowPresenterPage';
+import BulletinSlideShowProjectorPage from './views/BulletinSlideShowProjectorPage';
 import WorshipLivePage from './views/WorshipLivePage';
 import UploadConfirmPage from './views/UploadConfirmPage';
 import { useLibraryUpload } from './hooks/useLibraryUpload';
@@ -368,7 +370,7 @@ function AppShellWithMenu() {
 
 export default function App() {
   const { user, loading, permissions } = useAuth();
-  const { page, previewBlobId, mergeEditBlobIds, mergeEditTitle, worshipPlaylistId, worshipBulletinId, worshipMode } = useAppPage();
+  const { page, previewBlobId, mergeEditBlobIds, mergeEditTitle, worshipPlaylistId, worshipBulletinId, worshipMode, slideshowSessionId } = useAppPage();
   const libraryUpload = useLibraryUpload();
   const { t } = useI18n();
 
@@ -394,6 +396,22 @@ export default function App() {
 
   if (page === 'library-upload' && permissions.canUpload) {
     return <UploadConfirmPage libraryUpload={libraryUpload} />;
+  }
+
+  if (
+    page === 'bulletin-slideshow-projector' &&
+    slideshowSessionId &&
+    permissions.canViewBulletin
+  ) {
+    return <BulletinSlideShowProjectorPage sessionId={slideshowSessionId} />;
+  }
+
+  if (
+    page === 'bulletin-slideshow-presenter' &&
+    slideshowSessionId &&
+    permissions.canViewBulletin
+  ) {
+    return <BulletinSlideShowPresenterPage sessionId={slideshowSessionId} />;
   }
 
   if (

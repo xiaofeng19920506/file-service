@@ -13,6 +13,8 @@ export type AppPage =
   | 'login'
   | 'preview'
   | 'bulletin'
+  | 'bulletin-slideshow-presenter'
+  | 'bulletin-slideshow-projector'
   | 'worship'
   | 'worship-live';
 
@@ -27,6 +29,7 @@ export type AppRoute = {
   worshipPlaylistId?: string;
   worshipBulletinId?: string;
   worshipMode?: 'youtube' | 'ppt';
+  slideshowSessionId?: string;
 };
 
 const HOME_HASH = '#/playlists';
@@ -104,6 +107,24 @@ function routeFromHash(rawHash: string): AppRoute {
     }
   }
   if (hash === '#/worship' || hash.startsWith('#/worship?')) return { page: 'worship' };
+  if (hash.startsWith('#/bulletin/slideshow/projector')) {
+    const qIndex = hash.indexOf('?');
+    const params =
+      qIndex === -1 ? new URLSearchParams() : new URLSearchParams(hash.slice(qIndex + 1));
+    const slideshowSessionId = params.get('session')?.trim() || undefined;
+    if (slideshowSessionId) {
+      return { page: 'bulletin-slideshow-projector', slideshowSessionId };
+    }
+  }
+  if (hash.startsWith('#/bulletin/slideshow/presenter')) {
+    const qIndex = hash.indexOf('?');
+    const params =
+      qIndex === -1 ? new URLSearchParams() : new URLSearchParams(hash.slice(qIndex + 1));
+    const slideshowSessionId = params.get('session')?.trim() || undefined;
+    if (slideshowSessionId) {
+      return { page: 'bulletin-slideshow-presenter', slideshowSessionId };
+    }
+  }
   if (hash === '#/bulletin' || hash.startsWith('#/bulletin?')) return { page: 'bulletin' };
   if (hash === '#/login') return { page: 'login' };
   if (hash.startsWith('#/library')) return { page: 'library' };
@@ -189,6 +210,7 @@ export function useAppPage() {
     worshipPlaylistId: route.worshipPlaylistId,
     worshipBulletinId: route.worshipBulletinId,
     worshipMode: route.worshipMode,
+    slideshowSessionId: route.slideshowSessionId,
     navigate,
     navigateToPlaylist,
     navigateClearPlaylistShare,

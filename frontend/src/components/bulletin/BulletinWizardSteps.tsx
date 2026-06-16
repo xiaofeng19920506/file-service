@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { WeeklyBulletin } from '../../api/bulletins';
+import { BIBLE_BOOKS } from '../../lib/bible-books';
 import { useI18n } from '../../i18n';
 
 type StepShellProps = {
@@ -42,6 +43,35 @@ function TextField({ label, value, disabled, onChange, multiline }: FieldProps) 
   );
 }
 
+type SelectFieldProps = {
+  label: string;
+  value: string;
+  disabled?: boolean;
+  placeholder: string;
+  options: readonly string[];
+  onChange: (value: string) => void;
+};
+
+function SelectField({ label, value, disabled, placeholder, options, onChange }: SelectFieldProps) {
+  const hasCustomValue = Boolean(value) && !options.includes(value);
+  return (
+    <label className="bulletin-field">
+      {label}
+      <select value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)}>
+        <option value="">{placeholder}</option>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+        {hasCustomValue ? (
+          <option value={value}>{value}</option>
+        ) : null}
+      </select>
+    </label>
+  );
+}
+
 type SaveProps = {
   saving?: boolean;
   canEdit: boolean;
@@ -70,10 +100,12 @@ export function BulletinScriptureStep({ draft, canEdit, saving, onPatch, onSave 
   const { t } = useI18n();
   return (
     <StepShell titleKey="bulletin.steps.scriptureTitle" introKey="bulletin.steps.scriptureIntro">
-      <TextField
+      <SelectField
         label={t('bulletin.scriptureBook')}
         value={draft.scriptureBook}
         disabled={!canEdit}
+        placeholder={t('bulletin.scriptureBookPlaceholder')}
+        options={BIBLE_BOOKS}
         onChange={(v) => onPatch('scriptureBook', v)}
       />
       <TextField
