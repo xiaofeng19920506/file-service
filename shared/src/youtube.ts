@@ -508,3 +508,17 @@ export async function fetchYoutubeVideoDurationSeconds(videoId: string): Promise
     return null;
   }
 }
+
+const videoDurationCache = new Map<string, { seconds: number; cachedAt: number }>();
+const VIDEO_DURATION_CACHE_TTL_MS = 86_400_000;
+
+/** 带进程内缓存的 YouTube 视频时长（秒） */
+export async function getYoutubeVideoDurationSecondsCached(videoId: string): Promise<number | null> {
+  const hit = videoDurationCache.get(videoId);
+  if (hit && Date.now() - hit.cachedAt < VIDEO_DURATION_CACHE_TTL_MS) return hit.seconds;
+  const seconds = await fetchYoutubeVideoDurationSeconds(videoId);
+  if (seconds !== null) {
+    videoDurationCache.set(videoId, { seconds, cachedAt: Date.now() });
+  }
+  return seconds;
+}

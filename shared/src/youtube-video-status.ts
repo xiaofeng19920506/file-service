@@ -7,6 +7,7 @@ import {
   DEFAULT_YOUTUBE_VIDEO_STREAMABLE_MIN_BYTES,
 } from './youtube-video-storage.js';
 import { serializeVideoCache, type YoutubeVideoCachePublic } from './youtube-video-cache.js';
+import { getYoutubeVideoDurationSecondsCached } from './youtube.js';
 
 export type YoutubeVideoStreamInfo = {
   cachedBytes: number;
@@ -45,6 +46,7 @@ export type YoutubeVideoStatusPayload = YoutubeVideoCachePublic & {
   cachedBytes: number | null;
   expectedBytes: number | null;
   partial: boolean;
+  durationSeconds?: number;
 };
 
 export async function buildYoutubeVideoStatusPayload(
@@ -55,6 +57,12 @@ export async function buildYoutubeVideoStatusPayload(
   buildStreamUrl: (videoId: string) => { streamUrl: string; expiresAt: string },
   streamableMinBytes = DEFAULT_YOUTUBE_VIDEO_STREAMABLE_MIN_BYTES,
 ): Promise<YoutubeVideoStatusPayload> {
+  const durationSeconds = await getYoutubeVideoDurationSecondsCached(videoId);
+  const durationField =
+    durationSeconds !== null && durationSeconds > 0
+      ? { durationSeconds }
+      : {};
+
   const base = cache
     ? serializeVideoCache(cache)
     : { videoId, status: 'pending' as const, blobId: null, errorCode: null };
@@ -62,6 +70,7 @@ export async function buildYoutubeVideoStatusPayload(
   if (!cache?.blobId) {
     return {
       ...base,
+      ...durationField,
       streamUrl: null,
       expiresAt: null,
       cachedBytes: null,
@@ -76,6 +85,7 @@ export async function buildYoutubeVideoStatusPayload(
   if (!info.streamable || !blob) {
     return {
       ...base,
+      ...durationField,
       streamUrl: null,
       expiresAt: null,
       cachedBytes: info.cachedBytes,
@@ -87,6 +97,7 @@ export async function buildYoutubeVideoStatusPayload(
   const { streamUrl, expiresAt } = buildStreamUrl(videoId);
   return {
     ...base,
+    ...durationField,
     streamUrl,
     expiresAt,
     cachedBytes: info.cachedBytes,

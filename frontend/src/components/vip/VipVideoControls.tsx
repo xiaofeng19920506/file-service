@@ -143,8 +143,13 @@ export default function VipVideoControls({
       const el = videoRef.current;
       if (!el || !canSeek) return;
       const clamped = Math.min(1, Math.max(0, ratio));
+      const targetTime = clamped * duration;
       setScrubRatio(clamped);
-      el.currentTime = clamped * duration;
+      try {
+        el.currentTime = targetTime;
+      } catch {
+        /* 分段缓存流 metadata 未就绪时可能失败 */
+      }
     },
     [canSeek, duration, videoRef],
   );

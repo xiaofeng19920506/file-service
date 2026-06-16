@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import VipVideoBrowse, { VipVideoSearchBar } from '../components/vip/VipVideoBrowse';
 import VipVideoControls from '../components/vip/VipVideoControls';
 import { ChevronLeftIcon } from '../components/icons';
@@ -17,11 +17,28 @@ export default function VipVideoPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const watchTopRef = useRef<HTMLDivElement>(null);
   const search = useDebouncedYoutubeSearch({ debounceEnabled: !isMobile });
-  const { current, status, streamUrl, errorCode, partial, isReady, play, refreshForMoreCache, markPlaybackFailed, clear } =
+  const { current, status, streamUrl, errorCode, partial, durationSeconds, isReady, play, refreshForMoreCache, markPlaybackFailed, clear } =
     useVipVideoPlayback();
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+
+  const playbackDuration = useMemo(() => {
+    if (Number.isFinite(duration) && duration > 0 && duration !== Infinity) {
+      return duration;
+    }
+    if (typeof durationSeconds === 'number' && durationSeconds > 0) {
+      return durationSeconds;
+    }
+    return 0;
+  }, [duration, durationSeconds]);
+
+  const syncDurationFromVideo = useCallback((el: HTMLVideoElement) => {
+    const trackDuration = el.duration;
+    if (Number.isFinite(trackDuration) && trackDuration > 0 && trackDuration !== Infinity) {
+      setDuration(trackDuration);
+    }
+  }, []);
 
   useEffect(() => {
     if (!current) return;
@@ -154,8 +171,14 @@ export default function VipVideoPage() {
                     playsInline
                     preload={streamUrl ? 'auto' : 'none'}
                     poster={current.thumbnailUrl ?? undefined}
-                    onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-                    onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+                    onTimeUpdate={(e) => {
+                      setCurrentTime(e.currentTarget.currentTime);
+                      syncDurationFromVideo(e.currentTarget);
+                    }}
+                    onLoadedMetadata={(e) => syncDurationFromVideo(e.currentTarget)}
+                    onDurationChange={(e) => syncDurationFromVideo(e.currentTarget)}
+                    onLoadedData={(e) => syncDurationFromVideo(e.currentTarget)}
+                    onCanPlay={(e) => syncDurationFromVideo(e.currentTarget)}
                     onPlay={() => setPlaying(true)}
                     onPause={() => setPlaying(false)}
                     onEnded={() => setPlaying(false)}
@@ -186,7 +209,7 @@ export default function VipVideoPage() {
                   playing={playing}
                   onPlayingChange={setPlaying}
                   currentTime={currentTime}
-                  duration={duration}
+                  duration={playbackDuration}
                 />
 
                 {!isMobile && (

@@ -42,6 +42,7 @@ export function useVipVideoPlayback() {
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const [partial, setPartial] = useState(false);
   const [cachedBytes, setCachedBytes] = useState<number | null>(null);
+  const [durationSeconds, setDurationSeconds] = useState<number | null>(null);
   const pollErrorCountRef = useRef(0);
   const activeVideoIdRef = useRef<string | null>(null);
   const cachedBytesRef = useRef(0);
@@ -52,6 +53,13 @@ export function useVipVideoPlayback() {
     setErrorCode(data.errorCode);
     setPartial(Boolean(data.partial));
     setCachedBytes(data.cachedBytes);
+    if (
+      typeof data.durationSeconds === 'number' &&
+      Number.isFinite(data.durationSeconds) &&
+      data.durationSeconds > 0
+    ) {
+      setDurationSeconds(data.durationSeconds);
+    }
     if (typeof data.cachedBytes === 'number') {
       cachedBytesRef.current = data.cachedBytes;
     }
@@ -66,6 +74,7 @@ export function useVipVideoPlayback() {
     setErrorCode(null);
     setPartial(false);
     setCachedBytes(null);
+    setDurationSeconds(null);
     const hinted = track.cacheStatus;
     if (hinted === 'ready' || hinted === 'processing' || hinted === 'failed') {
       setStatus(hinted);
@@ -177,6 +186,7 @@ export function useVipVideoPlayback() {
     errorCode,
     partial,
     cachedBytes,
+    durationSeconds,
     isReady,
     play,
     refreshForMoreCache,

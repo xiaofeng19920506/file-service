@@ -45,6 +45,7 @@ export type YoutubeVideoStatus = {
   cachedBytes: number | null;
   expectedBytes: number | null;
   partial: boolean;
+  durationSeconds?: number;
 };
 
 export async function fetchYoutubeVideoStatus(videoId: string): Promise<YoutubeVideoStatus> {
