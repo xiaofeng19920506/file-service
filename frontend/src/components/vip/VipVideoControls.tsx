@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
-import AudioSeekBar from '../AudioSeekBar';
 import { useI18n } from '../../i18n';
+import { useSeekBarDrag } from '../../hooks/useSeekBarDrag';
 import {
   readStoredPlayerVolume,
   writeStoredPlayerVolume,
@@ -17,27 +17,29 @@ function formatTime(seconds: number): string {
 function VolumeIcon({ level, muted }: { level: number; muted: boolean }) {
   if (muted || level === 0) {
     return (
-      <svg className="audio-volume-icon" viewBox="0 0 16 16" aria-hidden>
+      <svg className="youtube-player-volume-icon" viewBox="0 0 16 16" aria-hidden>
         <path
           fill="currentColor"
-          d="M8.5 2.5L5 6H2v4h3l3.5 3.5V2.5zM11.5 8a3.5 3.5 0 00-1.5-2.86v5.72A3.5 3.5 0 0011.5 8z"
+          d="M2 5.5v5h2.5L8 14V2L4.5 5.5H2zM11.8 4.2 11 5l2 2-2 2 .8.8 2.8-2.8L14.6 6l-2.8-2.8zM9 6.4 10.6 8 9 9.6V6.4z"
         />
-        <path stroke="currentColor" strokeWidth="1.2" d="M13 5l-4 6M9 5l4 6" />
       </svg>
     );
   }
   if (level < 50) {
     return (
-      <svg className="audio-volume-icon" viewBox="0 0 16 16" aria-hidden>
-        <path fill="currentColor" d="M8.5 2.5L5 6H2v4h3l3.5 3.5V2.5zM11.5 8a3.5 3.5 0 00-1.5-2.86v5.72A3.5 3.5 0 0011.5 8z" />
+      <svg className="youtube-player-volume-icon" viewBox="0 0 16 16" aria-hidden>
+        <path
+          fill="currentColor"
+          d="M2 5.5v5h2.5L8 14V2L4.5 5.5H2zm5.5 2.5a3.5 3.5 0 0 1 0 5v-1.5a2 2 0 0 0 0-2v-1.5z"
+        />
       </svg>
     );
   }
   return (
-    <svg className="audio-volume-icon" viewBox="0 0 16 16" aria-hidden>
+    <svg className="youtube-player-volume-icon" viewBox="0 0 16 16" aria-hidden>
       <path
         fill="currentColor"
-        d="M8.5 2.5L5 6H2v4h3l3.5 3.5V2.5zM11.5 8a3.5 3.5 0 00-1.5-2.86v5.72A3.5 3.5 0 0011.5 8zm2.2-2.2a5.5 5.5 0 010 8.4V5.8a5.5 5.5 0 00-2.2-5.5z"
+        d="M2 5.5v5h2.5L8 14V2L4.5 5.5H2zm5.5 2.5a3.5 3.5 0 0 1 0 5v-1.5a2 2 0 0 0 0-2v-1.5zm2-5a6.5 6.5 0 0 1 0 11v-1.5a5 5 0 0 0 0-8v-1.5z"
       />
     </svg>
   );
@@ -65,13 +67,22 @@ export default function VipVideoControls({
   isMobile = false,
 }: VipVideoControlsProps) {
   const { t } = useI18n();
+  const progressRef = useRef<HTMLDivElement>(null);
   const volumeProgressRef = useRef<HTMLDivElement>(null);
+  const [scrubRatio, setScrubRatio] = useState<number | null>(null);
   const [volume, setVolume] = useState(readStoredPlayerVolume);
   const [muted, setMuted] = useState(false);
   const volumeBeforeMuteRef = useRef(volume);
 
+  const hasDuration = Number.isFinite(duration) && duration > 0;
+  const canSeek = isReady && hasDuration;
   const volumePct = muted ? 0 : volume;
-  const canSeek = isReady && Number.isFinite(duration) && duration > 0;
+  const progressPct =
+    scrubRatio !== null
+      ? scrubRatio * 100
+      : hasDuration
+        ? Math.min(100, Math.max(0, (currentTime / duration) * 100))
+        : 0;
 
   useEffect(() => {
     const el = videoRef.current;
@@ -118,11 +129,35 @@ export default function VipVideoControls({
     (ratio: number) => {
       const el = videoRef.current;
       if (!el || !canSeek) return;
-      const next = ratio * duration;
-      el.currentTime = next;
+      const clamped = Math.min(1, Math.max(0, ratio));
+      setScrubRatio(clamped);
+      el.currentTime = clamped * duration;
     },
     [canSeek, duration, videoRef],
   );
+
+  const { handleClick: handleProgressClick } = useSeekBarDrag({
+    barRef: progressRef,
+    enabled: canSeek,
+    onSeekRatio: seekToRatio,
+    onScrubStart: () => {
+      if (hasDuration) {
+        setScrubRatio(Math.min(1, Math.max(0, currentTime / duration)));
+      }
+    },
+    onScrubEnd: () => {
+      setScrubRatio(null);
+    },
+  });
+
+  const onProgressKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!canSeek) return;
+    const step = e.key === 'ArrowLeft' ? -5 : e.key === 'ArrowRight' ? 5 : 0;
+    if (!step) return;
+    e.preventDefault();
+    const ratio = Math.min(1, Math.max(0, currentTime / duration + step / duration));
+    seekToRatio(ratio);
+  };
 
   const togglePlay = () => {
     if (!isReady || isLoading) return;
@@ -131,21 +166,35 @@ export default function VipVideoControls({
 
   return (
     <div
-      className={`vip-video-controls-bar${isMobile ? ' vip-video-controls-bar--mobile' : ''}`}
+      className={`vip-video-controls-overlay${isMobile ? ' vip-video-controls-overlay--mobile' : ''}`}
       role="group"
       aria-label={t('vipVideo.playerControls')}
     >
-      <AudioSeekBar
-        currentTime={currentTime}
-        duration={duration}
-        canSeek={canSeek}
-        onSeekRatio={seekToRatio}
-        className="vip-video-seek"
-      />
+      <div
+        ref={progressRef}
+        className={`youtube-player-progress vip-video-progress${canSeek ? '' : ' vip-video-progress--disabled'}`}
+        role="slider"
+        tabIndex={canSeek ? 0 : -1}
+        aria-label={t('playlists.seek')}
+        aria-valuemin={0}
+        aria-valuemax={hasDuration ? duration : 0}
+        aria-valuenow={scrubRatio !== null && hasDuration ? scrubRatio * duration : currentTime}
+        aria-disabled={!canSeek}
+        onClick={(e) => handleProgressClick(e.clientX)}
+        onKeyDown={onProgressKeyDown}
+      >
+        <div className="youtube-player-progress-track">
+          <div className="youtube-player-progress-fill" style={{ width: `${progressPct}%` }} />
+          {hasDuration && (
+            <div className="youtube-player-progress-thumb" style={{ left: `${progressPct}%` }} aria-hidden />
+          )}
+        </div>
+      </div>
+
       <div className="vip-video-controls-row">
         <button
           type="button"
-          className="btn-primary vip-video-play-btn"
+          className="youtube-player-icon-btn youtube-player-icon-btn-primary vip-video-play-btn"
           disabled={!isReady}
           onClick={togglePlay}
           aria-busy={isLoading || undefined}
@@ -156,18 +205,20 @@ export default function VipVideoControls({
           {isLoading ? (
             <span className="vip-video-loading-spinner vip-video-loading-spinner--btn" aria-hidden />
           ) : playing ? (
-            t('vipVideo.pause')
+            '▮▮'
           ) : (
-            t('vipVideo.play')
+            '▶'
           )}
         </button>
-        <span className="vip-video-time">
+
+        <span className="youtube-player-time vip-video-time">
           {formatTime(currentTime)} / {formatTime(duration)}
         </span>
-        <div className="audio-volume vip-video-volume">
+
+        <div className="youtube-player-volume vip-video-volume">
           <div
             ref={volumeProgressRef}
-            className="audio-volume-slider"
+            className="youtube-player-volume-progress"
             role="slider"
             tabIndex={0}
             aria-label={t('playlists.volume')}
@@ -176,19 +227,19 @@ export default function VipVideoControls({
             aria-valuenow={volumePct}
             onClick={(e) => seekVolumeFromClientX(e.clientX)}
             onKeyDown={(e) => {
-              if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+              const step = e.key === 'ArrowLeft' ? -5 : e.key === 'ArrowRight' ? 5 : 0;
+              if (!step) return;
               e.preventDefault();
-              const step = e.key === 'ArrowRight' ? 5 : -5;
               setVolumeLevel((muted ? 0 : volume) + step);
             }}
           >
-            <div className="audio-volume-track">
-              <div className="audio-volume-fill" style={{ width: `${volumePct}%` }} />
+            <div className="youtube-player-volume-progress-track">
+              <div className="youtube-player-volume-progress-fill" style={{ width: `${volumePct}%` }} />
             </div>
           </div>
           <button
             type="button"
-            className="audio-transport-btn audio-volume-btn"
+            className="youtube-player-icon-btn youtube-player-volume-btn"
             onClick={toggleMute}
             aria-label={muted || volume === 0 ? t('playlists.unmute') : t('playlists.mute')}
           >
