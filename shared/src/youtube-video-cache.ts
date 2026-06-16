@@ -219,6 +219,49 @@ export async function prioritizeYoutubeVideoJobs(
   );
 }
 
+/** VIP 搜索页：按相关度预缓存前 N 条结果 */
+export const YOUTUBE_SEARCH_VIDEO_PREFETCH_COUNT = 10;
+
+export type YoutubeSearchPrefetchEntry = {
+  videoId: string;
+  title: string;
+  relevanceScore?: number;
+};
+
+export function topSearchResultsForVideoPrefetch(
+  results: YoutubeSearchPrefetchEntry[],
+  limit = YOUTUBE_SEARCH_VIDEO_PREFETCH_COUNT,
+): { videoId: string; title: string }[] {
+  const sorted = [...results].sort(
+    (a, b) => (b.relevanceScore ?? 0) - (a.relevanceScore ?? 0),
+  );
+  const seen = new Set<string>();
+  const picked: { videoId: string; title: string }[] = [];
+  for (const row of sorted) {
+    if (!isValidYoutubeVideoId(row.videoId) || seen.has(row.videoId)) continue;
+    seen.add(row.videoId);
+    picked.push({ videoId: row.videoId, title: row.title });
+    if (picked.length >= limit) break;
+  }
+  return picked;
+}
+
+export async function prefetchYoutubeVideosFromSearch(
+  db: Db,
+  queue: YoutubeVideoExtractQueue,
+  results: YoutubeSearchPrefetchEntry[],
+  limit = YOUTUBE_SEARCH_VIDEO_PREFETCH_COUNT,
+): Promise<void> {
+  const top = topSearchResultsForVideoPrefetch(results, limit);
+  if (!top.length) return;
+  await prioritizeYoutubeVideoJobs(
+    db,
+    queue,
+    top.map((e) => e.videoId),
+    top,
+  );
+}
+
 async function enqueueVideoJob(
   queue: YoutubeVideoExtractQueue,
   videoId: string,

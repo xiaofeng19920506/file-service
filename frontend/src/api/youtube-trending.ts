@@ -1,4 +1,5 @@
 import { apiFetch, parseJson } from './http';
+import type { YoutubeVideoCacheStatus } from './youtube-search';
 
 export type TrendingSong = {
   videoId: string;
@@ -6,6 +7,7 @@ export type TrendingSong = {
   channelTitle: string | null;
   playCount: number;
   inLibrary: boolean;
+  video?: { status: YoutubeVideoCacheStatus };
 };
 
 export type TrendingScope = 'today' | 'all_time' | 'popular';

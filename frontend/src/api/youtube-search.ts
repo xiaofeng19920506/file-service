@@ -1,5 +1,7 @@
 import { apiFetch, parseJson } from './http';
 
+export type YoutubeVideoCacheStatus = 'pending' | 'processing' | 'ready' | 'failed';
+
 export type YoutubeSearchResult = {
   videoId: string;
   title: string;
@@ -8,6 +10,7 @@ export type YoutubeSearchResult = {
   thumbnailUrl: string | null;
   relevanceScore: number;
   inLibrary?: boolean;
+  video?: { status: YoutubeVideoCacheStatus };
 };
 
 export type YoutubeSearchPageResponse = {

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { fetchTrendingYoutubeSongs, type TrendingSong } from '../../api/youtube-trending';
-import type { YoutubeSearchResult } from '../../api/youtube-search';
+import type { YoutubeSearchResult, YoutubeVideoCacheStatus } from '../../api/youtube-search';
+import { fetchYoutubeVideoStatus } from '../../api/vip-video';
 import { useDebouncedYoutubeSearch } from '../../hooks/useDebouncedYoutubeSearch';
 import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../../hooks/useMediaQuery';
 import type { VipVideoTrack } from '../../hooks/useVipVideoPlayback';
@@ -13,6 +14,7 @@ type BrowseItem = {
   title: string;
   channelTitle: string | null;
   thumbnailUrl: string | null;
+  videoStatus?: YoutubeVideoCacheStatus | null;
 };
 
 export function toVipBrowseItem(row: YoutubeSearchResult | TrendingSong): BrowseItem {
@@ -25,6 +27,7 @@ export function toVipBrowseItem(row: YoutubeSearchResult | TrendingSong): Browse
     title: row.title,
     channelTitle: row.channelTitle,
     thumbnailUrl,
+    videoStatus: row.video?.status ?? null,
   };
 }
 
@@ -147,6 +150,9 @@ export default function VipVideoBrowse({
   const [trending, setTrending] = useState<BrowseItem[]>([]);
   const [trendingLoading, setTrendingLoading] = useState(true);
   const [trendingError, setTrendingError] = useState<string | null>(null);
+  const [videoStatusById, setVideoStatusById] = useState<
+    Record<string, YoutubeVideoCacheStatus>
+  >({});
 
   const {
     searchQuery,
@@ -212,9 +218,63 @@ export default function VipVideoBrowse({
     ? searchResults.map(toVipBrowseItem)
     : trending;
 
+  useEffect(() => {
+    const fromResults: Record<string, YoutubeVideoCacheStatus> = {};
+    for (const row of searchResults) {
+      if (row.video?.status) fromResults[row.videoId] = row.video.status;
+    }
+    if (Object.keys(fromResults).length) {
+      setVideoStatusById((prev) => ({ ...prev, ...fromResults }));
+    }
+  }, [searchResults]);
+
+  useEffect(() => {
+    const cachingIds = displayItems
+      .map((item) => item.videoId)
+      .filter((id) => {
+        const status = videoStatusById[id] ?? displayItems.find((i) => i.videoId === id)?.videoStatus;
+        return status === 'pending' || status === 'processing';
+      });
+    if (!cachingIds.length) return;
+
+    const refresh = () => {
+      void Promise.all(
+        cachingIds.slice(0, 12).map(async (videoId) => {
+          try {
+            const data = await fetchYoutubeVideoStatus(videoId);
+            return [videoId, data.status] as const;
+          } catch {
+            return null;
+          }
+        }),
+      ).then((pairs) => {
+        const updates = pairs.filter((p): p is readonly [string, YoutubeVideoCacheStatus] => p !== null);
+        if (!updates.length) return;
+        setVideoStatusById((prev) => {
+          const next = { ...prev };
+          for (const [id, status] of updates) next[id] = status;
+          return next;
+        });
+      });
+    };
+
+    void refresh();
+    const timer = window.setInterval(refresh, 5000);
+    return () => window.clearInterval(timer);
+  }, [displayItems, videoStatusById]);
+
+  const statusLabel = (status: YoutubeVideoCacheStatus | null | undefined) => {
+    if (status === 'ready') return t('vipVideo.statusReady');
+    if (status === 'failed') return t('vipVideo.statusFailed');
+    if (status === 'pending' || status === 'processing') return t('vipVideo.statusCaching');
+    return null;
+  };
+
   const renderCard = (item: BrowseItem) => {
     const active = activeVideoId === item.videoId;
     const rowLayout = effectiveListStyle === 'row';
+    const cacheStatus = videoStatusById[item.videoId] ?? item.videoStatus;
+    const cacheLabel = statusLabel(cacheStatus);
     return (
       <button
         key={item.videoId}
@@ -244,6 +304,13 @@ export default function VipVideoBrowse({
           {item.channelTitle && (
             <span className="vip-video-card-channel" title={item.channelTitle}>
               {item.channelTitle}
+            </span>
+          )}
+          {cacheLabel && (
+            <span
+              className={`vip-video-card-status${cacheStatus === 'ready' ? ' ready' : ''}${cacheStatus === 'failed' ? ' failed' : ''}`}
+            >
+              {cacheLabel}
             </span>
           )}
         </span>

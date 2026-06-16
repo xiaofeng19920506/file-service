@@ -112,8 +112,8 @@ async function buildApp() {
   registerYoutubeVideoRoutes(app, { db, env, storage, videoQueue });
   registerVipRoutes(app, { db, env, videoQueue });
   registerYoutubeOAuthRoutes(app, { db, env });
-  registerYoutubeSearchRoutes(app, { db, env });
-  registerYoutubeTrendingRoutes(app, { db });
+  registerYoutubeSearchRoutes(app, { db, env, videoQueue });
+  registerYoutubeTrendingRoutes(app, { db, videoQueue });
   registerBulletinRoutes(app, {
     db,
     redisUrl: env.REDIS_URL,

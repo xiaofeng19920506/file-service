@@ -7559,6 +7559,20 @@ body.bulletin-slideshow-window {
   text-overflow: ellipsis;
 }
 
+.vip-video-card-status {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+
+.vip-video-card-status.ready {
+  color: var(--accent);
+}
+
+.vip-video-card-status.failed {
+  color: var(--danger, #c62828);
+}
+
 .vip-video-browse--sidebar .vip-video-browse-heading {
   font-size: 1rem;
   margin-bottom: 0.65rem;
