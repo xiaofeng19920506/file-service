@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   addPlaylistItemsByVideos,
+  addInvitePlaylistItemsByVideos,
   type PlaylistDetail,
   type PlaylistSummary,
 } from '../api/playlists';
@@ -17,6 +18,7 @@ type PendingAdd = { videoId: string; title: string };
 
 type PlaylistYoutubeSearchPanelProps = {
   playlistId?: string;
+  inviteToken?: string;
   existingVideoIds?: Set<string>;
   libraryVideoIds?: Set<string>;
   onAdded: (detail: PlaylistDetail, meta: { addedCount: number; skippedCount: number }) => void;
@@ -34,6 +36,7 @@ type PlaylistYoutubeSearchPanelProps = {
 
 export default function PlaylistYoutubeSearchPanel({
   playlistId,
+  inviteToken,
   existingVideoIds = new Set(),
   libraryVideoIds = new Set(),
   onAdded,
@@ -107,7 +110,9 @@ export default function PlaylistYoutubeSearchPanel({
     setAddingVideoId(videoId);
     setAddError(null);
     try {
-      const data = await addPlaylistItemsByVideos(targetPlaylistId, [{ videoId, title }]);
+      const data = inviteToken
+        ? await addInvitePlaylistItemsByVideos(inviteToken, [{ videoId, title }])
+        : await addPlaylistItemsByVideos(targetPlaylistId, [{ videoId, title }]);
       onAdded(data, { addedCount: data.addedCount, skippedCount: data.skippedCount });
       setPendingAdd(null);
     } catch (err) {
@@ -133,8 +138,9 @@ export default function PlaylistYoutubeSearchPanel({
       return;
     }
 
-    if (!playlistId || isInCurrentPlaylist(videoId)) return;
-    await addToPlaylist(playlistId, videoId, title);
+    if (!playlistId && !inviteToken) return;
+    if (isInCurrentPlaylist(videoId)) return;
+    await addToPlaylist(playlistId ?? '', videoId, title);
   };
 
   const isInCurrentPlaylist = (videoId: string) => existingVideoIds.has(videoId);

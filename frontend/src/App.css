@@ -6522,6 +6522,90 @@ body.bulletin-slideshow-window {
   padding: 1.25rem 1rem 5rem;
 }
 
+.worship-songs-page {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 3rem;
+}
+
+.worship-songs-header h1 {
+  margin: 0 0 0.35rem;
+}
+
+.worship-songs-intro {
+  margin: 0 0 1.25rem;
+  color: var(--text-secondary);
+}
+
+.worship-songs-panel {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.worship-songs-panel h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+}
+
+.worship-songs-url-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.worship-songs-track-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.worship-songs-track {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.worship-songs-track-order {
+  flex: 0 0 1.5rem;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.worship-songs-track-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.bulletin-worship-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.bulletin-worship-meta {
+  margin: 0.35rem 0;
+  color: var(--text-secondary);
+}
+
+.bulletin-worship-invite-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
 .worship-header h1 {
   margin: 0 0 0.35rem;
 }

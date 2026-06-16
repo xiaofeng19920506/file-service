@@ -9,6 +9,7 @@ import MergePage from './views/MergePage';
 import PlaylistsPage from './views/PlaylistsPage';
 import BulletinPage from './views/BulletinPage';
 import WorshipPage from './views/WorshipPage';
+import WorshipSongsInvitePage from './views/WorshipSongsInvitePage';
 import BulletinSlideShowPresenterPage from './views/BulletinSlideShowPresenterPage';
 import BulletinSlideShowProjectorPage from './views/BulletinSlideShowProjectorPage';
 import WorshipLivePage from './views/WorshipLivePage';
@@ -92,6 +93,9 @@ function AppShellInner({
       return;
     }
     if (page === 'worship' && !permissions.canStartWorship) {
+      navigate(home);
+    }
+    if (page === 'worship-songs' && !permissions.canAccessPlaylists) {
       navigate(home);
     }
   }, [loading, user, page, navigate, permissions]);
@@ -370,7 +374,7 @@ function AppShellWithMenu() {
 
 export default function App() {
   const { user, loading, permissions } = useAuth();
-  const { page, previewBlobId, mergeEditBlobIds, mergeEditTitle, worshipPlaylistId, worshipBulletinId, worshipMode, slideshowSessionId } = useAppPage();
+  const { page, previewBlobId, mergeEditBlobIds, mergeEditTitle, worshipPlaylistId, worshipBulletinId, worshipMode, worshipSongsInviteToken, slideshowSessionId } = useAppPage();
   const libraryUpload = useLibraryUpload();
   const { t } = useI18n();
 
@@ -412,6 +416,25 @@ export default function App() {
     permissions.canViewBulletin
   ) {
     return <BulletinSlideShowPresenterPage sessionId={slideshowSessionId} />;
+  }
+
+  if (
+    page === 'worship-songs' &&
+    worshipSongsInviteToken
+  ) {
+    if (!user) {
+      window.location.hash = '#/login';
+      return <AuthPage />;
+    }
+    if (!permissions.canAccessPlaylists) {
+      window.location.hash = '#/playlists';
+      return (
+        <div className="auth-page">
+          <p className="auth-loading">{t('auth.checkingSession')}</p>
+        </div>
+      );
+    }
+    return <WorshipSongsInvitePage inviteToken={worshipSongsInviteToken} />;
   }
 
   if (

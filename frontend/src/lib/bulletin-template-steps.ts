@@ -11,6 +11,7 @@ export type BulletinWizardStep = {
   labelKey:
     | 'bulletin.steps.cover'
     | 'bulletin.steps.scripture'
+    | 'bulletin.steps.worship'
     | 'bulletin.steps.offering'
     | 'bulletin.steps.birthday'
     | 'bulletin.steps.announcements'
@@ -36,6 +37,13 @@ export const BULLETIN_WIZARD_STEPS: BulletinWizardStep[] = [
     sectionId: 'scripture',
     slides: [4, 5, 6],
     labelKey: 'bulletin.steps.scripture',
+    enabled: true,
+  },
+  {
+    id: 'worship',
+    sectionId: 'worship',
+    slides: [7, 8, 9],
+    labelKey: 'bulletin.steps.worship',
     enabled: true,
   },
   {

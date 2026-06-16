@@ -29,6 +29,7 @@ export type WeeklyBulletin = {
   skipTestimonyWeek: boolean;
   skipDepartmentReports: boolean;
   outputBlobId: string | null;
+  servicePlaylistId: string | null;
   createdByUserId: string;
   createdAt: string;
   updatedAt: string | null;
@@ -236,4 +237,35 @@ export async function fetchBulletinSlidePreviewPng(
     throw new Error(msg);
   }
   return res.blob();
+}
+
+export type WorshipPlaylistInvite = {
+  bulletin: WeeklyBulletin;
+  playlist: { id: string; title: string };
+  inviteToken: string;
+  inviteUrl: string;
+  expiresAtUnix: number;
+  emailed?: boolean;
+};
+
+export async function ensureBulletinWorshipPlaylist(bulletinId: string): Promise<WorshipPlaylistInvite> {
+  const res = await apiFetch(`/v1/bulletins/${encodeURIComponent(bulletinId)}/worship-playlist`, {
+    method: 'POST',
+  });
+  return parseJson<WorshipPlaylistInvite>(res);
+}
+
+export async function inviteBulletinWorshipLeader(
+  bulletinId: string,
+  body: { email?: string; message?: string },
+): Promise<WorshipPlaylistInvite> {
+  const res = await apiFetch(
+    `/v1/bulletins/${encodeURIComponent(bulletinId)}/worship-playlist/invite`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  );
+  return parseJson<WorshipPlaylistInvite>(res);
 }

@@ -18,10 +18,15 @@ import {
   purgeExpiredScripturePreferences,
   upsertScripturePreference,
   weeklyBulletins,
+  playlists,
+  signPlaylistEditToken,
+  formatUserDisplayName,
+  type ApiEnv,
   type Db,
 } from '@file-service/shared';
 import type { FastifyInstance } from 'fastify';
 import { notifyBulletinUpdated } from './bulletin-realtime.js';
+import { resolveMailConfig, resolveWebAppUrl, sendMail } from './mail.js';
 
 function resolveBulletinTemplateDir(): string {
   const here = dirname(fileURLToPath(import.meta.url));
@@ -71,6 +76,7 @@ export type WeeklyBulletinDto = {
   weeklyMeetingVariant: number | null;
   skipTestimonyWeek: boolean;
   skipDepartmentReports: boolean;
+  servicePlaylistId: string | null;
   outputBlobId: string | null;
   createdByUserId: string;
   createdAt: string;
@@ -127,6 +133,7 @@ async function mapBulletin(
     weeklyMeetingVariant: row.weeklyMeetingVariant,
     skipTestimonyWeek: row.skipTestimonyWeek,
     skipDepartmentReports: row.skipDepartmentReports,
+    servicePlaylistId: row.servicePlaylistId,
     outputBlobId: row.outputBlobId,
     createdByUserId: row.createdByUserId,
     createdAt: row.createdAt.toISOString(),
@@ -162,6 +169,45 @@ type AnnouncementInput = {
   body: string;
 };
 
+const BULLETIN_PLAYLIST_SOURCE = 'bulletin://service-playlist';
+
+async function ensureBulletinServicePlaylist(
+  db: Db,
+  bulletin: typeof weeklyBulletins.$inferSelect,
+  userId: string,
+) {
+  if (bulletin.servicePlaylistId) {
+    const [existing] = await db
+      .select()
+      .from(playlists)
+      .where(eq(playlists.id, bulletin.servicePlaylistId));
+    if (existing) return existing;
+  }
+
+  const title = `${bulletin.serviceDate} 敬拜歌单`;
+  const now = new Date();
+  const [playlist] = await db
+    .insert(playlists)
+    .values({
+      title,
+      sourceUrl: `${BULLETIN_PLAYLIST_SOURCE}/${bulletin.id}`,
+      createdByUserId: userId,
+      updatedAt: now,
+    })
+    .returning();
+
+  await db
+    .update(weeklyBulletins)
+    .set({ servicePlaylistId: playlist!.id, updatedAt: now })
+    .where(eq(weeklyBulletins.id, bulletin.id));
+
+  return playlist!;
+}
+
+function buildWorshipInviteUrl(webAppUrl: string, token: string): string {
+  return `${webAppUrl}/#/worship-songs?invite=${encodeURIComponent(token)}`;
+}
+
 export function registerBulletinRoutes(
   app: FastifyInstance,
   {
@@ -169,7 +215,14 @@ export function registerBulletinRoutes(
     redisUrl,
     sofficePath,
     sofficePreviewUrl,
-  }: { db: Db; redisUrl: string; sofficePath: string; sofficePreviewUrl?: string },
+    env,
+  }: {
+    db: Db;
+    redisUrl: string;
+    sofficePath: string;
+    sofficePreviewUrl?: string;
+    env: ApiEnv;
+  },
 ) {
   void purgeExpiredScripturePreferences(db).catch((err) =>
     app.log.error(err, 'scripture preference purge failed'),
@@ -566,4 +619,133 @@ export function registerBulletinRoutes(
       return reply.send({ bulletin: await mapBulletin(db, row!) });
     },
   );
+
+  app.post<{ Params: { id: string } }>('/v1/bulletins/:id/worship-playlist', async (request, reply) => {
+    const user = requireUser(request);
+    if (!user || !canManageBulletin(user.role)) {
+      return reply.code(403).send({ error: 'bulletin_forbidden' });
+    }
+
+    const [bulletin] = await db
+      .select()
+      .from(weeklyBulletins)
+      .where(eq(weeklyBulletins.id, request.params.id));
+    if (!bulletin) return reply.code(404).send({ error: 'not_found' });
+
+    const playlist = await ensureBulletinServicePlaylist(db, bulletin, user.id);
+    const [updated] = await db
+      .select()
+      .from(weeklyBulletins)
+      .where(eq(weeklyBulletins.id, bulletin.id));
+
+    const expiresAtUnix = Math.floor(Date.now() / 1000) + env.SHARE_LINK_TTL_SECONDS;
+    const inviteToken = signPlaylistEditToken({
+      secret: env.DOWNLOAD_HMAC_SECRET,
+      playlistId: playlist.id,
+      bulletinId: bulletin.id,
+      expiresAtUnix,
+    });
+    const webAppUrl = resolveWebAppUrl(env);
+
+    return reply.send({
+      bulletin: await mapBulletin(db, updated!),
+      playlist: {
+        id: playlist.id,
+        title: playlist.title,
+      },
+      inviteToken,
+      inviteUrl: buildWorshipInviteUrl(webAppUrl, inviteToken),
+      expiresAtUnix,
+    });
+  });
+
+  app.post<{
+    Params: { id: string };
+    Body: { email?: string; message?: string };
+  }>('/v1/bulletins/:id/worship-playlist/invite', async (request, reply) => {
+    const user = requireUser(request);
+    if (!user || !canManageBulletin(user.role)) {
+      return reply.code(403).send({ error: 'bulletin_forbidden' });
+    }
+
+    const [bulletin] = await db
+      .select()
+      .from(weeklyBulletins)
+      .where(eq(weeklyBulletins.id, request.params.id));
+    if (!bulletin) return reply.code(404).send({ error: 'not_found' });
+
+    const playlist = await ensureBulletinServicePlaylist(db, bulletin, user.id);
+    const expiresAtUnix = Math.floor(Date.now() / 1000) + env.SHARE_LINK_TTL_SECONDS;
+    const inviteToken = signPlaylistEditToken({
+      secret: env.DOWNLOAD_HMAC_SECRET,
+      playlistId: playlist.id,
+      bulletinId: bulletin.id,
+      expiresAtUnix,
+    });
+    const webAppUrl = resolveWebAppUrl(env);
+    const inviteUrl = buildWorshipInviteUrl(webAppUrl, inviteToken);
+
+    const recipientEmail = request.body?.email?.trim().toLowerCase();
+    if (recipientEmail) {
+      const mailConfig = resolveMailConfig(env);
+      if (!mailConfig) {
+        return reply.code(503).send({ error: 'email_not_configured' });
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail)) {
+        return reply.code(400).send({ error: 'invalid_email' });
+      }
+
+      const senderName = formatUserDisplayName(user) || user.email;
+      const optionalMessage = request.body?.message?.trim();
+      const subject = `${senderName} 邀请你填写 ${bulletin.serviceDate} 敬拜歌单`;
+      const textLines = [
+        `${senderName} 邀请你为 ${bulletin.serviceDate} 主日崇拜填写敬拜歌单「${playlist.title}」。`,
+        optionalMessage ? `\n附言：${optionalMessage}\n` : '',
+        '你可以从 YouTube 播放列表导入，或逐首粘贴 YouTube 链接添加：',
+        inviteUrl,
+        '',
+        `链接 ${Math.ceil(env.SHARE_LINK_TTL_SECONDS / 86_400)} 天内有效。`,
+      ].filter((line) => line !== '');
+
+      try {
+        await sendMail({
+          config: mailConfig,
+          to: recipientEmail,
+          subject,
+          text: textLines.join('\n'),
+          html: [
+            `<p><strong>${senderName}</strong> 邀请你为 <strong>${bulletin.serviceDate}</strong> 主日崇拜填写敬拜歌单「${playlist.title}」。</p>`,
+            optionalMessage
+              ? `<p><strong>附言：</strong>${optionalMessage.replace(/</g, '&lt;')}</p>`
+              : '',
+            '<p>你可以从 YouTube 播放列表导入，或逐首粘贴 YouTube 链接添加。</p>',
+            `<p><a href="${inviteUrl.replace(/"/g, '&quot;')}">打开链接编辑歌单</a></p>`,
+            `<p style="color:#666;font-size:13px;">链接 ${Math.ceil(env.SHARE_LINK_TTL_SECONDS / 86_400)} 天内有效。</p>`,
+          ]
+            .filter(Boolean)
+            .join(''),
+        });
+      } catch (e) {
+        request.log.error(e, 'worship playlist invite email failed');
+        return reply.code(502).send({ error: 'email_send_failed' });
+      }
+    }
+
+    const [updated] = await db
+      .select()
+      .from(weeklyBulletins)
+      .where(eq(weeklyBulletins.id, bulletin.id));
+
+    return reply.send({
+      bulletin: await mapBulletin(db, updated!),
+      playlist: {
+        id: playlist.id,
+        title: playlist.title,
+      },
+      inviteToken,
+      inviteUrl,
+      expiresAtUnix,
+      emailed: Boolean(recipientEmail),
+    });
+  });
 }

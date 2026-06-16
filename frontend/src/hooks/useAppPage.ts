@@ -16,6 +16,7 @@ export type AppPage =
   | 'bulletin-slideshow-presenter'
   | 'bulletin-slideshow-projector'
   | 'worship'
+  | 'worship-songs'
   | 'worship-live';
 
 export type AppRoute = {
@@ -29,6 +30,7 @@ export type AppRoute = {
   worshipPlaylistId?: string;
   worshipBulletinId?: string;
   worshipMode?: 'youtube' | 'ppt';
+  worshipSongsInviteToken?: string;
   slideshowSessionId?: string;
 };
 
@@ -107,6 +109,15 @@ function routeFromHash(rawHash: string): AppRoute {
     }
   }
   if (hash === '#/worship' || hash.startsWith('#/worship?')) return { page: 'worship' };
+  if (hash.startsWith('#/worship-songs')) {
+    const qIndex = hash.indexOf('?');
+    const params =
+      qIndex === -1 ? new URLSearchParams() : new URLSearchParams(hash.slice(qIndex + 1));
+    const worshipSongsInviteToken = params.get('invite')?.trim() || undefined;
+    if (worshipSongsInviteToken) {
+      return { page: 'worship-songs', worshipSongsInviteToken };
+    }
+  }
   if (hash.startsWith('#/bulletin/slideshow/projector')) {
     const qIndex = hash.indexOf('?');
     const params =
@@ -210,6 +221,7 @@ export function useAppPage() {
     worshipPlaylistId: route.worshipPlaylistId,
     worshipBulletinId: route.worshipBulletinId,
     worshipMode: route.worshipMode,
+    worshipSongsInviteToken: route.worshipSongsInviteToken,
     slideshowSessionId: route.slideshowSessionId,
     navigate,
     navigateToPlaylist,

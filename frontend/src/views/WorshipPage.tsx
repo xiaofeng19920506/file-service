@@ -30,7 +30,12 @@ export default function WorshipPage() {
         if (cancelled) return;
         setPlaylists(list);
         setBulletins(weeks);
-        setPlaylistId((prev) => prev || list[0]?.id || '');
+        setPlaylistId((prev) => {
+          if (prev) return prev;
+          const bulletin = weeks[0];
+          if (bulletin?.servicePlaylistId) return bulletin.servicePlaylistId;
+          return list[0]?.id || '';
+        });
         setBulletinId((prev) => prev || weeks[0]?.id || '');
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : String(err));
@@ -127,7 +132,17 @@ export default function WorshipPage() {
         {mode === 'ppt' && (
           <label className="worship-field">
             {t('worship.bulletinLabel')}
-            <select value={bulletinId} onChange={(e) => setBulletinId(e.target.value)}>
+            <select
+              value={bulletinId}
+              onChange={(e) => {
+                const nextId = e.target.value;
+                setBulletinId(nextId);
+                const bulletin = bulletins.find((b) => b.id === nextId);
+                if (bulletin?.servicePlaylistId) {
+                  setPlaylistId(bulletin.servicePlaylistId);
+                }
+              }}
+            >
               <option value="">{t('worship.bulletinPlaceholder')}</option>
               {bulletins.map((b) => (
                 <option key={b.id} value={b.id}>

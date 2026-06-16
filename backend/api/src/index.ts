@@ -111,6 +111,7 @@ async function buildApp() {
     redisUrl: env.REDIS_URL,
     sofficePath: env.SOFFICE_PATH,
     sofficePreviewUrl: env.SOFFICE_PREVIEW_URL,
+    env,
   });
   registerBulletinRealtimeRoutes(app, { redisUrl: env.REDIS_URL });
 

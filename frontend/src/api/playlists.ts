@@ -181,3 +181,57 @@ export async function patchPlaylistItemBlob(
   const data = await parseJson<{ item: PlaylistItem }>(res);
   return data.item;
 }
+
+export type WorshipPlaylistInviteDetail = PlaylistDetail & {
+  bulletin: { id: string; serviceDate: string; serviceTime: string };
+  canEdit: boolean;
+};
+
+export async function getWorshipPlaylistInvite(token: string): Promise<WorshipPlaylistInviteDetail> {
+  const res = await apiFetch(`/v1/playlists/invite/${encodeURIComponent(token)}`);
+  return parseJson<WorshipPlaylistInviteDetail>(res);
+}
+
+export async function addInvitePlaylistItems(
+  token: string,
+  url: string,
+): Promise<PlaylistDetail & { addedCount: number; skippedCount: number }> {
+  const res = await apiFetch(`/v1/playlists/invite/${encodeURIComponent(token)}/items`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url }),
+  });
+  return parseJson<PlaylistDetail & { addedCount: number; skippedCount: number }>(res);
+}
+
+export async function addInvitePlaylistItemsByVideos(
+  token: string,
+  items: { videoId: string; title: string }[],
+): Promise<PlaylistDetail & { addedCount: number; skippedCount: number }> {
+  const res = await apiFetch(`/v1/playlists/invite/${encodeURIComponent(token)}/items`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items }),
+  });
+  return parseJson<PlaylistDetail & { addedCount: number; skippedCount: number }>(res);
+}
+
+export async function reorderInvitePlaylistItems(
+  token: string,
+  itemIds: string[],
+): Promise<PlaylistDetail> {
+  const res = await apiFetch(`/v1/playlists/invite/${encodeURIComponent(token)}/items/order`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ itemIds }),
+  });
+  return parseJson<PlaylistDetail>(res);
+}
+
+export async function removeInvitePlaylistItem(token: string, itemId: string): Promise<void> {
+  const res = await apiFetch(
+    `/v1/playlists/invite/${encodeURIComponent(token)}/items/${encodeURIComponent(itemId)}`,
+    { method: 'DELETE' },
+  );
+  await parseJson<{ ok: boolean }>(res);
+}

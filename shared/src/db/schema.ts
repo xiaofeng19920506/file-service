@@ -200,6 +200,7 @@ export const weeklyBulletins = pgTable('weekly_bulletins', {
   weeklyMeetingVariant: integer('weekly_meeting_variant'),
   skipTestimonyWeek: boolean('skip_testimony_week').notNull().default(false),
   skipDepartmentReports: boolean('skip_department_reports').notNull().default(false),
+  servicePlaylistId: uuid('service_playlist_id').references(() => playlists.id, { onDelete: 'set null' }),
   outputBlobId: uuid('output_blob_id').references(() => blobs.id, { onDelete: 'set null' }),
   createdByUserId: uuid('created_by_user_id')
     .notNull()

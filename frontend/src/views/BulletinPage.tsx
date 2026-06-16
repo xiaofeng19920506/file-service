@@ -10,6 +10,7 @@ import {
 } from '../api/bulletins';
 import { useAuth } from '../auth/AuthContext';
 import BulletinCoverStep from '../components/bulletin/BulletinCoverStep';
+import BulletinWorshipStep from '../components/bulletin/BulletinWorshipStep';
 import BulletinPreviewPanel from '../components/bulletin/BulletinPreviewPanel';
 import {
   BulletinAnnouncementsStep,
@@ -337,6 +338,16 @@ export default function BulletinPage() {
                 scriptureReference: draft.scriptureReference,
               })
             }
+          />
+        );
+      case 'worship':
+        return (
+          <BulletinWorshipStep
+            draft={draft}
+            canEdit={canManage}
+            onPlaylistReady={(playlistId) => {
+              setDraft((prev) => (prev ? { ...prev, servicePlaylistId: playlistId } : prev));
+            }}
           />
         );
       case 'offering':

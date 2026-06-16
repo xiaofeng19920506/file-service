@@ -11,7 +11,9 @@ import {
   playlistItems,
   playlists,
   signPlaylistShareToken,
+  verifyPlaylistEditToken,
   verifyPlaylistShareToken,
+  weeklyBulletins,
   type ApiEnv,
   type Db,
   type YoutubeAudioCachePublic,
@@ -81,6 +83,37 @@ async function assertPlaylistAccess(
     return { error: 'forbidden' as const, playlist: null };
   }
   return { error: null, playlist };
+}
+
+async function resolvePlaylistEditInvite(
+  db: Db,
+  secret: string,
+  token: string,
+): Promise<
+  | { error: 'invalid_invite_token' | 'not_found' }
+  | {
+      playlist: typeof playlists.$inferSelect;
+      bulletin: typeof weeklyBulletins.$inferSelect;
+    }
+> {
+  const claims = verifyPlaylistEditToken({ secret, token });
+  if (!claims) return { error: 'invalid_invite_token' };
+
+  const [playlist] = await db
+    .select()
+    .from(playlists)
+    .where(eq(playlists.id, claims.playlistId));
+  if (!playlist) return { error: 'not_found' };
+
+  const [bulletin] = await db
+    .select()
+    .from(weeklyBulletins)
+    .where(eq(weeklyBulletins.id, claims.bulletinId));
+  if (!bulletin || bulletin.servicePlaylistId !== playlist.id) {
+    return { error: 'invalid_invite_token' };
+  }
+
+  return { playlist, bulletin };
 }
 
 function youtubeWatchUrl(videoId: string): string {
@@ -791,6 +824,179 @@ export function registerPlaylistRoutes(
       if (!cloned) return reply.code(404).send({ error: 'not_found' });
 
       return buildPlaylistDetail(db, cloned, audioQueue);
+    },
+  );
+
+  app.get<{ Params: { token: string } }>('/v1/playlists/invite/:token', async (request, reply) => {
+    const user = request.authUser;
+    if (!user) return reply.code(401).send({ error: 'unauthorized' });
+
+    const resolved = await resolvePlaylistEditInvite(db, env.DOWNLOAD_HMAC_SECRET, request.params.token);
+    if ('error' in resolved) {
+      if (resolved.error === 'invalid_invite_token') {
+        return reply.code(400).send({ error: 'invalid_invite_token' });
+      }
+      return reply.code(404).send({ error: 'not_found' });
+    }
+
+    const detail = await buildPlaylistDetail(db, resolved.playlist, audioQueue);
+    return {
+      ...detail,
+      bulletin: {
+        id: resolved.bulletin.id,
+        serviceDate: resolved.bulletin.serviceDate,
+        serviceTime: resolved.bulletin.serviceTime,
+      },
+      canEdit: true,
+    };
+  });
+
+  app.post<{
+    Params: { token: string };
+    Body: { url?: string; items?: { videoId?: string; title?: string }[] };
+  }>('/v1/playlists/invite/:token/items', async (request, reply) => {
+    const user = request.authUser;
+    if (!user) return reply.code(401).send({ error: 'unauthorized' });
+
+    const resolved = await resolvePlaylistEditInvite(db, env.DOWNLOAD_HMAC_SECRET, request.params.token);
+    if ('error' in resolved) {
+      if (resolved.error === 'invalid_invite_token') {
+        return reply.code(400).send({ error: 'invalid_invite_token' });
+      }
+      return reply.code(404).send({ error: 'not_found' });
+    }
+
+    const playlistId = resolved.playlist.id;
+    const bodyItems = request.body?.items;
+    if (Array.isArray(bodyItems) && bodyItems.length > 0) {
+      const videos = bodyItems
+        .map((row) => ({
+          videoId: row.videoId?.trim() ?? '',
+          title: row.title?.trim() ?? '',
+        }))
+        .filter((row) => row.videoId && row.title);
+      if (!videos.length) return reply.code(400).send({ error: 'invalid_request' });
+
+      const result = await appendVideosToPlaylist(db, playlistId, videos, audioQueue);
+      if (!result.addedCount) {
+        return reply.code(409).send({
+          error: 'playlist_items_duplicate',
+          skipped: result.skippedCount,
+        });
+      }
+      return { ...result.detail, addedCount: result.addedCount, skippedCount: result.skippedCount };
+    }
+
+    const url = request.body?.url?.trim();
+    if (!url) return reply.code(400).send({ error: 'url_required' });
+
+    let imported;
+    try {
+      imported = await fetchYoutubePlaylistData(url, env.YOUTUBE_API_KEY);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'youtube_import_failed';
+      if (msg === 'invalid_youtube_url') {
+        return reply.code(400).send({ error: 'invalid_youtube_url' });
+      }
+      request.log.error(e, 'youtube invite add items failed');
+      return reply.code(502).send({ error: 'youtube_import_failed' });
+    }
+
+    if (!imported.items.length) {
+      return reply.code(400).send({ error: 'youtube_playlist_empty' });
+    }
+
+    const result = await appendVideosToPlaylist(
+      db,
+      playlistId,
+      imported.items.map((video) => ({ videoId: video.videoId, title: video.title })),
+      audioQueue,
+    );
+    if (!result.addedCount) {
+      return reply.code(409).send({
+        error: 'playlist_items_duplicate',
+        skipped: result.skippedCount,
+      });
+    }
+    return { ...result.detail, addedCount: result.addedCount, skippedCount: result.skippedCount };
+  });
+
+  app.put<{ Params: { token: string }; Body: { itemIds?: string[] } }>(
+    '/v1/playlists/invite/:token/items/order',
+    async (request, reply) => {
+      const user = request.authUser;
+      if (!user) return reply.code(401).send({ error: 'unauthorized' });
+
+      const resolved = await resolvePlaylistEditInvite(db, env.DOWNLOAD_HMAC_SECRET, request.params.token);
+      if ('error' in resolved) {
+        if (resolved.error === 'invalid_invite_token') {
+          return reply.code(400).send({ error: 'invalid_invite_token' });
+        }
+        return reply.code(404).send({ error: 'not_found' });
+      }
+
+      const itemIds = request.body?.itemIds;
+      if (!Array.isArray(itemIds) || !itemIds.length) {
+        return reply.code(400).send({ error: 'invalid_request' });
+      }
+
+      const playlistId = resolved.playlist.id;
+      const items = await db
+        .select()
+        .from(playlistItems)
+        .where(eq(playlistItems.playlistId, playlistId));
+      const itemMap = new Map(items.map((item) => [item.id, item]));
+      if (itemIds.some((id) => !itemMap.has(id))) {
+        return reply.code(400).send({ error: 'invalid_request' });
+      }
+
+      await Promise.all(
+        itemIds.map((id, index) =>
+          db
+            .update(playlistItems)
+            .set({ sortOrder: index })
+            .where(and(eq(playlistItems.id, id), eq(playlistItems.playlistId, playlistId))),
+        ),
+      );
+      await db
+        .update(playlists)
+        .set({ updatedAt: new Date() })
+        .where(eq(playlists.id, playlistId));
+
+      const [updated] = await db.select().from(playlists).where(eq(playlists.id, playlistId));
+      return buildPlaylistDetail(db, updated!, audioQueue);
+    },
+  );
+
+  app.delete<{ Params: { token: string; itemId: string } }>(
+    '/v1/playlists/invite/:token/items/:itemId',
+    async (request, reply) => {
+      const user = request.authUser;
+      if (!user) return reply.code(401).send({ error: 'unauthorized' });
+
+      const resolved = await resolvePlaylistEditInvite(db, env.DOWNLOAD_HMAC_SECRET, request.params.token);
+      if ('error' in resolved) {
+        if (resolved.error === 'invalid_invite_token') {
+          return reply.code(400).send({ error: 'invalid_invite_token' });
+        }
+        return reply.code(404).send({ error: 'not_found' });
+      }
+
+      const { itemId } = request.params;
+      const playlistId = resolved.playlist.id;
+      const [deleted] = await db
+        .delete(playlistItems)
+        .where(and(eq(playlistItems.id, itemId), eq(playlistItems.playlistId, playlistId)))
+        .returning();
+
+      if (!deleted) return reply.code(404).send({ error: 'not_found' });
+
+      await db
+        .update(playlists)
+        .set({ updatedAt: new Date() })
+        .where(eq(playlists.id, playlistId));
+
+      return { ok: true };
     },
   );
 }
