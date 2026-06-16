@@ -36,10 +36,13 @@ export function VipVideoSearchBar({
   search,
   className = '',
   isMobile = false,
+  onBeforeSearch,
 }: {
   search: ReturnType<typeof useDebouncedYoutubeSearch>;
   className?: string;
   isMobile?: boolean;
+  /** 提交搜索前回调（如退出全屏播放，回到搜索结果页） */
+  onBeforeSearch?: () => void;
 }) {
   const { t } = useI18n();
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -54,7 +57,9 @@ export function VipVideoSearchBar({
   const showClearSearch = searchQuery.trim().length > 0;
 
   const submitSearch = () => {
-    if (searchQuery.trim()) searchNow();
+    if (!searchQuery.trim()) return;
+    onBeforeSearch?.();
+    searchNow();
   };
 
   return (
