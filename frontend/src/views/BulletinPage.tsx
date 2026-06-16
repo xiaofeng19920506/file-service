@@ -21,6 +21,7 @@ import {
 } from '../components/bulletin/BulletinWizardSteps';
 import ProgressStepper from '../components/ProgressStepper';
 import { useBulletinRealtime } from '../hooks/useBulletinRealtime';
+import { useBulletinScripturePersistence } from '../hooks/useBulletinScripturePersistence';
 import { useI18n } from '../i18n';
 import { nextSundayIso } from '../lib/bulletin-date';
 import { BULLETIN_WIZARD_STEPS } from '../lib/bulletin-template-steps';
@@ -154,6 +155,10 @@ export default function BulletinPage() {
   const patchField = <K extends keyof WeeklyBulletin>(key: K, value: WeeklyBulletin[K]) => {
     setDraft((prev) => (prev ? { ...prev, [key]: value } : prev));
   };
+
+  useBulletinScripturePersistence(draft, patchField, {
+    canPersistRemote: canManage,
+  });
 
   const handleServiceDateChange = (isoDate: string) => {
     const existing = bulletins.find((b) => b.serviceDate === isoDate);

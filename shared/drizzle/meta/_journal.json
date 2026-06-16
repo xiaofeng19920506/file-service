@@ -127,6 +127,13 @@
       "when": 1750521600000,
       "tag": "0018_bulletin_scripture",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1750608000000,
+      "tag": "0019_bulletin_scripture_preferences",
+      "breakpoints": true
     }
   ]
 }

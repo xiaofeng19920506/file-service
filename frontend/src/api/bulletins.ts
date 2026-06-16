@@ -157,6 +157,54 @@ export async function fetchScriptureSlideBodies(
   return parseJson<ScriptureSlideBodies>(res);
 }
 
+export type ScripturePreference = {
+  bulletinId: string;
+  scriptureBook: string;
+  scriptureReference: string;
+  updatedAt: string;
+  expiresAt: string;
+};
+
+export async function fetchScripturePreference(
+  bulletinId: string,
+): Promise<ScripturePreference | null> {
+  const qs = new URLSearchParams({ bulletinId });
+  const res = await apiFetch(`/v1/bulletins/scripture-preference?${qs}`);
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    const msg =
+      typeof data === 'object' && data && 'error' in data
+        ? String((data as { error: string }).error)
+        : res.statusText;
+    throw new Error(msg);
+  }
+  const data = await parseJson<{ preference: ScripturePreference }>(res);
+  return data.preference;
+}
+
+export async function saveScripturePreference(input: {
+  bulletinId: string;
+  scriptureBook: string;
+  scriptureReference: string;
+}): Promise<ScripturePreference> {
+  const res = await apiFetch('/v1/bulletins/scripture-preference', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    const msg =
+      typeof data === 'object' && data && 'error' in data
+        ? String((data as { error: string }).error)
+        : res.statusText;
+    throw new Error(msg);
+  }
+  const data = await parseJson<{ preference: ScripturePreference }>(res);
+  return data.preference;
+}
+
 /** 服务端用 LibreOffice 从原版 PPT 渲染幻灯片 PNG（已按参数补丁封面/读经等文字） */
 export type BulletinSlidePreviewParams = {
   serviceDate?: string;

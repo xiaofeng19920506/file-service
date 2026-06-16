@@ -220,6 +220,25 @@ export const bulletinAnnouncements = pgTable('bulletin_announcements', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const bulletinScripturePreferences = pgTable(
+  'bulletin_scripture_preferences',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    bulletinId: uuid('bulletin_id')
+      .notNull()
+      .references(() => weeklyBulletins.id, { onDelete: 'cascade' }),
+    scriptureBook: text('scripture_book').notNull().default(''),
+    scriptureReference: text('scripture_reference').notNull().default(''),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.userId, table.bulletinId] }),
+  }),
+);
+
 export type UserRow = typeof users.$inferSelect;
 export type UserLoginDeviceRow = typeof userLoginDevices.$inferSelect;
 export type BlobRow = typeof blobs.$inferSelect;
@@ -232,3 +251,4 @@ export type YoutubeOAuthConnectionRow = typeof youtubeOAuthConnections.$inferSel
 export type UserSubscriptionRow = typeof userSubscriptions.$inferSelect;
 export type WeeklyBulletinRow = typeof weeklyBulletins.$inferSelect;
 export type BulletinAnnouncementRow = typeof bulletinAnnouncements.$inferSelect;
+export type BulletinScripturePreferenceRow = typeof bulletinScripturePreferences.$inferSelect;

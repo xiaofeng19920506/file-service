@@ -162,7 +162,7 @@ const en: MessageTree = {
     scriptureSelectBookFirst: 'Select a book first, then choose chapter and verses.',
     scriptureSelectChapterFirst: 'Select a chapter, then choose start and end verses.',
     scriptureReference: 'Passage',
-    scriptureHint: 'The Scripture Reading title stays fixed. Slides 5–6 auto-fill Chinese and English for the selected passage (overflow Chinese continues on slide 6).',
+    scriptureHint: 'Selections auto-save for 30 days. Slides 5–6 fill with Chinese and English; long Chinese text continues on slide 6.',
     lastWeekOffering: 'Last week offering date',
     offeringQuarter: 'Quarter offering label',
     birthdayMonth: 'Birthday month',

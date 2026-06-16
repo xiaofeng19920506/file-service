@@ -14,6 +14,9 @@ import {
   patchBulletinPreviewInPptx,
   renderSlidePngViaService,
   resolveScriptureSlideBodies,
+  getScripturePreference,
+  purgeExpiredScripturePreferences,
+  upsertScripturePreference,
   weeklyBulletins,
   type Db,
 } from '@file-service/shared';
@@ -168,6 +171,15 @@ export function registerBulletinRoutes(
     sofficePreviewUrl,
   }: { db: Db; redisUrl: string; sofficePath: string; sofficePreviewUrl?: string },
 ) {
+  void purgeExpiredScripturePreferences(db).catch((err) =>
+    app.log.error(err, 'scripture preference purge failed'),
+  );
+  setInterval(() => {
+    void purgeExpiredScripturePreferences(db).catch((err) =>
+      app.log.error(err, 'scripture preference purge failed'),
+    );
+  }, 24 * 60 * 60 * 1000);
+
   app.get('/v1/bulletins/template/slides', async (request, reply) => {
     const user = requireUser(request);
     if (!user || !canViewBulletin(user.role)) {
@@ -216,6 +228,78 @@ export function registerBulletinRoutes(
     } catch (err) {
       request.log.warn({ err, scriptureBook, scriptureReference }, 'scripture bodies failed');
       return reply.code(503).send({ error: 'scripture_data_unavailable' });
+    }
+  });
+
+  app.get<{
+    Querystring: { bulletinId?: string };
+  }>('/v1/bulletins/scripture-preference', async (request, reply) => {
+    const user = requireUser(request);
+    if (!user || !canViewBulletin(user.role)) {
+      return reply.code(403).send({ error: 'bulletin_forbidden' });
+    }
+    const bulletinId = request.query.bulletinId?.trim();
+    if (!bulletinId) {
+      return reply.code(400).send({ error: 'bulletin_id_required' });
+    }
+    try {
+      const preference = await getScripturePreference(db, user.id, bulletinId);
+      if (!preference) return reply.code(404).send({ error: 'not_found' });
+      return reply.send({ preference });
+    } catch (err) {
+      request.log.error(err, 'get scripture preference failed');
+      return reply.code(500).send({ error: 'bulletin_db_error' });
+    }
+  });
+
+  app.put<{
+    Body: {
+      bulletinId?: string;
+      scriptureBook?: string;
+      scriptureReference?: string;
+    };
+  }>('/v1/bulletins/scripture-preference', async (request, reply) => {
+    const user = requireUser(request);
+    if (!user || !canManageBulletin(user.role)) {
+      return reply.code(403).send({ error: 'bulletin_forbidden' });
+    }
+    const bulletinId = request.body?.bulletinId?.trim();
+    const scriptureBook = request.body?.scriptureBook?.trim() ?? '';
+    const scriptureReference = request.body?.scriptureReference?.trim() ?? '';
+    if (!bulletinId) {
+      return reply.code(400).send({ error: 'bulletin_id_required' });
+    }
+    const [bulletin] = await db
+      .select({ id: weeklyBulletins.id })
+      .from(weeklyBulletins)
+      .where(eq(weeklyBulletins.id, bulletinId));
+    if (!bulletin) return reply.code(404).send({ error: 'not_found' });
+
+    try {
+      const preference = await upsertScripturePreference(db, {
+        userId: user.id,
+        bulletinId,
+        scriptureBook,
+        scriptureReference,
+      });
+      if (scriptureBook || scriptureReference) {
+        await db
+          .update(weeklyBulletins)
+          .set({
+            scriptureBook,
+            scriptureReference,
+            updatedAt: new Date(),
+          })
+          .where(eq(weeklyBulletins.id, bulletinId));
+        const updatedAt = preference.updatedAt;
+        void notifyBulletinUpdated(redisUrl, bulletinId, updatedAt).catch((err) => {
+          app.log.warn({ err, bulletinId }, 'bulletin realtime notify failed');
+        });
+      }
+      return reply.send({ preference });
+    } catch (err) {
+      request.log.error(err, 'upsert scripture preference failed');
+      return reply.code(500).send({ error: 'bulletin_db_error' });
     }
   });
 
