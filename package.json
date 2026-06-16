@@ -30,6 +30,7 @@
     "dev:worker": "tsx watch backend/worker/src/index.ts",
     "dev:worker:merge": "tsx watch backend/worker/src/worker-merge.ts",
     "dev:worker:audio": "tsx watch backend/worker/src/worker-audio.ts",
+    "dev:worker:video": "tsx watch backend/worker/src/worker-video.ts",
     "dev:web": "npm run dev -w @file-service/web",
     "start": "node backend/api/dist/index.js",
     "test": "vitest run",
