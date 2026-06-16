@@ -148,6 +148,13 @@
       "when": 1750867200000,
       "tag": "0022_youtube_video_expected_bytes",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1750953600000,
+      "tag": "0023_youtube_user_activity",
+      "breakpoints": true
     }
   ]
 }
