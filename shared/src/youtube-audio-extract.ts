@@ -3,11 +3,13 @@ import { existsSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
+import {
+  withYtdlpPlayerClientFallback,
+  ytdlpProcessEnv,
+  ytdlpSharedArgs,
+} from './ytdlp-common.js';
 
 const execFileAsync = promisify(execFile);
-
-const TOOL_PATH =
-  '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:' + (process.env.PATH ?? '');
 
 export function resolveYtdlpPath(configured = 'yt-dlp'): string {
   for (const candidate of [
@@ -36,25 +38,26 @@ export async function extractYoutubeAudioMp3(
   }
 
   const outputTemplate = join(workDir, 'audio.%(ext)s');
-  await execFileAsync(
-    resolveYtdlpPath(ytdlpPath),
-    [
-      '-x',
-      '--audio-format',
-      'mp3',
-      '--audio-quality',
-      '5',
-      '-o',
-      outputTemplate,
-      '--no-playlist',
-      '--no-warnings',
-      `https://www.youtube.com/watch?v=${videoId}`,
-    ],
-    {
-      timeout: 600_000,
-      maxBuffer: 4 * 1024 * 1024,
-      env: { ...process.env, PATH: TOOL_PATH },
-    },
+  await withYtdlpPlayerClientFallback((playerClient) =>
+    execFileAsync(
+      resolveYtdlpPath(ytdlpPath),
+      [
+        '-x',
+        '--audio-format',
+        'mp3',
+        '--audio-quality',
+        '5',
+        '-o',
+        outputTemplate,
+        ...ytdlpSharedArgs(playerClient),
+        `https://www.youtube.com/watch?v=${videoId}`,
+      ],
+      {
+        timeout: 600_000,
+        maxBuffer: 4 * 1024 * 1024,
+        env: ytdlpProcessEnv(),
+      },
+    ),
   );
 
   const files = await readdir(workDir);
@@ -77,15 +80,14 @@ export function spawnYoutubeAudioPreviewStream(
     [
       '-f',
       'ba[ext=m4a]/ba[ext=mp3]/ba/b',
-      '--no-playlist',
-      '--no-warnings',
+      ...ytdlpSharedArgs(process.env.YT_DLP_PLAYER_CLIENT?.trim() || 'android,web'),
       '--no-part',
       '-o',
       '-',
       `https://www.youtube.com/watch?v=${videoId}`,
     ],
     {
-      env: { ...process.env, PATH: TOOL_PATH },
+      env: ytdlpProcessEnv(),
       stdio: ['ignore', 'pipe', 'pipe'],
     },
   );

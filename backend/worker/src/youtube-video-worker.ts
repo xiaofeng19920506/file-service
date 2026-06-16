@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import {
   YOUTUBE_VIDEO_QUEUE_NAME,
   bullmqConnection,
+  classifyYtdlpError,
   createDb,
   createObjectStorage,
   DEFAULT_YOUTUBE_VIDEO_PROGRESSIVE_BYTES,
@@ -80,7 +81,7 @@ export async function startYoutubeVideoWorker(): Promise<Worker> {
             .update(youtubeVideoCache)
             .set({
               status: 'failed',
-              errorCode: 'video_extract_failed',
+              errorCode: classifyYtdlpError(message),
               errorDetail: message.slice(0, 500),
               updatedAt: new Date(),
             })
@@ -121,14 +122,7 @@ export async function startYoutubeVideoWorker(): Promise<Worker> {
           .where(eq(youtubeVideoCache.youtubeVideoId, videoId));
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e);
-        const errorCode =
-          message === 'invalid_video_id'
-            ? 'invalid_video_id'
-            : message.includes('ffmpeg') || message.includes('ffprobe')
-              ? 'ffmpeg_not_installed'
-              : message.includes('ENOENT') || message.includes('not found')
-                ? 'ytdlp_not_installed'
-                : 'video_extract_failed';
+        const errorCode = classifyYtdlpError(message);
 
         await db
           .update(youtubeVideoCache)

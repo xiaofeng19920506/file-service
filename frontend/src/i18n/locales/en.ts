@@ -842,6 +842,8 @@ const en: MessageTree = {
     video_not_ready: 'Video is not cached yet — please wait',
     video_extract_failed: 'Video caching failed — try again later',
     video_playback_failed: 'Video playback failed — refresh and try again',
+    youtube_download_forbidden: 'YouTube blocked the download (403). Set YT_DLP_COOKIES_FROM_BROWSER on the server and retry.',
+    youtube_rate_limited: 'YouTube rate limit — try again later',
     last_admin_required: 'At least one admin must remain — cannot demote',
     cannot_change_own_role: 'You cannot change your own role',
     cannot_delete_self: 'You cannot delete your own account here',

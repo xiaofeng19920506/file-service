@@ -4,14 +4,15 @@ import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { isValidYoutubeVideoId, resolveYtdlpPath } from './youtube-audio-extract.js';
+import {
+  withYtdlpPlayerClientFallback,
+  ytdlpProcessEnv,
+  ytdlpSharedArgs,
+} from './ytdlp-common.js';
 
 const execFileAsync = promisify(execFile);
 
 export { isValidYoutubeVideoId };
-
-const YTDLP_ENV = {
-  PATH: '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:' + (process.env.PATH ?? ''),
-};
 
 function watchUrl(videoId: string): string {
   return `https://www.youtube.com/watch?v=${videoId}`;
@@ -26,10 +27,12 @@ export async function estimateYoutubeVideoBytes(
 ): Promise<number | null> {
   if (!isValidYoutubeVideoId(videoId)) return null;
   try {
-    const { stdout } = await execFileAsync(
-      resolveYtdlpPath(ytdlpPath),
-      ['-j', '-f', YTDLP_FORMAT, '--no-playlist', '--no-warnings', watchUrl(videoId)],
-      { env: { ...process.env, ...YTDLP_ENV }, maxBuffer: 8 * 1024 * 1024, timeout: 90_000 },
+    const { stdout } = await withYtdlpPlayerClientFallback((playerClient) =>
+      execFileAsync(
+        resolveYtdlpPath(ytdlpPath),
+        ['-j', '-f', YTDLP_FORMAT, ...ytdlpSharedArgs(playerClient), watchUrl(videoId)],
+        { env: ytdlpProcessEnv(), maxBuffer: 8 * 1024 * 1024, timeout: 90_000 },
+      ),
     );
     const info = JSON.parse(stdout) as { filesize?: number; filesize_approx?: number };
     const size = info.filesize ?? info.filesize_approx;
@@ -50,24 +53,25 @@ export async function extractYoutubeVideoMp4(
   }
 
   const outputTemplate = join(workDir, 'video.%(ext)s');
-  await execFileAsync(
-    resolveYtdlpPath(ytdlpPath),
-    [
-      '-f',
-      YTDLP_FORMAT,
-      '--merge-output-format',
-      'mp4',
-      '-o',
-      outputTemplate,
-      '--no-playlist',
-      '--no-warnings',
-      watchUrl(videoId),
-    ],
-    {
-      env: { ...process.env, ...YTDLP_ENV },
-      maxBuffer: 64 * 1024 * 1024,
-      timeout: 600_000,
-    },
+  await withYtdlpPlayerClientFallback((playerClient) =>
+    execFileAsync(
+      resolveYtdlpPath(ytdlpPath),
+      [
+        '-f',
+        YTDLP_FORMAT,
+        '--merge-output-format',
+        'mp4',
+        '-o',
+        outputTemplate,
+        ...ytdlpSharedArgs(playerClient),
+        watchUrl(videoId),
+      ],
+      {
+        env: ytdlpProcessEnv(),
+        maxBuffer: 64 * 1024 * 1024,
+        timeout: 600_000,
+      },
+    ),
   );
 
   const files = await readdir(workDir);
@@ -91,19 +95,6 @@ export async function extractYoutubeVideoMp4ToFile(
   }
 
   const ytdlp = resolveYtdlpPath(opts?.ytdlpPath ?? 'yt-dlp');
-  const args = [
-    '-f',
-    YTDLP_FORMAT,
-    '--merge-output-format',
-    'mp4',
-    '--postprocessor-args',
-    'ffmpeg:-movflags frag_keyframe+empty_moov+default_base_moof',
-    '-o',
-    outputPath,
-    '--no-playlist',
-    '--no-warnings',
-    watchUrl(videoId),
-  ];
 
   let lastReported = 0;
   const intervalMs = opts?.progressIntervalMs ?? 1500;
@@ -120,14 +111,22 @@ export async function extractYoutubeVideoMp4ToFile(
     }
   };
 
-  const timer = setInterval(() => {
-    void report();
-  }, intervalMs);
-
-  try {
-    await new Promise<void>((resolve, reject) => {
+  const runDownload = (playerClient: string) =>
+    new Promise<void>((resolve, reject) => {
+      const args = [
+        '-f',
+        YTDLP_FORMAT,
+        '--merge-output-format',
+        'mp4',
+        '--postprocessor-args',
+        'ffmpeg:-movflags frag_keyframe+empty_moov+default_base_moof',
+        '-o',
+        outputPath,
+        ...ytdlpSharedArgs(playerClient),
+        watchUrl(videoId),
+      ];
       const child = spawn(ytdlp, args, {
-        env: { ...process.env, ...YTDLP_ENV },
+        env: ytdlpProcessEnv(),
         stdio: ['ignore', 'pipe', 'pipe'],
       });
       let stderr = '';
@@ -140,6 +139,13 @@ export async function extractYoutubeVideoMp4ToFile(
         else reject(new Error(stderr.trim() || `video_extract_failed:${code}`));
       });
     });
+
+  const timer = setInterval(() => {
+    void report();
+  }, intervalMs);
+
+  try {
+    await withYtdlpPlayerClientFallback(runDownload);
     const finalSize = (await stat(outputPath)).size;
     if (opts?.onProgress && finalSize > lastReported) {
       await opts.onProgress(finalSize);

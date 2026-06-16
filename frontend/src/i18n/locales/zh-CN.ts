@@ -831,6 +831,8 @@ export default {
     video_not_ready: '视频尚未缓存完成，请稍候',
     video_extract_failed: '视频缓存失败，请稍后重试',
     video_playback_failed: '视频无法播放，请刷新后重试',
+    youtube_download_forbidden: 'YouTube 拒绝下载（403），可在服务器 .env 设置 YT_DLP_COOKIES_FROM_BROWSER=safari 后重试',
+    youtube_rate_limited: 'YouTube 请求过于频繁，请稍后再试',
     last_admin_required: '至少需要保留一名管理员，无法降级',
     cannot_change_own_role: '不能修改自己的角色',
     cannot_delete_self: '不能删除当前登录账号',

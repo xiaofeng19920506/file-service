@@ -6,6 +6,7 @@ import { and, eq } from 'drizzle-orm';
 import {
   YOUTUBE_AUDIO_QUEUE_NAME,
   bullmqConnection,
+  classifyYtdlpError,
   createDb,
   createObjectStorage,
   extractYoutubeAudioMp3,
@@ -60,14 +61,7 @@ export async function startYoutubeAudioWorker(): Promise<Worker> {
           .where(eq(youtubeAudioCache.youtubeVideoId, videoId));
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e);
-        const errorCode =
-          message === 'invalid_video_id'
-            ? 'invalid_video_id'
-            : message.includes('ffmpeg') || message.includes('ffprobe')
-              ? 'ffmpeg_not_installed'
-              : message.includes('ENOENT') || message.includes('not found')
-                ? 'ytdlp_not_installed'
-                : 'audio_extract_failed';
+        const errorCode = classifyYtdlpError(message, 'audio_extract_failed');
 
         await db
           .update(youtubeAudioCache)
