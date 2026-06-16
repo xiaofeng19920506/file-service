@@ -7805,10 +7805,26 @@ body.bulletin-slideshow-window {
 
 .vip-video-player-wrap {
   position: relative;
+  display: grid;
+  grid-template: 1fr / 1fr;
   aspect-ratio: 16 / 9;
   border-radius: 12px;
   overflow: hidden;
   background: #000;
+}
+
+.vip-video-player-wrap > .vip-video-player {
+  grid-area: 1 / 1;
+  z-index: 1;
+}
+
+.vip-video-player-wrap > .vip-video-placeholder-overlay {
+  grid-area: 1 / 1;
+}
+
+.vip-video-player-wrap > .vip-video-controls-overlay {
+  grid-area: 1 / 1;
+  align-self: end;
 }
 
 .vip-video-placeholder-overlay--player {
@@ -7817,10 +7833,7 @@ body.bulletin-slideshow-window {
 }
 
 .vip-video-controls-overlay {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  position: relative;
   z-index: 6;
   display: flex;
   flex-direction: column;
@@ -7834,16 +7847,91 @@ body.bulletin-slideshow-window {
   );
   color: #fff;
   pointer-events: none;
+  transform: translateZ(0);
+}
+
+.vip-video-controls-dock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.vip-video-controls-dock .vip-video-progress--dock {
+  width: 100%;
+  flex: none;
+  padding: 0.35rem 0;
+  cursor: pointer;
+}
+
+.vip-video-controls-dock .vip-video-progress--dock .youtube-player-progress-track {
+  height: 6px;
+  background: var(--border-light);
+}
+
+.vip-video-controls-dock .vip-video-progress--dock .youtube-player-progress-fill {
+  background: var(--accent, var(--blue));
+}
+
+.vip-video-controls-dock .vip-video-progress--dock .youtube-player-progress-thumb {
+  background: var(--accent, var(--blue));
+  border: 2px solid var(--surface);
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--shadow-sm) 70%, transparent);
+}
+
+.vip-video-controls-dock .vip-video-time--dock {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.vip-video-controls-dock .vip-video-play-btn--dock {
+  background: var(--accent);
+  color: #fff;
+}
+
+.vip-video-controls-dock .vip-video-play-btn--dock:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.vip-video-controls-dock .vip-video-volume-btn--dock {
+  background: var(--surface-secondary);
+  color: var(--text);
+}
+
+.vip-video-controls-dock .vip-video-volume-btn--dock:hover:not(:disabled) {
+  background: var(--border-light);
+}
+
+.vip-video-controls-dock .vip-video-volume-progress--dock {
+  width: 5.5rem;
+}
+
+.vip-video-controls-dock .vip-video-volume-progress--dock .youtube-player-volume-progress-track {
+  background: var(--border-light);
+}
+
+.vip-video-controls-dock .vip-video-volume-progress--dock .youtube-player-volume-progress-fill {
+  background: var(--accent, var(--blue));
 }
 
 .vip-video-controls-overlay > * {
   pointer-events: auto;
 }
 
-.vip-video-controls-overlay--mobile {
-  padding-left: max(0.75rem, var(--page-gutter, 0.75rem));
-  padding-right: max(0.75rem, var(--page-gutter, 0.75rem));
-  padding-bottom: max(0.55rem, env(safe-area-inset-bottom, 0px));
+@media (max-width: 900px) {
+  .vip-video-controls-overlay {
+    padding-left: max(0.75rem, var(--page-gutter, 0.75rem));
+    padding-right: max(0.75rem, var(--page-gutter, 0.75rem));
+    padding-bottom: max(0.55rem, env(safe-area-inset-bottom, 0px));
+  }
 }
 
 .vip-video-controls-overlay .vip-video-progress {

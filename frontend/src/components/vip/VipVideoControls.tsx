@@ -53,7 +53,7 @@ type VipVideoControlsProps = {
   onPlayingChange: (playing: boolean) => void;
   currentTime: number;
   duration: number;
-  isMobile?: boolean;
+  variant?: 'overlay' | 'dock';
 };
 
 export default function VipVideoControls({
@@ -64,7 +64,7 @@ export default function VipVideoControls({
   onPlayingChange,
   currentTime,
   duration,
-  isMobile = false,
+  variant = 'overlay',
 }: VipVideoControlsProps) {
   const { t } = useI18n();
   const progressRef = useRef<HTMLDivElement>(null);
@@ -164,89 +164,103 @@ export default function VipVideoControls({
     onPlayingChange(!playing);
   };
 
-  return (
-    <div
-      className={`vip-video-controls-overlay${isMobile ? ' vip-video-controls-overlay--mobile' : ''}`}
-      role="group"
-      aria-label={t('vipVideo.playerControls')}
-    >
-      <div
-        ref={progressRef}
-        className={`youtube-player-progress vip-video-progress${canSeek ? '' : ' vip-video-progress--disabled'}`}
-        role="slider"
-        tabIndex={canSeek ? 0 : -1}
-        aria-label={t('playlists.seek')}
-        aria-valuemin={0}
-        aria-valuemax={hasDuration ? duration : 0}
-        aria-valuenow={scrubRatio !== null && hasDuration ? scrubRatio * duration : currentTime}
-        aria-disabled={!canSeek}
-        onClick={(e) => handleProgressClick(e.clientX)}
-        onKeyDown={onProgressKeyDown}
-      >
-        <div className="youtube-player-progress-track">
-          <div className="youtube-player-progress-fill" style={{ width: `${progressPct}%` }} />
-          {hasDuration && (
-            <div className="youtube-player-progress-thumb" style={{ left: `${progressPct}%` }} aria-hidden />
-          )}
-        </div>
-      </div>
+  const isDock = variant === 'dock';
 
-      <div className="vip-video-controls-row">
+  const progressBar = (
+    <div
+      ref={progressRef}
+      className={`youtube-player-progress vip-video-progress${canSeek ? '' : ' vip-video-progress--disabled'}${isDock ? ' vip-video-progress--dock' : ''}`}
+      role="slider"
+      tabIndex={canSeek ? 0 : -1}
+      aria-label={t('playlists.seek')}
+      aria-valuemin={0}
+      aria-valuemax={hasDuration ? duration : 0}
+      aria-valuenow={scrubRatio !== null && hasDuration ? scrubRatio * duration : currentTime}
+      aria-disabled={!canSeek}
+      onClick={(e) => handleProgressClick(e.clientX)}
+      onKeyDown={onProgressKeyDown}
+    >
+      <div className="youtube-player-progress-track">
+        <div className="youtube-player-progress-fill" style={{ width: `${progressPct}%` }} />
+        {hasDuration && (
+          <div className="youtube-player-progress-thumb" style={{ left: `${progressPct}%` }} aria-hidden />
+        )}
+      </div>
+    </div>
+  );
+
+  const transportRow = (
+    <div className="vip-video-controls-row">
+      <button
+        type="button"
+        className={`youtube-player-icon-btn youtube-player-icon-btn-primary vip-video-play-btn${isDock ? ' vip-video-play-btn--dock' : ''}`}
+        disabled={!isReady}
+        onClick={togglePlay}
+        aria-busy={isLoading || undefined}
+        aria-label={
+          isLoading ? t('vipVideo.loading') : playing ? t('vipVideo.pause') : t('vipVideo.play')
+        }
+      >
+        {isLoading ? (
+          <span className="vip-video-loading-spinner vip-video-loading-spinner--btn" aria-hidden />
+        ) : playing ? (
+          '▮▮'
+        ) : (
+          '▶'
+        )}
+      </button>
+
+      <span className={`youtube-player-time vip-video-time${isDock ? ' vip-video-time--dock' : ''}`}>
+        {formatTime(currentTime)} / {formatTime(duration)}
+      </span>
+
+      <div className={`youtube-player-volume vip-video-volume${isDock ? ' vip-video-volume--dock' : ''}`}>
+        <div
+          ref={volumeProgressRef}
+          className={`youtube-player-volume-progress${isDock ? ' vip-video-volume-progress--dock' : ''}`}
+          role="slider"
+          tabIndex={0}
+          aria-label={t('playlists.volume')}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={volumePct}
+          onClick={(e) => seekVolumeFromClientX(e.clientX)}
+          onKeyDown={(e) => {
+            const step = e.key === 'ArrowLeft' ? -5 : e.key === 'ArrowRight' ? 5 : 0;
+            if (!step) return;
+            e.preventDefault();
+            setVolumeLevel((muted ? 0 : volume) + step);
+          }}
+        >
+          <div className="youtube-player-volume-progress-track">
+            <div className="youtube-player-volume-progress-fill" style={{ width: `${volumePct}%` }} />
+          </div>
+        </div>
         <button
           type="button"
-          className="youtube-player-icon-btn youtube-player-icon-btn-primary vip-video-play-btn"
-          disabled={!isReady}
-          onClick={togglePlay}
-          aria-busy={isLoading || undefined}
-          aria-label={
-            isLoading ? t('vipVideo.loading') : playing ? t('vipVideo.pause') : t('vipVideo.play')
-          }
+          className={`youtube-player-icon-btn youtube-player-volume-btn${isDock ? ' vip-video-volume-btn--dock' : ''}`}
+          onClick={toggleMute}
+          aria-label={muted || volume === 0 ? t('playlists.unmute') : t('playlists.mute')}
         >
-          {isLoading ? (
-            <span className="vip-video-loading-spinner vip-video-loading-spinner--btn" aria-hidden />
-          ) : playing ? (
-            '▮▮'
-          ) : (
-            '▶'
-          )}
+          <VolumeIcon level={volume} muted={muted || volume === 0} />
         </button>
-
-        <span className="youtube-player-time vip-video-time">
-          {formatTime(currentTime)} / {formatTime(duration)}
-        </span>
-
-        <div className="youtube-player-volume vip-video-volume">
-          <div
-            ref={volumeProgressRef}
-            className="youtube-player-volume-progress"
-            role="slider"
-            tabIndex={0}
-            aria-label={t('playlists.volume')}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={volumePct}
-            onClick={(e) => seekVolumeFromClientX(e.clientX)}
-            onKeyDown={(e) => {
-              const step = e.key === 'ArrowLeft' ? -5 : e.key === 'ArrowRight' ? 5 : 0;
-              if (!step) return;
-              e.preventDefault();
-              setVolumeLevel((muted ? 0 : volume) + step);
-            }}
-          >
-            <div className="youtube-player-volume-progress-track">
-              <div className="youtube-player-volume-progress-fill" style={{ width: `${volumePct}%` }} />
-            </div>
-          </div>
-          <button
-            type="button"
-            className="youtube-player-icon-btn youtube-player-volume-btn"
-            onClick={toggleMute}
-            aria-label={muted || volume === 0 ? t('playlists.unmute') : t('playlists.mute')}
-          >
-            <VolumeIcon level={volume} muted={muted || volume === 0} />
-          </button>
-        </div>
       </div>
+    </div>
+  );
+
+  if (isDock) {
+    return (
+      <div className="vip-video-controls-dock" role="group" aria-label={t('vipVideo.playerControls')}>
+        {progressBar}
+        {transportRow}
+      </div>
+    );
+  }
+
+  return (
+    <div className="vip-video-controls-overlay" role="group" aria-label={t('vipVideo.playerControls')}>
+      {progressBar}
+      {transportRow}
     </div>
   );
 }
