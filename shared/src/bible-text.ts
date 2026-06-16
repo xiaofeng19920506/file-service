@@ -102,16 +102,18 @@ export type ScriptureSlideBodies = {
   englishPages: string[][];
 };
 
-/** 中文 29pt 每行约容纳字数（偏保守，配合 noAutofit 分页） */
-export const SCRIPTURE_ZH_CHARS_PER_LINE = 18;
+/** 中文 29pt 每行约容纳字数（按投影实测校准：~22 字/行） */
+export const SCRIPTURE_ZH_CHARS_PER_LINE = 22;
 
 /** 中文每页视觉行数：最少 10 行、最多 11 行 */
 export const SCRIPTURE_ZH_PAGE_MIN_VISUAL_LINES = 10;
 export const SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES = 11;
 
-/** @deprecated 使用 SCRIPTURE_ZH_PAGE_MIN/MAX_VISUAL_LINES */
+/** 中文每页字数上下限（由行数 × 每行字数推导） */
+export const SCRIPTURE_ZH_PAGE_MIN_CHARS =
+  SCRIPTURE_ZH_PAGE_MIN_VISUAL_LINES * SCRIPTURE_ZH_CHARS_PER_LINE;
 export const SCRIPTURE_ZH_PAGE_MAX_CHARS =
-  SCRIPTURE_ZH_CHARS_PER_LINE * SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES;
+  SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES * SCRIPTURE_ZH_CHARS_PER_LINE;
 
 /** 英文 22pt 每行约容纳字符数（偏保守，配合 noAutofit 分页） */
 export const SCRIPTURE_EN_CHARS_PER_LINE = 52;
@@ -190,32 +192,6 @@ function splitTextToMaxVisualLines(
     remaining = tail;
   }
   return pages;
-}
-
-function mergeUndersizedTextPages(
-  pages: string[],
-  estimate: LineEstimate,
-  minLines: number,
-  maxLines: number,
-  joiner: string,
-): string[] {
-  if (pages.length < 2) return pages;
-  const result: string[] = [];
-  let i = 0;
-  while (i < pages.length) {
-    let merged = pages[i]!;
-    while (i + 1 < pages.length) {
-      const mergedLines = estimate(merged);
-      if (mergedLines >= minLines) break;
-      const candidate = `${merged}${joiner}${pages[i + 1]!}`;
-      if (estimate(candidate) > maxLines) break;
-      i++;
-      merged = candidate;
-    }
-    result.push(merged);
-    i++;
-  }
-  return result;
 }
 
 function packTextPiecesToPages(
@@ -306,6 +282,53 @@ function packTextPiecesToPages(
   return pages;
 }
 
+function takeHeadChars(text: string, maxChars: number): [string, string] {
+  const trimmed = text.trim();
+  if (!trimmed) return ['', ''];
+  if (trimmed.length <= maxChars) return [trimmed, ''];
+
+  let end = maxChars;
+  const lastSpace = trimmed.slice(0, end).lastIndexOf(' ');
+  if (lastSpace > end * 0.35) end = lastSpace;
+
+  const head = trimmed.slice(0, end).trim();
+  if (!head.length) {
+    return [trimmed.slice(0, maxChars), trimmed.slice(maxChars).trim()];
+  }
+  return [head, trimmed.slice(end).trim()];
+}
+
+function fillChinesePagesFromNext(pages: string[]): string[] {
+  const out = [...pages];
+
+  for (let i = 0; i < out.length - 1; i++) {
+    while (
+      estimateChineseBlockVisualLines(out[i]!) < SCRIPTURE_ZH_PAGE_MIN_VISUAL_LINES &&
+      i + 1 < out.length
+    ) {
+      const next = out[i + 1]!;
+      const combined = `${out[i]!} ${next}`.trim();
+      if (combined.length <= SCRIPTURE_ZH_PAGE_MAX_CHARS) {
+        out[i] = combined;
+        out.splice(i + 1, 1);
+        continue;
+      }
+
+      const room = SCRIPTURE_ZH_PAGE_MAX_CHARS - out[i]!.length - 1;
+      if (room <= 0) break;
+
+      const [head, tail] = takeHeadChars(next, room);
+      if (!head.length) break;
+
+      out[i] = `${out[i]!} ${head}`.trim();
+      if (tail.length) out[i + 1] = tail;
+      else out.splice(i + 1, 1);
+    }
+  }
+
+  return out;
+}
+
 function splitChineseBlockToMaxLines(text: string, maxLines: number): string[] {
   return splitTextToMaxVisualLines(
     text,
@@ -320,31 +343,29 @@ function paginateChineseVerses(verses: BibleVerse[]): string[] {
   const draft: string[] = [];
   let current: BibleVerse[] = [];
 
+  const blockText = (vs: BibleVerse[]) => formatChineseVerseBlock(vs);
+
   for (const verse of verses) {
     const candidate = [...current, verse];
-    const lines = estimateChineseBlockVisualLines(formatChineseVerseBlock(candidate));
-
-    if (current.length > 0 && lines > SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES) {
-      draft.push(formatChineseVerseBlock(current));
-      current = [verse];
-    } else {
+    if (!current.length) {
       current = candidate;
+      continue;
     }
+    if (blockText(candidate).length <= SCRIPTURE_ZH_PAGE_MAX_CHARS) {
+      current = candidate;
+      continue;
+    }
+    draft.push(blockText(current));
+    current = [verse];
   }
 
-  if (current.length) draft.push(formatChineseVerseBlock(current));
+  if (current.length) draft.push(blockText(current));
 
   const splitPages = draft.flatMap((block) =>
     splitChineseBlockToMaxLines(block, SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES),
   );
 
-  return mergeUndersizedTextPages(
-    splitPages,
-    estimateChineseBlockVisualLines,
-    SCRIPTURE_ZH_PAGE_MIN_VISUAL_LINES,
-    SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES,
-    ' ',
-  );
+  return fillChinesePagesFromNext(splitPages);
 }
 
 function paginateEnglishVerses(verses: BibleVerse[]): string[][] {

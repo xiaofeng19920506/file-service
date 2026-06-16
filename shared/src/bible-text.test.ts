@@ -3,9 +3,11 @@ import {
   buildScriptureSlideBodies,
   estimateChineseBlockVisualLines,
   estimateEnglishLineVisualLines,
+  loadScripturePassage,
   SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES,
   SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES,
   SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES,
+  SCRIPTURE_ZH_PAGE_MIN_CHARS,
   SCRIPTURE_ZH_PAGE_MIN_VISUAL_LINES,
   type BibleVerse,
 } from './bible-text.js';
@@ -78,6 +80,21 @@ describe('buildScriptureSlideBodies', () => {
     });
     bodies.chinesePages.forEach((page, i) => {
       assertChinesePageInRange(page, i === bodies.chinesePages.length - 1);
+    });
+  });
+
+  it('fills proverbs 15:1-11 chinese to at least 10 lines on non-final pages', async () => {
+    const passage = await loadScripturePassage('箴言 Proverbs', '15:1-11');
+    expect(passage).not.toBeNull();
+    const bodies = buildScriptureSlideBodies(passage!);
+    expect(bodies.chinesePages.length).toBeGreaterThanOrEqual(1);
+    bodies.chinesePages.forEach((page, i) => {
+      const lines = estimateChineseBlockVisualLines(page);
+      expect(lines).toBeLessThanOrEqual(SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES);
+      if (i < bodies.chinesePages.length - 1) {
+        expect(lines).toBeGreaterThanOrEqual(SCRIPTURE_ZH_PAGE_MIN_VISUAL_LINES);
+        expect(page.length).toBeGreaterThanOrEqual(SCRIPTURE_ZH_PAGE_MIN_CHARS - 4);
+      }
     });
   });
 
