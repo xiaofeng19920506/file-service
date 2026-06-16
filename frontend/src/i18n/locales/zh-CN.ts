@@ -154,7 +154,7 @@ export default {
     scriptureSelectBookFirst: '请先选择经卷，再选择章与经节。',
     scriptureSelectChapterFirst: '请选择章后，再选择开始与结束经节。',
     scriptureReference: '经节',
-    scriptureHint: '「读经 / Scripture Reading」标题固定不变，仅替换书名与经节（PPT 第 4 页）。第 5–6 页经文正文需另行在 PowerPoint 中修改。',
+    scriptureHint: '「读经 / Scripture Reading」标题固定不变；选好书卷与经节后，第 5 页自动填入中文经文、第 6 页填入英文（过长时中文续到第 6 页）。',
     lastWeekOffering: '上週奉献日期',
     offeringQuarter: '季度奉献说明',
     birthdayMonth: '生日月份',

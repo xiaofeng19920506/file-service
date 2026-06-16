@@ -1,4 +1,9 @@
 import JSZip from 'jszip';
+import { resolveScriptureSlideBodies } from './bible-text.js';
+import {
+  patchChineseScriptureBodyInSlideXml,
+  patchSlide6ScriptureBodyInSlideXml,
+} from './bulletin-scripture-body-patch.js';
 
 /** PPT 封面日期格式：06/14/2026 */
 export function formatBulletinCoverDate(isoDate: string): string {
@@ -182,7 +187,7 @@ export type BulletinPreviewPatchInput = {
   scriptureReference?: string;
 };
 
-/** 预览/导出用：封面 + 读经等可编辑字段 */
+/** 预览/导出用：封面 + 读经标题与经文正文（slide 4–6） */
 export async function patchBulletinPreviewInPptx(
   template: Buffer,
   input: BulletinPreviewPatchInput,
@@ -198,13 +203,38 @@ export async function patchBulletinPreviewInPptx(
   const reference = input.scriptureReference?.trim() ?? '';
   if (!book && !reference) return buf;
 
-  const zip = await JSZip.loadAsync(buf);
-  const slidePath = 'ppt/slides/slide4.xml';
-  const entry = zip.file(slidePath);
-  if (!entry) return buf;
+  let zip = await JSZip.loadAsync(buf);
 
-  const xml = await entry.async('string');
-  zip.file(slidePath, patchScriptureSlideInSlideXml(xml, book, reference));
+  if (book || reference) {
+    const slide4 = zip.file('ppt/slides/slide4.xml');
+    if (slide4) {
+      const xml = await slide4.async('string');
+      zip.file('ppt/slides/slide4.xml', patchScriptureSlideInSlideXml(xml, book, reference));
+    }
+  }
+
+  if (book && reference) {
+    const bodies = await resolveScriptureSlideBodies(book, reference);
+    if (bodies) {
+      const slide5 = zip.file('ppt/slides/slide5.xml');
+      if (slide5) {
+        const xml = await slide5.async('string');
+        zip.file(
+          'ppt/slides/slide5.xml',
+          patchChineseScriptureBodyInSlideXml(xml, bodies.slide5Chinese),
+        );
+      }
+      const slide6 = zip.file('ppt/slides/slide6.xml');
+      if (slide6) {
+        const xml = await slide6.async('string');
+        zip.file(
+          'ppt/slides/slide6.xml',
+          patchSlide6ScriptureBodyInSlideXml(xml, bodies.slide6Chinese, bodies.slide6English),
+        );
+      }
+    }
+  }
+
   return zip.generateAsync({ type: 'nodebuffer' });
 }
 

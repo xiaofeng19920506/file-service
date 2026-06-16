@@ -26,7 +26,7 @@ export async function generateBulletinPptx(
   templateBlob: Blob,
   bulletin: WeeklyBulletin,
 ): Promise<File> {
-  const patches: SlideTextPatch[] = patchesFromBulletin(bulletin);
+  const patches: SlideTextPatch[] = await patchesFromBulletin(bulletin);
   const filename = `bulletin-${bulletin.serviceDate}.pptx`;
 
   let file = await applySlidePatches(templateBlob, patches, filename);

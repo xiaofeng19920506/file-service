@@ -38,6 +38,7 @@
     "db:migrate": "npm run db:migrate -w @file-service/shared",
     "db:migrate:run": "npm run db:migrate:run -w @file-service/shared",
     "sync:bulletin-template": "bash scripts/sync-bulletin-template.sh",
+    "sync:bible": "node shared/scripts/sync-bible-data.mjs",
     "tunnel:start": "bash scripts/cloudflared-tunnel.sh start",
     "tunnel:status": "bash scripts/cloudflared-tunnel.sh status",
     "tunnel:stop": "bash scripts/cloudflared-tunnel.sh stop",

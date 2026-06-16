@@ -13,6 +13,7 @@ import {
   normalizeUserRole,
   patchBulletinPreviewInPptx,
   renderSlidePngViaService,
+  resolveScriptureSlideBodies,
   weeklyBulletins,
   type Db,
 } from '@file-service/shared';
@@ -38,7 +39,7 @@ const BULLETIN_TEMPLATE_DIR = resolveBulletinTemplateDir();
 
 const slidePreviewCache = new Map<string, Buffer>();
 /** 封面补丁版本；变更后自动失效旧 PNG 缓存 */
-const SLIDE_PREVIEW_PATCH_REV = 'v5';
+const SLIDE_PREVIEW_PATCH_REV = 'v6';
 
 export type BulletinAnnouncementDto = {
   id: string;
@@ -189,6 +190,33 @@ export function registerBulletinRoutes(
       )
       .header('Content-Disposition', `attachment; filename="${BULLETIN_TEMPLATE_FILE}"`)
       .send(buf);
+  });
+
+  app.get<{
+    Querystring: {
+      scriptureBook?: string;
+      scriptureReference?: string;
+    };
+  }>('/v1/bulletins/scripture-bodies', async (request, reply) => {
+    const user = requireUser(request);
+    if (!user || !canViewBulletin(user.role)) {
+      return reply.code(403).send({ error: 'bulletin_forbidden' });
+    }
+
+    const scriptureBook = request.query.scriptureBook?.trim() ?? '';
+    const scriptureReference = request.query.scriptureReference?.trim() ?? '';
+    if (!scriptureBook || !scriptureReference) {
+      return reply.code(400).send({ error: 'scripture_required' });
+    }
+
+    try {
+      const bodies = await resolveScriptureSlideBodies(scriptureBook, scriptureReference);
+      if (!bodies) return reply.code(404).send({ error: 'scripture_not_found' });
+      return reply.send(bodies);
+    } catch (err) {
+      request.log.warn({ err, scriptureBook, scriptureReference }, 'scripture bodies failed');
+      return reply.code(503).send({ error: 'scripture_data_unavailable' });
+    }
   });
 
   app.get<{

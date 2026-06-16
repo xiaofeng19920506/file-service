@@ -84,4 +84,19 @@ describe('patchScriptureSlideInSlideXml', () => {
     expect(slide4).toContain('约翰福音 John');
     expect(slide4).toContain('3:16');
   });
+
+  it('fills scripture body on slides 5 and 6', async () => {
+    const tpl = await readFile(templatePath);
+    const patched = await patchBulletinPreviewInPptx(tpl, {
+      scriptureBook: '箴言 Proverbs',
+      scriptureReference: '15:1-11',
+    });
+    const zip = await JSZip.loadAsync(patched);
+    const slide5 = await zip.file('ppt/slides/slide5.xml')!.async('string');
+    const slide6 = await zip.file('ppt/slides/slide6.xml')!.async('string');
+    expect(slide5).toContain('回答柔和');
+    expect(slide5).toContain('11 ');
+    expect(slide6).toContain('gentle answer');
+    expect(slide6).toContain('human hearts');
+  });
 });

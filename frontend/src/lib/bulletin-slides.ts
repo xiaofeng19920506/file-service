@@ -1,6 +1,6 @@
 import { fetchBulletinTemplateFile } from '../api/bulletins';
 import type { WeeklyBulletin } from '../api/bulletins';
-import { BULLETIN_TEMPLATE_FILENAME, applySlidePatches, patchesForStep } from './bulletin-pptx-patches';
+import { BULLETIN_TEMPLATE_FILENAME, applySlidePatches, patchesForStepAsync } from './bulletin-pptx-patches';
 import { buildBulletinPptxFile } from './bulletin-publish';
 import { parsePptxSlidesDetailed, type EditableSlide } from './pptx-preview';
 
@@ -40,7 +40,7 @@ export async function previewStepPptxBlob(
   bulletin: WeeklyBulletin,
 ): Promise<Blob> {
   const template = await fetchBulletinTemplateFile();
-  const patches = patchesForStep(stepId, bulletin);
+  const patches = await patchesForStepAsync(stepId, bulletin);
   if (!patches.length) return template;
   return applySlidePatches(template, patches, 'bulletin-preview.pptx');
 }
@@ -51,7 +51,7 @@ export async function previewStepSlides(
   bulletin: WeeklyBulletin,
   slideNumbers: number[],
 ): Promise<EditableSlide[]> {
-  const patches = patchesForStep(stepId, bulletin);
+  const patches = await patchesForStepAsync(stepId, bulletin);
   if (!patches.length) {
     return previewTemplateSlides(slideNumbers);
   }

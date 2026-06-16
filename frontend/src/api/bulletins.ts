@@ -130,6 +130,33 @@ export async function fetchBulletinTemplateFile(): Promise<Blob> {
   return res.blob();
 }
 
+export type ScriptureSlideBodies = {
+  slide5Chinese: string;
+  slide6Chinese: string | null;
+  slide6English: string[] | null;
+};
+
+export async function fetchScriptureSlideBodies(
+  scriptureBook: string,
+  scriptureReference: string,
+): Promise<ScriptureSlideBodies | null> {
+  const qs = new URLSearchParams({
+    scriptureBook,
+    scriptureReference,
+  });
+  const res = await apiFetch(`/v1/bulletins/scripture-bodies?${qs}`);
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    const msg =
+      typeof data === 'object' && data && 'error' in data
+        ? String((data as { error: string }).error)
+        : res.statusText;
+    throw new Error(msg);
+  }
+  return parseJson<ScriptureSlideBodies>(res);
+}
+
 /** 服务端用 LibreOffice 从原版 PPT 渲染幻灯片 PNG（已按参数补丁封面/读经等文字） */
 export type BulletinSlidePreviewParams = {
   serviceDate?: string;

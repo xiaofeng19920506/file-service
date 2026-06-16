@@ -1,5 +1,10 @@
 import type { WeeklyBulletin } from '../api/bulletins';
+import { fetchScriptureSlideBodies } from '../api/bulletins';
 import { formatBulletinCoverDate } from './bulletin-date';
+import {
+  patchChineseScriptureBodyInSlideXml,
+  patchSlide6ScriptureBodyInSlideXml,
+} from './bulletin-scripture-body-patch';
 import {
   applyIndexedTextReplacementsToSlideXml,
   parsePptxSlidesDetailed,
@@ -25,6 +30,13 @@ export type SlideTextPatch = {
   replacements: SlideTextReplacement[];
   /** 封面日期行整段重写（避免 run 替换 + spAutoFit 换行错位） */
   coverLine?: { serviceDate: string; serviceTime: string };
+  /** 读经 slide 5 中文正文 */
+  scriptureChineseBody?: string;
+  /** 读经 slide 6：中文续页或英文正文 */
+  scriptureSlide6?: {
+    chinese?: string | null;
+    englishLines?: string[] | null;
+  };
 };
 
 /** 封面日期行补丁 */
@@ -220,6 +232,7 @@ export function patchesForStep(stepId: string, bulletin: WeeklyBulletin): SlideT
 
 function mergePatches(patches: SlideTextPatch[]): SlideTextPatch[] {
   const bySlide = new Map<number, Map<number, string>>();
+  const extras = new Map<number, Omit<SlideTextPatch, 'slideNumber' | 'replacements'>>();
   let coverLine: SlideTextPatch['coverLine'];
   for (const patch of patches) {
     if (patch.coverLine) coverLine = patch.coverLine;
@@ -231,6 +244,12 @@ function mergePatches(patches: SlideTextPatch[]): SlideTextPatch[] {
     for (const { textIndex, text } of patch.replacements) {
       slot.set(textIndex, text);
     }
+    const extra: Omit<SlideTextPatch, 'slideNumber' | 'replacements'> = {};
+    if (patch.scriptureChineseBody) extra.scriptureChineseBody = patch.scriptureChineseBody;
+    if (patch.scriptureSlide6) extra.scriptureSlide6 = patch.scriptureSlide6;
+    if (Object.keys(extra).length) {
+      extras.set(patch.slideNumber, { ...extras.get(patch.slideNumber), ...extra });
+    }
   }
   return [...bySlide.entries()]
     .map(([slideNumber, slot]) => ({
@@ -239,14 +258,44 @@ function mergePatches(patches: SlideTextPatch[]): SlideTextPatch[] {
         .sort((a, b) => a[0] - b[0])
         .map(([textIndex, text]) => ({ textIndex, text })),
       ...(slideNumber === 1 && coverLine ? { coverLine } : {}),
+      ...extras.get(slideNumber),
     }))
     .sort((a, b) => a.slideNumber - b.slideNumber);
 }
 
+async function scriptureBodyPatches(bulletin: WeeklyBulletin): Promise<SlideTextPatch[]> {
+  const book = bulletin.scriptureBook?.trim() ?? '';
+  const reference = bulletin.scriptureReference?.trim() ?? '';
+  if (!book || !reference) return [];
+  const bodies = await fetchScriptureSlideBodies(book, reference);
+  if (!bodies) return [];
+  return [
+    { slideNumber: 5, replacements: [], scriptureChineseBody: bodies.slide5Chinese },
+    {
+      slideNumber: 6,
+      replacements: [],
+      scriptureSlide6: {
+        chinese: bodies.slide6Chinese,
+        englishLines: bodies.slide6English,
+      },
+    },
+  ];
+}
+
+export async function patchesForStepAsync(
+  stepId: string,
+  bulletin: WeeklyBulletin,
+): Promise<SlideTextPatch[]> {
+  const base = patchesForStep(stepId, bulletin);
+  if (stepId !== 'scripture') return base;
+  return [...base, ...(await scriptureBodyPatches(bulletin))];
+}
+
 /** 导出 PPT 时合并全部已填字段的补丁 */
-export function patchesFromBulletin(bulletin: WeeklyBulletin): SlideTextPatch[] {
+export async function patchesFromBulletin(bulletin: WeeklyBulletin): Promise<SlideTextPatch[]> {
   const stepIds = ['cover', 'scripture', 'offering', 'birthday', 'announcements', 'verse', 'more'] as const;
-  return mergePatches(stepIds.flatMap((stepId) => patchesForStep(stepId, bulletin)));
+  const groups = await Promise.all(stepIds.map((stepId) => patchesForStepAsync(stepId, bulletin)));
+  return mergePatches(groups.flat());
 }
 
 export async function applySlidePatches(
@@ -279,6 +328,16 @@ export async function applySlidePatches(
     }
     if (patch.replacements.length) {
       nextXml = applyIndexedTextReplacementsToSlideXml(nextXml, patch.replacements);
+    }
+    if (patch.scriptureChineseBody) {
+      nextXml = patchChineseScriptureBodyInSlideXml(nextXml, patch.scriptureChineseBody);
+    }
+    if (patch.scriptureSlide6) {
+      nextXml = patchSlide6ScriptureBodyInSlideXml(
+        nextXml,
+        patch.scriptureSlide6.chinese ?? null,
+        patch.scriptureSlide6.englishLines ?? null,
+      );
     }
     zip.file(slidePath, nextXml);
   }
