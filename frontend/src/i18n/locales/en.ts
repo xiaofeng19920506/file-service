@@ -271,7 +271,7 @@ const en: MessageTree = {
     worshipShowInvite: 'Invite someone to help',
     worshipHideInvite: 'Hide',
     worshipImportYoutubeTitle: 'Pick a YouTube playlist',
-    worshipImportYoutubeConnect: 'Sign in with YouTube',
+    worshipImportYoutubeConnect: 'Sign in with Google',
     worshipImportYoutubeLoadingLists: 'Loading…',
     worshipImportYoutubeEmpty: 'No playlists',
     worshipImportYoutubeUnavailable: 'Unavailable — contact an admin',

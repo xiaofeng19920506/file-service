@@ -263,7 +263,7 @@ export default {
     worshipShowInvite: '邀请他人填写',
     worshipHideInvite: '收起',
     worshipImportYoutubeTitle: '选择 YouTube 歌单',
-    worshipImportYoutubeConnect: '用 YouTube 登录',
+    worshipImportYoutubeConnect: '用 Google 登录',
     worshipImportYoutubeLoadingLists: '加载中…',
     worshipImportYoutubeEmpty: '没有歌单',
     worshipImportYoutubeUnavailable: '暂时无法使用，请联系管理员',
