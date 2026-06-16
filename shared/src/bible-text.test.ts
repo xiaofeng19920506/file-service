@@ -4,7 +4,9 @@ import {
   estimateChineseBlockVisualLines,
   estimateEnglishLineVisualLines,
   SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES,
+  SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES,
   SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES,
+  SCRIPTURE_ZH_PAGE_MIN_VISUAL_LINES,
   type BibleVerse,
 } from './bible-text.js';
 
@@ -18,6 +20,22 @@ function longText(chars: number): string {
 
 function englishPageVisualLines(page: string[]): number {
   return page.reduce((sum, line) => sum + estimateEnglishLineVisualLines(line), 0);
+}
+
+function assertChinesePageInRange(page: string, isLastPage: boolean) {
+  const lines = estimateChineseBlockVisualLines(page);
+  expect(lines).toBeLessThanOrEqual(SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES);
+  if (!isLastPage) {
+    expect(lines).toBeGreaterThanOrEqual(SCRIPTURE_ZH_PAGE_MIN_VISUAL_LINES);
+  }
+}
+
+function assertEnglishPageInRange(page: string[], isLastPage: boolean) {
+  const lines = englishPageVisualLines(page);
+  expect(lines).toBeLessThanOrEqual(SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES);
+  if (!isLastPage) {
+    expect(lines).toBeGreaterThanOrEqual(SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES);
+  }
 }
 
 describe('buildScriptureSlideBodies', () => {
@@ -49,7 +67,7 @@ describe('buildScriptureSlideBodies', () => {
     expect(joined).not.toContain('…');
   });
 
-  it('keeps each Chinese page within 10 visual lines', () => {
+  it('keeps Chinese pages between 10 and 11 lines except the last', () => {
     const zh: BibleVerse[] = [];
     for (let n = 1; n <= 15; n++) {
       zh.push(verse(n, `這是第${n}節經文內容用來測試分頁。`));
@@ -58,11 +76,9 @@ describe('buildScriptureSlideBodies', () => {
       zh,
       en: [verse(1, 'line one')],
     });
-    for (const page of bodies.chinesePages) {
-      expect(estimateChineseBlockVisualLines(page)).toBeLessThanOrEqual(
-        SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES,
-      );
-    }
+    bodies.chinesePages.forEach((page, i) => {
+      assertChinesePageInRange(page, i === bodies.chinesePages.length - 1);
+    });
   });
 
   it('splits a single long Chinese block across pages', () => {
@@ -89,7 +105,7 @@ describe('buildScriptureSlideBodies', () => {
     expect(bodies.englishPages.flat().join('\n')).not.toContain('…');
   });
 
-  it('keeps each English page within 13 visual lines', () => {
+  it('keeps English pages between 13 and 14 lines except the last', () => {
     const en: BibleVerse[] = [];
     for (let i = 1; i <= 30; i++) {
       en.push(
@@ -103,11 +119,9 @@ describe('buildScriptureSlideBodies', () => {
       zh: [verse(1, '一節')],
       en,
     });
-    for (const page of bodies.englishPages) {
-      expect(englishPageVisualLines(page)).toBeLessThanOrEqual(
-        SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES,
-      );
-    }
+    bodies.englishPages.forEach((page, i) => {
+      assertEnglishPageInRange(page, i === bodies.englishPages.length - 1);
+    });
   });
 
   it('splits a single long English verse across pages', () => {
