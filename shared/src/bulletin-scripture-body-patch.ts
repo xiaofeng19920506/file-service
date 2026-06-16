@@ -108,7 +108,7 @@ export function patchChineseScriptureBodyInSlideXml(xml: string, text: string): 
   );
 }
 
-/** 读经 slide 6：英文经文（每节一段）或中文续页 shape 299 */
+/** 读经 slide 6：英文经文正文 shape 299（流式文本，按行数分页） */
 export function patchEnglishScriptureBodyInSlideXml(xml: string, lines: string[]): string {
   if (!lines.length) return xml;
   const txBody = buildEnglishTxBody(lines);

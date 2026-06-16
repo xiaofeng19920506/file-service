@@ -90,9 +90,14 @@ export function formatChineseVerseBlock(verses: BibleVerse[]): string {
   return verses.map((v) => `${v.verse} ${v.text}`).join(' ');
 }
 
-/** 英文 slide 6：每节一行，节号 + 经文 */
+/** 英文 slide 6：节号 + 经文，节与节之间空格（与中文一致，按行数流式分页） */
 export function formatEnglishVerseLine(verse: BibleVerse): string {
   return `${verse.verse} ${verse.text}`;
+}
+
+/** 整段英文经文（连续文本，不按节分页） */
+export function formatEnglishPassageText(verses: BibleVerse[]): string {
+  return verses.map((v) => formatEnglishVerseLine(v)).join(' ');
 }
 
 export type ScriptureSlideBodies = {
@@ -200,42 +205,31 @@ function splitTextToMaxVisualLines(
   return pages;
 }
 
-function takeHeadChars(text: string, maxChars: number): [string, string] {
-  const trimmed = text.trim();
-  if (!trimmed) return ['', ''];
-  if (trimmed.length <= maxChars) return [trimmed, ''];
-
-  let end = maxChars;
-  const lastSpace = trimmed.slice(0, end).lastIndexOf(' ');
-  if (lastSpace > end * 0.35) end = lastSpace;
-
-  const head = trimmed.slice(0, end).trim();
-  if (!head.length) {
-    return [trimmed.slice(0, maxChars), trimmed.slice(maxChars).trim()];
-  }
-  return [head, trimmed.slice(end).trim()];
-}
-
-function fillChinesePagesFromNext(pages: string[]): string[] {
+function fillTextPagesFromNext(
+  pages: string[],
+  minLines: number,
+  maxLines: number,
+  maxChars: number,
+  charsPerLine: number,
+  estimate: LineEstimate,
+): string[] {
   const out = [...pages];
 
   for (let i = 0; i < out.length - 1; i++) {
-    while (
-      estimateChineseBlockVisualLines(out[i]!) < SCRIPTURE_ZH_PAGE_MIN_VISUAL_LINES &&
-      i + 1 < out.length
-    ) {
+    while (estimate(out[i]!) < minLines && i + 1 < out.length) {
       const next = out[i + 1]!;
       const combined = `${out[i]!} ${next}`.trim();
-      if (combined.length <= SCRIPTURE_ZH_PAGE_MAX_CHARS) {
+      if (combined.length <= maxChars && estimate(combined) <= maxLines) {
         out[i] = combined;
         out.splice(i + 1, 1);
         continue;
       }
 
-      const room = SCRIPTURE_ZH_PAGE_MAX_CHARS - out[i]!.length - 1;
-      if (room <= 0) break;
+      const roomLines = maxLines - estimate(out[i]!);
+      const roomChars = maxChars - out[i]!.length - 1;
+      if (roomLines <= 0 || roomChars <= 0) break;
 
-      const [head, tail] = takeHeadChars(next, room);
+      const [head, tail] = takeHeadVisualLines(next, roomLines, charsPerLine, estimate);
       if (!head.length) break;
 
       out[i] = `${out[i]!} ${head}`.trim();
@@ -247,189 +241,48 @@ function fillChinesePagesFromNext(pages: string[]): string[] {
   return out;
 }
 
-function splitChineseBlockToMaxLines(text: string, maxLines: number): string[] {
-  return splitTextToMaxVisualLines(
-    text,
-    maxLines,
+function paginateTextByVisualLines(
+  text: string,
+  minLines: number,
+  maxLines: number,
+  maxChars: number,
+  charsPerLine: number,
+  estimate: LineEstimate,
+): string[] {
+  const trimmed = text.trim();
+  if (!trimmed) return [];
+
+  const draft = splitTextToMaxVisualLines(trimmed, maxLines, charsPerLine, estimate);
+  return fillTextPagesFromNext(draft, minLines, maxLines, maxChars, charsPerLine, estimate);
+}
+
+function paginateChineseVerses(verses: BibleVerse[]): string[] {
+  return paginateTextByVisualLines(
+    formatChineseVerseBlock(verses),
+    SCRIPTURE_ZH_PAGE_MIN_VISUAL_LINES,
+    SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES,
+    SCRIPTURE_ZH_PAGE_MAX_CHARS,
     SCRIPTURE_ZH_CHARS_PER_LINE,
     estimateChineseBlockVisualLines,
   );
 }
 
-function paginateChineseVerses(verses: BibleVerse[]): string[] {
-  if (!verses.length) return [];
-  const draft: string[] = [];
-  let current: BibleVerse[] = [];
-
-  const blockText = (vs: BibleVerse[]) => formatChineseVerseBlock(vs);
-
-  for (const verse of verses) {
-    const candidate = [...current, verse];
-    if (!current.length) {
-      current = candidate;
-      continue;
-    }
-    if (blockText(candidate).length <= SCRIPTURE_ZH_PAGE_MAX_CHARS) {
-      current = candidate;
-      continue;
-    }
-    draft.push(blockText(current));
-    current = [verse];
-  }
-
-  if (current.length) draft.push(blockText(current));
-
-  const splitPages = draft.flatMap((block) =>
-    splitChineseBlockToMaxLines(block, SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES),
-  );
-
-  return fillChinesePagesFromNext(splitPages);
-}
-
-function englishPageVisualLines(page: string[]): number {
-  return page.reduce((sum, line) => sum + estimateEnglishLineVisualLines(line), 0);
-}
-
-function fillEnglishPagesFromNext(pages: string[][]): string[][] {
-  const out = pages.map((p) => [...p]);
-
-  for (let i = 0; i < out.length - 1; i++) {
-    while (
-      englishPageVisualLines(out[i]!) < SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES &&
-      out[i + 1]?.length
-    ) {
-      const nextVerse = out[i + 1]![0]!;
-      const trial = [...out[i]!, nextVerse];
-      const trialLines = englishPageVisualLines(trial);
-      const trialChars = trial.join('').length;
-
-      if (
-        trialLines <= SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES &&
-        trialChars <= SCRIPTURE_EN_PAGE_MAX_CHARS
-      ) {
-        out[i] = trial;
-        out[i + 1]!.shift();
-        if (!out[i + 1]!.length) out.splice(i + 1, 1);
-        continue;
-      }
-
-      const roomLines = SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES - englishPageVisualLines(out[i]!);
-      const roomChars = SCRIPTURE_EN_PAGE_MAX_CHARS - out[i]!.join('').length - 1;
-      if (roomLines <= 0 || roomChars <= 0) break;
-
-      const [head, tail] = takeHeadVisualLines(
-        nextVerse,
-        roomLines,
-        SCRIPTURE_EN_CHARS_PER_LINE,
-        estimateEnglishLineVisualLines,
-      );
-      if (!head.trim()) break;
-
-      out[i]!.push(head);
-      if (tail.trim()) out[i + 1]![0] = tail;
-      else out[i + 1]!.shift();
-      if (!out[i + 1]!.length) out.splice(i + 1, 1);
-    }
-  }
-
-  return out;
-}
-
 function paginateEnglishVerses(verses: BibleVerse[]): string[][] {
-  const pieces: string[] = [];
-  for (const verse of verses) {
-    pieces.push(
-      ...splitEnglishLineToMaxLines(
-        formatEnglishVerseLine(verse),
-        SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES,
-      ),
-    );
-  }
-
-  const pages: string[][] = [];
-  let current: string[] = [];
-  let usedLines = 0;
-  let usedChars = 0;
-
-  const flush = () => {
-    if (current.length) {
-      pages.push(current);
-      current = [];
-      usedLines = 0;
-      usedChars = 0;
-    }
-  };
-
-  for (const piece of pieces) {
-    const pieceLines = estimateEnglishLineVisualLines(piece);
-    const pieceChars = piece.length;
-
-    if (!current.length) {
-      current.push(piece);
-      usedLines = pieceLines;
-      usedChars = pieceChars;
-      continue;
-    }
-
-    const fits =
-      usedLines + pieceLines <= SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES &&
-      usedChars + pieceChars + 1 <= SCRIPTURE_EN_PAGE_MAX_CHARS;
-
-    if (fits) {
-      current.push(piece);
-      usedLines += pieceLines;
-      usedChars += pieceChars + 1;
-      continue;
-    }
-
-    if (usedLines < SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES) {
-      const roomLines = SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES - usedLines;
-      const roomChars = SCRIPTURE_EN_PAGE_MAX_CHARS - usedChars - 1;
-      if (roomLines > 0 && roomChars > 0) {
-        const [head, tail] = takeHeadVisualLines(
-          piece,
-          roomLines,
-          SCRIPTURE_EN_CHARS_PER_LINE,
-          estimateEnglishLineVisualLines,
-        );
-        if (head.trim()) {
-          current.push(head);
-          flush();
-          if (tail.trim()) {
-            current.push(tail);
-            usedLines = estimateEnglishLineVisualLines(tail);
-            usedChars = tail.length;
-          }
-          continue;
-        }
-      }
-    }
-
-    flush();
-    current.push(piece);
-    usedLines = pieceLines;
-    usedChars = pieceChars;
-  }
-
-  flush();
-
-  return fillEnglishPagesFromNext(pages);
+  return paginateTextByVisualLines(
+    formatEnglishPassageText(verses),
+    SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES,
+    SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES,
+    SCRIPTURE_EN_PAGE_MAX_CHARS,
+    SCRIPTURE_EN_CHARS_PER_LINE,
+    estimateEnglishLineVisualLines,
+  ).map((page) => [page]);
 }
 
-/** 估算一行英文经文（一节）在 slide 上占用的视觉行数 */
+/** 估算一段英文经文在 slide 上占用的视觉行数 */
 export function estimateEnglishLineVisualLines(line: string): number {
   const trimmed = line.trim();
   if (!trimmed) return 0;
   return Math.max(1, Math.ceil(trimmed.length / SCRIPTURE_EN_CHARS_PER_LINE));
-}
-
-function splitEnglishLineToMaxLines(line: string, maxLines: number): string[] {
-  return splitTextToMaxVisualLines(
-    line,
-    maxLines,
-    SCRIPTURE_EN_CHARS_PER_LINE,
-    estimateEnglishLineVisualLines,
-  );
 }
 
 export function buildScriptureSlideBodies(passage: BiblePassage): ScriptureSlideBodies {

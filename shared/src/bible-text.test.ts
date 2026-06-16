@@ -49,7 +49,7 @@ describe('buildScriptureSlideBodies', () => {
     expect(bodies.chinesePages).toHaveLength(1);
     expect(bodies.englishPages).toHaveLength(1);
     expect(bodies.chinesePages[0]).toContain('回答柔和');
-    expect(bodies.englishPages[0]).toHaveLength(2);
+    expect(bodies.englishPages[0]![0]).toContain('gentle answer');
   });
 
   it('splits Chinese across multiple pages without truncation', () => {
@@ -98,13 +98,18 @@ describe('buildScriptureSlideBodies', () => {
     });
   });
 
-  it('splits a single long Chinese block across pages', () => {
+  it('splits mid-verse when a page runs out of lines', () => {
     const bodies = buildScriptureSlideBodies({
       zh: [verse(1, longText(400))],
-      en: [verse(1, 'line one')],
+      en: [verse(1, 'word '.repeat(220).trim())],
     });
     expect(bodies.chinesePages.length).toBeGreaterThan(1);
-    expect(bodies.chinesePages.join('')).toContain('经');
+    expect(bodies.englishPages.length).toBeGreaterThan(1);
+    const enJoined = bodies.englishPages.flat().join(' ');
+    expect(enJoined).toMatch(/^1 word/);
+    expect(enJoined).toContain('word');
+    const firstPageLines = estimateEnglishLineVisualLines(bodies.englishPages[0]![0]!);
+    expect(firstPageLines).toBeLessThanOrEqual(SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES);
   });
 
   it('fills proverbs 15:1-11 english to 13-14 lines when content allows', async () => {
@@ -122,17 +127,24 @@ describe('buildScriptureSlideBodies', () => {
 
   it('splits English across multiple pages without truncation', () => {
     const en: BibleVerse[] = [];
-    for (let i = 1; i <= SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES * 2 + 3; i++) {
-      en.push(verse(i, `verse text ${i}`));
+    for (let i = 1; i <= 40; i++) {
+      en.push(
+        verse(
+          i,
+          `The Lord is my shepherd, I shall not want, verse number ${i} with extra words for flow pagination.`,
+        ),
+      );
     }
     const bodies = buildScriptureSlideBodies({
       zh: [verse(1, '一節')],
       en,
     });
     expect(bodies.englishPages.length).toBeGreaterThan(2);
-    const lineCount = bodies.englishPages.reduce((n, page) => n + page.length, 0);
-    expect(lineCount).toBeGreaterThanOrEqual(en.length);
-    expect(bodies.englishPages.flat().join('\n')).not.toContain('…');
+    const joined = bodies.englishPages.flat().join(' ');
+    for (const v of en) {
+      expect(joined).toContain(String(v.verse));
+    }
+    expect(joined).not.toContain('…');
   });
 
   it('keeps English pages between 13 and 14 lines except the last', () => {
