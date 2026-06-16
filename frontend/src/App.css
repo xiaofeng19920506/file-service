@@ -6794,6 +6794,28 @@ body.bulletin-slideshow-window {
   font: inherit;
 }
 
+.bulletin-scripture-reference {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.bulletin-scripture-reference-chapter {
+  grid-column: 1 / -1;
+}
+
+.bulletin-scripture-reference-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .bulletin-scripture-reference {
+    grid-template-columns: 1fr;
+  }
+}
+
 .bulletin-cover-date-hint {
   margin: 0;
   font-size: 0.85rem;

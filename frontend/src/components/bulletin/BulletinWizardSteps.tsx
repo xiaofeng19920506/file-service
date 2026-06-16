@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { WeeklyBulletin } from '../../api/bulletins';
 import { BIBLE_BOOKS } from '../../lib/bible-books';
 import { useI18n } from '../../i18n';
+import BulletinScriptureReferenceFields from './BulletinScriptureReferenceFields';
 
 type StepShellProps = {
   titleKey: string;
@@ -106,11 +107,14 @@ export function BulletinScriptureStep({ draft, canEdit, saving, onPatch, onSave 
         disabled={!canEdit}
         placeholder={t('bulletin.scriptureBookPlaceholder')}
         options={BIBLE_BOOKS}
-        onChange={(v) => onPatch('scriptureBook', v)}
+        onChange={(v) => {
+          if (v !== draft.scriptureBook) onPatch('scriptureReference', '');
+          onPatch('scriptureBook', v);
+        }}
       />
-      <TextField
-        label={t('bulletin.scriptureReference')}
-        value={draft.scriptureReference}
+      <BulletinScriptureReferenceFields
+        book={draft.scriptureBook}
+        reference={draft.scriptureReference}
         disabled={!canEdit}
         onChange={(v) => onPatch('scriptureReference', v)}
       />
