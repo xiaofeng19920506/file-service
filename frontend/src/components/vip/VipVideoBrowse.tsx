@@ -3,6 +3,7 @@ import { fetchTrendingYoutubeSongs, type TrendingSong } from '../../api/youtube-
 import type { YoutubeSearchResult, YoutubeVideoCacheStatus } from '../../api/youtube-search';
 import { fetchYoutubeVideoStatuses } from '../../api/vip-video';
 import { useDebouncedYoutubeSearch } from '../../hooks/useDebouncedYoutubeSearch';
+import { useYoutubeSearchAutocomplete } from '../../hooks/useYoutubeSearchAutocomplete';
 import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../../hooks/useMediaQuery';
 import type { VipVideoTrack } from '../../hooks/useVipVideoPlayback';
 import { friendlyError } from '../../lib/error-messages';
@@ -46,6 +47,7 @@ export function VipVideoSearchBar({
 }) {
   const { t } = useI18n();
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchWrapRef = useRef<HTMLDivElement>(null);
   const {
     searchQuery,
     setSearchQuery,
@@ -54,20 +56,49 @@ export function VipVideoSearchBar({
     resetSearch,
   } = search;
 
+  const {
+    suggestions,
+    suggestLoading,
+    suggestionsOpen,
+    closeSuggestions,
+    setSuggestionsOpen,
+  } = useYoutubeSearchAutocomplete(searchQuery, !isSearchBusy);
+
   const showClearSearch = searchQuery.trim().length > 0;
+  const showInputSpinner = isSearchBusy || suggestLoading;
 
   const submitSearch = () => {
     if (!searchQuery.trim()) return;
+    closeSuggestions();
     onBeforeSearch?.();
     searchNow();
   };
+
+  const pickSuggestion = (value: string) => {
+    setSearchQuery(value);
+    closeSuggestions();
+    searchInputRef.current?.focus();
+  };
+
+  useEffect(() => {
+    const onDocPointerDown = (e: PointerEvent) => {
+      if (!searchWrapRef.current?.contains(e.target as Node)) {
+        closeSuggestions();
+      }
+    };
+    document.addEventListener('pointerdown', onDocPointerDown);
+    return () => document.removeEventListener('pointerdown', onDocPointerDown);
+  }, [closeSuggestions]);
 
   return (
     <div
       className={`search-box vip-video-search-box${isMobile ? ' search-box--submit-only' : ''}${className ? ` ${className}` : ''}`}
     >
-      <div className={`search-input-wrap${isSearchBusy ? ' search-input-wrap--busy' : ''}`}>
-        {isSearchBusy ? (
+      <div
+        ref={searchWrapRef}
+        className={`search-input-wrap vip-video-search-input-wrap${showInputSpinner ? ' search-input-wrap--busy' : ''}`}
+      >
+        {showInputSpinner ? (
           <span className="search-input-spinner" aria-hidden />
         ) : (
           <SearchIcon />
@@ -77,39 +108,70 @@ export function VipVideoSearchBar({
           type="search"
           className="search-input"
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            if (e.target.value.trim()) setSuggestionsOpen(true);
+          }}
+          onFocus={() => {
+            if (suggestions.length > 0) setSuggestionsOpen(true);
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
-              if (isMobile) {
-                e.currentTarget.blur();
-                return;
-              }
               submitSearch();
+              if (isMobile) e.currentTarget.blur();
+              return;
             }
-          }}
-          onBlur={() => {
-            if (isMobile) submitSearch();
+            if (e.key === 'Escape') {
+              closeSuggestions();
+            }
           }}
           placeholder={t('vipVideo.searchPlaceholder')}
           enterKeyHint="search"
           autoComplete="off"
           aria-busy={isSearchBusy}
+          aria-expanded={suggestionsOpen}
+          aria-controls="vip-video-search-suggest"
+          aria-autocomplete="list"
           aria-label={t('vipVideo.searchPlaceholder')}
+          role="combobox"
         />
-        {showClearSearch && !isSearchBusy && (
+        {showClearSearch && !showInputSpinner && (
           <button
             type="button"
             className="search-clear-btn"
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => {
               resetSearch();
+              closeSuggestions();
               searchInputRef.current?.blur();
             }}
             aria-label={t('search.clear')}
           >
             <CloseIcon />
           </button>
+        )}
+        {suggestionsOpen && suggestions.length > 0 && (
+          <ul
+            id="vip-video-search-suggest"
+            className="vip-video-search-suggest"
+            role="listbox"
+          >
+            {suggestions.map((item) => (
+              <li key={item} role="presentation">
+                <button
+                  type="button"
+                  className="vip-video-search-suggest-item"
+                  role="option"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => pickSuggestion(item)}
+                >
+                  <SearchIcon />
+                  <span>{item}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
       {!isMobile && (

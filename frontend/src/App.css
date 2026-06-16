@@ -7462,6 +7462,60 @@ body.bulletin-slideshow-window {
   margin: 0 auto;
 }
 
+.vip-video-search-input-wrap {
+  position: relative;
+}
+
+.vip-video-search-suggest {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  margin: 0;
+  padding: 0.35rem 0;
+  list-style: none;
+  background: var(--surface-elevated, var(--card-bg));
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  max-height: min(320px, 50vh);
+  overflow-y: auto;
+}
+
+.vip-video-search-suggest-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.55rem 0.85rem;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.vip-video-search-suggest-item:hover,
+.vip-video-search-suggest-item:focus-visible {
+  background: var(--surface-hover, rgba(127, 127, 127, 0.12));
+}
+
+.vip-video-search-suggest-item svg {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  opacity: 0.55;
+}
+
+.vip-video-search-suggest-item span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .vip-video-browse-heading {
   margin: 0 0 0.75rem;
   font-size: 1.1rem;

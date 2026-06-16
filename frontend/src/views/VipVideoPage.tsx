@@ -20,7 +20,7 @@ export default function VipVideoPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const theaterRef = useRef<HTMLDivElement>(null);
   const watchTopRef = useRef<HTMLDivElement>(null);
-  const search = useDebouncedYoutubeSearch({ debounceEnabled: !isMobile });
+  const search = useDebouncedYoutubeSearch({ debounceEnabled: false });
   const { current, status, streamUrl, errorCode, partial, durationSeconds, isReady, play, refreshForMoreCache, markPlaybackFailed, clear } =
     useVipVideoPlayback();
   const [playing, setPlaying] = useState(false);
@@ -28,7 +28,6 @@ export default function VipVideoPage() {
   const [duration, setDuration] = useState(0);
   const [videoDecodeIssue, setVideoDecodeIssue] = useState(false);
   const reextractAttemptedRef = useRef<string | null>(null);
-  const watchSearchBaselineRef = useRef<string | null>(null);
 
   const { isFullscreen, toggleFullscreen, exitFullscreen } = useVipVideoFullscreen(
     theaterRef,
@@ -79,11 +78,7 @@ export default function VipVideoPage() {
     : undefined;
 
   useEffect(() => {
-    if (!current) {
-      watchSearchBaselineRef.current = null;
-      return;
-    }
-    watchSearchBaselineRef.current = search.searchQuery.trim();
+    if (!current) return;
     if (isMobile) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
@@ -115,13 +110,6 @@ export default function VipVideoPage() {
   const exitWatchForSearch = useCallback(() => {
     if (current) stopPlayback();
   }, [current, stopPlayback]);
-
-  useEffect(() => {
-    if (!current || !search.searchLoading) return;
-    const trimmed = search.searchQuery.trim();
-    if (!trimmed || trimmed === watchSearchBaselineRef.current) return;
-    stopPlayback();
-  }, [current, search.searchLoading, search.searchQuery, stopPlayback]);
 
   useEffect(() => {
     const el = videoRef.current;

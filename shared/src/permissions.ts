@@ -101,6 +101,7 @@ export function isPlaylistPath(method: string, path: string): boolean {
 
 export function isYoutubeBrowsePath(method: string, path: string): boolean {
   if (method === 'GET' && path === '/v1/youtube/search') return true;
+  if (method === 'GET' && path === '/v1/youtube/search/suggest') return true;
   if (method === 'GET' && path === '/v1/youtube/trending') return true;
   return false;
 }

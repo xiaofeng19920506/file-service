@@ -40,3 +40,12 @@ export async function searchYoutubeVideos(
   const res = await apiFetch(`/v1/youtube/search?${params}`);
   return parseJson<YoutubeSearchPageResponse>(res);
 }
+
+export async function fetchYoutubeSearchSuggestions(query: string): Promise<string[]> {
+  const q = query.trim();
+  if (!q) return [];
+  const params = new URLSearchParams({ q });
+  const res = await apiFetch(`/v1/youtube/search/suggest?${params}`);
+  const data = await parseJson<{ suggestions: string[] }>(res);
+  return data.suggestions ?? [];
+}
