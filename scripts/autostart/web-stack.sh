@@ -55,7 +55,24 @@ wait_for_api() {
 
 ensure_web_build() {
   local build_id="${ROOT}/frontend/.next/BUILD_ID"
-  if [[ -f "$build_id" && "${FILE_SERVICE_WEB_REBUILD:-}" != "1" ]]; then
+  local stamp_file="${ROOT}/data/autostart/web-build-head"
+  local current_head=""
+  if command -v git >/dev/null 2>&1 && git -C "$ROOT" rev-parse HEAD >/dev/null 2>&1; then
+    current_head="$(git -C "$ROOT" rev-parse HEAD)"
+  fi
+
+  local needs_rebuild=0
+  if [[ "${FILE_SERVICE_WEB_REBUILD:-}" == "1" ]]; then
+    needs_rebuild=1
+  elif [[ ! -f "$build_id" ]]; then
+    needs_rebuild=1
+  elif [[ -n "$current_head" && -f "$stamp_file" && "$(cat "$stamp_file")" != "$current_head" ]]; then
+    needs_rebuild=1
+  elif [[ -n "$current_head" && ! -f "$stamp_file" ]]; then
+    needs_rebuild=1
+  fi
+
+  if [[ "$needs_rebuild" == "0" ]]; then
     log "使用已有前端构建（${build_id}）"
     return 0
   fi
@@ -67,6 +84,10 @@ ensure_web_build() {
 
   log "构建前端（BACKEND_URL=${BACKEND_URL}）"
   BACKEND_URL="$BACKEND_URL" npm run build:web >> "$LOG_FILE" 2>&1
+  if [[ -n "$current_head" ]]; then
+    mkdir -p "$(dirname "$stamp_file")"
+    printf '%s' "$current_head" > "$stamp_file"
+  fi
 }
 
 wait_for_api

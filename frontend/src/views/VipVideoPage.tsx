@@ -177,32 +177,17 @@ export default function VipVideoPage() {
                       <p className="vip-video-placeholder-error">{errorText}</p>
                     </div>
                   )}
-                  {isMobile && (
-                    <VipVideoControls
-                      videoRef={videoRef}
-                      isReady={isReady}
-                      isLoading={isLoading}
-                      playing={playing}
-                      onPlayingChange={setPlaying}
-                      currentTime={currentTime}
-                      duration={duration}
-                      variant="overlay"
-                    />
-                  )}
                 </div>
 
-                {!isMobile && (
-                  <VipVideoControls
-                    videoRef={videoRef}
-                    isReady={isReady}
-                    isLoading={isLoading}
-                    playing={playing}
-                    onPlayingChange={setPlaying}
-                    currentTime={currentTime}
-                    duration={duration}
-                    variant="dock"
-                  />
-                )}
+                <VipVideoControls
+                  videoRef={videoRef}
+                  isReady={isReady}
+                  isLoading={isLoading}
+                  playing={playing}
+                  onPlayingChange={setPlaying}
+                  currentTime={currentTime}
+                  duration={duration}
+                />
 
                 {!isMobile && (
                   <div className="vip-video-watch-meta">
