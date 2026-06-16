@@ -269,6 +269,7 @@ function AppShellInner({
               canViewBulletin={permissions.canViewBulletin}
               canStartWorship={permissions.canStartWorship}
               canEdit={permissions.canEdit}
+              canAccessVipVideo={permissions.canAccessVipVideo}
               variant="header"
             />
           </div>
@@ -364,6 +365,7 @@ function AppShellInner({
           canViewBulletin={permissions.canViewBulletin}
           canStartWorship={permissions.canStartWorship}
           canEdit={permissions.canEdit}
+          canAccessVipVideo={permissions.canAccessVipVideo}
           variant="bottom"
         />
       </nav>

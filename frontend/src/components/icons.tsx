@@ -145,6 +145,15 @@ export function WorshipNavIcon() {
   );
 }
 
+export function VipNavIcon() {
+  return (
+    <NavIcon>
+      <rect x="3" y="6" width="18" height="12" rx="2" />
+      <path d="M11 10.5v5l5-2.5-5-2.5z" fill="currentColor" stroke="none" />
+    </NavIcon>
+  );
+}
+
 export function MenuIcon() {
   return (
     <svg className="nav-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>

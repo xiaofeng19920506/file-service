@@ -416,6 +416,7 @@ const en: MessageTree = {
     bulletinShort: 'Bulletin',
     worshipShort: 'Worship',
     adminShort: 'Admin',
+    vipShort: 'VIP',
   },
   pages: {
     libraryTitle: 'Library — Music Playlist Player',

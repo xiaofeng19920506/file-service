@@ -5,12 +5,21 @@ import {
   LibraryNavIcon,
   MergeNavIcon,
   PlaylistsNavIcon,
+  VipNavIcon,
   WorshipNavIcon,
 } from './icons';
 import type { AppPage } from '../hooks/useAppPage';
 import { useI18n } from '../i18n';
 
-type NavTarget = 'library' | 'playlists' | 'playlist-lists' | 'merge' | 'bulletin' | 'worship' | 'admin';
+type NavTarget =
+  | 'library'
+  | 'playlists'
+  | 'playlist-lists'
+  | 'merge'
+  | 'bulletin'
+  | 'worship'
+  | 'admin'
+  | 'vip-video';
 
 type PageNavTabsProps = {
   page: AppPage;
@@ -21,19 +30,29 @@ type PageNavTabsProps = {
   canViewBulletin: boolean;
   canStartWorship: boolean;
   canEdit: boolean;
+  canAccessVipVideo: boolean;
   variant: 'header' | 'bottom';
 };
 
 const NAV_ITEMS: {
   id: NavTarget;
   icon: typeof LibraryNavIcon;
-  labelKey: 'nav.library' | 'nav.playlistsShort' | 'nav.playlistLists' | 'nav.merge' | 'nav.bulletinShort' | 'nav.worshipShort' | 'nav.admin';
+  labelKey:
+    | 'nav.library'
+    | 'nav.playlistsShort'
+    | 'nav.playlistLists'
+    | 'nav.merge'
+    | 'nav.bulletinShort'
+    | 'nav.worshipShort'
+    | 'nav.admin'
+    | 'nav.vipShort';
   requiresSearch?: boolean;
   requiresPlaylists?: boolean;
   requiresMerge?: boolean;
   requiresBulletin?: boolean;
   requiresWorship?: boolean;
   requiresEdit?: boolean;
+  requiresVipVideo?: boolean;
   bottomOnly?: boolean;
   /** 桌面顶栏不展示（首页由左侧应用名标识即可） */
   headerHidden?: boolean;
@@ -77,6 +96,12 @@ const NAV_ITEMS: {
     requiresWorship: true,
   },
   {
+    id: 'vip-video',
+    icon: VipNavIcon,
+    labelKey: 'nav.vipShort',
+    requiresVipVideo: true,
+  },
+  {
     id: 'admin',
     icon: AdminNavIcon,
     labelKey: 'nav.admin',
@@ -93,6 +118,7 @@ export default function PageNavTabs({
   canViewBulletin,
   canStartWorship,
   canEdit,
+  canAccessVipVideo,
   variant,
 }: PageNavTabsProps) {
   const { t } = useI18n();
@@ -107,6 +133,7 @@ export default function PageNavTabs({
     if (item.requiresBulletin && !canViewBulletin) return false;
     if (item.requiresWorship && !canStartWorship) return false;
     if (item.requiresEdit && !canEdit) return false;
+    if (item.requiresVipVideo && !canAccessVipVideo) return false;
     return true;
   });
 
@@ -120,7 +147,8 @@ export default function PageNavTabs({
     >
       {items.map((item) => {
         const Icon = item.icon;
-        const active = page === item.id || (item.id === 'worship' && page === 'worship-live');
+        const active =
+          page === item.id || (item.id === 'worship' && page === 'worship-live');
         const label = t(item.labelKey);
 
         return (

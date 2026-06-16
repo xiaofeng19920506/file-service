@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { isPublicApiPath } from './api-key.js';
 import {
   accessDeniedErrorCode,
+  canAccessVipVideo,
   isUnauthenticatedAccessAllowed,
   resolvePathAccessLevel,
   roleMeetsAccessLevel,
@@ -61,10 +62,11 @@ describe('roleMeetsAccessLevel', () => {
     expect(roleMeetsAccessLevel('member', 'vip')).toBe(false);
   });
 
-  it('allows vip video for vip role only', () => {
+  it('allows vip video for vip and admin roles', () => {
     expect(roleMeetsAccessLevel('vip_video', 'vip')).toBe(true);
-    expect(roleMeetsAccessLevel('vip_video', 'member')).toBe(false);
     expect(roleMeetsAccessLevel('vip_video', 'admin')).toBe(true);
+    expect(roleMeetsAccessLevel('vip_video', 'member')).toBe(false);
+    expect(roleMeetsAccessLevel('vip_video', 'worship_team')).toBe(false);
   });
 
   it('allows youtube browse for vip and playlist roles', () => {
@@ -93,6 +95,17 @@ describe('roleMeetsAccessLevel', () => {
     expect(roleMeetsAccessLevel('youtube_export', 'member')).toBe(false);
     expect(roleMeetsAccessLevel('youtube_export', 'worship_team')).toBe(true);
     expect(roleMeetsAccessLevel('youtube_export', 'admin')).toBe(true);
+  });
+});
+
+describe('canAccessVipVideo', () => {
+  it('allows vip and admin only', () => {
+    expect(canAccessVipVideo('vip')).toBe(true);
+    expect(canAccessVipVideo('admin')).toBe(true);
+    expect(canAccessVipVideo('member')).toBe(false);
+    expect(canAccessVipVideo('worship_team')).toBe(false);
+    expect(canAccessVipVideo('creator')).toBe(false);
+    expect(canAccessVipVideo(null)).toBe(false);
   });
 });
 

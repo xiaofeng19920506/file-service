@@ -407,6 +407,7 @@ export default {
     bulletinShort: '周报',
     worshipShort: '敬拜',
     adminShort: '管理',
+    vipShort: 'VIP',
   },
   pages: {
     libraryTitle: '诗库 — Music Playlist Player',
