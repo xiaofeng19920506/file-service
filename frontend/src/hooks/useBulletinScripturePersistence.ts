@@ -9,12 +9,13 @@ import {
 
 type Options = {
   canPersistRemote: boolean;
+  onPersistingChange?: (busy: boolean) => void;
 };
 
 export function useBulletinScripturePersistence(
   draft: WeeklyBulletin | null,
   patchField: <K extends keyof WeeklyBulletin>(key: K, value: WeeklyBulletin[K]) => void,
-  { canPersistRemote }: Options,
+  { canPersistRemote, onPersistingChange }: Options,
 ) {
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const restoredForRef = useRef<string | null>(null);
@@ -78,15 +79,18 @@ export function useBulletinScripturePersistence(
     saveTimerRef.current = setTimeout(() => {
       writeLocalScripturePreference(draft.id, book, reference);
       if (!canPersistRemote) return;
+      onPersistingChange?.(true);
       void saveScripturePreference({
         bulletinId: draft.id,
         scriptureBook: book,
         scriptureReference: reference,
-      }).catch(() => undefined);
+      })
+        .catch(() => undefined)
+        .finally(() => onPersistingChange?.(false));
     }, 600);
 
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
-  }, [canPersistRemote, draft?.id, draft?.scriptureBook, draft?.scriptureReference]);
+  }, [canPersistRemote, draft?.id, draft?.scriptureBook, draft?.scriptureReference, onPersistingChange]);
 }

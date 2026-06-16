@@ -73,6 +73,7 @@ export default function BulletinPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [wizardStep, setWizardStep] = useState(0);
   const savingRef = useRef(false);
+  const scripturePersistingRef = useRef(false);
   savingRef.current = saving || publishing;
 
   const stepperSteps = useMemo(
@@ -90,7 +91,7 @@ export default function BulletinPage() {
   useBulletinRealtime(
     selectedId,
     (event) => {
-      if (!selectedId || savingRef.current) return;
+      if (!selectedId || savingRef.current || scripturePersistingRef.current) return;
       if (event.updatedAt === draft?.updatedAt) return;
       void (async () => {
         const remote = await getBulletin(selectedId);
@@ -158,6 +159,9 @@ export default function BulletinPage() {
 
   useBulletinScripturePersistence(draft, patchField, {
     canPersistRemote: canManage,
+    onPersistingChange: (busy) => {
+      scripturePersistingRef.current = busy;
+    },
   });
 
   const handleServiceDateChange = (isoDate: string) => {

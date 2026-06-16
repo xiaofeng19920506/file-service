@@ -6860,26 +6860,6 @@ body.bulletin-slideshow-window {
   line-height: 1.45;
 }
 
-.bulletin-scripture-verse-range {
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-}
-
-.bulletin-scripture-verse-range-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  gap: 0.65rem;
-  align-items: end;
-}
-
-.bulletin-scripture-verse-separator {
-  padding-bottom: 0.72rem;
-  color: var(--text-secondary);
-  font-size: 1rem;
-  line-height: 1;
-}
-
 .bulletin-cover-date-hint {
   margin: 0;
   font-size: 0.85rem;
