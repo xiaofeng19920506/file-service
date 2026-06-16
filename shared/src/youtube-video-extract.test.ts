@@ -6,8 +6,10 @@ import {
 import { DEFAULT_YOUTUBE_VIDEO_PROGRESSIVE_BYTES } from './youtube-video-storage.js';
 
 describe('YOUTUBE_VIDEO_YTDLP_FORMAT', () => {
-  it('prefers H.264 for browser playback', () => {
+  it('only allows H.264 video codecs for browser playback', () => {
     expect(YOUTUBE_VIDEO_YTDLP_FORMAT).toContain('avc1');
+    expect(YOUTUBE_VIDEO_YTDLP_FORMAT).toContain('vcodec^=avc');
+    expect(YOUTUBE_VIDEO_YTDLP_FORMAT).not.toMatch(/\/best\[height<=480\]$/);
   });
 });
 

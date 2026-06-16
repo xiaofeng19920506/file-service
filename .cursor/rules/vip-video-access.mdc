@@ -25,3 +25,9 @@ alwaysApply: false
 - 导航：`PageNavTabs` 在 `canAccessVipVideo` 为真时展示「VIP」入口。
 - 播放列表：`readPlaylistPlaybackMode(canPlayPlaylistVideo)`，成员恒为 `audio`。
 - 扩展访问角色时同步改 shared、前端 permissions、测试与 UI 门禁。
+
+## VIP 视频缓存编码
+
+- **主格式**：`YOUTUBE_VIDEO_YTDLP_FORMAT`（`shared/src/youtube-video-extract.ts`）仅选 **H.264 (avc) + AAC**，禁止 VP9/HEVC 回退，兼容 iOS / Android / 鸿蒙 WebView。
+- **转码回退**：无原生 H.264 时用 `YOUTUBE_VIDEO_YTDLP_FORMAT_TRANSCODE` + ffmpeg `libx264`（较慢，输出仍为 H.264 MP4）。
+- 黑屏仅有声时前端可 `force` 重缓存（`resetYoutubeVideoForReextract`）。
