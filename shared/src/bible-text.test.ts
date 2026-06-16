@@ -107,6 +107,19 @@ describe('buildScriptureSlideBodies', () => {
     expect(bodies.chinesePages.join('')).toContain('经');
   });
 
+  it('fills proverbs 15:1-11 english to 13-14 lines when content allows', async () => {
+    const passage = await loadScripturePassage('箴言 Proverbs', '15:1-11');
+    expect(passage).not.toBeNull();
+    const bodies = buildScriptureSlideBodies(passage!);
+    expect(bodies.englishPages.length).toBeGreaterThanOrEqual(1);
+    const lines = englishPageVisualLines(bodies.englishPages[0]!);
+    expect(lines).toBeGreaterThanOrEqual(SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES);
+    expect(lines).toBeLessThanOrEqual(SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES);
+    bodies.englishPages.forEach((page, i) => {
+      assertEnglishPageInRange(page, i === bodies.englishPages.length - 1);
+    });
+  });
+
   it('splits English across multiple pages without truncation', () => {
     const en: BibleVerse[] = [];
     for (let i = 1; i <= SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES * 2 + 3; i++) {
@@ -142,7 +155,7 @@ describe('buildScriptureSlideBodies', () => {
   });
 
   it('splits a single long English verse across pages', () => {
-    const longVerse = 'word '.repeat(160).trim();
+    const longVerse = 'word '.repeat(220).trim();
     const bodies = buildScriptureSlideBodies({
       zh: [verse(1, '一節')],
       en: [verse(1, longVerse)],

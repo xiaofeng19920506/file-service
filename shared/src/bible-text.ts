@@ -115,12 +115,18 @@ export const SCRIPTURE_ZH_PAGE_MIN_CHARS =
 export const SCRIPTURE_ZH_PAGE_MAX_CHARS =
   SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES * SCRIPTURE_ZH_CHARS_PER_LINE;
 
-/** 英文 22pt 每行约容纳字符数（偏保守，配合 noAutofit 分页） */
-export const SCRIPTURE_EN_CHARS_PER_LINE = 52;
+/** 英文 22pt 每行约容纳字符数（按投影实测校准：~68 字符/行） */
+export const SCRIPTURE_EN_CHARS_PER_LINE = 68;
 
 /** 英文每页视觉行数：最少 13 行、最多 14 行 */
 export const SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES = 13;
 export const SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES = 14;
+
+/** 英文每页字符数上下限（由行数 × 每行字符数推导） */
+export const SCRIPTURE_EN_PAGE_MIN_CHARS =
+  SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES * SCRIPTURE_EN_CHARS_PER_LINE;
+export const SCRIPTURE_EN_PAGE_MAX_CHARS =
+  SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES * SCRIPTURE_EN_CHARS_PER_LINE;
 
 /** @deprecated 使用 SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES */
 export const SCRIPTURE_EN_PAGE_MAX_LINES = SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES;
@@ -191,94 +197,6 @@ function splitTextToMaxVisualLines(
     pages.push(head);
     remaining = tail;
   }
-  return pages;
-}
-
-function packTextPiecesToPages(
-  pieces: string[],
-  estimate: LineEstimate,
-  charsPerLine: number,
-  minLines: number,
-  maxLines: number,
-): string[][] {
-  const pages: string[][] = [];
-  let current: string[] = [];
-  let usedLines = 0;
-
-  const flush = () => {
-    if (current.length) {
-      pages.push(current);
-      current = [];
-      usedLines = 0;
-    }
-  };
-
-  const room = () => maxLines - usedLines;
-
-  for (let piece of pieces) {
-    piece = piece.trim();
-    if (!piece) continue;
-
-    while (piece) {
-      const pieceLines = estimate(piece);
-
-      if (!current.length) {
-        if (pieceLines <= maxLines) {
-          current.push(piece);
-          usedLines = pieceLines;
-          piece = '';
-        } else {
-          const [head, tail] = takeHeadVisualLines(piece, maxLines, charsPerLine, estimate);
-          current.push(head);
-          usedLines = estimate(head);
-          flush();
-          piece = tail;
-        }
-        continue;
-      }
-
-      if (pieceLines <= room()) {
-        current.push(piece);
-        usedLines += pieceLines;
-        piece = '';
-        continue;
-      }
-
-      if (usedLines >= minLines) {
-        flush();
-        continue;
-      }
-
-      const fillRoom = room();
-      if (fillRoom > 0) {
-        const [head, tail] = takeHeadVisualLines(piece, fillRoom, charsPerLine, estimate);
-        if (head) {
-          current.push(head);
-          usedLines += estimate(head);
-        }
-        flush();
-        piece = tail;
-      } else {
-        flush();
-      }
-    }
-  }
-
-  flush();
-
-  if (pages.length >= 2) {
-    const lastIdx = pages.length - 1;
-    const lastLines = pages[lastIdx]!.reduce((sum, p) => sum + estimate(p), 0);
-    if (lastLines < minLines) {
-      const prevIdx = lastIdx - 1;
-      const prevLines = pages[prevIdx]!.reduce((sum, p) => sum + estimate(p), 0);
-      if (prevLines + lastLines <= maxLines) {
-        pages[prevIdx] = [...pages[prevIdx]!, ...pages[lastIdx]!];
-        pages.pop();
-      }
-    }
-  }
-
   return pages;
 }
 
@@ -368,6 +286,55 @@ function paginateChineseVerses(verses: BibleVerse[]): string[] {
   return fillChinesePagesFromNext(splitPages);
 }
 
+function englishPageVisualLines(page: string[]): number {
+  return page.reduce((sum, line) => sum + estimateEnglishLineVisualLines(line), 0);
+}
+
+function fillEnglishPagesFromNext(pages: string[][]): string[][] {
+  const out = pages.map((p) => [...p]);
+
+  for (let i = 0; i < out.length - 1; i++) {
+    while (
+      englishPageVisualLines(out[i]!) < SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES &&
+      out[i + 1]?.length
+    ) {
+      const nextVerse = out[i + 1]![0]!;
+      const trial = [...out[i]!, nextVerse];
+      const trialLines = englishPageVisualLines(trial);
+      const trialChars = trial.join('').length;
+
+      if (
+        trialLines <= SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES &&
+        trialChars <= SCRIPTURE_EN_PAGE_MAX_CHARS
+      ) {
+        out[i] = trial;
+        out[i + 1]!.shift();
+        if (!out[i + 1]!.length) out.splice(i + 1, 1);
+        continue;
+      }
+
+      const roomLines = SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES - englishPageVisualLines(out[i]!);
+      const roomChars = SCRIPTURE_EN_PAGE_MAX_CHARS - out[i]!.join('').length - 1;
+      if (roomLines <= 0 || roomChars <= 0) break;
+
+      const [head, tail] = takeHeadVisualLines(
+        nextVerse,
+        roomLines,
+        SCRIPTURE_EN_CHARS_PER_LINE,
+        estimateEnglishLineVisualLines,
+      );
+      if (!head.trim()) break;
+
+      out[i]!.push(head);
+      if (tail.trim()) out[i + 1]![0] = tail;
+      else out[i + 1]!.shift();
+      if (!out[i + 1]!.length) out.splice(i + 1, 1);
+    }
+  }
+
+  return out;
+}
+
 function paginateEnglishVerses(verses: BibleVerse[]): string[][] {
   const pieces: string[] = [];
   for (const verse of verses) {
@@ -379,13 +346,74 @@ function paginateEnglishVerses(verses: BibleVerse[]): string[][] {
     );
   }
 
-  return packTextPiecesToPages(
-    pieces,
-    estimateEnglishLineVisualLines,
-    SCRIPTURE_EN_CHARS_PER_LINE,
-    SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES,
-    SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES,
-  );
+  const pages: string[][] = [];
+  let current: string[] = [];
+  let usedLines = 0;
+  let usedChars = 0;
+
+  const flush = () => {
+    if (current.length) {
+      pages.push(current);
+      current = [];
+      usedLines = 0;
+      usedChars = 0;
+    }
+  };
+
+  for (const piece of pieces) {
+    const pieceLines = estimateEnglishLineVisualLines(piece);
+    const pieceChars = piece.length;
+
+    if (!current.length) {
+      current.push(piece);
+      usedLines = pieceLines;
+      usedChars = pieceChars;
+      continue;
+    }
+
+    const fits =
+      usedLines + pieceLines <= SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES &&
+      usedChars + pieceChars + 1 <= SCRIPTURE_EN_PAGE_MAX_CHARS;
+
+    if (fits) {
+      current.push(piece);
+      usedLines += pieceLines;
+      usedChars += pieceChars + 1;
+      continue;
+    }
+
+    if (usedLines < SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES) {
+      const roomLines = SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES - usedLines;
+      const roomChars = SCRIPTURE_EN_PAGE_MAX_CHARS - usedChars - 1;
+      if (roomLines > 0 && roomChars > 0) {
+        const [head, tail] = takeHeadVisualLines(
+          piece,
+          roomLines,
+          SCRIPTURE_EN_CHARS_PER_LINE,
+          estimateEnglishLineVisualLines,
+        );
+        if (head.trim()) {
+          current.push(head);
+          flush();
+          if (tail.trim()) {
+            current.push(tail);
+            usedLines = estimateEnglishLineVisualLines(tail);
+            usedChars = tail.length;
+          }
+          continue;
+        }
+      }
+    }
+
+    flush();
+    current.push(piece);
+    usedLines = pieceLines;
+    usedChars = pieceChars;
+  }
+
+  flush();
+
+  return fillEnglishPagesFromNext(pages);
 }
 
 /** 估算一行英文经文（一节）在 slide 上占用的视觉行数 */
