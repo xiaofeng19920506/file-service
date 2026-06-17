@@ -1,14 +1,43 @@
 import {
   fetchBulletinTemplateFile,
   fetchScriptureSlideBodies,
-  type BulletinTemplateSection,
   type WeeklyBulletin,
 } from '../api/bulletins';
 import { buildPreviewMatchingPptx } from './bulletin-preview-pptx';
 import { listPptxSlidesInPresentationOrder } from './pptx-preview';
 import { BULLETIN_WIZARD_STEPS } from './bulletin-template-steps';
 
-/** 向导步骤对应的模板分区（`template-slide-map.json` section id） */
+type TemplateSlideSection = { id: string; slides: number[] };
+
+/**
+ * 模板内 slide 文件编号 → 分区（非放映页码）。
+ * 分区到演示页码的映射在已补丁预览 PPTX 的 presentation 顺序上解析。
+ */
+export const BULLETIN_TEMPLATE_SLIDE_SECTIONS: TemplateSlideSection[] = [
+  { id: 'cover', slides: [1] },
+  { id: 'pre_service', slides: [2, 3] },
+  { id: 'scripture', slides: [4, 5, 6] },
+  { id: 'worship', slides: [7, 8, 9] },
+  { id: 'communion', slides: [10, 11, 12, 13] },
+  { id: 'welcome', slides: [14] },
+  { id: 'youth_prayer', slides: [15] },
+  { id: 'testimony_week', slides: [16] },
+  { id: 'message', slides: [17] },
+  { id: 'family_time', slides: [18] },
+  { id: 'offering', slides: [19, 20, 21, 22] },
+  { id: 'birthday', slides: [23, 24] },
+  { id: 'announcements', slides: [25, 26, 27] },
+  { id: 'weekly_meetings', slides: [28, 29, 30] },
+  { id: 'staff_meeting', slides: [31] },
+  { id: 'rotation', slides: [32] },
+  { id: 'future_testimony', slides: [33] },
+  { id: 'service_roster', slides: [34] },
+  { id: 'verse_of_week', slides: [35] },
+  { id: 'department_reports', slides: [36] },
+  { id: 'closing', slides: [37, 38] },
+];
+
+/** 向导步骤对应的模板分区 */
 export const WIZARD_STEP_SECTION_IDS: Record<string, readonly string[]> = {
   cover: ['cover', 'pre_service'],
   scripture: ['scripture'],
@@ -45,7 +74,7 @@ export type BulletinDeckPlan = {
   wizardSteps: BulletinDeckWizardStep[];
 };
 
-function buildSlideInFileToSection(sections: BulletinTemplateSection[]): Map<number, string> {
+function buildSlideInFileToSection(sections: TemplateSlideSection[]): Map<number, string> {
   const map = new Map<number, string>();
   for (const section of sections) {
     for (const slide of section.slides) {
@@ -95,13 +124,11 @@ function buildWizardSteps(sections: BulletinDeckSection[]): BulletinDeckWizardSt
 
 /**
  * 从已补丁的 PPTX（放映顺序与预览 PNG API 一致）生成分区映射。
+ * 演示页码与右侧预览 `data-slide` 一一对应，不依赖模板固定页码。
  */
-export async function buildBulletinDeckPlanFromFile(
-  file: Blob,
-  templateSections: BulletinTemplateSection[],
-): Promise<BulletinDeckPlan> {
+export async function buildBulletinDeckPlanFromFile(file: Blob): Promise<BulletinDeckPlan> {
   const parsed = await listPptxSlidesInPresentationOrder(file);
-  const slideInFileToSection = buildSlideInFileToSection(templateSections);
+  const slideInFileToSection = buildSlideInFileToSection(BULLETIN_TEMPLATE_SLIDE_SECTIONS);
   const worshipPresentationIndex = parsed.find((s) => s.slideInFile === 7)?.index ?? 7;
 
   const slides: BulletinDeckSlide[] = parsed.map((slide) => ({
@@ -123,10 +150,7 @@ export async function buildBulletinDeckPlanFromFile(
  * 按当前周报字段生成演示顺序与分区映射（含读经加页）。
  * 须与预览 PNG API 使用同一套补丁逻辑，否则敬拜页码会错位。
  */
-export async function buildBulletinDeckPlan(
-  bulletin: WeeklyBulletin,
-  templateSections: BulletinTemplateSection[],
-): Promise<BulletinDeckPlan> {
+export async function buildBulletinDeckPlan(bulletin: WeeklyBulletin): Promise<BulletinDeckPlan> {
   const template = await fetchBulletinTemplateFile();
   const book = bulletin.scriptureBook?.trim() ?? '';
   const reference = bulletin.scriptureReference?.trim() ?? '';
@@ -138,11 +162,20 @@ export async function buildBulletinDeckPlan(
     scriptureBodies,
     'bulletin-deck-plan.pptx',
   );
-  return buildBulletinDeckPlanFromFile(file, templateSections);
+  return buildBulletinDeckPlanFromFile(file);
+}
+
+/** 预览 deck 中敬拜段的首个演示页（`data-slide`），无 deck 时返回 null */
+export function worshipFirstPresentationSlide(
+  plan: BulletinDeckPlan | null | undefined,
+): number | null {
+  if (!plan) return null;
+  const worship = plan.wizardSteps.find((w) => w.stepId === 'worship');
+  return worship?.slides[0] ?? null;
 }
 
 export function worshipSlidesFromPlan(plan: BulletinDeckPlan | null | undefined): number[] {
-  if (!plan) return [7, 8, 9];
+  if (!plan) return [];
   return plan.sections.find((s) => s.id === 'worship')?.slides ?? [];
 }
 

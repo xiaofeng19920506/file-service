@@ -8,7 +8,6 @@ import { buildPreviewMatchingPptx } from './bulletin-preview-pptx';
 import { listPptxSlidesInPresentationOrder } from './pptx-preview';
 
 const templatePath = join(import.meta.dirname, '../../../shared/templates/bulletin/06_14_2026.pptx');
-const mapPath = join(import.meta.dirname, '../../../shared/templates/bulletin/template-slide-map.json');
 
 const PPTX_MIME = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
 
@@ -39,10 +38,7 @@ describe('bulletin deck plan', () => {
 
   it('maps worship wizard step to the first worship presentation slide', async () => {
     const file = await patchedPreviewFile('119:1-40');
-    const map = JSON.parse(await readFile(mapPath, 'utf8')) as {
-      sections: { id: string; slides: number[] }[];
-    };
-    const plan = await buildBulletinDeckPlanFromFile(file, map.sections);
+    const plan = await buildBulletinDeckPlanFromFile(file);
     const worship = plan.wizardSteps.find((w) => w.stepId === 'worship');
     const order = await listPptxSlidesInPresentationOrder(file);
     const worshipPresentation = order.find((s) => s.slideInFile === 7);

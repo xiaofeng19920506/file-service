@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  fetchBulletinTemplateMap,
   getBulletinWorshipPlaylist,
   type BulletinSlidePreviewParams,
   type WeeklyBulletin,
@@ -9,33 +8,51 @@ import type { PlaylistItem } from '../../api/playlists';
 import { useI18n } from '../../i18n';
 import { buildBulletinDeckPlan, type BulletinDeckPlan } from '../../lib/bulletin-deck-plan';
 import { nextSundayIso } from '../../lib/bulletin-date';
-import { slidesForWizardStep } from '../../lib/bulletin-template-steps';
+import {
+  firstSlideForWizardStep,
+  slidesForWizardStep,
+  wizardStepIndexForSlide,
+} from '../../lib/bulletin-template-steps';
 import BulletinFullDeckPreview, {
   type BulletinPreviewScrollRequest,
 } from './BulletinFullDeckPreview';
 import BulletinSlideShowLauncher from './BulletinSlideShowLauncher';
 
 type BulletinPreviewPanelProps = {
+  /** 左侧 stepper 当前步骤；滚动目标从本面板 deckPlan 解析 */
+  scrollToWizardStep: number;
+  /** 再次点击同一 step 时递增，触发重新滚动 */
+  scrollToWizardBump?: number;
+  /** 显式滚到某一预览页（如封面聚焦） */
+  scrollToPresentationSlide?: { slide: number; bump: number } | null;
   highlightWizardStep: number;
   bulletin: WeeklyBulletin;
-  scrollRequest?: BulletinPreviewScrollRequest | null;
   worshipRefreshKey?: number;
-  onVisibleSlideChange?: (slideNumber: number) => void;
-  onDeckPlanChange?: (plan: BulletinDeckPlan | null) => void;
+  onVisibleWizardStepChange?: (stepIndex: number) => void;
 };
 
 export default function BulletinPreviewPanel({
+  scrollToWizardStep,
+  scrollToWizardBump = 0,
+  scrollToPresentationSlide = null,
   highlightWizardStep,
   bulletin,
-  scrollRequest = null,
   worshipRefreshKey = 0,
-  onVisibleSlideChange,
-  onDeckPlanChange,
+  onVisibleWizardStepChange,
 }: BulletinPreviewPanelProps) {
   const { t } = useI18n();
   const [deckPlan, setDeckPlan] = useState<BulletinDeckPlan | null>(null);
+  const [scrollRequest, setScrollRequest] = useState<BulletinPreviewScrollRequest>({
+    slide: 1,
+    id: 0,
+  });
   const [worshipItems, setWorshipItems] = useState<PlaylistItem[]>([]);
   const [worshipPlaylistTitle, setWorshipPlaylistTitle] = useState('');
+
+  const requestScroll = useCallback((slide: number) => {
+    if (slide < 1) return;
+    setScrollRequest((prev) => ({ slide, id: prev.id + 1 }));
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -44,17 +61,10 @@ export default function BulletinPreviewPanel({
     const run = () => {
       void (async () => {
         try {
-          const map = await fetchBulletinTemplateMap();
-          const plan = await buildBulletinDeckPlan(bulletin, map.sections ?? []);
-          if (!cancelled) {
-            setDeckPlan(plan);
-            onDeckPlanChange?.(plan);
-          }
+          const plan = await buildBulletinDeckPlan(bulletin);
+          if (!cancelled) setDeckPlan(plan);
         } catch {
-          if (!cancelled) {
-            setDeckPlan(null);
-            onDeckPlanChange?.(null);
-          }
+          if (!cancelled) setDeckPlan(null);
         }
       })();
     };
@@ -74,8 +84,18 @@ export default function BulletinPreviewPanel({
     bulletin.skipTestimonyWeek,
     bulletin.skipDepartmentReports,
     bulletin.weeklyMeetingVariant,
-    onDeckPlanChange,
   ]);
+
+  useEffect(() => {
+    if (!deckPlan) return;
+    const slide = firstSlideForWizardStep(scrollToWizardStep, deckPlan);
+    if (slide != null) requestScroll(slide);
+  }, [scrollToWizardStep, scrollToWizardBump, deckPlan, requestScroll]);
+
+  useEffect(() => {
+    if (!deckPlan || !scrollToPresentationSlide) return;
+    requestScroll(scrollToPresentationSlide.slide);
+  }, [scrollToPresentationSlide?.bump, deckPlan, requestScroll, scrollToPresentationSlide]);
 
   useEffect(() => {
     if (!bulletin.servicePlaylistId) {
@@ -105,6 +125,13 @@ export default function BulletinPreviewPanel({
   const highlightSlides = useMemo(
     () => slidesForWizardStep(highlightWizardStep, deckPlan),
     [highlightWizardStep, deckPlan],
+  );
+
+  const handleVisibleSlide = useCallback(
+    (slide: number) => {
+      onVisibleWizardStepChange?.(wizardStepIndexForSlide(slide, deckPlan));
+    },
+    [deckPlan, onVisibleWizardStepChange],
   );
 
   const previewPatch = useMemo(
@@ -145,7 +172,7 @@ export default function BulletinPreviewPanel({
         scrollRequest={scrollRequest}
         worshipItems={worshipItems}
         worshipPlaylistTitle={worshipPlaylistTitle}
-        onVisibleSlideChange={onVisibleSlideChange}
+        onVisibleSlideChange={handleVisibleSlide}
       />
     </div>
   );

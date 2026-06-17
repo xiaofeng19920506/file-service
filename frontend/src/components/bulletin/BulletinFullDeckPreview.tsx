@@ -3,7 +3,7 @@ import type { WeeklyBulletin } from '../../api/bulletins';
 import type { PlaylistItem } from '../../api/playlists';
 import { useI18n } from '../../i18n';
 import type { BulletinDeckPlan } from '../../lib/bulletin-deck-plan';
-import { worshipSlidesFromPlan } from '../../lib/bulletin-deck-plan';
+import { worshipFirstPresentationSlide } from '../../lib/bulletin-deck-plan';
 import { nextSundayIso } from '../../lib/bulletin-date';
 import BulletinPptSlidePreview from './BulletinPptSlidePreview';
 import BulletinWorshipEmbeddedPlayer, {
@@ -121,7 +121,7 @@ export default function BulletinFullDeckPreview({
   const scrollSyncUntilRef = useRef(0);
   const highlightSet = useMemo(() => new Set(highlightSlides), [highlightSlides]);
 
-  const worshipFirstSlide = worshipSlidesFromPlan(deckPlan)[0] ?? null;
+  const worshipFirstSlide = worshipFirstPresentationSlide(deckPlan);
 
   const patch = useMemo(
     () => ({

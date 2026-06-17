@@ -96,18 +96,15 @@ export function isBulletinWorshipSlide(slideNumber: number, plan?: BulletinDeckP
   return (BULLETIN_WORSHIP_SLIDES as readonly number[]).includes(slideNumber);
 }
 
-/** 向导步骤在 PPT 中对应的首页（用于右侧预览滚动定位） */
+/** 向导步骤在预览 deck 中的首页（`data-slide`）；无 deckPlan 时不猜测模板页码 */
 export function firstSlideForWizardStep(
   stepIndex: number,
   plan?: BulletinDeckPlan | null,
-): number {
+): number | null {
   const step = BULLETIN_WIZARD_STEPS[stepIndex];
-  if (!step) return 1;
-  if (plan) {
-    const entry = plan.wizardSteps.find((w) => w.stepId === step.id);
-    if (entry?.slides.length) return entry.slides[0]!;
-  }
-  return step.slides[0] ?? 1;
+  if (!step || !plan) return null;
+  const entry = plan.wizardSteps.find((w) => w.stepId === step.id);
+  return entry?.slides[0] ?? null;
 }
 
 function allSlidesForWizardStep(stepIndex: number): number[] {
@@ -122,11 +119,9 @@ export function slidesForWizardStep(
 ): number[] {
   const step = BULLETIN_WIZARD_STEPS[stepIndex];
   if (!step) return [];
-  if (plan) {
-    const entry = plan.wizardSteps.find((w) => w.stepId === step.id);
-    if (entry) return entry.slides;
-  }
-  return allSlidesForWizardStep(stepIndex);
+  if (!plan) return [];
+  const entry = plan.wizardSteps.find((w) => w.stepId === step.id);
+  return entry?.slides ?? [];
 }
 
 /** 根据演示页码推断对应的向导步骤（用于预览滚动反查左侧分区） */

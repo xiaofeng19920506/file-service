@@ -12,8 +12,6 @@ import { useAuth } from '../auth/AuthContext';
 import BulletinCoverStep from '../components/bulletin/BulletinCoverStep';
 import BulletinWorshipStep from '../components/bulletin/BulletinWorshipStep';
 import BulletinPreviewPanel from '../components/bulletin/BulletinPreviewPanel';
-import type { BulletinPreviewScrollRequest } from '../components/bulletin/BulletinFullDeckPreview';
-import type { BulletinDeckPlan } from '../lib/bulletin-deck-plan';
 import {
   BulletinAnnouncementsStep,
   BulletinBirthdayStep,
@@ -27,7 +25,7 @@ import { useBulletinRealtime } from '../hooks/useBulletinRealtime';
 import { useBulletinScripturePersistence } from '../hooks/useBulletinScripturePersistence';
 import { useI18n } from '../i18n';
 import { nextSundayIso } from '../lib/bulletin-date';
-import { BULLETIN_WIZARD_STEPS, firstSlideForWizardStep, wizardStepIndexForSlide } from '../lib/bulletin-template-steps';
+import { BULLETIN_WIZARD_STEPS } from '../lib/bulletin-template-steps';
 import { publishBulletinPptx, resolveBulletinPptxBlob } from '../lib/bulletin-publish';
 import { friendlyError } from '../lib/error-messages';
 import { readWorshipLiveConfig, writeWorshipLiveConfig } from '../lib/worship-live-config';
@@ -77,11 +75,11 @@ export default function BulletinPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [wizardStep, setWizardStep] = useState(0);
   const [previewHighlightStep, setPreviewHighlightStep] = useState(0);
-  const [deckPlan, setDeckPlan] = useState<BulletinDeckPlan | null>(null);
-  const [previewScrollRequest, setPreviewScrollRequest] = useState<BulletinPreviewScrollRequest>({
-    slide: 1,
-    id: 0,
-  });
+  const [previewScrollBump, setPreviewScrollBump] = useState(0);
+  const [previewScrollToSlide, setPreviewScrollToSlide] = useState<{
+    slide: number;
+    bump: number;
+  } | null>(null);
   const [worshipPreviewRevision, setWorshipPreviewRevision] = useState(0);
   const [worshipYoutubeOauthReady, setWorshipYoutubeOauthReady] = useState(false);
   const [worshipOauthError, setWorshipOauthError] = useState<string | null>(null);
@@ -101,22 +99,9 @@ export default function BulletinPage() {
 
   const currentStepDef = BULLETIN_WIZARD_STEPS[wizardStep];
 
-  const requestPreviewScroll = useCallback((slide: number) => {
-    setPreviewScrollRequest((prev) => ({ slide, id: prev.id + 1 }));
-  }, []);
-
-  const handlePreviewVisibleSlide = useCallback(
-    (slide: number) => {
-      setPreviewHighlightStep(wizardStepIndexForSlide(slide, deckPlan));
-    },
-    [deckPlan],
-  );
-
   useEffect(() => {
     setPreviewHighlightStep(wizardStep);
-    if (!deckPlan) return;
-    requestPreviewScroll(firstSlideForWizardStep(wizardStep, deckPlan));
-  }, [wizardStep, deckPlan, requestPreviewScroll]);
+  }, [wizardStep]);
 
   useEffect(() => {
     const hash = window.location.hash;
@@ -385,7 +370,12 @@ export default function BulletinPage() {
             onServiceDateChange={handleServiceDateChange}
             onServiceTimeChange={(time) => patchField('serviceTime', time)}
             onSave={handleSaveCover}
-            onCoverPreviewFocus={() => requestPreviewScroll(1)}
+            onCoverPreviewFocus={() =>
+              setPreviewScrollToSlide((prev) => ({
+                slide: 1,
+                bump: (prev?.bump ?? 0) + 1,
+              }))
+            }
           />
         );
       case 'scripture':
@@ -547,8 +537,7 @@ export default function BulletinPage() {
                 onStepSelect={(index) => {
                   if (!BULLETIN_WIZARD_STEPS[index]?.enabled) return;
                   if (index === wizardStep) {
-                    if (!deckPlan) return;
-                    requestPreviewScroll(firstSlideForWizardStep(index, deckPlan));
+                    setPreviewScrollBump((b) => b + 1);
                     return;
                   }
                   setWizardStep(index);
@@ -596,12 +585,13 @@ export default function BulletinPage() {
 
           <aside className="bulletin-workspace-preview" aria-label={t('bulletin.previewTitle')}>
             <BulletinPreviewPanel
+              scrollToWizardStep={wizardStep}
+              scrollToWizardBump={previewScrollBump}
+              scrollToPresentationSlide={previewScrollToSlide}
               highlightWizardStep={previewHighlightStep}
               bulletin={draft}
-              scrollRequest={previewScrollRequest}
               worshipRefreshKey={worshipPreviewRevision}
-              onVisibleSlideChange={handlePreviewVisibleSlide}
-              onDeckPlanChange={setDeckPlan}
+              onVisibleWizardStepChange={setPreviewHighlightStep}
             />
           </aside>
         </div>
