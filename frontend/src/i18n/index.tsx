@@ -46,8 +46,12 @@ type I18nContextValue = {
 const I18nContext = createContext<I18nContextValue | null>(null);
 
 function detectLocale(): Locale {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored === 'zh-CN' || stored === 'en') return stored;
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored === 'zh-CN' || stored === 'en') return stored;
+  } catch {
+    // Safari 私密浏览 / 部分 WebView 禁用 localStorage
+  }
   const lang = navigator.language.toLowerCase();
   return lang.startsWith('zh') ? 'zh-CN' : 'en';
 }
@@ -57,7 +61,11 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   const setLocale = useCallback((next: Locale) => {
     setLocaleState(next);
-    localStorage.setItem(STORAGE_KEY, next);
+    try {
+      localStorage.setItem(STORAGE_KEY, next);
+    } catch {
+      // ignore
+    }
   }, []);
 
   const t = useCallback(

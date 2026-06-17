@@ -42,6 +42,9 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+/** 会话校验最长阻塞首屏时间（弱网 / 跨境） */
+const SESSION_VERIFY_TIMEOUT_MS = 8_000;
+
 function goHomeAfterAuth(user?: { role: string } | null): void {
   const hash = window.location.hash;
   if (hash !== '#/login' && hash !== '' && hash !== '#/' && hash !== '#') return;
@@ -71,18 +74,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     let cancelled = false;
+    const timeoutId = window.setTimeout(() => {
+      if (!cancelled) setLoading(false);
+    }, SESSION_VERIFY_TIMEOUT_MS);
+
     void (async () => {
-      const verified = await verifyAuthSession();
-      if (cancelled) return;
-      setUser(verified ?? getCachedUser());
-      setLoading(false);
-      if ((verified ?? getCachedUser()) && window.location.hash === '#/login') {
-        goHomeAfterAuth(verified ?? getCachedUser());
+      try {
+        const verified = await verifyAuthSession();
+        if (cancelled) return;
+        setUser(verified ?? getCachedUser());
+        if ((verified ?? getCachedUser()) && window.location.hash === '#/login') {
+          goHomeAfterAuth(verified ?? getCachedUser());
+        }
+      } finally {
+        if (!cancelled) {
+          window.clearTimeout(timeoutId);
+          setLoading(false);
+        }
       }
     })();
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timeoutId);
     };
   }, []);
 

@@ -500,5 +500,12 @@ export default function App() {
     );
   }
 
+  if (!user && page !== 'login') {
+    if (window.location.hash !== '#/login') {
+      window.location.hash = '#/login';
+    }
+    return <AuthPage />;
+  }
+
   return <AppShellWithMenu />;
 }

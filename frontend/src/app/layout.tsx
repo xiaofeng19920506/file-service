@@ -48,11 +48,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Inline theme script runs before first paint to avoid flash */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){var s=localStorage.getItem('theme'),p=window.matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.setAttribute('data-theme',s==='dark'||s==='light'?s:p?'dark':'light');})();`,
+            __html: `(function(){var s=null;try{s=localStorage.getItem('theme');}catch(e){}var p=window.matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.setAttribute('data-theme',s==='dark'||s==='light'?s:p?'dark':'light');})();`,
           }}
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <div id="app-boot" className="app-boot" aria-live="polite" aria-busy="true">
+          <div className="app-boot-inner">
+            <span className="app-boot-mark" aria-hidden>
+              ▶
+            </span>
+            <span className="app-boot-name">YoutVS</span>
+            <p className="app-boot-status">加载中…</p>
+          </div>
+        </div>
+        {children}
+      </body>
     </html>
   );
 }
