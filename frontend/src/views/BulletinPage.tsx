@@ -13,6 +13,7 @@ import BulletinCoverStep from '../components/bulletin/BulletinCoverStep';
 import BulletinWorshipStep from '../components/bulletin/BulletinWorshipStep';
 import BulletinPreviewPanel from '../components/bulletin/BulletinPreviewPanel';
 import type { BulletinPreviewScrollRequest } from '../components/bulletin/BulletinFullDeckPreview';
+import type { BulletinDeckPlan } from '../lib/bulletin-deck-plan';
 import {
   BulletinAnnouncementsStep,
   BulletinBirthdayStep,
@@ -76,6 +77,7 @@ export default function BulletinPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [wizardStep, setWizardStep] = useState(0);
   const [previewHighlightStep, setPreviewHighlightStep] = useState(0);
+  const [deckPlan, setDeckPlan] = useState<BulletinDeckPlan | null>(null);
   const [previewScrollRequest, setPreviewScrollRequest] = useState<BulletinPreviewScrollRequest>({
     slide: 1,
     id: 0,
@@ -103,14 +105,19 @@ export default function BulletinPage() {
     setPreviewScrollRequest((prev) => ({ slide, id: prev.id + 1 }));
   }, []);
 
-  const handlePreviewVisibleSlide = useCallback((slide: number) => {
-    setPreviewHighlightStep(wizardStepIndexForSlide(slide));
-  }, []);
+  const handlePreviewVisibleSlide = useCallback(
+    (slide: number) => {
+      setPreviewHighlightStep(wizardStepIndexForSlide(slide, deckPlan));
+    },
+    [deckPlan],
+  );
 
   useEffect(() => {
     setPreviewHighlightStep(wizardStep);
-    requestPreviewScroll(firstSlideForWizardStep(wizardStep));
-  }, [wizardStep, requestPreviewScroll]);
+    const needsDeckPlan = wizardStep >= 2;
+    if (needsDeckPlan && !deckPlan) return;
+    requestPreviewScroll(firstSlideForWizardStep(wizardStep, deckPlan));
+  }, [wizardStep, deckPlan, requestPreviewScroll]);
 
   useEffect(() => {
     const hash = window.location.hash;
@@ -541,7 +548,8 @@ export default function BulletinPage() {
                 onStepSelect={(index) => {
                   if (!BULLETIN_WIZARD_STEPS[index]?.enabled) return;
                   if (index === wizardStep) {
-                    requestPreviewScroll(firstSlideForWizardStep(index));
+                    if (index >= 2 && !deckPlan) return;
+                    requestPreviewScroll(firstSlideForWizardStep(index, deckPlan));
                     return;
                   }
                   setWizardStep(index);
@@ -594,6 +602,7 @@ export default function BulletinPage() {
               scrollRequest={previewScrollRequest}
               worshipRefreshKey={worshipPreviewRevision}
               onVisibleSlideChange={handlePreviewVisibleSlide}
+              onDeckPlanChange={setDeckPlan}
             />
           </aside>
         </div>

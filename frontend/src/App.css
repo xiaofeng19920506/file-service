@@ -6133,6 +6133,11 @@
   outline-offset: 2px;
 }
 
+.bulletin-slide-preview--placeholder {
+  min-height: min(52vw, 320px);
+  aspect-ratio: 16 / 9;
+}
+
 .bulletin-preview-static-block {
   width: 100%;
 }

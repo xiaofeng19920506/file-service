@@ -109,9 +109,17 @@ export async function saveBulletinAnnouncements(
   return data.bulletin;
 }
 
+export type BulletinTemplateSection = {
+  id: string;
+  slides: number[];
+  role: string;
+  notes?: string;
+};
+
 export type BulletinTemplateMap = {
   totalSlides: number;
   templateFile: string;
+  sections: BulletinTemplateSection[];
 };
 
 export async function fetchBulletinTemplateMap(): Promise<BulletinTemplateMap> {

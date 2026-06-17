@@ -1,9 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getBulletinWorshipPlaylist, type BulletinSlidePreviewParams, type WeeklyBulletin } from '../../api/bulletins';
+import {
+  fetchBulletinTemplateMap,
+  getBulletinWorshipPlaylist,
+  type BulletinSlidePreviewParams,
+  type WeeklyBulletin,
+} from '../../api/bulletins';
 import type { PlaylistItem } from '../../api/playlists';
 import { useI18n } from '../../i18n';
+import { buildBulletinDeckPlan, type BulletinDeckPlan } from '../../lib/bulletin-deck-plan';
 import { nextSundayIso } from '../../lib/bulletin-date';
-import { BULLETIN_WIZARD_STEPS } from '../../lib/bulletin-template-steps';
+import { slidesForWizardStep } from '../../lib/bulletin-template-steps';
 import BulletinFullDeckPreview, {
   type BulletinPreviewScrollRequest,
 } from './BulletinFullDeckPreview';
@@ -15,6 +21,7 @@ type BulletinPreviewPanelProps = {
   scrollRequest?: BulletinPreviewScrollRequest | null;
   worshipRefreshKey?: number;
   onVisibleSlideChange?: (slideNumber: number) => void;
+  onDeckPlanChange?: (plan: BulletinDeckPlan | null) => void;
 };
 
 export default function BulletinPreviewPanel({
@@ -23,11 +30,52 @@ export default function BulletinPreviewPanel({
   scrollRequest = null,
   worshipRefreshKey = 0,
   onVisibleSlideChange,
+  onDeckPlanChange,
 }: BulletinPreviewPanelProps) {
   const { t } = useI18n();
-  const highlightStepDef = BULLETIN_WIZARD_STEPS[highlightWizardStep];
+  const [deckPlan, setDeckPlan] = useState<BulletinDeckPlan | null>(null);
   const [worshipItems, setWorshipItems] = useState<PlaylistItem[]>([]);
   const [worshipPlaylistTitle, setWorshipPlaylistTitle] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    let debounceTimer = 0;
+
+    const run = () => {
+      void (async () => {
+        try {
+          const map = await fetchBulletinTemplateMap();
+          const plan = await buildBulletinDeckPlan(bulletin, map.sections ?? []);
+          if (!cancelled) {
+            setDeckPlan(plan);
+            onDeckPlanChange?.(plan);
+          }
+        } catch {
+          if (!cancelled) {
+            setDeckPlan(null);
+            onDeckPlanChange?.(null);
+          }
+        }
+      })();
+    };
+
+    debounceTimer = window.setTimeout(run, 180);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(debounceTimer);
+    };
+  }, [
+    bulletin.id,
+    bulletin.serviceDate,
+    bulletin.serviceTime,
+    bulletin.scriptureBook,
+    bulletin.scriptureReference,
+    bulletin.skipTestimonyWeek,
+    bulletin.skipDepartmentReports,
+    bulletin.weeklyMeetingVariant,
+    onDeckPlanChange,
+  ]);
 
   useEffect(() => {
     if (!bulletin.servicePlaylistId) {
@@ -54,10 +102,10 @@ export default function BulletinPreviewPanel({
     };
   }, [bulletin.id, bulletin.servicePlaylistId, worshipRefreshKey]);
 
-  const highlightSlides = useMemo(() => {
-    if (!highlightStepDef) return [];
-    return [...highlightStepDef.slides, ...(highlightStepDef.companionStaticSlides ?? [])];
-  }, [highlightStepDef]);
+  const highlightSlides = useMemo(
+    () => slidesForWizardStep(highlightWizardStep, deckPlan),
+    [highlightWizardStep, deckPlan],
+  );
 
   const previewPatch = useMemo(
     (): BulletinSlidePreviewParams => ({
@@ -92,6 +140,7 @@ export default function BulletinPreviewPanel({
 
       <BulletinFullDeckPreview
         bulletin={bulletin}
+        deckPlan={deckPlan}
         highlightSlides={highlightSlides}
         scrollRequest={scrollRequest}
         worshipItems={worshipItems}

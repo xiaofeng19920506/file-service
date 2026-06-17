@@ -83,16 +83,31 @@ export const BULLETIN_WIZARD_STEPS: BulletinWizardStep[] = [
   },
 ];
 
-/** 敬拜赞美模板页（与 template-slide-map worship 分区一致） */
+import type { BulletinDeckPlan } from './bulletin-deck-plan';
+
+/** 敬拜赞美模板页（无 deckPlan 时的回退） */
 export const BULLETIN_WORSHIP_SLIDES = [7, 8, 9] as const;
 
-export function isBulletinWorshipSlide(slideNumber: number): boolean {
+export function isBulletinWorshipSlide(slideNumber: number, plan?: BulletinDeckPlan | null): boolean {
+  if (plan) {
+    const worship = plan.sections.find((s) => s.id === 'worship');
+    if (worship) return worship.slides.includes(slideNumber);
+  }
   return (BULLETIN_WORSHIP_SLIDES as readonly number[]).includes(slideNumber);
 }
 
 /** 向导步骤在 PPT 中对应的首页（用于右侧预览滚动定位） */
-export function firstSlideForWizardStep(stepIndex: number): number {
-  return BULLETIN_WIZARD_STEPS[stepIndex]?.slides[0] ?? 1;
+export function firstSlideForWizardStep(
+  stepIndex: number,
+  plan?: BulletinDeckPlan | null,
+): number {
+  const step = BULLETIN_WIZARD_STEPS[stepIndex];
+  if (!step) return 1;
+  if (plan) {
+    const entry = plan.wizardSteps.find((w) => w.stepId === step.id);
+    if (entry?.slides.length) return entry.slides[0]!;
+  }
+  return step.slides[0] ?? 1;
 }
 
 function allSlidesForWizardStep(stepIndex: number): number[] {
@@ -101,8 +116,37 @@ function allSlidesForWizardStep(stepIndex: number): number[] {
   return [...step.slides, ...(step.companionStaticSlides ?? [])];
 }
 
-/** 根据 PPT 页码推断对应的向导步骤（用于预览滚动反查左侧分区） */
-export function wizardStepIndexForSlide(slideNumber: number): number {
+export function slidesForWizardStep(
+  stepIndex: number,
+  plan?: BulletinDeckPlan | null,
+): number[] {
+  const step = BULLETIN_WIZARD_STEPS[stepIndex];
+  if (!step) return [];
+  if (plan) {
+    const entry = plan.wizardSteps.find((w) => w.stepId === step.id);
+    if (entry) return entry.slides;
+  }
+  return allSlidesForWizardStep(stepIndex);
+}
+
+/** 根据演示页码推断对应的向导步骤（用于预览滚动反查左侧分区） */
+export function wizardStepIndexForSlide(
+  slideNumber: number,
+  plan?: BulletinDeckPlan | null,
+): number {
+  if (plan) {
+    for (let i = 0; i < BULLETIN_WIZARD_STEPS.length; i++) {
+      const entry = plan.wizardSteps.find((w) => w.stepId === BULLETIN_WIZARD_STEPS[i]!.id);
+      if (entry?.slides.includes(slideNumber)) return i;
+    }
+    for (let i = BULLETIN_WIZARD_STEPS.length - 1; i >= 0; i--) {
+      const entry = plan.wizardSteps.find((w) => w.stepId === BULLETIN_WIZARD_STEPS[i]!.id);
+      const first = entry?.slides[0];
+      if (first != null && slideNumber >= first) return i;
+    }
+    return 0;
+  }
+
   for (let i = 0; i < BULLETIN_WIZARD_STEPS.length; i++) {
     if (allSlidesForWizardStep(i).includes(slideNumber)) return i;
   }

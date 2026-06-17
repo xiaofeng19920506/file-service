@@ -9,7 +9,7 @@ function slidePathForNumber(n: number): string {
   return `ppt/slides/slide${n}.xml`;
 }
 
-function slidesToDelete(bulletin: WeeklyBulletin): string[] {
+export function slidesToDelete(bulletin: WeeklyBulletin): string[] {
   const paths: string[] = [];
   if (bulletin.skipTestimonyWeek) paths.push(slidePathForNumber(16));
   if (bulletin.skipDepartmentReports) paths.push(slidePathForNumber(36));

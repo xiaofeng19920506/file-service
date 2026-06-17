@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { RefObject } from 'react';
-import { fetchBulletinTemplateMap, type WeeklyBulletin } from '../../api/bulletins';
+import type { WeeklyBulletin } from '../../api/bulletins';
 import type { PlaylistItem } from '../../api/playlists';
 import { useI18n } from '../../i18n';
+import type { BulletinDeckPlan } from '../../lib/bulletin-deck-plan';
+import { worshipSlidesFromPlan } from '../../lib/bulletin-deck-plan';
 import { nextSundayIso } from '../../lib/bulletin-date';
-import { BULLETIN_WORSHIP_SLIDES } from '../../lib/bulletin-template-steps';
 import BulletinPptSlidePreview from './BulletinPptSlidePreview';
 import BulletinWorshipEmbeddedPlayer, {
   hasBulletinWorshipPlayItems,
@@ -35,6 +36,7 @@ type LazySlideItemProps = {
   worshipPlaylistId: string | null;
   worshipPlaylistTitle: string;
   worshipItems: PlaylistItem[];
+  worshipFirstSlide: number | null;
 };
 
 function LazySlideItem({
@@ -49,6 +51,7 @@ function LazySlideItem({
   worshipPlaylistId,
   worshipPlaylistTitle,
   worshipItems,
+  worshipFirstSlide,
 }: LazySlideItemProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(Boolean(eager));
@@ -66,14 +69,15 @@ function LazySlideItem({
       ([entry]) => {
         if (entry.isIntersecting) setVisible(true);
       },
-      { root, rootMargin: '240px 0px', threshold: 0.01 },
+      { root, rootMargin: '480px 0px', threshold: 0.01 },
     );
     io.observe(el);
     return () => io.disconnect();
   }, [eager, scrollRoot]);
 
   const showWorshipPlayer =
-    slideNumber === BULLETIN_WORSHIP_SLIDES[0] &&
+    worshipFirstSlide != null &&
+    slideNumber === worshipFirstSlide &&
     worshipPlaylistId &&
     hasBulletinWorshipPlayItems(worshipItems);
 
@@ -107,7 +111,7 @@ function LazySlideItem({
       ) : (
         <figure className="bulletin-slide-preview">
           <figcaption className="bulletin-slide-preview-caption">{label}</figcaption>
-          <div className="bulletin-slide-preview bulletin-slide-preview--loading">
+          <div className="bulletin-slide-preview bulletin-slide-preview--loading bulletin-slide-preview--placeholder">
             <div className="preview-spinner" />
           </div>
         </figure>
@@ -120,15 +124,32 @@ function scrollSlideIntoDeck(
   root: HTMLElement,
   slideNumber: number,
   behavior: ScrollBehavior = 'smooth',
-): void {
+): boolean {
   const el = root.querySelector<HTMLElement>(`[data-slide="${slideNumber}"]`);
-  if (!el) return;
+  if (!el) return false;
   const top = el.getBoundingClientRect().top - root.getBoundingClientRect().top + root.scrollTop;
   root.scrollTo({ top: Math.max(0, top - 6), behavior });
+  return true;
+}
+
+function scheduleScrollRetries(
+  root: HTMLElement,
+  slide: number,
+  onDone?: () => void,
+): () => void {
+  const delays = [0, 80, 200, 450, 900, 1500];
+  const timers = delays.map((delay, index) =>
+    window.setTimeout(() => {
+      scrollSlideIntoDeck(root, slide, index === 0 ? 'auto' : 'smooth');
+      if (index === delays.length - 1) onDone?.();
+    }, delay),
+  );
+  return () => timers.forEach((timer) => window.clearTimeout(timer));
 }
 
 type BulletinFullDeckPreviewProps = {
   bulletin: WeeklyBulletin;
+  deckPlan: BulletinDeckPlan | null;
   highlightSlides?: number[];
   scrollRequest?: BulletinPreviewScrollRequest | null;
   worshipItems?: PlaylistItem[];
@@ -138,6 +159,7 @@ type BulletinFullDeckPreviewProps = {
 
 export default function BulletinFullDeckPreview({
   bulletin,
+  deckPlan,
   highlightSlides = [],
   scrollRequest = null,
   worshipItems = [],
@@ -147,9 +169,11 @@ export default function BulletinFullDeckPreview({
   const { t } = useI18n();
   const scrollRootRef = useRef<HTMLDivElement>(null);
   const scrollSyncUntilRef = useRef(0);
-  const [totalSlides, setTotalSlides] = useState(FALLBACK_TOTAL_SLIDES);
   const [forcedVisibleSlides, setForcedVisibleSlides] = useState<Set<number>>(() => new Set());
   const highlightSet = useMemo(() => new Set(highlightSlides), [highlightSlides]);
+
+  const totalSlides = deckPlan?.totalSlides ?? FALLBACK_TOTAL_SLIDES;
+  const worshipFirstSlide = worshipSlidesFromPlan(deckPlan)[0] ?? null;
 
   const patch = useMemo(
     () => ({
@@ -166,16 +190,12 @@ export default function BulletinFullDeckPreview({
     ],
   );
 
-  useEffect(() => {
-    let cancelled = false;
-    void fetchBulletinTemplateMap()
-      .then((map) => {
-        if (!cancelled && map.totalSlides > 0) setTotalSlides(map.totalSlides);
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
+  const primeSlidesForScroll = useCallback((targetSlide: number) => {
+    setForcedVisibleSlides((prev) => {
+      const next = new Set(prev);
+      for (let page = 1; page <= targetSlide; page++) next.add(page);
+      return next;
+    });
   }, []);
 
   useEffect(() => {
@@ -183,25 +203,16 @@ export default function BulletinFullDeckPreview({
     const slide = scrollRequest.slide;
     if (slide < 1) return;
 
-    scrollSyncUntilRef.current = Date.now() + 900;
-
-    setForcedVisibleSlides((prev) => {
-      if (prev.has(slide)) return prev;
-      const next = new Set(prev);
-      next.add(slide);
-      return next;
-    });
+    scrollSyncUntilRef.current = Date.now() + 1600;
+    primeSlidesForScroll(slide);
 
     const root = scrollRootRef.current;
     if (!root) return;
 
-    const runScroll = () => scrollSlideIntoDeck(root, slide);
-    const raf = window.requestAnimationFrame(() => {
-      runScroll();
-      window.requestAnimationFrame(runScroll);
+    return scheduleScrollRetries(root, slide, () => {
+      scrollSyncUntilRef.current = Date.now() + 400;
     });
-    return () => window.cancelAnimationFrame(raf);
-  }, [scrollRequest?.id, scrollRequest?.slide]);
+  }, [scrollRequest?.id, scrollRequest?.slide, deckPlan?.totalSlides, primeSlidesForScroll]);
 
   const reportVisibleSlide = useCallback(() => {
     if (!onVisibleSlideChange || Date.now() < scrollSyncUntilRef.current) return;
@@ -278,6 +289,7 @@ export default function BulletinFullDeckPreview({
           worshipPlaylistId={bulletin.servicePlaylistId}
           worshipPlaylistTitle={worshipPlaylistTitle}
           worshipItems={worshipItems}
+          worshipFirstSlide={worshipFirstSlide}
         />
       ))}
     </div>
