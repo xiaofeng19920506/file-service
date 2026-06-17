@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import VipVideoBrowse, { VipVideoSearchBar } from '../components/vip/VipVideoBrowse';
 import VipVideoControls from '../components/vip/VipVideoControls';
-import { ChevronLeftIcon } from '../components/icons';
 import { useAuth } from '../auth/AuthContext';
 import { useDebouncedYoutubeSearch } from '../hooks/useDebouncedYoutubeSearch';
 import { useRecordYoutubePlay } from '../hooks/useRecordYoutubePlay';
@@ -133,10 +132,6 @@ export default function VipVideoPage() {
     clear();
   }, [exitFullscreen, clear]);
 
-  const closePlayer = () => {
-    stopPlayback();
-  };
-
   const exitWatchForSearch = useCallback(() => {
     if (current) stopPlayback();
   }, [current, stopPlayback]);
@@ -204,44 +199,21 @@ export default function VipVideoPage() {
     <div
       className={`vip-video-page vip-video-page--clone${isMobile ? ' vip-video-page--mobile' : ''}${current ? ' vip-video-page--watching' : ''}`}
     >
-      <header
-        className={`vip-video-topbar${current && isMobile ? ' vip-video-topbar--watching' : ''}`}
-      >
-        {current && isMobile ? (
-          <div className="vip-video-topbar-start">
-            <button
-              type="button"
-              className="vip-video-back-btn"
-              onClick={closePlayer}
-              aria-label={t('vipVideo.backToBrowse')}
-            >
-              <ChevronLeftIcon />
-            </button>
-            <div className="vip-video-brand vip-video-brand--compact">
-              <span className="vip-video-brand-mark" aria-hidden>
-                ▶
-              </span>
-              <span className="vip-video-brand-name">{t('vipVideo.brand')}</span>
-            </div>
-          </div>
-        ) : (
-          <div className="vip-video-brand">
-            <span className="vip-video-brand-mark" aria-hidden>
-              ▶
-            </span>
-            <span className="vip-video-brand-name">{t('vipVideo.brand')}</span>
-          </div>
-        )}
-        {!(current && isMobile) && (
-          <div className="vip-video-topbar-search">
-            <VipVideoSearchBar
-              search={search}
-              isMobile={isMobile}
-              className="vip-video-search-box--topbar"
-              onBeforeSearch={exitWatchForSearch}
-            />
-          </div>
-        )}
+      <header className="vip-video-topbar">
+        <div className="vip-video-brand">
+          <span className="vip-video-brand-mark" aria-hidden>
+            ▶
+          </span>
+          <span className="vip-video-brand-name">{t('vipVideo.brand')}</span>
+        </div>
+        <div className="vip-video-topbar-search">
+          <VipVideoSearchBar
+            search={search}
+            isMobile={isMobile}
+            className="vip-video-search-box--topbar"
+            onBeforeSearch={exitWatchForSearch}
+          />
+        </div>
         <div className="vip-video-topbar-actions">
           {user && !isMobile && <span className="vip-video-user">{user.email}</span>}
           <button type="button" className="btn-secondary btn-sm" onClick={logout}>
@@ -249,12 +221,6 @@ export default function VipVideoPage() {
           </button>
         </div>
       </header>
-
-      {current && isMobile && (
-        <div className="vip-video-mobile-watch-title" title={current.title}>
-          {current.title}
-        </div>
-      )}
 
       <div className="vip-video-body">
         {current ? (
@@ -332,20 +298,12 @@ export default function VipVideoPage() {
                 />
                 </div>
 
-                {!isMobile && (
-                  <div className="vip-video-watch-meta">
-                    <h1 className="vip-video-watch-title">{current.title}</h1>
-                    {current.channelTitle && (
-                      <p className="vip-video-watch-channel">{current.channelTitle}</p>
-                    )}
-                  </div>
-                )}
-
-                {isMobile && current.channelTitle && (
-                  <div className="vip-video-watch-meta vip-video-watch-meta--mobile">
+                <div className="vip-video-watch-meta">
+                  <h1 className="vip-video-watch-title">{current.title}</h1>
+                  {current.channelTitle && (
                     <p className="vip-video-watch-channel">{current.channelTitle}</p>
-                  </div>
-                )}
+                  )}
+                </div>
               </section>
 
               {!isMobile && (
