@@ -321,6 +321,10 @@ const en: MessageTree = {
     worshipManualLinksComplete: 'Done',
     worshipManualLinksSubmitting: 'Saving…',
     worshipManualLinksProgress: '{current} / {total}',
+    worshipSlidePlay: 'Play worship set',
+    worshipSlideHidePlayer: 'Hide player',
+    worshipSlidePlayerTitle: 'Worship playlist preview',
+    worshipSlideOpenLive: 'Full worship mode',
   },
   worshipSongs: {
     title: 'Praise & worship',

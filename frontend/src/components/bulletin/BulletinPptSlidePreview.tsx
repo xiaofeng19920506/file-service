@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { fetchBulletinSlidePreviewPng } from '../../api/bulletins';
 import { useI18n } from '../../i18n';
 import PreviewConversionGuide from '../PreviewConversionGuide';
@@ -17,6 +17,7 @@ type BulletinPptSlidePreviewProps = {
   emptyLabel: string;
   slideLabel?: string;
   large?: boolean;
+  overlay?: ReactNode;
 };
 
 export default function BulletinPptSlidePreview({
@@ -27,6 +28,7 @@ export default function BulletinPptSlidePreview({
   emptyLabel,
   slideLabel,
   large,
+  overlay,
 }: BulletinPptSlidePreviewProps) {
   const { t } = useI18n();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -123,6 +125,7 @@ export default function BulletinPptSlidePreview({
       {slideLabel && <figcaption className="bulletin-slide-preview-caption">{slideLabel}</figcaption>}
       <div className="bulletin-slide-preview-frame bulletin-slide-preview-frame--png">
         <img className="bulletin-slide-preview-img" src={previewUrl} alt="" draggable={false} />
+        {overlay}
       </div>
     </figure>
   );

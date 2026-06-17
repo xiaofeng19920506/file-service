@@ -79,6 +79,7 @@ export default function BulletinPage() {
     slide: 1,
     id: 0,
   });
+  const [worshipPreviewRevision, setWorshipPreviewRevision] = useState(0);
   const [worshipYoutubeOauthReady, setWorshipYoutubeOauthReady] = useState(false);
   const [worshipOauthError, setWorshipOauthError] = useState<string | null>(null);
   const savingRef = useRef(false);
@@ -398,7 +399,9 @@ export default function BulletinPage() {
             onClearOauthError={() => setWorshipOauthError(null)}
             onPlaylistReady={(playlistId) => {
               setDraft((prev) => (prev ? { ...prev, servicePlaylistId: playlistId } : prev));
+              setWorshipPreviewRevision((v) => v + 1);
             }}
+            onPlaylistChanged={() => setWorshipPreviewRevision((v) => v + 1)}
           />
         );
       case 'offering':
@@ -582,6 +585,7 @@ export default function BulletinPage() {
               wizardStep={wizardStep}
               bulletin={draft}
               scrollRequest={previewScrollRequest}
+              worshipRefreshKey={worshipPreviewRevision}
             />
           </aside>
         </div>

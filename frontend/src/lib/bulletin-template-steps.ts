@@ -83,6 +83,13 @@ export const BULLETIN_WIZARD_STEPS: BulletinWizardStep[] = [
   },
 ];
 
+/** 敬拜赞美模板页（与 template-slide-map worship 分区一致） */
+export const BULLETIN_WORSHIP_SLIDES = [7, 8, 9] as const;
+
+export function isBulletinWorshipSlide(slideNumber: number): boolean {
+  return (BULLETIN_WORSHIP_SLIDES as readonly number[]).includes(slideNumber);
+}
+
 /** 向导步骤在 PPT 中对应的首页（用于右侧预览滚动定位） */
 export function firstSlideForWizardStep(stepIndex: number): number {
   return BULLETIN_WIZARD_STEPS[stepIndex]?.slides[0] ?? 1;

@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
-import type { BulletinSlidePreviewParams, WeeklyBulletin } from '../../api/bulletins';
+import { useEffect, useMemo, useState } from 'react';
+import { getBulletinWorshipPlaylist, type BulletinSlidePreviewParams, type WeeklyBulletin } from '../../api/bulletins';
+import type { PlaylistItem } from '../../api/playlists';
 import { useI18n } from '../../i18n';
 import { nextSundayIso } from '../../lib/bulletin-date';
 import { BULLETIN_WIZARD_STEPS } from '../../lib/bulletin-template-steps';
@@ -12,15 +13,36 @@ type BulletinPreviewPanelProps = {
   wizardStep: number;
   bulletin: WeeklyBulletin;
   scrollRequest?: BulletinPreviewScrollRequest | null;
+  worshipRefreshKey?: number;
 };
 
 export default function BulletinPreviewPanel({
   wizardStep,
   bulletin,
   scrollRequest = null,
+  worshipRefreshKey = 0,
 }: BulletinPreviewPanelProps) {
   const { t } = useI18n();
   const stepDef = BULLETIN_WIZARD_STEPS[wizardStep];
+  const [worshipItems, setWorshipItems] = useState<PlaylistItem[]>([]);
+
+  useEffect(() => {
+    if (!bulletin.servicePlaylistId) {
+      setWorshipItems([]);
+      return;
+    }
+    let cancelled = false;
+    void getBulletinWorshipPlaylist(bulletin.id)
+      .then((data) => {
+        if (!cancelled) setWorshipItems(data.items ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setWorshipItems([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [bulletin.id, bulletin.servicePlaylistId, worshipRefreshKey]);
 
   const highlightSlides = useMemo(() => {
     if (!stepDef) return [];
@@ -62,6 +84,7 @@ export default function BulletinPreviewPanel({
         bulletin={bulletin}
         highlightSlides={highlightSlides}
         scrollRequest={scrollRequest}
+        worshipItems={worshipItems}
       />
     </div>
   );

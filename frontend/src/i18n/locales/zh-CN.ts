@@ -312,6 +312,10 @@ export default {
     worshipManualLinksComplete: '完成',
     worshipManualLinksSubmitting: '保存中…',
     worshipManualLinksProgress: '{current} / {total}',
+    worshipSlidePlay: '播放敬拜歌单',
+    worshipSlideHidePlayer: '收起播放器',
+    worshipSlidePlayerTitle: '敬拜歌单预览',
+    worshipSlideOpenLive: '全屏敬拜',
   },
   worshipSongs: {
     title: '敬拜赞美',

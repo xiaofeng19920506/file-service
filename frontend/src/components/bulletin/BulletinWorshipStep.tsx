@@ -22,6 +22,7 @@ type BulletinWorshipStepProps = {
   oauthError?: string | null;
   onClearOauthError?: () => void;
   onPlaylistReady: (playlistId: string) => void;
+  onPlaylistChanged?: () => void;
 };
 
 export default function BulletinWorshipStep({
@@ -32,6 +33,7 @@ export default function BulletinWorshipStep({
   oauthError = null,
   onClearOauthError,
   onPlaylistReady,
+  onPlaylistChanged,
 }: BulletinWorshipStepProps) {
   const { t } = useI18n();
   const [items, setItems] = useState<PlaylistItem[]>([]);
@@ -83,6 +85,7 @@ export default function BulletinWorshipStep({
       setStatus(t('worshipSongs.duplicateSkipped'));
     }
     void refreshPlaylist();
+    onPlaylistChanged?.();
   };
 
   const copyInviteLink = async () => {
