@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ensureBulletinWorshipPlaylist,
   getBulletinWorshipPlaylist,
@@ -6,10 +6,13 @@ import {
   type WeeklyBulletin,
 } from '../../api/bulletins';
 import type { PlaylistDetail, PlaylistItem } from '../../api/playlists';
-import ImportYoutubePlaylistModal from './ImportYoutubePlaylistModal';
-import ManualLinksPlaylistModal from './ManualLinksPlaylistModal';
+import MobileSegmentedControl from '../MobileSegmentedControl';
+import PlaylistYoutubeSearchPanel from '../PlaylistYoutubeSearchPanel';
+import BulletinWorshipYoutubeImportPanel from './BulletinWorshipYoutubeImportPanel';
 import { friendlyError } from '../../lib/error-messages';
 import { useI18n } from '../../i18n';
+
+type WorshipSourceTab = 'youtube' | 'search';
 
 type BulletinWorshipStepProps = {
   draft: WeeklyBulletin;
@@ -37,10 +40,16 @@ export default function BulletinWorshipStep({
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [youtubeModalOpen, setYoutubeModalOpen] = useState(oauthJustConnected);
-  const [manualModalOpen, setManualModalOpen] = useState(false);
+  const [sourceTab, setSourceTab] = useState<WorshipSourceTab>(
+    oauthJustConnected || oauthError ? 'youtube' : 'youtube',
+  );
 
   const canAddSongs = canEditSongs || canManage;
+
+  const existingVideoIds = useMemo(
+    () => new Set(items.map((item) => item.youtubeVideoId)),
+    [items],
+  );
 
   const refreshPlaylist = useCallback(async () => {
     const data = await getBulletinWorshipPlaylist(draft.id);
@@ -59,7 +68,7 @@ export default function BulletinWorshipStep({
   }, [refreshPlaylist, draft.servicePlaylistId]);
 
   useEffect(() => {
-    if (oauthJustConnected || oauthError) setYoutubeModalOpen(true);
+    if (oauthJustConnected || oauthError) setSourceTab('youtube');
   }, [oauthJustConnected, oauthError]);
 
   const handleImported = (
@@ -121,22 +130,41 @@ export default function BulletinWorshipStep({
       </header>
 
       {canAddSongs && (
-        <div className="bulletin-worship-action-buttons">
-          <button
-            type="button"
-            className="btn-primary bulletin-worship-action-btn"
-            onClick={() => setYoutubeModalOpen(true)}
-          >
-            {t('bulletin.worshipImportYoutubeBtn')}
-          </button>
-          <button
-            type="button"
-            className="btn-secondary bulletin-worship-action-btn"
-            onClick={() => setManualModalOpen(true)}
-          >
-            {t('bulletin.worshipManualLinksBtn')}
-          </button>
-        </div>
+        <>
+          <MobileSegmentedControl
+            className="bulletin-worship-tabs"
+            ariaLabel={t('bulletin.worshipSourceTabs')}
+            value={sourceTab}
+            onChange={(id) => setSourceTab(id as WorshipSourceTab)}
+            segments={[
+              { id: 'youtube', label: t('bulletin.worshipTabYoutube') },
+              { id: 'search', label: t('bulletin.worshipTabSearch') },
+            ]}
+          />
+
+          <div className="bulletin-worship-tab-panel" role="tabpanel">
+            {sourceTab === 'youtube' ? (
+              <BulletinWorshipYoutubeImportPanel
+                bulletinId={draft.id}
+                oauthJustConnected={oauthJustConnected}
+                oauthError={oauthError}
+                onClearOauthError={onClearOauthError}
+                onImported={handleImported}
+              />
+            ) : (
+              <div className="bulletin-worship-search-panel">
+                <p className="bulletin-worship-search-hint">{t('bulletin.worshipSearchHint')}</p>
+                <PlaylistYoutubeSearchPanel
+                  bulletinId={draft.id}
+                  existingVideoIds={existingVideoIds}
+                  onAdded={handleImported}
+                  mobileListOnly
+                  className="bulletin-worship-youtube-search"
+                />
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       <section className="bulletin-worship-playlist-preview">
@@ -190,27 +218,6 @@ export default function BulletinWorshipStep({
 
       {status && <p className="success-msg">{status}</p>}
       {error && <p className="error-msg">{error}</p>}
-
-      {youtubeModalOpen && canAddSongs && (
-        <ImportYoutubePlaylistModal
-          bulletinId={draft.id}
-          oauthJustConnected={oauthJustConnected}
-          oauthError={oauthError}
-          onClose={() => {
-            setYoutubeModalOpen(false);
-            onClearOauthError?.();
-          }}
-          onImported={handleImported}
-        />
-      )}
-
-      {manualModalOpen && canAddSongs && (
-        <ManualLinksPlaylistModal
-          bulletinId={draft.id}
-          onClose={() => setManualModalOpen(false)}
-          onImported={handleImported}
-        />
-      )}
     </div>
   );
 }
