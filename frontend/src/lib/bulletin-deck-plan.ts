@@ -5,7 +5,7 @@ import {
 } from '../api/bulletins';
 import { applyBulletinPatches, patchesFromBulletin } from './bulletin-pptx-patches';
 import { slidesToDelete } from './bulletin-pptx';
-import { deleteSlidesFromPptx, parsePptxSlidesDetailed } from './pptx-preview';
+import { deleteSlidesFromPptx, listPptxSlidesInPresentationOrder } from './pptx-preview';
 import { BULLETIN_WIZARD_STEPS } from './bulletin-template-steps';
 
 /** 向导步骤对应的模板分区（`template-slide-map.json` section id） */
@@ -110,7 +110,7 @@ export async function buildBulletinDeckPlan(
     file = await deleteSlidesFromPptx(file, deletePaths);
   }
 
-  const parsed = await parsePptxSlidesDetailed(file, { sourceFile: 'bulletin-deck-plan.pptx' });
+  const parsed = await listPptxSlidesInPresentationOrder(file);
   const slideInFileToSection = buildSlideInFileToSection(templateSections);
   const worshipPresentationIndex = parsed.find((s) => s.slideInFile === 7)?.index ?? 7;
 

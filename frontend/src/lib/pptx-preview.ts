@@ -34,6 +34,50 @@ function slideNumber(path: string): number {
   return parseInt(path.match(/slide(\d+)\.xml/)?.[1] ?? '0', 10);
 }
 
+export type PptxPresentationSlideRef = {
+  /** 演示顺序（1-based，与 LibreOffice / 预览 PNG API 一致） */
+  index: number;
+  slideInFile: number;
+  slidePath: string;
+};
+
+function relTargetToSlidePath(target: string): string {
+  if (target.startsWith('ppt/')) return target;
+  if (target.startsWith('slides/')) return `ppt/${target}`;
+  return `ppt/slides/${target.replace(/^\/?slides\//, '')}`;
+}
+
+/** 按 presentation.xml 放映顺序列出幻灯片（复制加页后不能用文件编号排序） */
+export async function listPptxSlidesInPresentationOrder(
+  file: Blob,
+): Promise<PptxPresentationSlideRef[]> {
+  const zip = await JSZip.loadAsync(await file.arrayBuffer());
+  const { presEntry, relsEntry } = readPresentationParts(zip);
+  const presXml = await presEntry.async('string');
+  const relsXml = await relsEntry.async('string');
+
+  const relIdToPath = new Map<string, string>();
+  for (const match of relsXml.matchAll(/<Relationship Id="(rId\d+)"[^>]*Target="([^"]+)"/g)) {
+    const target = match[2];
+    if (!target.includes('slide')) continue;
+    relIdToPath.set(match[1], relTargetToSlidePath(target));
+  }
+
+  const slides: PptxPresentationSlideRef[] = [];
+  let index = 0;
+  for (const match of presXml.matchAll(/<p:sldId[^>]*r:id="(rId\d+)"[^>]*\/>/g)) {
+    const slidePath = relIdToPath.get(match[1]);
+    if (!slidePath) continue;
+    index += 1;
+    slides.push({
+      index,
+      slideInFile: slideNumber(slidePath),
+      slidePath,
+    });
+  }
+  return slides;
+}
+
 function escapeXml(text: string): string {
   return text
     .replace(/&/g, '&amp;')
