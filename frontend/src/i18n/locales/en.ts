@@ -325,6 +325,12 @@ const en: MessageTree = {
     worshipSlideHidePlayer: 'Hide player',
     worshipSlidePlayerTitle: 'Worship playlist preview',
     worshipSlideOpenLive: 'Full worship mode',
+    worshipSlideTapPlay: 'Tap to play playlist',
+    worshipSlideTrackCount: '{count} tracks',
+    worshipSlideModeVideo: 'Video fullscreen',
+    worshipSlideModePpt: 'Lyrics PPT',
+    worshipSlideMaximize: 'Maximize',
+    worshipSlideExitMaximize: 'Exit fullscreen',
   },
   worshipSongs: {
     title: 'Praise & worship',

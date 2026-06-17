@@ -6,11 +6,9 @@ import { useI18n } from '../../i18n';
 import { nextSundayIso } from '../../lib/bulletin-date';
 import { BULLETIN_WORSHIP_SLIDES } from '../../lib/bulletin-template-steps';
 import BulletinPptSlidePreview from './BulletinPptSlidePreview';
-import {
-  BulletinWorshipSlidePlayFab,
-  BulletinWorshipSlidePlayerPanel,
+import BulletinWorshipEmbeddedPlayer, {
   hasBulletinWorshipPlayItems,
-} from './BulletinWorshipSlidePlayEntry';
+} from './BulletinWorshipEmbeddedPlayer';
 
 const FALLBACK_TOTAL_SLIDES = 38;
 const EAGER_SLIDE_COUNT = 3;
@@ -35,9 +33,8 @@ type LazySlideItemProps = {
   eager?: boolean;
   bulletinId: string;
   worshipPlaylistId: string | null;
+  worshipPlaylistTitle: string;
   worshipItems: PlaylistItem[];
-  worshipPlayerExpanded: boolean;
-  onWorshipPlayerToggle: () => void;
 };
 
 function LazySlideItem({
@@ -50,9 +47,8 @@ function LazySlideItem({
   eager,
   bulletinId,
   worshipPlaylistId,
+  worshipPlaylistTitle,
   worshipItems,
-  worshipPlayerExpanded,
-  onWorshipPlayerToggle,
 }: LazySlideItemProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(Boolean(eager));
@@ -76,37 +72,38 @@ function LazySlideItem({
     return () => io.disconnect();
   }, [eager, scrollRoot]);
 
-  const showWorshipPlay =
+  const showWorshipPlayer =
     slideNumber === BULLETIN_WORSHIP_SLIDES[0] &&
     worshipPlaylistId &&
     hasBulletinWorshipPlayItems(worshipItems);
 
-  const worshipPlayProps = {
-    bulletinId,
-    playlistId: worshipPlaylistId!,
-    items: worshipItems,
-    expanded: worshipPlayerExpanded,
-    onToggle: onWorshipPlayerToggle,
-  };
-
   return (
     <div
       ref={ref}
-      className={`bulletin-deck-slide${highlight ? ' bulletin-deck-slide--highlight' : ''}${showWorshipPlay ? ' bulletin-deck-slide--worship' : ''}`}
+      className={`bulletin-deck-slide${highlight ? ' bulletin-deck-slide--highlight' : ''}${showWorshipPlayer ? ' bulletin-deck-slide--worship' : ''}`}
       data-slide={slideNumber}
     >
       {visible ? (
-        <div className="bulletin-worship-slide-wrap">
+        showWorshipPlayer ? (
+          <BulletinWorshipEmbeddedPlayer
+            bulletinId={bulletinId}
+            playlistId={worshipPlaylistId!}
+            playlistTitle={worshipPlaylistTitle}
+            items={worshipItems}
+            slideNumber={slideNumber}
+            patch={patch}
+            slideLabel={label}
+            emptyLabel={emptyLabel}
+          />
+        ) : (
           <BulletinPptSlidePreview
             slideNumber={slideNumber}
             patch={patch}
             requireDate={false}
             emptyLabel={emptyLabel}
             slideLabel={label}
-            overlay={showWorshipPlay ? <BulletinWorshipSlidePlayFab {...worshipPlayProps} /> : undefined}
           />
-          {showWorshipPlay && <BulletinWorshipSlidePlayerPanel {...worshipPlayProps} />}
-        </div>
+        )
       ) : (
         <figure className="bulletin-slide-preview">
           <figcaption className="bulletin-slide-preview-caption">{label}</figcaption>
@@ -135,6 +132,7 @@ type BulletinFullDeckPreviewProps = {
   highlightSlides?: number[];
   scrollRequest?: BulletinPreviewScrollRequest | null;
   worshipItems?: PlaylistItem[];
+  worshipPlaylistTitle?: string;
 };
 
 export default function BulletinFullDeckPreview({
@@ -142,12 +140,12 @@ export default function BulletinFullDeckPreview({
   highlightSlides = [],
   scrollRequest = null,
   worshipItems = [],
+  worshipPlaylistTitle = '',
 }: BulletinFullDeckPreviewProps) {
   const { t } = useI18n();
   const scrollRootRef = useRef<HTMLDivElement>(null);
   const [totalSlides, setTotalSlides] = useState(FALLBACK_TOTAL_SLIDES);
   const [forcedVisibleSlides, setForcedVisibleSlides] = useState<Set<number>>(() => new Set());
-  const [expandedWorshipSlide, setExpandedWorshipSlide] = useState<number | null>(null);
   const highlightSet = useMemo(() => new Set(highlightSlides), [highlightSlides]);
 
   const patch = useMemo(
@@ -225,11 +223,8 @@ export default function BulletinFullDeckPreview({
           }
           bulletinId={bulletin.id}
           worshipPlaylistId={bulletin.servicePlaylistId}
+          worshipPlaylistTitle={worshipPlaylistTitle}
           worshipItems={worshipItems}
-          worshipPlayerExpanded={expandedWorshipSlide === page}
-          onWorshipPlayerToggle={() =>
-            setExpandedWorshipSlide((current) => (current === page ? null : page))
-          }
         />
       ))}
     </div>

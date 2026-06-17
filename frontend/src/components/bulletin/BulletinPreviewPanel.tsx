@@ -25,19 +25,27 @@ export default function BulletinPreviewPanel({
   const { t } = useI18n();
   const stepDef = BULLETIN_WIZARD_STEPS[wizardStep];
   const [worshipItems, setWorshipItems] = useState<PlaylistItem[]>([]);
+  const [worshipPlaylistTitle, setWorshipPlaylistTitle] = useState('');
 
   useEffect(() => {
     if (!bulletin.servicePlaylistId) {
       setWorshipItems([]);
+      setWorshipPlaylistTitle('');
       return;
     }
     let cancelled = false;
     void getBulletinWorshipPlaylist(bulletin.id)
       .then((data) => {
-        if (!cancelled) setWorshipItems(data.items ?? []);
+        if (!cancelled) {
+          setWorshipItems(data.items ?? []);
+          setWorshipPlaylistTitle(data.playlist?.title ?? '');
+        }
       })
       .catch(() => {
-        if (!cancelled) setWorshipItems([]);
+        if (!cancelled) {
+          setWorshipItems([]);
+          setWorshipPlaylistTitle('');
+        }
       });
     return () => {
       cancelled = true;
@@ -85,6 +93,7 @@ export default function BulletinPreviewPanel({
         highlightSlides={highlightSlides}
         scrollRequest={scrollRequest}
         worshipItems={worshipItems}
+        worshipPlaylistTitle={worshipPlaylistTitle}
       />
     </div>
   );

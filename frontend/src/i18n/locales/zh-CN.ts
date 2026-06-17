@@ -316,6 +316,12 @@ export default {
     worshipSlideHidePlayer: '收起播放器',
     worshipSlidePlayerTitle: '敬拜歌单预览',
     worshipSlideOpenLive: '全屏敬拜',
+    worshipSlideTapPlay: '点击播放歌单',
+    worshipSlideTrackCount: '{count} 首',
+    worshipSlideModeVideo: '视频全屏',
+    worshipSlideModePpt: '歌词 PPT',
+    worshipSlideMaximize: '最大化',
+    worshipSlideExitMaximize: '退出全屏',
   },
   worshipSongs: {
     title: '敬拜赞美',
