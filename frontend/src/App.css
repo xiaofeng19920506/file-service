@@ -7400,6 +7400,27 @@ body.bulletin-slideshow-window {
   flex-shrink: 0;
 }
 
+.vip-video-brand-btn {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.vip-video-brand-btn:hover .vip-video-brand-mark {
+  filter: brightness(1.08);
+}
+
+.vip-video-brand-btn:focus-visible {
+  outline: 2px solid var(--accent, var(--blue));
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
 .vip-video-brand-mark {
   display: inline-flex;
   align-items: center;

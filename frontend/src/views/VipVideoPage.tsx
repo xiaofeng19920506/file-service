@@ -136,6 +136,15 @@ export default function VipVideoPage() {
     if (current) stopPlayback();
   }, [current, stopPlayback]);
 
+  const goToHome = useCallback(() => {
+    void exitFullscreen();
+    if (current) stopPlayback();
+    if (search.searchQuery.trim() || search.hasSearched) {
+      search.resetSearch();
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [current, exitFullscreen, search, stopPlayback]);
+
   useEffect(() => {
     const el = videoRef.current;
     if (!el || !streamUrl) return;
@@ -200,12 +209,17 @@ export default function VipVideoPage() {
       className={`vip-video-page vip-video-page--clone${isMobile ? ' vip-video-page--mobile' : ''}${current ? ' vip-video-page--watching' : ''}`}
     >
       <header className="vip-video-topbar">
-        <div className="vip-video-brand">
+        <button
+          type="button"
+          className="vip-video-brand vip-video-brand-btn"
+          onClick={goToHome}
+          aria-label={t('vipVideo.backToBrowse')}
+        >
           <span className="vip-video-brand-mark" aria-hidden>
             ▶
           </span>
           <span className="vip-video-brand-name">{t('vipVideo.brand')}</span>
-        </div>
+        </button>
         <div className="vip-video-topbar-search">
           <VipVideoSearchBar
             search={search}
