@@ -82,3 +82,8 @@ export const BULLETIN_WIZARD_STEPS: BulletinWizardStep[] = [
     enabled: true,
   },
 ];
+
+/** 向导步骤在 PPT 中对应的首页（用于右侧预览滚动定位） */
+export function firstSlideForWizardStep(stepIndex: number): number {
+  return BULLETIN_WIZARD_STEPS[stepIndex]?.slides[0] ?? 1;
+}

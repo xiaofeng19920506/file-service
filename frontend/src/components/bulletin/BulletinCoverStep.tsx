@@ -21,6 +21,7 @@ type BulletinCoverStepProps = {
   onServiceDateChange: (isoDate: string) => void;
   onServiceTimeChange: (time: string) => void;
   onSave?: () => void;
+  onCoverPreviewFocus?: () => void;
 };
 
 export default function BulletinCoverStep({
@@ -31,6 +32,7 @@ export default function BulletinCoverStep({
   onServiceDateChange,
   onServiceTimeChange,
   onSave,
+  onCoverPreviewFocus,
 }: BulletinCoverStepProps) {
   const { t } = useI18n();
   const dateValue = serviceDate || nextSundayIso();
@@ -51,6 +53,8 @@ export default function BulletinCoverStep({
             value={dateValue}
             disabled={!canEdit}
             onChange={(e) => onServiceDateChange(e.target.value)}
+            onFocus={onCoverPreviewFocus}
+            onClick={onCoverPreviewFocus}
           />
         </label>
         <label className="bulletin-field">
@@ -61,6 +65,8 @@ export default function BulletinCoverStep({
             disabled={!canEdit}
             step={300}
             onChange={(e) => onServiceTimeChange(normalizeTimeValue(e.target.value))}
+            onFocus={onCoverPreviewFocus}
+            onClick={onCoverPreviewFocus}
           />
         </label>
         {canEdit && onSave && (

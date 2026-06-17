@@ -8,6 +8,11 @@ import BulletinPptSlidePreview from './BulletinPptSlidePreview';
 const FALLBACK_TOTAL_SLIDES = 38;
 const EAGER_SLIDE_COUNT = 3;
 
+export type BulletinPreviewScrollRequest = {
+  slide: number;
+  id: number;
+};
+
 type LazySlideItemProps = {
   slideNumber: number;
   patch: {
@@ -18,7 +23,6 @@ type LazySlideItemProps = {
   };
   highlight: boolean;
   label: string;
-  scrollIntoView: boolean;
   emptyLabel: string;
   scrollRoot: RefObject<HTMLElement | null>;
   eager?: boolean;
@@ -29,7 +33,6 @@ function LazySlideItem({
   patch,
   highlight,
   label,
-  scrollIntoView,
   emptyLabel,
   scrollRoot,
   eager,
@@ -55,12 +58,6 @@ function LazySlideItem({
     io.observe(el);
     return () => io.disconnect();
   }, [eager, scrollRoot]);
-
-  useEffect(() => {
-    if (scrollIntoView && ref.current) {
-      ref.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-  }, [scrollIntoView]);
 
   return (
     <div
@@ -88,20 +85,33 @@ function LazySlideItem({
   );
 }
 
+function scrollSlideIntoDeck(
+  root: HTMLElement,
+  slideNumber: number,
+  behavior: ScrollBehavior = 'smooth',
+): void {
+  const el = root.querySelector<HTMLElement>(`[data-slide="${slideNumber}"]`);
+  if (!el) return;
+  const top = el.getBoundingClientRect().top - root.getBoundingClientRect().top + root.scrollTop;
+  root.scrollTo({ top: Math.max(0, top - 6), behavior });
+}
+
 type BulletinFullDeckPreviewProps = {
   bulletin: WeeklyBulletin;
   highlightSlides?: number[];
+  scrollRequest?: BulletinPreviewScrollRequest | null;
 };
 
 export default function BulletinFullDeckPreview({
   bulletin,
   highlightSlides = [],
+  scrollRequest = null,
 }: BulletinFullDeckPreviewProps) {
   const { t } = useI18n();
   const scrollRootRef = useRef<HTMLDivElement>(null);
   const [totalSlides, setTotalSlides] = useState(FALLBACK_TOTAL_SLIDES);
+  const [forcedVisibleSlides, setForcedVisibleSlides] = useState<Set<number>>(() => new Set());
   const highlightSet = useMemo(() => new Set(highlightSlides), [highlightSlides]);
-  const scrollTarget = highlightSlides[0];
 
   const patch = useMemo(
     () => ({
@@ -130,6 +140,29 @@ export default function BulletinFullDeckPreview({
     };
   }, []);
 
+  useEffect(() => {
+    if (!scrollRequest) return;
+    const slide = scrollRequest.slide;
+    if (slide < 1) return;
+
+    setForcedVisibleSlides((prev) => {
+      if (prev.has(slide)) return prev;
+      const next = new Set(prev);
+      next.add(slide);
+      return next;
+    });
+
+    const root = scrollRootRef.current;
+    if (!root) return;
+
+    const runScroll = () => scrollSlideIntoDeck(root, slide);
+    const raf = window.requestAnimationFrame(() => {
+      runScroll();
+      window.requestAnimationFrame(runScroll);
+    });
+    return () => window.cancelAnimationFrame(raf);
+  }, [scrollRequest?.id, scrollRequest?.slide]);
+
   const slides = useMemo(
     () => Array.from({ length: totalSlides }, (_, i) => i + 1),
     [totalSlides],
@@ -148,10 +181,11 @@ export default function BulletinFullDeckPreview({
           patch={patch}
           highlight={highlightSet.has(page)}
           label={t('bulletin.previewSlideSingle', { page })}
-          scrollIntoView={page === scrollTarget}
           emptyLabel={t('bulletin.coverPreviewEmpty')}
           scrollRoot={scrollRootRef}
-          eager={page <= EAGER_SLIDE_COUNT}
+          eager={
+            page <= EAGER_SLIDE_COUNT || highlightSet.has(page) || forcedVisibleSlides.has(page)
+          }
         />
       ))}
     </div>

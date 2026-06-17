@@ -3,15 +3,22 @@ import type { BulletinSlidePreviewParams, WeeklyBulletin } from '../../api/bulle
 import { useI18n } from '../../i18n';
 import { nextSundayIso } from '../../lib/bulletin-date';
 import { BULLETIN_WIZARD_STEPS } from '../../lib/bulletin-template-steps';
-import BulletinFullDeckPreview from './BulletinFullDeckPreview';
+import BulletinFullDeckPreview, {
+  type BulletinPreviewScrollRequest,
+} from './BulletinFullDeckPreview';
 import BulletinSlideShowLauncher from './BulletinSlideShowLauncher';
 
 type BulletinPreviewPanelProps = {
   wizardStep: number;
   bulletin: WeeklyBulletin;
+  scrollRequest?: BulletinPreviewScrollRequest | null;
 };
 
-export default function BulletinPreviewPanel({ wizardStep, bulletin }: BulletinPreviewPanelProps) {
+export default function BulletinPreviewPanel({
+  wizardStep,
+  bulletin,
+  scrollRequest = null,
+}: BulletinPreviewPanelProps) {
   const { t } = useI18n();
   const stepDef = BULLETIN_WIZARD_STEPS[wizardStep];
 
@@ -51,7 +58,11 @@ export default function BulletinPreviewPanel({ wizardStep, bulletin }: BulletinP
         </div>
       </header>
 
-      <BulletinFullDeckPreview bulletin={bulletin} highlightSlides={highlightSlides} />
+      <BulletinFullDeckPreview
+        bulletin={bulletin}
+        highlightSlides={highlightSlides}
+        scrollRequest={scrollRequest}
+      />
     </div>
   );
 }
