@@ -79,7 +79,7 @@ function replaceShapeBlock(
 }
 
 /** 与 shared/bulletin-pptx-patch 保持一致 */
-function patchCoverDateLineInSlideXml(
+export function patchCoverDateLineInSlideXml(
   xml: string,
   serviceDate: string,
   serviceTime: string,

@@ -184,12 +184,14 @@ export type BulletinPreviewPatchInput = {
   scriptureReference?: string;
 };
 
+type PptxInputBytes = Buffer | Uint8Array;
+
 /** 预览/导出用：封面 + 读经标题与经文正文（slide 4–6） */
 export async function patchBulletinPreviewInPptx(
-  template: Buffer,
+  template: PptxInputBytes,
   input: BulletinPreviewPatchInput,
-): Promise<Buffer> {
-  let buf = template;
+): Promise<Uint8Array> {
+  let buf: PptxInputBytes = template;
   if (input.serviceDate) {
     buf = await patchCoverSlideInPptx(buf, {
       serviceDate: input.serviceDate,
@@ -198,7 +200,9 @@ export async function patchBulletinPreviewInPptx(
   }
   const book = input.scriptureBook?.trim() ?? '';
   const reference = input.scriptureReference?.trim() ?? '';
-  if (!book && !reference) return buf;
+  if (!book && !reference) {
+    return buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+  }
 
   let zip = await JSZip.loadAsync(buf);
 
@@ -217,7 +221,7 @@ export async function patchBulletinPreviewInPptx(
     }
   }
 
-  return zip.generateAsync({ type: 'nodebuffer' });
+  return zip.generateAsync({ type: 'uint8array' });
 }
 
 export type CoverSlidePatchInput = {
@@ -227,13 +231,15 @@ export type CoverSlidePatchInput = {
 
 /** 仅修改封面 slide 1 的日期与时间 */
 export async function patchCoverSlideInPptx(
-  template: Buffer,
+  template: PptxInputBytes,
   input: CoverSlidePatchInput,
-): Promise<Buffer> {
+): Promise<Uint8Array> {
   const zip = await JSZip.loadAsync(template);
   const slidePath = 'ppt/slides/slide1.xml';
   const entry = zip.file(slidePath);
-  if (!entry) return template;
+  if (!entry) {
+    return template instanceof Uint8Array ? template : new Uint8Array(template);
+  }
 
   const xml = await entry.async('string');
   const patched = patchCoverDateLineInSlideXml(
@@ -242,5 +248,5 @@ export async function patchCoverSlideInPptx(
     input.serviceTime ?? '11:00',
   );
   zip.file(slidePath, patched);
-  return zip.generateAsync({ type: 'nodebuffer' });
+  return zip.generateAsync({ type: 'uint8array' });
 }

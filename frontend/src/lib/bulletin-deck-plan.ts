@@ -1,11 +1,11 @@
 import {
   fetchBulletinTemplateFile,
+  fetchScriptureSlideBodies,
   type BulletinTemplateSection,
   type WeeklyBulletin,
 } from '../api/bulletins';
-import { applyBulletinPatches, patchesFromBulletin } from './bulletin-pptx-patches';
-import { slidesToDelete } from './bulletin-pptx';
-import { deleteSlidesFromPptx, listPptxSlidesInPresentationOrder } from './pptx-preview';
+import { buildPreviewMatchingPptx } from './bulletin-preview-pptx';
+import { listPptxSlidesInPresentationOrder } from './pptx-preview';
 import { BULLETIN_WIZARD_STEPS } from './bulletin-template-steps';
 
 /** 向导步骤对应的模板分区（`template-slide-map.json` section id） */
@@ -94,22 +94,12 @@ function buildWizardSteps(sections: BulletinDeckSection[]): BulletinDeckWizardSt
 }
 
 /**
- * 按当前周报字段生成演示顺序与分区映射（含读经加页、跳过页等）。
- * 预览滚动 / 高亮 / 敬拜播放器入口均依赖此数据，勿用模板固定页码。
+ * 从已补丁的 PPTX（放映顺序与预览 PNG API 一致）生成分区映射。
  */
-export async function buildBulletinDeckPlan(
-  bulletin: WeeklyBulletin,
+export async function buildBulletinDeckPlanFromFile(
+  file: Blob,
   templateSections: BulletinTemplateSection[],
 ): Promise<BulletinDeckPlan> {
-  const template = await fetchBulletinTemplateFile();
-  const { patches, scriptureBodies } = await patchesFromBulletin(bulletin);
-  let file = await applyBulletinPatches(template, patches, scriptureBodies, 'bulletin-deck-plan.pptx');
-
-  const deletePaths = slidesToDelete(bulletin);
-  if (deletePaths.length) {
-    file = await deleteSlidesFromPptx(file, deletePaths);
-  }
-
   const parsed = await listPptxSlidesInPresentationOrder(file);
   const slideInFileToSection = buildSlideInFileToSection(templateSections);
   const worshipPresentationIndex = parsed.find((s) => s.slideInFile === 7)?.index ?? 7;
@@ -127,6 +117,28 @@ export async function buildBulletinDeckPlan(
     sections,
     wizardSteps: buildWizardSteps(sections),
   };
+}
+
+/**
+ * 按当前周报字段生成演示顺序与分区映射（含读经加页）。
+ * 须与预览 PNG API 使用同一套补丁逻辑，否则敬拜页码会错位。
+ */
+export async function buildBulletinDeckPlan(
+  bulletin: WeeklyBulletin,
+  templateSections: BulletinTemplateSection[],
+): Promise<BulletinDeckPlan> {
+  const template = await fetchBulletinTemplateFile();
+  const book = bulletin.scriptureBook?.trim() ?? '';
+  const reference = bulletin.scriptureReference?.trim() ?? '';
+  const scriptureBodies =
+    book && reference ? await fetchScriptureSlideBodies(book, reference) : null;
+  const file = await buildPreviewMatchingPptx(
+    template,
+    bulletin,
+    scriptureBodies,
+    'bulletin-deck-plan.pptx',
+  );
+  return buildBulletinDeckPlanFromFile(file, templateSections);
 }
 
 export function worshipSlidesFromPlan(plan: BulletinDeckPlan | null | undefined): number[] {
