@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import { fetchBulletinTemplateMap, type WeeklyBulletin } from '../../api/bulletins';
 import type { PlaylistItem } from '../../api/playlists';
@@ -133,6 +133,7 @@ type BulletinFullDeckPreviewProps = {
   scrollRequest?: BulletinPreviewScrollRequest | null;
   worshipItems?: PlaylistItem[];
   worshipPlaylistTitle?: string;
+  onVisibleSlideChange?: (slideNumber: number) => void;
 };
 
 export default function BulletinFullDeckPreview({
@@ -141,9 +142,11 @@ export default function BulletinFullDeckPreview({
   scrollRequest = null,
   worshipItems = [],
   worshipPlaylistTitle = '',
+  onVisibleSlideChange,
 }: BulletinFullDeckPreviewProps) {
   const { t } = useI18n();
   const scrollRootRef = useRef<HTMLDivElement>(null);
+  const scrollSyncUntilRef = useRef(0);
   const [totalSlides, setTotalSlides] = useState(FALLBACK_TOTAL_SLIDES);
   const [forcedVisibleSlides, setForcedVisibleSlides] = useState<Set<number>>(() => new Set());
   const highlightSet = useMemo(() => new Set(highlightSlides), [highlightSlides]);
@@ -180,6 +183,8 @@ export default function BulletinFullDeckPreview({
     const slide = scrollRequest.slide;
     if (slide < 1) return;
 
+    scrollSyncUntilRef.current = Date.now() + 900;
+
     setForcedVisibleSlides((prev) => {
       if (prev.has(slide)) return prev;
       const next = new Set(prev);
@@ -197,6 +202,54 @@ export default function BulletinFullDeckPreview({
     });
     return () => window.cancelAnimationFrame(raf);
   }, [scrollRequest?.id, scrollRequest?.slide]);
+
+  const reportVisibleSlide = useCallback(() => {
+    if (!onVisibleSlideChange || Date.now() < scrollSyncUntilRef.current) return;
+    const root = scrollRootRef.current;
+    if (!root) return;
+
+    const rootRect = root.getBoundingClientRect();
+    const centerY = rootRect.top + rootRect.height * 0.42;
+    let bestSlide = 1;
+    let bestDistance = Number.POSITIVE_INFINITY;
+
+    root.querySelectorAll<HTMLElement>('[data-slide]').forEach((el) => {
+      const slide = Number(el.dataset.slide);
+      if (!slide) return;
+      const rect = el.getBoundingClientRect();
+      const slideCenter = rect.top + rect.height / 2;
+      const distance = Math.abs(slideCenter - centerY);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestSlide = slide;
+      }
+    });
+
+    onVisibleSlideChange(bestSlide);
+  }, [onVisibleSlideChange]);
+
+  useEffect(() => {
+    const root = scrollRootRef.current;
+    if (!root || !onVisibleSlideChange) return;
+
+    let raf = 0;
+    const onScroll = () => {
+      if (raf) return;
+      raf = window.requestAnimationFrame(() => {
+        raf = 0;
+        reportVisibleSlide();
+      });
+    };
+
+    root.addEventListener('scroll', onScroll, { passive: true });
+    const initialTimer = window.setTimeout(reportVisibleSlide, 120);
+
+    return () => {
+      root.removeEventListener('scroll', onScroll);
+      if (raf) window.cancelAnimationFrame(raf);
+      window.clearTimeout(initialTimer);
+    };
+  }, [onVisibleSlideChange, reportVisibleSlide, totalSlides]);
 
   const slides = useMemo(
     () => Array.from({ length: totalSlides }, (_, i) => i + 1),

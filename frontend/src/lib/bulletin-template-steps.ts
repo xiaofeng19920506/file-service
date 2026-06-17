@@ -94,3 +94,23 @@ export function isBulletinWorshipSlide(slideNumber: number): boolean {
 export function firstSlideForWizardStep(stepIndex: number): number {
   return BULLETIN_WIZARD_STEPS[stepIndex]?.slides[0] ?? 1;
 }
+
+function allSlidesForWizardStep(stepIndex: number): number[] {
+  const step = BULLETIN_WIZARD_STEPS[stepIndex];
+  if (!step) return [];
+  return [...step.slides, ...(step.companionStaticSlides ?? [])];
+}
+
+/** 根据 PPT 页码推断对应的向导步骤（用于预览滚动反查左侧分区） */
+export function wizardStepIndexForSlide(slideNumber: number): number {
+  for (let i = 0; i < BULLETIN_WIZARD_STEPS.length; i++) {
+    if (allSlidesForWizardStep(i).includes(slideNumber)) return i;
+  }
+  for (let i = BULLETIN_WIZARD_STEPS.length - 1; i >= 0; i--) {
+    const slides = allSlidesForWizardStep(i);
+    if (slides.length === 0) continue;
+    const first = Math.min(...slides);
+    if (slideNumber >= first) return i;
+  }
+  return 0;
+}

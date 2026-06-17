@@ -10,20 +10,22 @@ import BulletinFullDeckPreview, {
 import BulletinSlideShowLauncher from './BulletinSlideShowLauncher';
 
 type BulletinPreviewPanelProps = {
-  wizardStep: number;
+  highlightWizardStep: number;
   bulletin: WeeklyBulletin;
   scrollRequest?: BulletinPreviewScrollRequest | null;
   worshipRefreshKey?: number;
+  onVisibleSlideChange?: (slideNumber: number) => void;
 };
 
 export default function BulletinPreviewPanel({
-  wizardStep,
+  highlightWizardStep,
   bulletin,
   scrollRequest = null,
   worshipRefreshKey = 0,
+  onVisibleSlideChange,
 }: BulletinPreviewPanelProps) {
   const { t } = useI18n();
-  const stepDef = BULLETIN_WIZARD_STEPS[wizardStep];
+  const highlightStepDef = BULLETIN_WIZARD_STEPS[highlightWizardStep];
   const [worshipItems, setWorshipItems] = useState<PlaylistItem[]>([]);
   const [worshipPlaylistTitle, setWorshipPlaylistTitle] = useState('');
 
@@ -53,9 +55,9 @@ export default function BulletinPreviewPanel({
   }, [bulletin.id, bulletin.servicePlaylistId, worshipRefreshKey]);
 
   const highlightSlides = useMemo(() => {
-    if (!stepDef) return [];
-    return [...stepDef.slides, ...(stepDef.companionStaticSlides ?? [])];
-  }, [stepDef]);
+    if (!highlightStepDef) return [];
+    return [...highlightStepDef.slides, ...(highlightStepDef.companionStaticSlides ?? [])];
+  }, [highlightStepDef]);
 
   const previewPatch = useMemo(
     (): BulletinSlidePreviewParams => ({
@@ -94,6 +96,7 @@ export default function BulletinPreviewPanel({
         scrollRequest={scrollRequest}
         worshipItems={worshipItems}
         worshipPlaylistTitle={worshipPlaylistTitle}
+        onVisibleSlideChange={onVisibleSlideChange}
       />
     </div>
   );

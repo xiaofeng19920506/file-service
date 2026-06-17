@@ -9,6 +9,8 @@ export type ProgressStepperStep = {
 type ProgressStepperProps = {
   steps: ProgressStepperStep[];
   currentIndex: number;
+  /** 右侧预览滚动时对应高亮的步骤（可与 currentIndex 不同） */
+  previewIndex?: number | null;
   onStepSelect?: (index: number) => void;
   orientation?: 'horizontal' | 'vertical';
 };
@@ -16,6 +18,7 @@ type ProgressStepperProps = {
 export default function ProgressStepper({
   steps,
   currentIndex,
+  previewIndex = null,
   onStepSelect,
   orientation = 'horizontal',
 }: ProgressStepperProps) {
@@ -29,6 +32,7 @@ export default function ProgressStepper({
       <ol className="progress-stepper-list">
         {steps.map((step, index) => {
           const isCurrent = index === currentIndex;
+          const isPreviewFocus = previewIndex != null && index === previewIndex && !isCurrent;
           const isComplete = index < currentIndex;
           const isDisabled = step.enabled === false;
           const canSelect = !isDisabled && Boolean(onStepSelect);
@@ -36,7 +40,7 @@ export default function ProgressStepper({
           return (
             <li
               key={step.id}
-              className={`progress-stepper-item${isCurrent ? ' is-current' : ''}${isComplete ? ' is-complete' : ''}${isDisabled ? ' is-disabled' : ''}`}
+              className={`progress-stepper-item${isCurrent ? ' is-current' : ''}${isPreviewFocus ? ' is-preview-focus' : ''}${isComplete ? ' is-complete' : ''}${isDisabled ? ' is-disabled' : ''}`}
             >
               {canSelect ? (
                 <button

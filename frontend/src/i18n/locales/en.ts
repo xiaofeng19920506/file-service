@@ -229,7 +229,7 @@ const en: MessageTree = {
     previewTitle: 'PPT preview',
     previewHint: 'Scroll through every slide in the PPT (LibreOffice render). Cover date/time follow the form; highlighted slides match the current step',
     previewDeckMeta: '{count} slides',
-    previewDeckHighlightNote: 'highlighted = current step',
+    previewDeckHighlightNote: 'highlighted = preview section',
     previewUnavailableHint: 'Install LibreOffice on the API server to enable slide preview, or download the PPT to view in PowerPoint.',
     previewSlideSingle: 'PPT page {page}',
     previewEditedTexts: 'Text written in this step',

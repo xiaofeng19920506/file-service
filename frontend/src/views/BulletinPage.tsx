@@ -26,7 +26,7 @@ import { useBulletinRealtime } from '../hooks/useBulletinRealtime';
 import { useBulletinScripturePersistence } from '../hooks/useBulletinScripturePersistence';
 import { useI18n } from '../i18n';
 import { nextSundayIso } from '../lib/bulletin-date';
-import { BULLETIN_WIZARD_STEPS, firstSlideForWizardStep } from '../lib/bulletin-template-steps';
+import { BULLETIN_WIZARD_STEPS, firstSlideForWizardStep, wizardStepIndexForSlide } from '../lib/bulletin-template-steps';
 import { publishBulletinPptx, resolveBulletinPptxBlob } from '../lib/bulletin-publish';
 import { friendlyError } from '../lib/error-messages';
 import { readWorshipLiveConfig, writeWorshipLiveConfig } from '../lib/worship-live-config';
@@ -75,6 +75,7 @@ export default function BulletinPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [wizardStep, setWizardStep] = useState(0);
+  const [previewHighlightStep, setPreviewHighlightStep] = useState(0);
   const [previewScrollRequest, setPreviewScrollRequest] = useState<BulletinPreviewScrollRequest>({
     slide: 1,
     id: 0,
@@ -102,7 +103,12 @@ export default function BulletinPage() {
     setPreviewScrollRequest((prev) => ({ slide, id: prev.id + 1 }));
   }, []);
 
+  const handlePreviewVisibleSlide = useCallback((slide: number) => {
+    setPreviewHighlightStep(wizardStepIndexForSlide(slide));
+  }, []);
+
   useEffect(() => {
+    setPreviewHighlightStep(wizardStep);
     requestPreviewScroll(firstSlideForWizardStep(wizardStep));
   }, [wizardStep, requestPreviewScroll]);
 
@@ -530,6 +536,7 @@ export default function BulletinPage() {
               <ProgressStepper
                 steps={stepperSteps}
                 currentIndex={wizardStep}
+                previewIndex={previewHighlightStep}
                 orientation="vertical"
                 onStepSelect={(index) => {
                   if (!BULLETIN_WIZARD_STEPS[index]?.enabled) return;
@@ -582,10 +589,11 @@ export default function BulletinPage() {
 
           <aside className="bulletin-workspace-preview" aria-label={t('bulletin.previewTitle')}>
             <BulletinPreviewPanel
-              wizardStep={wizardStep}
+              highlightWizardStep={previewHighlightStep}
               bulletin={draft}
               scrollRequest={previewScrollRequest}
               worshipRefreshKey={worshipPreviewRevision}
+              onVisibleSlideChange={handlePreviewVisibleSlide}
             />
           </aside>
         </div>

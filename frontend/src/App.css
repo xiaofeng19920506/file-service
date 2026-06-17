@@ -7300,6 +7300,17 @@ body.bulletin-slideshow-window {
   background: var(--blue-muted);
 }
 
+.progress-stepper-item.is-preview-focus .progress-stepper-btn {
+  border-color: color-mix(in srgb, var(--blue) 65%, var(--border-light));
+  background: color-mix(in srgb, var(--blue-muted) 55%, var(--surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--blue) 25%, transparent);
+}
+
+.progress-stepper-item.is-preview-focus .progress-stepper-index {
+  background: color-mix(in srgb, var(--blue) 75%, var(--border-light));
+  color: #fff;
+}
+
 .progress-stepper-item.is-complete .progress-stepper-index {
   background: var(--blue);
   color: #fff;
