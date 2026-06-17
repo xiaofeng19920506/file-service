@@ -222,6 +222,7 @@ export default {
     previewHint: '滚动查看当前 PPT 全部页面，由 LibreOffice 渲染；封面日期/时间已按左侧填写替换，高亮为当前步骤相关页',
     previewDeckMeta: '共 {count} 页',
     previewDeckHighlightNote: '高亮为当前预览分区',
+    previewPlanLoading: '正在计算幻灯片布局…',
     previewUnavailableHint: '本机未安装 LibreOffice 时无法渲染预览，导出 PPT 后可在 PowerPoint 中查看。',
     previewSlideSingle: 'PPT 第 {page} 页',
     previewEditedTexts: '本步将写入的文字',

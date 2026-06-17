@@ -114,8 +114,7 @@ export default function BulletinPage() {
 
   useEffect(() => {
     setPreviewHighlightStep(wizardStep);
-    const needsDeckPlan = wizardStep >= 2;
-    if (needsDeckPlan && !deckPlan) return;
+    if (!deckPlan) return;
     requestPreviewScroll(firstSlideForWizardStep(wizardStep, deckPlan));
   }, [wizardStep, deckPlan, requestPreviewScroll]);
 
@@ -548,7 +547,7 @@ export default function BulletinPage() {
                 onStepSelect={(index) => {
                   if (!BULLETIN_WIZARD_STEPS[index]?.enabled) return;
                   if (index === wizardStep) {
-                    if (index >= 2 && !deckPlan) return;
+                    if (!deckPlan) return;
                     requestPreviewScroll(firstSlideForWizardStep(index, deckPlan));
                     return;
                   }

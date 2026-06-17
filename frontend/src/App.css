@@ -6133,6 +6133,17 @@
   outline-offset: 2px;
 }
 
+.bulletin-deck-preview--loading-plan {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  min-height: min(52vh, 360px);
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
 .bulletin-slide-preview--placeholder {
   min-height: min(52vw, 320px);
   aspect-ratio: 16 / 9;

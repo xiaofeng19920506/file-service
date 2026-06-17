@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { RefObject } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { WeeklyBulletin } from '../../api/bulletins';
 import type { PlaylistItem } from '../../api/playlists';
 import { useI18n } from '../../i18n';
@@ -11,15 +10,12 @@ import BulletinWorshipEmbeddedPlayer, {
   hasBulletinWorshipPlayItems,
 } from './BulletinWorshipEmbeddedPlayer';
 
-const FALLBACK_TOTAL_SLIDES = 38;
-const EAGER_SLIDE_COUNT = 3;
-
 export type BulletinPreviewScrollRequest = {
   slide: number;
   id: number;
 };
 
-type LazySlideItemProps = {
+type DeckSlideItemProps = {
   slideNumber: number;
   patch: {
     serviceDate: string;
@@ -30,8 +26,6 @@ type LazySlideItemProps = {
   highlight: boolean;
   label: string;
   emptyLabel: string;
-  scrollRoot: RefObject<HTMLElement | null>;
-  eager?: boolean;
   bulletinId: string;
   worshipPlaylistId: string | null;
   worshipPlaylistTitle: string;
@@ -39,42 +33,18 @@ type LazySlideItemProps = {
   worshipFirstSlide: number | null;
 };
 
-function LazySlideItem({
+function DeckSlideItem({
   slideNumber,
   patch,
   highlight,
   label,
   emptyLabel,
-  scrollRoot,
-  eager,
   bulletinId,
   worshipPlaylistId,
   worshipPlaylistTitle,
   worshipItems,
   worshipFirstSlide,
-}: LazySlideItemProps) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(Boolean(eager));
-
-  useEffect(() => {
-    if (eager) {
-      setVisible(true);
-      return;
-    }
-    const el = ref.current;
-    if (!el) return;
-
-    const root = scrollRoot.current;
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) setVisible(true);
-      },
-      { root, rootMargin: '480px 0px', threshold: 0.01 },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [eager, scrollRoot]);
-
+}: DeckSlideItemProps) {
   const showWorshipPlayer =
     worshipFirstSlide != null &&
     slideNumber === worshipFirstSlide &&
@@ -83,68 +53,48 @@ function LazySlideItem({
 
   return (
     <div
-      ref={ref}
       className={`bulletin-deck-slide${highlight ? ' bulletin-deck-slide--highlight' : ''}${showWorshipPlayer ? ' bulletin-deck-slide--worship' : ''}`}
       data-slide={slideNumber}
     >
-      {visible ? (
-        showWorshipPlayer ? (
-          <BulletinWorshipEmbeddedPlayer
-            bulletinId={bulletinId}
-            playlistId={worshipPlaylistId!}
-            playlistTitle={worshipPlaylistTitle}
-            items={worshipItems}
-            slideNumber={slideNumber}
-            patch={patch}
-            slideLabel={label}
-            emptyLabel={emptyLabel}
-          />
-        ) : (
-          <BulletinPptSlidePreview
-            slideNumber={slideNumber}
-            patch={patch}
-            requireDate={false}
-            emptyLabel={emptyLabel}
-            slideLabel={label}
-          />
-        )
+      {showWorshipPlayer ? (
+        <BulletinWorshipEmbeddedPlayer
+          bulletinId={bulletinId}
+          playlistId={worshipPlaylistId!}
+          playlistTitle={worshipPlaylistTitle}
+          items={worshipItems}
+          slideNumber={slideNumber}
+          patch={patch}
+          slideLabel={label}
+          emptyLabel={emptyLabel}
+        />
       ) : (
-        <figure className="bulletin-slide-preview">
-          <figcaption className="bulletin-slide-preview-caption">{label}</figcaption>
-          <div className="bulletin-slide-preview bulletin-slide-preview--loading bulletin-slide-preview--placeholder">
-            <div className="preview-spinner" />
-          </div>
-        </figure>
+        <BulletinPptSlidePreview
+          slideNumber={slideNumber}
+          patch={patch}
+          requireDate={false}
+          emptyLabel={emptyLabel}
+          slideLabel={label}
+        />
       )}
     </div>
   );
 }
 
-function scrollSlideIntoDeck(
-  root: HTMLElement,
-  slideNumber: number,
-  behavior: ScrollBehavior = 'smooth',
-): boolean {
+function scrollSlideIntoDeck(root: HTMLElement, slideNumber: number, behavior: ScrollBehavior): boolean {
   const el = root.querySelector<HTMLElement>(`[data-slide="${slideNumber}"]`);
   if (!el) return false;
-  const top = el.getBoundingClientRect().top - root.getBoundingClientRect().top + root.scrollTop;
-  root.scrollTo({ top: Math.max(0, top - 6), behavior });
+  el.scrollIntoView({ behavior, block: 'start' });
   return true;
 }
 
-function scheduleScrollRetries(
-  root: HTMLElement,
-  slide: number,
-  onDone?: () => void,
-): () => void {
-  const delays = [0, 80, 200, 450, 900, 1500];
-  const timers = delays.map((delay, index) =>
-    window.setTimeout(() => {
-      scrollSlideIntoDeck(root, slide, index === 0 ? 'auto' : 'smooth');
-      if (index === delays.length - 1) onDone?.();
-    }, delay),
-  );
-  return () => timers.forEach((timer) => window.clearTimeout(timer));
+function runScrollToSlide(root: HTMLElement, slide: number): void {
+  scrollSlideIntoDeck(root, slide, 'auto');
+  window.requestAnimationFrame(() => {
+    scrollSlideIntoDeck(root, slide, 'auto');
+    window.requestAnimationFrame(() => {
+      scrollSlideIntoDeck(root, slide, 'smooth');
+    });
+  });
 }
 
 type BulletinFullDeckPreviewProps = {
@@ -169,10 +119,8 @@ export default function BulletinFullDeckPreview({
   const { t } = useI18n();
   const scrollRootRef = useRef<HTMLDivElement>(null);
   const scrollSyncUntilRef = useRef(0);
-  const [forcedVisibleSlides, setForcedVisibleSlides] = useState<Set<number>>(() => new Set());
   const highlightSet = useMemo(() => new Set(highlightSlides), [highlightSlides]);
 
-  const totalSlides = deckPlan?.totalSlides ?? FALLBACK_TOTAL_SLIDES;
   const worshipFirstSlide = worshipSlidesFromPlan(deckPlan)[0] ?? null;
 
   const patch = useMemo(
@@ -190,29 +138,29 @@ export default function BulletinFullDeckPreview({
     ],
   );
 
-  const primeSlidesForScroll = useCallback((targetSlide: number) => {
-    setForcedVisibleSlides((prev) => {
-      const next = new Set(prev);
-      for (let page = 1; page <= targetSlide; page++) next.add(page);
-      return next;
-    });
-  }, []);
-
   useEffect(() => {
-    if (!scrollRequest) return;
+    if (!scrollRequest || !deckPlan) return;
     const slide = scrollRequest.slide;
-    if (slide < 1) return;
+    if (slide < 1 || slide > deckPlan.totalSlides) return;
 
-    scrollSyncUntilRef.current = Date.now() + 1600;
-    primeSlidesForScroll(slide);
+    scrollSyncUntilRef.current = Date.now() + 1200;
 
     const root = scrollRootRef.current;
     if (!root) return;
 
-    return scheduleScrollRetries(root, slide, () => {
-      scrollSyncUntilRef.current = Date.now() + 400;
-    });
-  }, [scrollRequest?.id, scrollRequest?.slide, deckPlan?.totalSlides, primeSlidesForScroll]);
+    runScrollToSlide(root, slide);
+
+    const retryTimers = [120, 350, 700, 1200].map((delay) =>
+      window.setTimeout(() => {
+        runScrollToSlide(root, slide);
+        if (delay === 1200) {
+          scrollSyncUntilRef.current = Date.now() + 300;
+        }
+      }, delay),
+    );
+
+    return () => retryTimers.forEach((timer) => window.clearTimeout(timer));
+  }, [scrollRequest?.id, scrollRequest?.slide, deckPlan]);
 
   const reportVisibleSlide = useCallback(() => {
     if (!onVisibleSlideChange || Date.now() < scrollSyncUntilRef.current) return;
@@ -241,7 +189,7 @@ export default function BulletinFullDeckPreview({
 
   useEffect(() => {
     const root = scrollRootRef.current;
-    if (!root || !onVisibleSlideChange) return;
+    if (!root || !onVisibleSlideChange || !deckPlan) return;
 
     let raf = 0;
     const onScroll = () => {
@@ -253,38 +201,43 @@ export default function BulletinFullDeckPreview({
     };
 
     root.addEventListener('scroll', onScroll, { passive: true });
-    const initialTimer = window.setTimeout(reportVisibleSlide, 120);
+    const initialTimer = window.setTimeout(reportVisibleSlide, 150);
 
     return () => {
       root.removeEventListener('scroll', onScroll);
       if (raf) window.cancelAnimationFrame(raf);
       window.clearTimeout(initialTimer);
     };
-  }, [onVisibleSlideChange, reportVisibleSlide, totalSlides]);
+  }, [onVisibleSlideChange, reportVisibleSlide, deckPlan]);
 
   const slides = useMemo(
-    () => Array.from({ length: totalSlides }, (_, i) => i + 1),
-    [totalSlides],
+    () => (deckPlan ? Array.from({ length: deckPlan.totalSlides }, (_, i) => i + 1) : []),
+    [deckPlan],
   );
+
+  if (!deckPlan) {
+    return (
+      <div className="bulletin-deck-preview bulletin-deck-preview--loading-plan">
+        <div className="preview-spinner" />
+        <p>{t('bulletin.previewPlanLoading')}</p>
+      </div>
+    );
+  }
 
   return (
     <div ref={scrollRootRef} className="bulletin-deck-preview">
       <p className="bulletin-deck-preview-meta">
-        {t('bulletin.previewDeckMeta', { count: totalSlides })}
+        {t('bulletin.previewDeckMeta', { count: deckPlan.totalSlides })}
         {highlightSlides.length > 0 ? ` · ${t('bulletin.previewDeckHighlightNote')}` : ''}
       </p>
       {slides.map((page) => (
-        <LazySlideItem
+        <DeckSlideItem
           key={page}
           slideNumber={page}
           patch={patch}
           highlight={highlightSet.has(page)}
           label={t('bulletin.previewSlideSingle', { page })}
           emptyLabel={t('bulletin.coverPreviewEmpty')}
-          scrollRoot={scrollRootRef}
-          eager={
-            page <= EAGER_SLIDE_COUNT || highlightSet.has(page) || forcedVisibleSlides.has(page)
-          }
           bulletinId={bulletin.id}
           worshipPlaylistId={bulletin.servicePlaylistId}
           worshipPlaylistTitle={worshipPlaylistTitle}
