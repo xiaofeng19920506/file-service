@@ -71,14 +71,19 @@ log "启动 Postgres + Redis"
 wait_for_postgres
 
 TSX="${ROOT}/node_modules/.bin/tsx"
-CONCURRENTLY="${ROOT}/node_modules/.bin/concurrently"
-if [[ ! -x "$TSX" ]] || [[ ! -x "$CONCURRENTLY" ]]; then
-  log "缺少 node_modules，请在 ${ROOT} 执行 npm install"
+SUPERVISOR="${ROOT}/scripts/autostart/supervise-commands.sh"
+
+if [[ ! -x "$TSX" ]]; then
+  log "缺少 node_modules/.bin/tsx，请在 ${ROOT} 执行 npm install"
+  exit 1
+fi
+if [[ ! -f "$SUPERVISOR" ]]; then
+  log "缺少 ${SUPERVISOR}"
   exit 1
 fi
 
 log "启动 API + Worker（端口 ${PORT:-3000}）"
-exec "$CONCURRENTLY" -k \
-  "cd '${ROOT}' && '$TSX' backend/api/src/index.ts" \
-  "cd '${ROOT}' && '$TSX' backend/worker/src/index.ts" \
+exec bash "$SUPERVISOR" \
+  "cd '${ROOT}' && exec '${TSX}' backend/api/src/index.ts" \
+  "cd '${ROOT}' && exec '${TSX}' backend/worker/src/index.ts" \
   >> "$LOG_FILE" 2>&1

@@ -98,6 +98,19 @@ ensure_web_build() {
 wait_for_api
 ensure_web_build
 
+free_port() {
+  local port="$1"
+  local pids
+  pids="$(lsof -ti ":${port}" 2>/dev/null || true)"
+  if [[ -n "$pids" ]]; then
+    log "释放端口 :${port}"
+    echo "$pids" | xargs kill -9 2>/dev/null || true
+    sleep 1
+  fi
+}
+
+free_port "$WEB_PORT"
+
 log "启动 Next.js（端口 ${WEB_PORT} → API ${BACKEND_URL}）"
 cd "${ROOT}/frontend"
 export PORT="$WEB_PORT"

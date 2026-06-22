@@ -94,6 +94,8 @@ EOF
     <key>PATH</key>
     <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
   </dict>
+  <key>WorkingDirectory</key>
+  <string>${ROOT}</string>
   <key>StandardOutPath</key>
   <string>${TUNNEL_LOG}</string>
   <key>StandardErrorPath</key>
@@ -155,6 +157,8 @@ EOF
     <key>PATH</key>
     <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
   </dict>
+  <key>WorkingDirectory</key>
+  <string>${ROOT}</string>
   <key>StandardOutPath</key>
   <string>${API_LOG}</string>
   <key>StandardErrorPath</key>
@@ -218,6 +222,8 @@ EOF
     <key>PATH</key>
     <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
   </dict>
+  <key>WorkingDirectory</key>
+  <string>${ROOT}</string>
   <key>StandardOutPath</key>
   <string>${WEB_LOG}</string>
   <key>StandardErrorPath</key>

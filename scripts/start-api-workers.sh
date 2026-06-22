@@ -34,10 +34,17 @@ if ! [[ "$VIDEO_WORKER_COUNT" =~ ^[1-9][0-9]*$ ]]; then
   exit 1
 fi
 
-COMPOSE=(docker compose -f shared/docker-compose.yml)
-MERGE_WORKER_CMD="tsx watch backend/worker/src/worker-merge.ts"
-AUDIO_WORKER_CMD="tsx watch backend/worker/src/worker-audio.ts"
-VIDEO_WORKER_CMD="tsx watch backend/worker/src/worker-video.ts"
+TSX="${ROOT}/node_modules/.bin/tsx"
+SUPERVISOR="${ROOT}/scripts/autostart/supervise-commands.sh"
+
+if [[ ! -x "$TSX" ]]; then
+  echo "缺少 node_modules/.bin/tsx，请在 ${ROOT} 执行 npm install" >&2
+  exit 1
+fi
+if [[ ! -f "$SUPERVISOR" ]]; then
+  echo "缺少 ${SUPERVISOR}" >&2
+  exit 1
+fi
 
 info() { echo "==> $*"; }
 warn() { echo "!!> $*"; }
@@ -64,6 +71,7 @@ if ! command -v docker >/dev/null 2>&1 || ! docker info >/dev/null 2>&1; then
 fi
 
 info "启动 Postgres + Redis …"
+COMPOSE=(docker compose -f shared/docker-compose.yml)
 "${COMPOSE[@]}" up -d postgres redis
 
 free_port 3000
@@ -77,24 +85,25 @@ sleep 1
 
 names="api,merge"
 colors="blue,magenta"
-cmds=("tsx watch backend/api/src/index.ts" "$MERGE_WORKER_CMD")
+cmds=("cd '${ROOT}' && exec '${TSX}' watch backend/api/src/index.ts" "cd '${ROOT}' && exec '${TSX}' watch backend/worker/src/worker-merge.ts")
 
 for ((i = 1; i <= MP3_WORKER_COUNT; i++)); do
   names+=",mp3${i}"
   colors+=",green"
-  cmds+=("$AUDIO_WORKER_CMD")
+  cmds+=("cd '${ROOT}' && exec '${TSX}' watch backend/worker/src/worker-audio.ts")
 done
 
 for ((i = 1; i <= VIDEO_WORKER_COUNT; i++)); do
   names+=",video${i}"
   colors+=",yellow"
-  cmds+=("$VIDEO_WORKER_CMD")
+  cmds+=("cd '${ROOT}' && exec '${TSX}' watch backend/worker/src/worker-video.ts")
 done
 
 info "启动 API + 1 个合并 Worker + ${MP3_WORKER_COUNT} 个 MP3 Worker + ${VIDEO_WORKER_COUNT} 个视频 Worker（Ctrl+C 全部停止）"
+echo "   进程: ${names}"
 echo "   MP3 总并发 ≈ ${MP3_WORKER_COUNT} × YOUTUBE_AUDIO_WORKER_CONCURRENCY（见 .env）"
 echo "   视频总并发 ≈ ${VIDEO_WORKER_COUNT} × YOUTUBE_VIDEO_WORKER_CONCURRENCY（见 .env）"
 echo "   PPT 合并并发 = WORKER_CONCURRENCY（见 .env）"
 echo ""
 
-exec npx concurrently -k -n "$names" -c "$colors" "${cmds[@]}"
+exec bash "$SUPERVISOR" "${cmds[@]}"

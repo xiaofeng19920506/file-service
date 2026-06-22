@@ -23,7 +23,7 @@ API_PORT="${PORT:-3000}"
 WEB_PORT="${FILE_SERVICE_WEB_PORT:-4000}"
 MP3_WORKER_COUNT="${MP3_WORKER_COUNT:-5}"
 VIDEO_WORKER_COUNT="${VIDEO_WORKER_COUNT:-5}"
-CONCURRENTLY="${ROOT}/node_modules/.bin/concurrently"
+SUPERVISOR="${ROOT}/scripts/autostart/supervise-commands.sh"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -195,8 +195,8 @@ cmd_start() {
   info "停止已有本机进程…"
   stop_local_processes
 
-  if [[ ! -x "$CONCURRENTLY" ]]; then
-    echo "缺少 node_modules，请在 ${ROOT} 执行 npm install" >&2
+  if [[ ! -f "$SUPERVISOR" ]]; then
+    echo "缺少 ${SUPERVISOR}" >&2
     exit 1
   fi
 
@@ -210,27 +210,6 @@ cmd_start() {
 
   ensure_build "$build_flag"
 
-  local names="api,merge"
-  local colors="blue,magenta"
-  local -a cmds=(
-    "cd '${ROOT}' && node backend/api/dist/index.js"
-    "cd '${ROOT}' && node backend/worker/dist/worker-merge.js"
-  )
-  local i
-  for ((i = 1; i <= MP3_WORKER_COUNT; i++)); do
-    names+=",mp3${i}"
-    colors+=",green"
-    cmds+=("cd '${ROOT}' && node backend/worker/dist/worker-audio.js")
-  done
-  for ((i = 1; i <= VIDEO_WORKER_COUNT; i++)); do
-    names+=",video${i}"
-    colors+=",yellow"
-    cmds+=("cd '${ROOT}' && node backend/worker/dist/worker-video.js")
-  done
-  names+=",web"
-  colors+=",magenta"
-  cmds+=("cd '${ROOT}/frontend' && PORT=${WEB_PORT} npm run start")
-
   echo ""
   info "启动生产栈（API :${API_PORT} · Web :${WEB_PORT} · LibreOffice :3010）"
   echo "   Worker: 1 合并 + ${MP3_WORKER_COUNT} 音频 + ${VIDEO_WORKER_COUNT} 视频"
@@ -243,7 +222,19 @@ cmd_start() {
   export FILE_SERVICE_WEB_PORT="$WEB_PORT"
   export BACKEND_URL="${FILE_SERVICE_BACKEND_URL:-http://127.0.0.1:${API_PORT}}"
 
-  exec "$CONCURRENTLY" -k -n "$names" -c "$colors" "${cmds[@]}"
+  local -a supervised_cmds=(
+    "cd '${ROOT}' && exec node backend/api/dist/index.js"
+    "cd '${ROOT}' && exec node backend/worker/dist/worker-merge.js"
+  )
+  for ((i = 1; i <= MP3_WORKER_COUNT; i++)); do
+    supervised_cmds+=("cd '${ROOT}' && exec node backend/worker/dist/worker-audio.js")
+  done
+  for ((i = 1; i <= VIDEO_WORKER_COUNT; i++)); do
+    supervised_cmds+=("cd '${ROOT}' && exec node backend/worker/dist/worker-video.js")
+  done
+  supervised_cmds+=("cd '${ROOT}/frontend' && exec env PORT=${WEB_PORT} npm run start")
+
+  exec bash "$SUPERVISOR" "${supervised_cmds[@]}"
 }
 
 cmd_status() {
