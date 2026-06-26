@@ -215,17 +215,26 @@ export function registerYoutubeAudioRoutes(
         request.log.warn({ videoId, stderr: chunk.toString().slice(0, 200) }, 'audio preview stderr');
       });
 
+      // 一旦开始流式响应（headers 已发出），就不能再 reply.send(对象)，
+      // 否则在子进程事件回调里抛出的 FST_ERR_REP_INVALID_PAYLOAD_TYPE 会拖垮整个进程。
+      const failPreview = () => {
+        cleanup();
+        if (reply.sent || reply.raw.headersSent) return;
+        try {
+          void reply.code(502).send({ error: 'audio_preview_failed' });
+        } catch (err) {
+          request.log.error({ err, videoId }, 'audio preview reply failed');
+        }
+      };
+
       child.on('error', (err) => {
         request.log.error({ err, videoId }, 'audio preview spawn failed');
-        cleanup();
-        if (!reply.sent) void reply.code(502).send({ error: 'audio_preview_failed' });
+        failPreview();
       });
 
       child.on('close', (code) => {
         cleanup();
-        if (code !== 0 && !reply.sent) {
-          void reply.code(502).send({ error: 'audio_preview_failed' });
-        }
+        if (code !== 0) failPreview();
       });
 
       return reply

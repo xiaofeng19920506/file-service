@@ -402,12 +402,14 @@ export function registerBulletinRoutes(
     const workRoot = await mkdtemp(join(tmpdir(), 'fs-bulletin-preview-'));
     try {
       const templateBuf = await readFile(join(BULLETIN_TEMPLATE_DIR, BULLETIN_TEMPLATE_FILE));
-      const pptxBuf = await patchBulletinPreviewInPptx(templateBuf, {
-        serviceDate,
-        serviceTime,
-        scriptureBook,
-        scriptureReference,
-      });
+      const pptxBuf = Buffer.from(
+        await patchBulletinPreviewInPptx(templateBuf, {
+          serviceDate,
+          serviceTime,
+          scriptureBook,
+          scriptureReference,
+        }),
+      );
 
       const pptxPath = join(workRoot, 'preview.pptx');
       await writeFile(pptxPath, pptxBuf);
