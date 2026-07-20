@@ -7389,6 +7389,10 @@ body.bulletin-slideshow-window {
   background: var(--blue-muted);
 }
 
+.progress-stepper-item.is-editing .progress-stepper-btn {
+  box-shadow: inset 3px 0 0 var(--blue);
+}
+
 .progress-stepper-item.is-preview-focus .progress-stepper-btn {
   border-color: color-mix(in srgb, var(--blue) 65%, var(--border-light));
   background: color-mix(in srgb, var(--blue-muted) 55%, var(--surface));

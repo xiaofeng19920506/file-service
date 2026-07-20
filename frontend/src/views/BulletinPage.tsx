@@ -110,7 +110,9 @@ export default function BulletinPage() {
   const currentStepDef = BULLETIN_WIZARD_STEPS[wizardStep];
   const activeSectionReadonly = isReadonlyNavSection(activeSectionId);
 
-  const selectNavSection = useCallback((sectionId: string) => {
+  const handleVisibleSectionChange = useCallback((sectionId: string) => {
+    setPreviewSectionId((prev) => (prev === sectionId ? prev : sectionId));
+  }, []);
     const section = navSectionById(sectionId);
     if (!section) return;
 
@@ -630,7 +632,7 @@ export default function BulletinPage() {
               highlightSectionId={previewSectionId}
               bulletin={draft}
               worshipRefreshKey={worshipPreviewRevision}
-              onVisibleSectionChange={setPreviewSectionId}
+              onVisibleSectionChange={handleVisibleSectionChange}
             />
           </aside>
         </div>

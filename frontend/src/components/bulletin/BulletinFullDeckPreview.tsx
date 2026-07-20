@@ -143,18 +143,18 @@ export default function BulletinFullDeckPreview({
     const slide = scrollRequest.slide;
     if (slide < 1 || slide > deckPlan.totalSlides) return;
 
-    scrollSyncUntilRef.current = Date.now() + 1200;
+    scrollSyncUntilRef.current = Date.now() + 700;
 
     const root = scrollRootRef.current;
     if (!root) return;
 
     runScrollToSlide(root, slide);
 
-    const retryTimers = [120, 350, 700, 1200].map((delay) =>
+    const retryTimers = [80, 220, 500].map((delay) =>
       window.setTimeout(() => {
         runScrollToSlide(root, slide);
-        if (delay === 1200) {
-          scrollSyncUntilRef.current = Date.now() + 300;
+        if (delay === 500) {
+          scrollSyncUntilRef.current = Date.now() + 200;
         }
       }, delay),
     );
@@ -168,7 +168,8 @@ export default function BulletinFullDeckPreview({
     if (!root) return;
 
     const rootRect = root.getBoundingClientRect();
-    const centerY = rootRect.top + rootRect.height * 0.42;
+    if (rootRect.height < 8) return;
+    const centerY = rootRect.top + rootRect.height * 0.35;
     let bestSlide = 1;
     let bestDistance = Number.POSITIVE_INFINITY;
 
@@ -176,6 +177,7 @@ export default function BulletinFullDeckPreview({
       const slide = Number(el.dataset.slide);
       if (!slide) return;
       const rect = el.getBoundingClientRect();
+      if (rect.bottom < rootRect.top || rect.top > rootRect.bottom) return;
       const slideCenter = rect.top + rect.height / 2;
       const distance = Math.abs(slideCenter - centerY);
       if (distance < bestDistance) {
@@ -201,12 +203,14 @@ export default function BulletinFullDeckPreview({
     };
 
     root.addEventListener('scroll', onScroll, { passive: true });
-    const initialTimer = window.setTimeout(reportVisibleSlide, 150);
+    const initialTimer = window.setTimeout(reportVisibleSlide, 80);
+    const settleTimer = window.setTimeout(reportVisibleSlide, 400);
 
     return () => {
       root.removeEventListener('scroll', onScroll);
       if (raf) window.cancelAnimationFrame(raf);
       window.clearTimeout(initialTimer);
+      window.clearTimeout(settleTimer);
     };
   }, [onVisibleSlideChange, reportVisibleSlide, deckPlan]);
 
