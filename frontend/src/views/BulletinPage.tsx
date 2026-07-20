@@ -113,6 +113,8 @@ export default function BulletinPage() {
   const handleVisibleSectionChange = useCallback((sectionId: string) => {
     setPreviewSectionId((prev) => (prev === sectionId ? prev : sectionId));
   }, []);
+
+  const selectNavSection = useCallback((sectionId: string) => {
     const section = navSectionById(sectionId);
     if (!section) return;
 
