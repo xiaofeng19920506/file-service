@@ -206,6 +206,11 @@ const en: MessageTree = {
     serviceRoster: 'Next Sunday roster',
     baptism: 'Baptism announcement',
     slideOptions: 'Slide options',
+    sectionVisible: 'Show this section',
+    sectionVisibleHint:
+      'Uncheck to omit this section from the preview and exported PPT. Click Save to apply.',
+    sectionVisibleNavHint:
+      'You can also toggle visibility next to each section in the left nav; Save updates the preview.',
     skipTestimony: 'Skip testimony week slide (16)',
     skipDepartment: 'Skip department reports slide (36)',
     meetingVariant: 'Weekly meeting layout',

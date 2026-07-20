@@ -18,6 +18,7 @@ import {
   BulletinMoreStep,
   BulletinOfferingStep,
   BulletinPreServiceStep,
+  BulletinReadonlySectionStep,
   BulletinScriptureStep,
   BulletinVerseStep,
 } from '../components/bulletin/BulletinWizardSteps';
@@ -26,6 +27,11 @@ import { useBulletinRealtime } from '../hooks/useBulletinRealtime';
 import { useBulletinScripturePersistence } from '../hooks/useBulletinScripturePersistence';
 import { useI18n } from '../i18n';
 import { nextSundayIso } from '../lib/bulletin-date';
+import {
+  isBulletinSectionVisible,
+  resolveHiddenSections,
+  setBulletinSectionVisible,
+} from '../lib/bulletin-section-visibility';
 import {
   BULLETIN_NAV_SECTIONS,
   isReadonlyNavSection,
@@ -62,6 +68,22 @@ function toDrafts(bulletin: WeeklyBulletin): AnnouncementDraft[] {
       body: item.body,
     };
   });
+}
+
+function withHiddenSections(bulletin: WeeklyBulletin): WeeklyBulletin {
+  return {
+    ...bulletin,
+    hiddenSections: resolveHiddenSections(bulletin),
+  };
+}
+
+function visibilitySaveFields(draft: WeeklyBulletin) {
+  const hiddenSections = resolveHiddenSections(draft);
+  return {
+    hiddenSections,
+    skipTestimonyWeek: hiddenSections.includes('testimony_week'),
+    skipDepartmentReports: hiddenSections.includes('department_reports'),
+  };
 }
 
 export default function BulletinPage() {
@@ -104,8 +126,9 @@ export default function BulletinPage() {
         label: t(section.labelKey),
         enabled: true,
         readonly: section.editableStepId == null,
+        visible: draft ? isBulletinSectionVisible(section.id, draft) : true,
       })),
-    [t],
+    [t, draft],
   );
 
   const navCurrentIndex = navSectionIndexById(activeSectionId);
@@ -183,12 +206,13 @@ export default function BulletinPage() {
       if (event.updatedAt === draft?.updatedAt) return;
       void (async () => {
         const remote = await getBulletin(selectedId);
+        const normalized = withHiddenSections(remote);
         setDraft((prev) => {
-          if (!prev || prev.id !== remote.id) return remote;
-          return remote;
+          if (!prev || prev.id !== normalized.id) return normalized;
+          return normalized;
         });
-        setPreviewBulletin(remote);
-        setAnnouncements(toDrafts(remote));
+        setPreviewBulletin(normalized);
+        setAnnouncements(toDrafts(normalized));
       })();
     },
     Boolean(selectedId),
@@ -232,9 +256,10 @@ export default function BulletinPage() {
         setError(null);
         const bulletin = await getBulletin(selectedId);
         if (cancelled) return;
-        setDraft(bulletin);
-        setPreviewBulletin(bulletin);
-        setAnnouncements(toDrafts(bulletin));
+        const normalized = withHiddenSections(bulletin);
+        setDraft(normalized);
+        setPreviewBulletin(normalized);
+        setAnnouncements(toDrafts(normalized));
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : String(err));
       }
@@ -246,6 +271,19 @@ export default function BulletinPage() {
 
   const patchField = <K extends keyof WeeklyBulletin>(key: K, value: WeeklyBulletin[K]) => {
     setDraft((prev) => (prev ? { ...prev, [key]: value } : prev));
+  };
+
+  const handleSectionVisibilityChange = (sectionId: string, visible: boolean) => {
+    setDraft((prev) => {
+      if (!prev) return prev;
+      const hiddenSections = setBulletinSectionVisible(prev.hiddenSections, sectionId, visible);
+      return {
+        ...prev,
+        hiddenSections,
+        skipTestimonyWeek: hiddenSections.includes('testimony_week'),
+        skipDepartmentReports: hiddenSections.includes('department_reports'),
+      };
+    });
   };
 
   useBulletinScripturePersistence(draft, patchField, {
@@ -272,9 +310,11 @@ export default function BulletinPage() {
       const updated = await updateBulletin(draft.id, {
         serviceDate: draft.serviceDate,
         serviceTime: draft.serviceTime,
+        ...visibilitySaveFields(draft),
       });
-      setDraft(updated);
-      setPreviewBulletin(updated);
+      const normalized = withHiddenSections(updated);
+      setDraft(normalized);
+      setPreviewBulletin(normalized);
       await refreshList();
       setMessage(t('bulletin.saved'));
     } catch (err) {
@@ -292,7 +332,10 @@ export default function BulletinPage() {
     try {
       setSaving(true);
       setError(null);
-      let updated = await updateBulletin(draft.id, patch);
+      let updated = await updateBulletin(draft.id, {
+        ...patch,
+        ...visibilitySaveFields(draft),
+      });
       if (withAnnouncements) {
         updated = await saveBulletinAnnouncements(
           updated.id,
@@ -301,9 +344,10 @@ export default function BulletinPage() {
             .map(({ category, title, body }) => ({ category, title, body })),
         );
       }
-      setDraft(updated);
-      setPreviewBulletin(updated);
-      setAnnouncements(toDrafts(updated));
+      const normalized = withHiddenSections(updated);
+      setDraft(normalized);
+      setPreviewBulletin(normalized);
+      setAnnouncements(toDrafts(normalized));
       await refreshList();
       setMessage(t('bulletin.saved'));
     } catch (err) {
@@ -376,8 +420,7 @@ export default function BulletinPage() {
         scriptureReference: draft.scriptureReference,
         verseOfWeek: draft.verseOfWeek,
         weeklyMeetingVariant: draft.weeklyMeetingVariant,
-        skipTestimonyWeek: draft.skipTestimonyWeek,
-        skipDepartmentReports: draft.skipDepartmentReports,
+        ...visibilitySaveFields(draft),
       });
       const withAnnouncements = await saveBulletinAnnouncements(
         saved.id,
@@ -386,9 +429,10 @@ export default function BulletinPage() {
           .map(({ category, title, body }) => ({ category, title, body })),
       );
       const { bulletin } = await publishBulletinPptx(withAnnouncements);
-      setDraft(bulletin);
-      setPreviewBulletin(bulletin);
-      setAnnouncements(toDrafts(bulletin));
+      const normalized = withHiddenSections(bulletin);
+      setDraft(normalized);
+      setPreviewBulletin(normalized);
+      setAnnouncements(toDrafts(normalized));
       await refreshList();
       setMessage(t('bulletin.published'));
     } catch (err) {
@@ -401,8 +445,22 @@ export default function BulletinPage() {
   const renderStepPanel = () => {
     if (!draft) return null;
 
+    const visibilityProps = {
+      sectionId: activeSectionId,
+      onSectionVisibilityChange: handleSectionVisibilityChange,
+    };
+
     if (activeSectionReadonly) {
-      return null;
+      return (
+        <BulletinReadonlySectionStep
+          sectionId={activeSectionId}
+          draft={draft}
+          canEdit={canManage}
+          saving={saving}
+          onSectionVisibilityChange={handleSectionVisibilityChange}
+          onSave={() => void handleSaveFields(visibilitySaveFields(draft))}
+        />
+      );
     }
 
     const common = {
@@ -410,6 +468,7 @@ export default function BulletinPage() {
       canEdit: canManage,
       saving,
       onPatch: patchField,
+      ...visibilityProps,
     };
 
     switch (currentStepDef?.id) {
@@ -418,10 +477,12 @@ export default function BulletinPage() {
           <BulletinCoverStep
             serviceDate={draft.serviceDate}
             serviceTime={draft.serviceTime}
+            draft={draft}
             canEdit={canManage}
             saving={saving}
             onServiceDateChange={handleServiceDateChange}
             onServiceTimeChange={(time) => patchField('serviceTime', time)}
+            onSectionVisibilityChange={handleSectionVisibilityChange}
             onSave={handleSaveCover}
             onCoverPreviewFocus={() =>
               setPreviewScrollToSlide((prev) => ({
@@ -472,6 +533,9 @@ export default function BulletinPage() {
               setWorshipPreviewRevision((v) => v + 1);
             }}
             onPlaylistChanged={() => setWorshipPreviewRevision((v) => v + 1)}
+            onSectionVisibilityChange={handleSectionVisibilityChange}
+            onSaveVisibility={() => void handleSaveFields(visibilitySaveFields(draft))}
+            saving={saving}
           />
         );
       case 'offering':
@@ -525,8 +589,6 @@ export default function BulletinPage() {
                 serviceRosterText: draft.serviceRosterText,
                 baptismText: draft.baptismText,
                 weeklyMeetingVariant: draft.weeklyMeetingVariant,
-                skipTestimonyWeek: draft.skipTestimonyWeek,
-                skipDepartmentReports: draft.skipDepartmentReports,
               })
             }
           />
@@ -602,6 +664,8 @@ export default function BulletinPage() {
                 currentIndex={navCurrentIndex}
                 previewIndex={navPreviewIndex}
                 orientation="vertical"
+                canEditVisibility={canManage}
+                onStepVisibilityChange={handleSectionVisibilityChange}
                 onStepSelect={(index) => {
                   const section = BULLETIN_NAV_SECTIONS[index];
                   if (!section) return;

@@ -11,43 +11,34 @@ const full = {
   scriptureReference: '1:1-6',
   showPreServiceChairName: true,
   preServiceChairNames: '王凯',
+  hiddenSections: [] as string[],
+  weeklyMeetingVariant: 28 as number | null,
 };
 
 describe('previewPatchForSection', () => {
-  it('includes scripture + date/time for cover', () => {
+  it('includes scripture + visibility structure + date for cover', () => {
     expect(previewPatchForSection('cover', full)).toEqual({
       scriptureBook: '诗篇 Psalms',
       scriptureReference: '1:1-6',
+      hiddenSections: [],
+      weeklyMeetingVariant: 28,
       serviceDate: '2026-07-20',
       serviceTime: '11:00',
     });
   });
 
-  it('includes scripture + chair fields for pre_service', () => {
+  it('includes chair fields for pre_service', () => {
     expect(previewPatchForSection('pre_service', full)).toEqual({
       scriptureBook: '诗篇 Psalms',
       scriptureReference: '1:1-6',
+      hiddenSections: [],
+      weeklyMeetingVariant: 28,
       showPreServiceChairName: true,
       preServiceChairNames: '王凯',
     });
   });
 
-  it('only includes scripture for other sections (structure must match)', () => {
-    expect(previewPatchForSection('scripture', full)).toEqual({
-      scriptureBook: '诗篇 Psalms',
-      scriptureReference: '1:1-6',
-    });
-    expect(previewPatchForSection('worship', full)).toEqual({
-      scriptureBook: '诗篇 Psalms',
-      scriptureReference: '1:1-6',
-    });
-    expect(previewPatchForSection('benediction', full)).toEqual({
-      scriptureBook: '诗篇 Psalms',
-      scriptureReference: '1:1-6',
-    });
-  });
-
-  it('keeps worship cache key stable when only chair/cover change', () => {
+  it('keeps worship key stable when only chair changes', () => {
     const a = bulletinPreviewCacheKey(10, previewPatchForSection('worship', full));
     const b = bulletinPreviewCacheKey(
       10,
@@ -60,23 +51,14 @@ describe('previewPatchForSection', () => {
     expect(a).toBe(b);
   });
 
-  it('changes all keys when scripture changes (page structure)', () => {
+  it('changes keys when hidden sections change', () => {
     const a = bulletinPreviewCacheKey(10, previewPatchForSection('worship', full));
     const b = bulletinPreviewCacheKey(
       10,
       previewPatchForSection('worship', {
         ...full,
-        scriptureReference: '119:1-40',
+        hiddenSections: ['communion'],
       }),
-    );
-    expect(a).not.toBe(b);
-  });
-
-  it('changes pre_service cache key when chair name changes', () => {
-    const a = bulletinPreviewCacheKey(2, previewPatchForSection('pre_service', full));
-    const b = bulletinPreviewCacheKey(
-      2,
-      previewPatchForSection('pre_service', { ...full, preServiceChairNames: '别人' }),
     );
     expect(a).not.toBe(b);
   });

@@ -7,6 +7,8 @@ export type ProgressStepperStep = {
   enabled?: boolean;
   /** 可点击导航但无编辑表单（模板固定页） */
   readonly?: boolean;
+  /** 是否显示该分区（纳入 PPT）；缺省不渲染勾选 */
+  visible?: boolean;
 };
 
 type ProgressStepperProps = {
@@ -15,6 +17,8 @@ type ProgressStepperProps = {
   /** 右侧预览可见分区；有值时驱动主高亮（可与 currentIndex 不同） */
   previewIndex?: number | null;
   onStepSelect?: (index: number) => void;
+  onStepVisibilityChange?: (sectionId: string, visible: boolean) => void;
+  canEditVisibility?: boolean;
   orientation?: 'horizontal' | 'vertical';
 };
 
@@ -35,6 +39,8 @@ export default function ProgressStepper({
   currentIndex,
   previewIndex = null,
   onStepSelect,
+  onStepVisibilityChange,
+  canEditVisibility = false,
   orientation = 'horizontal',
 }: ProgressStepperProps) {
   const { t } = useI18n();
@@ -62,12 +68,29 @@ export default function ProgressStepper({
           const isDisabled = step.enabled === false;
           const isReadonly = Boolean(step.readonly);
           const canSelect = !isDisabled && Boolean(onStepSelect);
+          const showVisibility = typeof step.visible === 'boolean';
+          const isHidden = showVisibility && step.visible === false;
 
           return (
             <li
               key={step.id}
-              className={`progress-stepper-item${isFocused ? ' is-current' : ''}${isEditing ? ' is-editing' : ''}${isComplete ? ' is-complete' : ''}${isDisabled ? ' is-disabled' : ''}${isReadonly ? ' is-readonly' : ''}`}
+              className={`progress-stepper-item${isFocused ? ' is-current' : ''}${isEditing ? ' is-editing' : ''}${isComplete ? ' is-complete' : ''}${isDisabled ? ' is-disabled' : ''}${isReadonly ? ' is-readonly' : ''}${isHidden ? ' is-section-hidden' : ''}`}
             >
+              {showVisibility && (
+                <label
+                  className="progress-stepper-visibility"
+                  title={t('bulletin.sectionVisible')}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <input
+                    type="checkbox"
+                    checked={step.visible !== false}
+                    disabled={!canEditVisibility || !onStepVisibilityChange}
+                    onChange={(e) => onStepVisibilityChange?.(step.id, e.target.checked)}
+                  />
+                  <span className="visually-hidden">{t('bulletin.sectionVisible')}</span>
+                </label>
+              )}
               {canSelect ? (
                 <button
                   type="button"

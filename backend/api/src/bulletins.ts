@@ -27,6 +27,7 @@ import {
   weeklyBulletins,
   signPlaylistEditToken,
   formatUserDisplayName,
+  normalizeHiddenSections,
   type ApiEnv,
   type Db,
 } from '@file-service/shared';
@@ -57,7 +58,7 @@ const slidePreviewCache = new Map<string, Buffer>();
 /** 同一套补丁参数共享已补丁 PPTX，避免每页都重新 patch */
 const patchedPptxCache = new Map<string, Buffer>();
 /** 封面补丁版本；变更后自动失效旧 PNG 缓存 */
-const SLIDE_PREVIEW_PATCH_REV = 'v22';
+const SLIDE_PREVIEW_PATCH_REV = 'v23';
 
 let previewRenderActive = 0;
 const previewRenderWaiters: Array<() => void> = [];
@@ -116,6 +117,7 @@ export type WeeklyBulletinDto = {
   weeklyMeetingVariant: number | null;
   skipTestimonyWeek: boolean;
   skipDepartmentReports: boolean;
+  hiddenSections: string[];
   servicePlaylistId: string | null;
   outputBlobId: string | null;
   createdByUserId: string;
@@ -175,6 +177,7 @@ async function mapBulletin(
     weeklyMeetingVariant: row.weeklyMeetingVariant,
     skipTestimonyWeek: row.skipTestimonyWeek,
     skipDepartmentReports: row.skipDepartmentReports,
+    hiddenSections: Array.isArray(row.hiddenSections) ? row.hiddenSections : [],
     servicePlaylistId: row.servicePlaylistId,
     outputBlobId: row.outputBlobId,
     createdByUserId: row.createdByUserId,
@@ -204,6 +207,7 @@ type BulletinPatchBody = Partial<{
   weeklyMeetingVariant: number | null;
   skipTestimonyWeek: boolean;
   skipDepartmentReports: boolean;
+  hiddenSections: string[];
   outputBlobId: string | null;
 }>;
 
@@ -411,6 +415,8 @@ export function registerBulletinRoutes(
       scriptureReference?: string;
       showPreServiceChairName?: string;
       preServiceChairNames?: string;
+      hiddenSections?: string;
+      weeklyMeetingVariant?: string;
     };
   }>('/v1/bulletins/template/slides/:slide/preview.png', async (request, reply) => {
     const user = requireUser(request);
@@ -431,17 +437,27 @@ export function registerBulletinRoutes(
       request.query.showPreServiceChairName === '1' ||
       request.query.showPreServiceChairName === 'true';
     const preServiceChairNames = request.query.preServiceChairNames?.trim() ?? '';
+    const hiddenSections = normalizeHiddenSections(
+      (request.query.hiddenSections ?? '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
+    );
+    const variantRaw = request.query.weeklyMeetingVariant?.trim();
+    const weeklyMeetingVariant =
+      variantRaw && /^\d+$/.test(variantRaw) ? Number.parseInt(variantRaw, 10) : null;
     if (serviceDate && !/^\d{4}-\d{2}-\d{2}$/.test(serviceDate)) {
       return reply.code(400).send({ error: 'invalid_service_date' });
     }
 
-    const cacheKey = `${SLIDE_PREVIEW_PATCH_REV}:${slideNumber}:${serviceDate ?? ''}:${serviceTime}:${scriptureBook}:${scriptureReference}:${showPreServiceChairName}:${preServiceChairNames}`;
+    const hiddenKey = hiddenSections.slice().sort().join(',');
+    const cacheKey = `${SLIDE_PREVIEW_PATCH_REV}:${slideNumber}:${serviceDate ?? ''}:${serviceTime}:${scriptureBook}:${scriptureReference}:${showPreServiceChairName}:${preServiceChairNames}:${hiddenKey}:${weeklyMeetingVariant ?? ''}`;
     const cached = slidePreviewCache.get(cacheKey);
     if (cached) {
       return reply.header('Content-Type', 'image/png').header('X-Preview-Cached', 'true').send(cached);
     }
 
-    const patchKey = `${SLIDE_PREVIEW_PATCH_REV}:pptx:${serviceDate ?? ''}:${serviceTime}:${scriptureBook}:${scriptureReference}:${showPreServiceChairName}:${preServiceChairNames}`;
+    const patchKey = `${SLIDE_PREVIEW_PATCH_REV}:pptx:${serviceDate ?? ''}:${serviceTime}:${scriptureBook}:${scriptureReference}:${showPreServiceChairName}:${preServiceChairNames}:${hiddenKey}:${weeklyMeetingVariant ?? ''}`;
     const workRoot = await mkdtemp(join(tmpdir(), 'fs-bulletin-preview-'));
     try {
       let pptxBuf = patchedPptxCache.get(patchKey);
@@ -455,6 +471,8 @@ export function registerBulletinRoutes(
             scriptureReference,
             showPreServiceChairName,
             preServiceChairNames,
+            hiddenSections,
+            weeklyMeetingVariant,
           }),
         );
         rememberLru(patchedPptxCache, patchKey, pptxBuf, 12);
@@ -605,6 +623,12 @@ export function registerBulletinRoutes(
       if (body.skipTestimonyWeek !== undefined) patch.skipTestimonyWeek = body.skipTestimonyWeek;
       if (body.skipDepartmentReports !== undefined) {
         patch.skipDepartmentReports = body.skipDepartmentReports;
+      }
+      if (body.hiddenSections !== undefined) {
+        const hidden = normalizeHiddenSections(body.hiddenSections);
+        patch.hiddenSections = hidden;
+        patch.skipTestimonyWeek = hidden.includes('testimony_week');
+        patch.skipDepartmentReports = hidden.includes('department_reports');
       }
       if (body.outputBlobId !== undefined) {
         if (body.outputBlobId === null) {

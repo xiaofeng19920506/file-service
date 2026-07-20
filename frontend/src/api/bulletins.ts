@@ -31,6 +31,8 @@ export type WeeklyBulletin = {
   weeklyMeetingVariant: number | null;
   skipTestimonyWeek: boolean;
   skipDepartmentReports: boolean;
+  /** 不显示的分区 id */
+  hiddenSections: string[];
   outputBlobId: string | null;
   servicePlaylistId: string | null;
   createdByUserId: string;
@@ -59,6 +61,7 @@ export type BulletinPatch = Partial<{
   weeklyMeetingVariant: number | null;
   skipTestimonyWeek: boolean;
   skipDepartmentReports: boolean;
+  hiddenSections: string[];
   outputBlobId: string | null;
 }>;
 
@@ -226,6 +229,8 @@ export type BulletinSlidePreviewParams = {
   scriptureReference?: string;
   showPreServiceChairName?: boolean;
   preServiceChairNames?: string;
+  hiddenSections?: string[];
+  weeklyMeetingVariant?: number | null;
 };
 
 export async function fetchBulletinSlidePreviewPng(
@@ -239,6 +244,10 @@ export async function fetchBulletinSlidePreviewPng(
   if (params.scriptureReference) qs.set('scriptureReference', params.scriptureReference);
   if (params.showPreServiceChairName) qs.set('showPreServiceChairName', '1');
   if (params.preServiceChairNames) qs.set('preServiceChairNames', params.preServiceChairNames);
+  if (params.hiddenSections?.length) qs.set('hiddenSections', params.hiddenSections.join(','));
+  if (params.weeklyMeetingVariant != null) {
+    qs.set('weeklyMeetingVariant', String(params.weeklyMeetingVariant));
+  }
   const query = qs.toString();
   const path = `/v1/bulletins/template/slides/${slideNumber}/preview.png${query ? `?${query}` : ''}`;
 
@@ -254,7 +263,6 @@ export async function fetchBulletinSlidePreviewPng(
         ? String((data as { error: string }).error)
         : res.statusText;
 
-    // LibreOffice 过载时短暂退避重试
     if (res.status === 503 && attempt < maxAttempts - 1) {
       await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
       continue;

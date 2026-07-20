@@ -187,6 +187,10 @@ export default function BulletinFullDeckPreview({
       scriptureReference: bulletin.scriptureReference,
       showPreServiceChairName: bulletin.showPreServiceChairName,
       preServiceChairNames: bulletin.preServiceChairNames,
+      hiddenSections: bulletin.hiddenSections,
+      skipTestimonyWeek: bulletin.skipTestimonyWeek,
+      skipDepartmentReports: bulletin.skipDepartmentReports,
+      weeklyMeetingVariant: bulletin.weeklyMeetingVariant,
     }),
     [
       bulletin.serviceDate,
@@ -195,6 +199,10 @@ export default function BulletinFullDeckPreview({
       bulletin.scriptureReference,
       bulletin.showPreServiceChairName,
       bulletin.preServiceChairNames,
+      bulletin.hiddenSections,
+      bulletin.skipTestimonyWeek,
+      bulletin.skipDepartmentReports,
+      bulletin.weeklyMeetingVariant,
     ],
   );
 

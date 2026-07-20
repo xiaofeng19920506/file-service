@@ -77,8 +77,15 @@ export default function BulletinPreviewPanel({
       cancelled = true;
       window.clearTimeout(debounceTimer);
     };
-    // 仅结构相关字段会改变页数/演示顺序；封面日期与会前姓名不影响 deckPlan
-  }, [bulletin.id, bulletin.scriptureBook, bulletin.scriptureReference]);
+  }, [
+    bulletin.id,
+    bulletin.scriptureBook,
+    bulletin.scriptureReference,
+    bulletin.hiddenSections,
+    bulletin.skipTestimonyWeek,
+    bulletin.skipDepartmentReports,
+    bulletin.weeklyMeetingVariant,
+  ]);
 
   useEffect(() => {
     if (!deckPlan) return;
@@ -138,6 +145,8 @@ export default function BulletinPreviewPanel({
       scriptureReference: bulletin.scriptureReference,
       showPreServiceChairName: bulletin.showPreServiceChairName,
       preServiceChairNames: bulletin.preServiceChairNames,
+      hiddenSections: bulletin.hiddenSections,
+      weeklyMeetingVariant: bulletin.weeklyMeetingVariant,
     }),
     [
       bulletin.serviceDate,
@@ -146,6 +155,8 @@ export default function BulletinPreviewPanel({
       bulletin.scriptureReference,
       bulletin.showPreServiceChairName,
       bulletin.preServiceChairNames,
+      bulletin.hiddenSections,
+      bulletin.weeklyMeetingVariant,
     ],
   );
 

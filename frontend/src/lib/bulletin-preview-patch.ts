@@ -1,4 +1,5 @@
 import type { BulletinSlidePreviewParams } from '../api/bulletins';
+import { resolveHiddenSections } from './bulletin-section-visibility';
 
 export type BulletinPreviewPatchFields = {
   serviceDate: string;
@@ -7,22 +8,31 @@ export type BulletinPreviewPatchFields = {
   scriptureReference?: string;
   showPreServiceChairName?: boolean;
   preServiceChairNames?: string;
+  hiddenSections?: string[];
+  skipTestimonyWeek?: boolean;
+  skipDepartmentReports?: boolean;
+  weeklyMeetingVariant?: number | null;
 };
+
+function structureParams(full: BulletinPreviewPatchFields): BulletinSlidePreviewParams {
+  const hidden = resolveHiddenSections(full);
+  return {
+    scriptureBook: full.scriptureBook,
+    scriptureReference: full.scriptureReference,
+    hiddenSections: hidden,
+    weeklyMeetingVariant: full.weeklyMeetingVariant ?? null,
+  };
+}
 
 /**
  * 按分区裁剪预览 query。
- * 读经加页会改变整份演示页码，因此所有页都必须带同一套经文参数，
- * 否则高页码会按「未加页」PPTX 渲染 → 错页或 503。
- * 封面日期 / 会前主席名只加到对应分区，避免改姓名时整卷 cache miss。
+ * 读经 / 隐藏分区 / 聚会版式会影响演示页码，所有页都必须带同一套结构参数。
  */
 export function previewPatchForSection(
   sectionId: string,
   full: BulletinPreviewPatchFields,
 ): BulletinSlidePreviewParams {
-  const structure: BulletinSlidePreviewParams = {
-    scriptureBook: full.scriptureBook,
-    scriptureReference: full.scriptureReference,
-  };
+  const structure = structureParams(full);
 
   switch (sectionId) {
     case 'cover':
@@ -42,11 +52,11 @@ export function previewPatchForSection(
   }
 }
 
-/** 稳定字符串，用作预览 effect / 客户端缓存 key */
 export function bulletinPreviewCacheKey(
   slideNumber: number,
   params: BulletinSlidePreviewParams,
 ): string {
+  const hidden = (params.hiddenSections ?? []).slice().sort().join(',');
   return [
     slideNumber,
     params.serviceDate ?? '',
@@ -55,5 +65,7 @@ export function bulletinPreviewCacheKey(
     params.scriptureReference ?? '',
     params.showPreServiceChairName ? '1' : '0',
     params.preServiceChairNames ?? '',
+    hidden,
+    params.weeklyMeetingVariant == null ? '' : String(params.weeklyMeetingVariant),
   ].join('\0');
 }

@@ -2,6 +2,7 @@ import JSZip from 'jszip';
 import { resolveScriptureSlideBodies } from './bible-text.js';
 import { applyScripturePagesToZip } from './bulletin-scripture-pptx.js';
 import { removeSlidesFromPptxZip } from './pptx-duplicate-slide.js';
+import { bulletinSlidePathsToDelete } from './bulletin-section-visibility.js';
 
 /** PPT 封面日期格式：06/14/2026 */
 export function formatBulletinCoverDate(isoDate: string): string {
@@ -180,7 +181,6 @@ export function patchScriptureSlideInSlideXml(
 
 /** 会前祷告第 2 页标题 shape；第 3 页名单页会从 deck 移除 */
 const PRE_SERVICE_TITLE_SHAPE_ID = '276';
-const PRE_SERVICE_EXTRA_SLIDE_PATH = 'ppt/slides/slide3.xml';
 
 /**
  * 在会前祷告第 2 页标题下方写入主席姓名。
@@ -226,11 +226,15 @@ export type BulletinPreviewPatchInput = {
   showPreServiceChairName?: boolean;
   /** 主席姓名（单人） */
   preServiceChairNames?: string;
+  hiddenSections?: string[];
+  skipTestimonyWeek?: boolean;
+  skipDepartmentReports?: boolean;
+  weeklyMeetingVariant?: number | null;
 };
 
 type PptxInputBytes = Buffer | Uint8Array;
 
-/** 预览/导出用：封面 + 会前祷告（仅第 2 页，去掉第 3 页）+ 读经 */
+/** 预览/导出用：封面 + 会前祷告（仅第 2 页）+ 读经 + 按隐藏分区删页 */
 export async function patchBulletinPreviewInPptx(
   template: PptxInputBytes,
   input: BulletinPreviewPatchInput,
@@ -254,20 +258,16 @@ export async function patchBulletinPreviewInPptx(
         zip.file('ppt/slides/slide2.xml', patchPreServiceChairNameOnSlide2Xml(xml, chairName));
       }
     }
-    // 会前祷告只保留第 2 页；模板第 3 页（多人名单）从 deck 移除，避免与读经串台
-    await removeSlidesFromPptxZip(zip, [PRE_SERVICE_EXTRA_SLIDE_PATH]);
     buf = await zip.generateAsync({ type: 'uint8array' });
   }
 
   const book = input.scriptureBook?.trim() ?? '';
   const reference = input.scriptureReference?.trim() ?? '';
-  if (!book && !reference) {
-    return buf instanceof Uint8Array ? buf : new Uint8Array(buf);
-  }
+  const hideScripture = bulletinSlidePathsToDelete(input).some((p) => p.includes('slide4.xml'));
 
   let zip = await JSZip.loadAsync(buf);
 
-  if (book || reference) {
+  if (!hideScripture && (book || reference)) {
     const slide4 = zip.file('ppt/slides/slide4.xml');
     if (slide4) {
       const xml = await slide4.async('string');
@@ -275,11 +275,16 @@ export async function patchBulletinPreviewInPptx(
     }
   }
 
-  if (book && reference) {
+  if (!hideScripture && book && reference) {
     const bodies = await resolveScriptureSlideBodies(book, reference);
     if (bodies) {
       await applyScripturePagesToZip(zip, bodies.chinesePages, bodies.englishPages);
     }
+  }
+
+  const removePaths = bulletinSlidePathsToDelete(input);
+  if (removePaths.length) {
+    await removeSlidesFromPptxZip(zip, removePaths);
   }
 
   return zip.generateAsync({ type: 'uint8array' });

@@ -45,6 +45,7 @@ export * from './subscription.js';
 export * from './bulletin-realtime.js';
 export * from './pptx-duplicate-slide.js';
 export * from './bulletin-pptx-patch.js';
+export * from './bulletin-section-visibility.js';
 export * from './scripture-reference.js';
 export * from './bible-text.js';
 export type { ScriptureSlideBodies } from './bible-text.js';
