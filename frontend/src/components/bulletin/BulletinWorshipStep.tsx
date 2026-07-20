@@ -3,11 +3,13 @@ import {
   ensureBulletinWorshipPlaylist,
   getBulletinWorshipPlaylist,
   inviteBulletinWorshipLeader,
+  removeBulletinWorshipPlaylistItem,
+  reorderBulletinWorshipPlaylistItems,
   type WeeklyBulletin,
 } from '../../api/bulletins';
 import type { PlaylistDetail, PlaylistItem } from '../../api/playlists';
+import AddPlaylistItemsModal from '../AddPlaylistItemsModal';
 import MobileSegmentedControl from '../MobileSegmentedControl';
-import PlaylistYoutubeSearchPanel from '../PlaylistYoutubeSearchPanel';
 import BulletinWorshipYoutubeImportPanel from './BulletinWorshipYoutubeImportPanel';
 import { friendlyError } from '../../lib/error-messages';
 import { useI18n } from '../../i18n';
@@ -28,6 +30,14 @@ type BulletinWorshipStepProps = {
   onSaveVisibility?: () => void;
   saving?: boolean;
 };
+
+function reorderToFinalIndex<T>(items: T[], from: number, toIndex: number): T[] {
+  if (from === toIndex || from < 0 || from >= items.length) return items;
+  const next = [...items];
+  const [moved] = next.splice(from, 1);
+  next.splice(toIndex, 0, moved!);
+  return next;
+}
 
 export default function BulletinWorshipStep({
   draft,
@@ -52,6 +62,8 @@ export default function BulletinWorshipStep({
   const [sourceTab, setSourceTab] = useState<WorshipSourceTab>(
     oauthJustConnected || oauthError ? 'youtube' : 'youtube',
   );
+  const [searchModalOpen, setSearchModalOpen] = useState(false);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   const canAddSongs = canEditSongs || canManage;
 
@@ -80,6 +92,14 @@ export default function BulletinWorshipStep({
     if (oauthJustConnected || oauthError) setSourceTab('youtube');
   }, [oauthJustConnected, oauthError]);
 
+  const handleSourceTabChange = (id: string) => {
+    const next = id as WorshipSourceTab;
+    setSourceTab(next);
+    if (next === 'search' && canAddSongs) {
+      setSearchModalOpen(true);
+    }
+  };
+
   const handleImported = (
     detail: PlaylistDetail,
     meta: { addedCount: number; skippedCount: number },
@@ -93,6 +113,46 @@ export default function BulletinWorshipStep({
     }
     void refreshPlaylist();
     onPlaylistChanged?.();
+  };
+
+  const handleSearchAdded = (
+    detail: PlaylistDetail,
+    meta: { addedCount: number; skippedCount: number },
+  ) => {
+    handleImported(detail, meta);
+  };
+
+  const handleRemove = async (item: PlaylistItem) => {
+    if (!canAddSongs) return;
+    setError(null);
+    try {
+      await removeBulletinWorshipPlaylistItem(draft.id, item.id);
+      setItems((prev) => prev.filter((row) => row.id !== item.id));
+      onPlaylistChanged?.();
+    } catch (err) {
+      setError(friendlyError(err instanceof Error ? err.message : 'remove_playlist_item_failed', t));
+    }
+  };
+
+  const handleDrop = async (toIndex: number) => {
+    if (!canAddSongs || dragIndex === null || dragIndex === toIndex) {
+      setDragIndex(null);
+      return;
+    }
+    const reordered = reorderToFinalIndex(items, dragIndex, toIndex);
+    setDragIndex(null);
+    setItems(reordered);
+    try {
+      const data = await reorderBulletinWorshipPlaylistItems(
+        draft.id,
+        reordered.map((item) => item.id),
+      );
+      setItems(data.items);
+      onPlaylistChanged?.();
+    } catch (err) {
+      setError(friendlyError(err instanceof Error ? err.message : 'reorder_playlist_failed', t));
+      await refreshPlaylist();
+    }
   };
 
   const copyInviteLink = async () => {
@@ -166,7 +226,7 @@ export default function BulletinWorshipStep({
             className="bulletin-worship-tabs"
             ariaLabel={t('bulletin.worshipSourceTabs')}
             value={sourceTab}
-            onChange={(id) => setSourceTab(id as WorshipSourceTab)}
+            onChange={handleSourceTabChange}
             segments={[
               { id: 'youtube', label: t('bulletin.worshipTabYoutube') },
               { id: 'search', label: t('bulletin.worshipTabSearch') },
@@ -184,14 +244,14 @@ export default function BulletinWorshipStep({
               />
             ) : (
               <div className="bulletin-worship-search-panel">
-                <p className="bulletin-worship-search-hint">{t('bulletin.worshipSearchHint')}</p>
-                <PlaylistYoutubeSearchPanel
-                  bulletinId={draft.id}
-                  existingVideoIds={existingVideoIds}
-                  onAdded={handleImported}
-                  mobileListOnly
-                  className="bulletin-worship-youtube-search"
-                />
+                <p className="bulletin-worship-search-hint">{t('bulletin.worshipSearchModalHint')}</p>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => setSearchModalOpen(true)}
+                >
+                  {t('bulletin.worshipOpenSearchModal')}
+                </button>
               </div>
             )}
           </div>
@@ -199,23 +259,66 @@ export default function BulletinWorshipStep({
       )}
 
       <section className="bulletin-worship-playlist-preview">
-        <h4 className="bulletin-worship-playlist-heading">
-          {items.length > 0
-            ? t('bulletin.worshipTrackCount', { count: items.length })
-            : t('bulletin.worshipNoPlaylist')}
-        </h4>
+        <div className="bulletin-worship-playlist-heading-row">
+          <h4 className="bulletin-worship-playlist-heading">
+            {items.length > 0
+              ? t('bulletin.worshipTrackCount', { count: items.length })
+              : t('bulletin.worshipNoPlaylist')}
+          </h4>
+          {canAddSongs ? (
+            <button
+              type="button"
+              className="btn-secondary btn-sm"
+              onClick={() => {
+                setSourceTab('search');
+                setSearchModalOpen(true);
+              }}
+            >
+              {t('bulletin.worshipOpenSearchModal')}
+            </button>
+          ) : null}
+        </div>
         {items.length > 0 ? (
           <ol className="bulletin-worship-track-preview">
             {items.map((item, index) => (
-              <li key={item.id}>
+              <li
+                key={item.id}
+                className={
+                  canAddSongs
+                    ? `bulletin-worship-track-preview-item${dragIndex === index ? ' is-dragging' : ''}`
+                    : undefined
+                }
+                draggable={canAddSongs}
+                onDragStart={canAddSongs ? () => setDragIndex(index) : undefined}
+                onDragOver={
+                  canAddSongs
+                    ? (e) => {
+                        e.preventDefault();
+                      }
+                    : undefined
+                }
+                onDrop={canAddSongs ? () => void handleDrop(index) : undefined}
+              >
                 <span className="bulletin-worship-track-preview-order">{index + 1}</span>
                 <span className="bulletin-worship-track-preview-title">{item.title}</span>
+                {canAddSongs ? (
+                  <button
+                    type="button"
+                    className="btn-secondary btn-sm"
+                    onClick={() => void handleRemove(item)}
+                  >
+                    {t('playlists.removeTrackShort')}
+                  </button>
+                ) : null}
               </li>
             ))}
           </ol>
         ) : (
           <p className="playlists-muted">{t('bulletin.worshipEmptyHint')}</p>
         )}
+        {canAddSongs && items.length > 0 ? (
+          <p className="bulletin-worship-reorder-hint">{t('bulletin.worshipReorderHint')}</p>
+        ) : null}
       </section>
 
       {canManage && (
@@ -249,6 +352,15 @@ export default function BulletinWorshipStep({
 
       {status && <p className="success-msg">{status}</p>}
       {error && <p className="error-msg">{error}</p>}
+
+      {searchModalOpen && canAddSongs ? (
+        <AddPlaylistItemsModal
+          bulletinId={draft.id}
+          existingVideoIds={existingVideoIds}
+          onClose={() => setSearchModalOpen(false)}
+          onAdded={handleSearchAdded}
+        />
+      ) : null}
     </div>
   );
 }

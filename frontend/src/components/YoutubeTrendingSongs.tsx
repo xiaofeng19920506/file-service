@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { addBulletinWorshipPlaylistItemsByVideos } from '../api/bulletins';
 import {
   addPlaylistItemsByVideos,
   type PlaylistDetail,
@@ -21,6 +22,7 @@ type YoutubeTrendingSongsProps = {
   existingVideoIds?: Set<string>;
   pickPlaylistOnAdd?: boolean;
   playlistId?: string;
+  bulletinId?: string;
   playlists?: PlaylistSummary[];
   loadingPlaylists?: boolean;
   onCreatePlaylist?: (title: string) => Promise<PlaylistDetail>;
@@ -34,6 +36,7 @@ export default function YoutubeTrendingSongs({
   existingVideoIds = new Set(),
   pickPlaylistOnAdd = false,
   playlistId,
+  bulletinId,
   playlists = [],
   loadingPlaylists = false,
   onCreatePlaylist,
@@ -79,7 +82,9 @@ export default function YoutubeTrendingSongs({
   const addToPlaylist = async (targetPlaylistId: string, videoId: string, title: string) => {
     setAddingVideoId(videoId);
     try {
-      const data = await addPlaylistItemsByVideos(targetPlaylistId, [{ videoId, title }]);
+      const data = bulletinId
+        ? await addBulletinWorshipPlaylistItemsByVideos(bulletinId, [{ videoId, title }])
+        : await addPlaylistItemsByVideos(targetPlaylistId, [{ videoId, title }]);
       onAdded(data, { addedCount: data.addedCount, skippedCount: data.skippedCount });
       setSongs((prev) =>
         prev.map((song) =>
@@ -103,8 +108,8 @@ export default function YoutubeTrendingSongs({
       setPendingAdd({ videoId, title });
       return;
     }
-    if (!playlistId || isInCurrentPlaylist(videoId)) return;
-    await addToPlaylist(playlistId, videoId, title);
+    if ((!playlistId && !bulletinId) || isInCurrentPlaylist(videoId)) return;
+    await addToPlaylist(playlistId ?? '', videoId, title);
   };
 
   const scopeLabel =

@@ -246,6 +246,7 @@ export default function PlaylistYoutubeSearchPanel({
             className={mobileListOnly ? 'youtube-trending--mobile-home' : ''}
             pickPlaylistOnAdd={pickPlaylistOnAdd}
             playlistId={playlistId}
+            bulletinId={bulletinId}
             libraryVideoIds={libraryVideoIds}
             existingVideoIds={existingVideoIds}
             playlists={playlists}

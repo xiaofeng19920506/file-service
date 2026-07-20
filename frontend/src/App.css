@@ -6729,10 +6729,45 @@ body.bulletin-slideshow-window {
   font-size: 1rem;
 }
 
+.bulletin-worship-playlist-heading-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
 .bulletin-worship-playlist-heading {
-  margin: 0 0 0.5rem;
+  margin: 0;
   font-size: 0.95rem;
   font-weight: 600;
+}
+
+.bulletin-worship-reorder-hint {
+  margin: 0.65rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.bulletin-worship-track-preview-item {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.35rem 0.25rem;
+  border-radius: 8px;
+  cursor: grab;
+}
+
+.bulletin-worship-track-preview-item.is-dragging {
+  opacity: 0.65;
+  background: var(--surface-muted, rgba(0, 0, 0, 0.04));
+}
+
+.bulletin-worship-track-preview-item .bulletin-worship-track-preview-title {
+  flex: 1;
+  min-width: 0;
 }
 
 .bulletin-worship-invite-details {

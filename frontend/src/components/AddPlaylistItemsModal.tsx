@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { addBulletinWorshipPlaylistItems } from '../api/bulletins';
 import { addPlaylistItems } from '../api/playlists';
 import { friendlyError } from '../lib/error-messages';
 import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
@@ -7,7 +8,10 @@ import { useI18n } from '../i18n';
 import type { PlaylistDetail } from '../api/playlists';
 
 type AddPlaylistItemsModalProps = {
-  playlistId: string;
+  /** 普通歌单：按 playlistId 添加 */
+  playlistId?: string;
+  /** 周报敬拜歌单：按 bulletinId 添加（与 playlistId 二选一） */
+  bulletinId?: string;
   existingVideoIds: Set<string>;
   onClose: () => void;
   onAdded: (detail: PlaylistDetail, meta: { addedCount: number; skippedCount: number }) => void;
@@ -15,6 +19,7 @@ type AddPlaylistItemsModalProps = {
 
 export default function AddPlaylistItemsModal({
   playlistId,
+  bulletinId,
   existingVideoIds,
   onClose,
   onAdded,
@@ -46,7 +51,9 @@ export default function AddPlaylistItemsModal({
     setAddingUrl(true);
     setError(null);
     try {
-      const data = await addPlaylistItems(playlistId, trimmed);
+      const data = bulletinId
+        ? await addBulletinWorshipPlaylistItems(bulletinId, trimmed)
+        : await addPlaylistItems(playlistId!, trimmed);
       onAdded(data, { addedCount: data.addedCount, skippedCount: data.skippedCount });
       onClose();
     } catch (err) {
@@ -81,7 +88,9 @@ export default function AddPlaylistItemsModal({
           disabled={addingUrl}
         />
       </label>
-      <p className="playlists-muted playlists-add-modal-hint">{t('playlists.addHint')}</p>
+      <p className="playlists-muted playlists-add-modal-hint">
+        {bulletinId ? t('worshipSongs.urlHint') : t('playlists.addHint')}
+      </p>
       {error && <p className="error-msg">{error}</p>}
 
       <div className="metadata-modal-actions add-playlist-items-url-actions">
@@ -130,7 +139,8 @@ export default function AddPlaylistItemsModal({
             )}
             <PlaylistYoutubeSearchPanel
               className="add-playlist-items-search"
-              playlistId={playlistId}
+              playlistId={bulletinId ? undefined : playlistId}
+              bulletinId={bulletinId}
               existingVideoIds={existingVideoIds}
               onAdded={onAdded}
             />

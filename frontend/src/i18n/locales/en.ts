@@ -346,6 +346,10 @@ const en: MessageTree = {
     worshipImportYoutubeConnectHint:
       'No YouTube account linked yet. Sign in with Google below, then pick a playlist from your library.',
     worshipSearchHint: 'Search for songs, then tap + to add them one at a time.',
+    worshipSearchModalHint:
+      'Open the dialog to search YouTube, paste a video or playlist URL, and add tracks one by one.',
+    worshipOpenSearchModal: 'Search / paste URL',
+    worshipReorderHint: 'Drag to reorder, or remove individual tracks.',
     worshipEmptyHint: 'No songs yet',
     worshipImportedCount: 'Added {count} track(s)',
     worshipShowInvite: 'Invite someone to help',
