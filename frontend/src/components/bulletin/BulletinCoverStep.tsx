@@ -1,5 +1,7 @@
 import { useI18n } from '../../i18n';
 import { nextSundayIso } from '../../lib/bulletin-date';
+import type { WeeklyBulletin } from '../../api/bulletins';
+import { SectionVisibleCheckbox } from './BulletinWizardSteps';
 
 const DEFAULT_SERVICE_TIME = '11:00';
 
@@ -16,10 +18,12 @@ function normalizeTimeValue(value: string): string {
 type BulletinCoverStepProps = {
   serviceDate: string;
   serviceTime: string;
+  draft: WeeklyBulletin;
   canEdit: boolean;
   saving?: boolean;
   onServiceDateChange: (isoDate: string) => void;
   onServiceTimeChange: (time: string) => void;
+  onSectionVisibilityChange: (sectionId: string, visible: boolean) => void;
   onSave?: () => void;
   onCoverPreviewFocus?: () => void;
 };
@@ -27,10 +31,12 @@ type BulletinCoverStepProps = {
 export default function BulletinCoverStep({
   serviceDate,
   serviceTime,
+  draft,
   canEdit,
   saving,
   onServiceDateChange,
   onServiceTimeChange,
+  onSectionVisibilityChange,
   onSave,
   onCoverPreviewFocus,
 }: BulletinCoverStepProps) {
@@ -46,6 +52,12 @@ export default function BulletinCoverStep({
       </header>
 
       <div className="bulletin-cover-step-fields">
+        <SectionVisibleCheckbox
+          sectionId="cover"
+          draft={draft}
+          canEdit={canEdit}
+          onSectionVisibilityChange={onSectionVisibilityChange}
+        />
         <label className="bulletin-field">
           {t('bulletin.pickServiceDate')}
           <input
