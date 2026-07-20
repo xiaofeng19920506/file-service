@@ -6189,6 +6189,7 @@
 
 .bulletin-preview-panel-header {
   width: 100%;
+  flex-shrink: 0;
 }
 
 .bulletin-preview-panel-header-row {
