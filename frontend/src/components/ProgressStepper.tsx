@@ -4,6 +4,8 @@ export type ProgressStepperStep = {
   id: string;
   label: string;
   enabled?: boolean;
+  /** 可点击导航但无编辑表单（模板固定页） */
+  readonly?: boolean;
 };
 
 type ProgressStepperProps = {
@@ -35,12 +37,13 @@ export default function ProgressStepper({
           const isPreviewFocus = previewIndex != null && index === previewIndex && !isCurrent;
           const isComplete = index < currentIndex;
           const isDisabled = step.enabled === false;
+          const isReadonly = Boolean(step.readonly);
           const canSelect = !isDisabled && Boolean(onStepSelect);
 
           return (
             <li
               key={step.id}
-              className={`progress-stepper-item${isCurrent ? ' is-current' : ''}${isPreviewFocus ? ' is-preview-focus' : ''}${isComplete ? ' is-complete' : ''}${isDisabled ? ' is-disabled' : ''}`}
+              className={`progress-stepper-item${isCurrent ? ' is-current' : ''}${isPreviewFocus ? ' is-preview-focus' : ''}${isComplete ? ' is-complete' : ''}${isDisabled ? ' is-disabled' : ''}${isReadonly ? ' is-readonly' : ''}`}
             >
               {canSelect ? (
                 <button

@@ -25,6 +25,12 @@ import { useBulletinRealtime } from '../hooks/useBulletinRealtime';
 import { useBulletinScripturePersistence } from '../hooks/useBulletinScripturePersistence';
 import { useI18n } from '../i18n';
 import { nextSundayIso } from '../lib/bulletin-date';
+import {
+  BULLETIN_NAV_SECTIONS,
+  isReadonlyNavSection,
+  navSectionById,
+  navSectionIndexById,
+} from '../lib/bulletin-sections';
 import { BULLETIN_WIZARD_STEPS } from '../lib/bulletin-template-steps';
 import { publishBulletinPptx, resolveBulletinPptxBlob } from '../lib/bulletin-publish';
 import { friendlyError } from '../lib/error-messages';
@@ -74,7 +80,8 @@ export default function BulletinPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [wizardStep, setWizardStep] = useState(0);
-  const [previewHighlightStep, setPreviewHighlightStep] = useState(0);
+  const [activeSectionId, setActiveSectionId] = useState('cover');
+  const [previewSectionId, setPreviewSectionId] = useState('cover');
   const [previewScrollBump, setPreviewScrollBump] = useState(0);
   const [previewScrollToSlide, setPreviewScrollToSlide] = useState<{
     slide: number;
@@ -89,19 +96,41 @@ export default function BulletinPage() {
 
   const stepperSteps = useMemo(
     () =>
-      BULLETIN_WIZARD_STEPS.filter((step) => !step.skipInStepper).map((step) => ({
-        id: step.id,
-        label: t(step.labelKey),
-        enabled: step.enabled,
+      BULLETIN_NAV_SECTIONS.map((section) => ({
+        id: section.id,
+        label: t(section.labelKey),
+        enabled: true,
+        readonly: section.editableStepId == null,
       })),
     [t],
   );
 
+  const navCurrentIndex = navSectionIndexById(activeSectionId);
+  const navPreviewIndex = navSectionIndexById(previewSectionId);
   const currentStepDef = BULLETIN_WIZARD_STEPS[wizardStep];
+  const activeSectionReadonly = isReadonlyNavSection(activeSectionId);
+
+  const selectNavSection = useCallback((sectionId: string) => {
+    const section = navSectionById(sectionId);
+    if (!section) return;
+
+    if (sectionId === activeSectionId) {
+      setPreviewScrollBump((b) => b + 1);
+      return;
+    }
+
+    setActiveSectionId(sectionId);
+    setPreviewSectionId(sectionId);
+
+    if (section.editableStepId) {
+      const stepIdx = BULLETIN_WIZARD_STEPS.findIndex((s) => s.id === section.editableStepId);
+      if (stepIdx >= 0) setWizardStep(stepIdx);
+    }
+  }, [activeSectionId]);
 
   useEffect(() => {
-    setPreviewHighlightStep(wizardStep);
-  }, [wizardStep]);
+    setPreviewSectionId(activeSectionId);
+  }, [activeSectionId]);
 
   useEffect(() => {
     const hash = window.location.hash;
@@ -122,6 +151,9 @@ export default function BulletinPage() {
 
     const worshipIdx = BULLETIN_WIZARD_STEPS.findIndex((step) => step.id === 'worship');
     if (worshipIdx >= 0) setWizardStep(worshipIdx);
+    setActiveSectionId('worship');
+    setPreviewSectionId('worship');
+    setPreviewScrollBump((b) => b + 1);
 
     if (oauth === 'connected') {
       setWorshipYoutubeOauthReady(true);
@@ -352,6 +384,16 @@ export default function BulletinPage() {
   const renderStepPanel = () => {
     if (!draft) return null;
 
+    if (activeSectionReadonly) {
+      const section = navSectionById(activeSectionId);
+      return (
+        <div className="bulletin-section-readonly">
+          <h3>{section ? t(section.labelKey) : t('bulletin.sectionReadonlyTitle')}</h3>
+          <p className="bulletin-step-intro">{t('bulletin.sectionReadonlyHint')}</p>
+        </div>
+      );
+    }
+
     const common = {
       draft,
       canEdit: canManage,
@@ -531,16 +573,13 @@ export default function BulletinPage() {
             <div className="bulletin-workspace-editor-inner">
               <ProgressStepper
                 steps={stepperSteps}
-                currentIndex={wizardStep}
-                previewIndex={previewHighlightStep}
+                currentIndex={navCurrentIndex}
+                previewIndex={navPreviewIndex}
                 orientation="vertical"
                 onStepSelect={(index) => {
-                  if (!BULLETIN_WIZARD_STEPS[index]?.enabled) return;
-                  if (index === wizardStep) {
-                    setPreviewScrollBump((b) => b + 1);
-                    return;
-                  }
-                  setWizardStep(index);
+                  const section = BULLETIN_NAV_SECTIONS[index];
+                  if (!section) return;
+                  selectNavSection(section.id);
                 }}
               />
               <div className="bulletin-step-panel">{renderStepPanel()}</div>
@@ -585,13 +624,13 @@ export default function BulletinPage() {
 
           <aside className="bulletin-workspace-preview" aria-label={t('bulletin.previewTitle')}>
             <BulletinPreviewPanel
-              scrollToWizardStep={wizardStep}
-              scrollToWizardBump={previewScrollBump}
+              scrollToSectionId={activeSectionId}
+              scrollToSectionBump={previewScrollBump}
               scrollToPresentationSlide={previewScrollToSlide}
-              highlightWizardStep={previewHighlightStep}
+              highlightSectionId={previewSectionId}
               bulletin={draft}
               worshipRefreshKey={worshipPreviewRevision}
-              onVisibleWizardStepChange={setPreviewHighlightStep}
+              onVisibleSectionChange={setPreviewSectionId}
             />
           </aside>
         </div>

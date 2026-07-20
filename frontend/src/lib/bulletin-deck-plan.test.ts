@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { patchBulletinPreviewInPptx } from '../../../shared/src/bulletin-pptx-patch.js';
 import { resolveScriptureSlideBodies } from '../../../shared/src/bible-text.js';
-import { buildBulletinDeckPlanFromFile } from './bulletin-deck-plan';
+import { buildBulletinDeckPlanFromFile, firstSlideForSection, sectionIdForSlide } from './bulletin-deck-plan';
 import { buildPreviewMatchingPptx } from './bulletin-preview-pptx';
 import { listPptxSlidesInPresentationOrder } from './pptx-preview';
 
@@ -73,5 +73,25 @@ describe('bulletin deck plan', () => {
 
     expect(browserWorship?.index).toBe(apiWorship?.index);
     expect(browserOrder.length).toBe(apiOrder.length);
+  });
+
+  it('resolves section first slides so communion is not mistaken for worship', async () => {
+    const file = await patchedPreviewFile('119:1-40');
+    const plan = await buildBulletinDeckPlanFromFile(file);
+    const order = await listPptxSlidesInPresentationOrder(file);
+
+    const worshipFirst = firstSlideForSection('worship', plan);
+    const communionFirst = firstSlideForSection('communion', plan);
+    const closingFirst = firstSlideForSection('closing', plan);
+
+    expect(worshipFirst).toBe(order.find((s) => s.slideInFile === 7)?.index);
+    expect(worshipFirst).toBeGreaterThan(6);
+    expect(communionFirst).toBe(order.find((s) => s.slideInFile === 10)?.index);
+    expect(communionFirst).toBeGreaterThan(worshipFirst!);
+    expect(closingFirst).toBe(order.find((s) => s.slideInFile === 37)?.index);
+
+    expect(sectionIdForSlide(worshipFirst!, plan)).toBe('worship');
+    expect(sectionIdForSlide(communionFirst!, plan)).toBe('communion');
+    expect(sectionIdForSlide(closingFirst!, plan)).toBe('closing');
   });
 });

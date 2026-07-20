@@ -6023,7 +6023,7 @@
 
 .bulletin-workspace-editor-inner {
   display: grid;
-  grid-template-columns: minmax(9.5rem, 11rem) minmax(0, 1fr);
+  grid-template-columns: minmax(10.5rem, 12.5rem) minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
   border: 1px solid var(--border-light);
@@ -7275,6 +7275,9 @@ body.bulletin-slideshow-window {
 .progress-stepper--vertical .progress-stepper-list {
   flex-direction: column;
   flex-wrap: nowrap;
+  max-height: min(70vh, 42rem);
+  overflow-y: auto;
+  padding-right: 0.15rem;
 }
 
 .progress-stepper--vertical .progress-stepper-item {
@@ -7286,6 +7289,27 @@ body.bulletin-slideshow-window {
 .progress-stepper--vertical .progress-stepper-btn {
   border-radius: 10px;
   justify-content: flex-start;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.8rem;
+}
+
+.progress-stepper-item.is-readonly .progress-stepper-btn {
+  opacity: 0.78;
+}
+
+.progress-stepper-item.is-readonly .progress-stepper-index {
+  background: transparent;
+  border: 1px dashed var(--border-light);
+  font-size: 0.7rem;
+}
+
+.bulletin-section-readonly {
+  padding: 0.25rem 0.15rem 0.5rem;
+}
+
+.bulletin-section-readonly h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
 }
 
 .progress-stepper-item {

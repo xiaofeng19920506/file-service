@@ -6,39 +6,41 @@ import {
 } from '../../api/bulletins';
 import type { PlaylistItem } from '../../api/playlists';
 import { useI18n } from '../../i18n';
-import { buildBulletinDeckPlan, type BulletinDeckPlan } from '../../lib/bulletin-deck-plan';
-import { nextSundayIso } from '../../lib/bulletin-date';
 import {
-  firstSlideForWizardStep,
-  slidesForWizardStep,
-  wizardStepIndexForSlide,
-} from '../../lib/bulletin-template-steps';
+  buildBulletinDeckPlan,
+  firstSlideForSection,
+  sectionIdForSlide,
+  slidesForSection,
+  type BulletinDeckPlan,
+} from '../../lib/bulletin-deck-plan';
+import { nextSundayIso } from '../../lib/bulletin-date';
 import BulletinFullDeckPreview, {
   type BulletinPreviewScrollRequest,
 } from './BulletinFullDeckPreview';
 import BulletinSlideShowLauncher from './BulletinSlideShowLauncher';
 
 type BulletinPreviewPanelProps = {
-  /** 左侧 stepper 当前步骤；滚动目标从本面板 deckPlan 解析 */
-  scrollToWizardStep: number;
-  /** 再次点击同一 step 时递增，触发重新滚动 */
-  scrollToWizardBump?: number;
+  /** 左侧选中的模板分区 id；滚动目标从本面板 deckPlan 解析 */
+  scrollToSectionId: string;
+  /** 再次点击同一分区时递增，触发重新滚动 */
+  scrollToSectionBump?: number;
   /** 显式滚到某一预览页（如封面聚焦） */
   scrollToPresentationSlide?: { slide: number; bump: number } | null;
-  highlightWizardStep: number;
+  /** 预览高亮的分区 id */
+  highlightSectionId: string;
   bulletin: WeeklyBulletin;
   worshipRefreshKey?: number;
-  onVisibleWizardStepChange?: (stepIndex: number) => void;
+  onVisibleSectionChange?: (sectionId: string) => void;
 };
 
 export default function BulletinPreviewPanel({
-  scrollToWizardStep,
-  scrollToWizardBump = 0,
+  scrollToSectionId,
+  scrollToSectionBump = 0,
   scrollToPresentationSlide = null,
-  highlightWizardStep,
+  highlightSectionId,
   bulletin,
   worshipRefreshKey = 0,
-  onVisibleWizardStepChange,
+  onVisibleSectionChange,
 }: BulletinPreviewPanelProps) {
   const { t } = useI18n();
   const [deckPlan, setDeckPlan] = useState<BulletinDeckPlan | null>(null);
@@ -88,9 +90,9 @@ export default function BulletinPreviewPanel({
 
   useEffect(() => {
     if (!deckPlan) return;
-    const slide = firstSlideForWizardStep(scrollToWizardStep, deckPlan);
+    const slide = firstSlideForSection(scrollToSectionId, deckPlan);
     if (slide != null) requestScroll(slide);
-  }, [scrollToWizardStep, scrollToWizardBump, deckPlan, requestScroll]);
+  }, [scrollToSectionId, scrollToSectionBump, deckPlan, requestScroll]);
 
   useEffect(() => {
     if (!deckPlan || !scrollToPresentationSlide) return;
@@ -123,15 +125,16 @@ export default function BulletinPreviewPanel({
   }, [bulletin.id, bulletin.servicePlaylistId, worshipRefreshKey]);
 
   const highlightSlides = useMemo(
-    () => slidesForWizardStep(highlightWizardStep, deckPlan),
-    [highlightWizardStep, deckPlan],
+    () => slidesForSection(highlightSectionId, deckPlan),
+    [highlightSectionId, deckPlan],
   );
 
   const handleVisibleSlide = useCallback(
     (slide: number) => {
-      onVisibleWizardStepChange?.(wizardStepIndexForSlide(slide, deckPlan));
+      const sectionId = sectionIdForSlide(slide, deckPlan);
+      if (sectionId) onVisibleSectionChange?.(sectionId);
     },
-    [deckPlan, onVisibleWizardStepChange],
+    [deckPlan, onVisibleSectionChange],
   );
 
   const previewPatch = useMemo(

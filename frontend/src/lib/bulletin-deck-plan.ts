@@ -179,6 +179,37 @@ export function worshipSlidesFromPlan(plan: BulletinDeckPlan | null | undefined)
   return plan.sections.find((s) => s.id === 'worship')?.slides ?? [];
 }
 
+/** 分区在预览 deck 中的首页（`data-slide`）；无 deck 或不存在该分区时返回 null */
+export function firstSlideForSection(
+  sectionId: string,
+  plan: BulletinDeckPlan | null | undefined,
+): number | null {
+  if (!plan || !sectionId) return null;
+  const section = plan.sections.find((s) => s.id === sectionId);
+  return section?.slides[0] ?? null;
+}
+
+/** 分区在预览 deck 中的全部演示页 */
+export function slidesForSection(
+  sectionId: string,
+  plan: BulletinDeckPlan | null | undefined,
+): number[] {
+  if (!plan || !sectionId) return [];
+  return plan.sections.find((s) => s.id === sectionId)?.slides ?? [];
+}
+
+/** 可见演示页 → 模板分区 id（读经加页归 scripture；未知页返回 null） */
+export function sectionIdForSlide(
+  slideNumber: number,
+  plan: BulletinDeckPlan | null | undefined,
+): string | null {
+  if (!plan || slideNumber < 1) return null;
+  const hit = plan.slides.find((s) => s.index === slideNumber);
+  if (!hit) return null;
+  if (hit.sectionId === 'unknown') return null;
+  return hit.sectionId;
+}
+
 export function slidesForWizardStepId(
   stepId: string,
   plan: BulletinDeckPlan | null | undefined,
