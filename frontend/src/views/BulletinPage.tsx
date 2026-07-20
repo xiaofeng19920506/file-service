@@ -17,6 +17,7 @@ import {
   BulletinBirthdayStep,
   BulletinMoreStep,
   BulletinOfferingStep,
+  BulletinPreServiceStep,
   BulletinScriptureStep,
   BulletinVerseStep,
 } from '../components/bulletin/BulletinWizardSteps';
@@ -393,13 +394,7 @@ export default function BulletinPage() {
     if (!draft) return null;
 
     if (activeSectionReadonly) {
-      const section = navSectionById(activeSectionId);
-      return (
-        <div className="bulletin-section-readonly">
-          <h3>{section ? t(section.labelKey) : t('bulletin.sectionReadonlyTitle')}</h3>
-          <p className="bulletin-step-intro">{t('bulletin.sectionReadonlyHint')}</p>
-        </div>
-      );
+      return null;
     }
 
     const common = {
@@ -425,6 +420,17 @@ export default function BulletinPage() {
                 slide: 1,
                 bump: (prev?.bump ?? 0) + 1,
               }))
+            }
+          />
+        );
+      case 'pre_service':
+        return (
+          <BulletinPreServiceStep
+            {...common}
+            onSave={() =>
+              void handleSaveFields({
+                preServiceChairNames: draft.preServiceChairNames,
+              })
             }
           />
         );

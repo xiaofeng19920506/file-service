@@ -190,6 +190,8 @@ export default {
     offeringQuarter: '季度奉献说明',
     birthdayMonth: '生日月份',
     birthdayNames: '生日名单',
+    preServiceChairNames: '主席 / 带领人姓名',
+    preServiceChairNamesHint: '每行一人，最多 4 人，例如：唐毅弟兄',
     staffMeeting: '同工会日期',
     testimonyShare: '见证分享日期',
     serviceRoster: '下主日服事轮值',
@@ -237,7 +239,6 @@ export default {
     sections: {
       cover: '封面',
       pre_service: '会前祷告',
-      pre_service_chairs: '会前祷告带领',
       scripture: '读经',
       worship: '敬拜赞美',
       communion: '圣餐',
@@ -277,7 +278,10 @@ export default {
     steps: {
       cover: '封面日期',
       coverTitle: '封面 · 主日日期',
-      coverIntro: '每周使用同一份 PPT 模板，本页只需修改主日日期与崇拜时间；第 2 页「主席会前祷告」固定不变，保存后自动接上。',
+      coverIntro: '每周使用同一份 PPT 模板，本页只需修改主日日期与崇拜时间。',
+      pre_service: '会前祷告',
+      preServiceTitle: '会前祷告',
+      preServiceIntro: '第 2 页为会前祷告标题页；若本周要在幻灯片上显示主席/带领人姓名，填写下方名单（写入第 3 页）。留空则保留模板原名。',
       scripture: '读经',
       scriptureTitle: '读经 · 第 4 页',
       scriptureIntro: '填写本週经卷与经节；标题「读经 / Scripture Reading」保持模板不变。',

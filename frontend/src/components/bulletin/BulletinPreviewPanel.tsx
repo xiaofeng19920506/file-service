@@ -144,12 +144,14 @@ export default function BulletinPreviewPanel({
       serviceTime: bulletin.serviceTime || '11:00',
       scriptureBook: bulletin.scriptureBook,
       scriptureReference: bulletin.scriptureReference,
+      preServiceChairNames: bulletin.preServiceChairNames,
     }),
     [
       bulletin.serviceDate,
       bulletin.serviceTime,
       bulletin.scriptureBook,
       bulletin.scriptureReference,
+      bulletin.preServiceChairNames,
     ],
   );
 

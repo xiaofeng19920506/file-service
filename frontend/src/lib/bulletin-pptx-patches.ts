@@ -31,6 +31,8 @@ export type SlideTextPatch = {
   replacements: SlideTextReplacement[];
   /** 封面日期行整段重写（避免 run 替换 + spAutoFit 换行错位） */
   coverLine?: { serviceDate: string; serviceTime: string };
+  /** 会前祷告 slide 3 带领人名单（整段重写） */
+  preServiceChairNames?: string;
   /** 读经 slide 5 中文正文 */
   scriptureChineseBody?: string;
   /** 读经 slide 6：中文续页或英文正文 */
@@ -76,6 +78,34 @@ function replaceShapeBlock(
   if (!loc) return xml;
   const block = xml.slice(loc.start, loc.end);
   return xml.slice(0, loc.start) + transform(block) + xml.slice(loc.end);
+}
+
+const PRE_SERVICE_CHAIR_SHAPE_ID = '283';
+
+function parsePreServiceChairNames(raw: string, max = 4): string[] {
+  return raw
+    .split(/[\n,，、]/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, max);
+}
+
+/** 与 shared/bulletin-pptx-patch 保持一致：重写 slide 3 带领人名单 */
+export function patchPreServiceChairNamesInSlideXml(xml: string, namesRaw: string): string {
+  const names = parsePreServiceChairNames(namesRaw);
+  if (!names.length) return xml;
+  const rPr =
+    '<a:rPr b="1" lang="en" sz="4000"><a:solidFill><a:srgbClr val="000000"/></a:solidFill><a:latin typeface="Arial"/><a:ea typeface="Arial"/><a:cs typeface="Arial"/><a:sym typeface="Arial"/></a:rPr>';
+  const paragraphs = names
+    .map(
+      (name) =>
+        `<a:p><a:pPr indent="0" lvl="0" marL="0" rtl="0" algn="l"><a:spcBef><a:spcPts val="1000"/></a:spcBef><a:spcAft><a:spcPts val="0"/></a:spcAft><a:buNone/></a:pPr><a:r>${rPr}<a:t>${escapeXml(name)}</a:t></a:r><a:endParaRPr b="1" sz="4000"><a:solidFill><a:srgbClr val="000000"/></a:solidFill><a:latin typeface="Arial"/><a:ea typeface="Arial"/><a:cs typeface="Arial"/><a:sym typeface="Arial"/></a:endParaRPr></a:p>`,
+    )
+    .join('');
+  const txBody = `<p:txBody><a:bodyPr anchorCtr="0" anchor="b" bIns="91425" lIns="91425" spcFirstLastPara="1" rIns="91425" wrap="square" tIns="91425"><a:spAutoFit/></a:bodyPr><a:lstStyle/>${paragraphs}</p:txBody>`;
+  return replaceShapeBlock(xml, PRE_SERVICE_CHAIR_SHAPE_ID, (shapeXml) =>
+    shapeXml.replace(/<p:txBody>[\s\S]*?<\/p:txBody>/, txBody),
+  );
 }
 
 /** 与 shared/bulletin-pptx-patch 保持一致 */
@@ -155,6 +185,16 @@ export function patchesForStep(stepId: string, bulletin: WeeklyBulletin): SlideT
     case 'cover':
       if (!bulletin.serviceDate) return [];
       return [buildCoverPatch(bulletin.serviceDate, bulletin.serviceTime)];
+    case 'pre_service':
+      return bulletin.preServiceChairNames?.trim()
+        ? [
+            {
+              slideNumber: 3,
+              replacements: [],
+              preServiceChairNames: bulletin.preServiceChairNames.trim(),
+            },
+          ]
+        : [];
     case 'scripture': {
       const patch = buildScripturePatch(bulletin);
       return patch ? [patch] : [];
@@ -246,6 +286,7 @@ function mergePatches(patches: SlideTextPatch[]): SlideTextPatch[] {
       slot.set(textIndex, text);
     }
     const extra: Omit<SlideTextPatch, 'slideNumber' | 'replacements'> = {};
+    if (patch.preServiceChairNames) extra.preServiceChairNames = patch.preServiceChairNames;
     if (patch.scriptureChineseBody) extra.scriptureChineseBody = patch.scriptureChineseBody;
     if (patch.scriptureSlide6) extra.scriptureSlide6 = patch.scriptureSlide6;
     if (Object.keys(extra).length) {
@@ -306,7 +347,16 @@ export async function patchesFromBulletin(bulletin: WeeklyBulletin): Promise<{
   scriptureBodies: ScriptureSlideBodies | null;
 }> {
   const scriptureBodies = await fetchScriptureBodiesForBulletin(bulletin);
-  const stepIds = ['cover', 'scripture', 'offering', 'birthday', 'announcements', 'verse', 'more'] as const;
+  const stepIds = [
+    'cover',
+    'pre_service',
+    'scripture',
+    'offering',
+    'birthday',
+    'announcements',
+    'verse',
+    'more',
+  ] as const;
   const groups = await Promise.all(
     stepIds.map((stepId) => patchesForStepAsync(stepId, bulletin, scriptureBodies)),
   );
@@ -354,6 +404,9 @@ export async function applySlidePatches(
         patch.coverLine.serviceDate,
         patch.coverLine.serviceTime,
       );
+    }
+    if (patch.preServiceChairNames) {
+      nextXml = patchPreServiceChairNamesInSlideXml(nextXml, patch.preServiceChairNames);
     }
     if (patch.replacements.length) {
       nextXml = applyIndexedTextReplacementsToSlideXml(nextXml, patch.replacements);

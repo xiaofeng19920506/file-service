@@ -11,6 +11,7 @@ type BulletinPptSlidePreviewProps = {
     serviceTime?: string;
     scriptureBook?: string;
     scriptureReference?: string;
+    preServiceChairNames?: string;
   };
   requireDate?: boolean;
   loading?: boolean;
@@ -52,6 +53,7 @@ export default function BulletinPptSlidePreview({
         serviceTime: patch?.serviceTime || '11:00',
         scriptureBook: patch?.scriptureBook,
         scriptureReference: patch?.scriptureReference,
+        preServiceChairNames: patch?.preServiceChairNames,
       })
         .then((blob) => {
           if (cancelled) return;
@@ -80,6 +82,7 @@ export default function BulletinPptSlidePreview({
     patch?.serviceTime,
     patch?.scriptureBook,
     patch?.scriptureReference,
+    patch?.preServiceChairNames,
     requireDate,
   ]);
 

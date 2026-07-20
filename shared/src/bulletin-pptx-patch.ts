@@ -177,16 +177,81 @@ export function patchScriptureSlideInSlideXml(
   return applyIndexedTextReplacementsToSlideXml(xml, replacements);
 }
 
+/** 会前祷告 slide 3 带领人名单 shape */
+const PRE_SERVICE_CHAIR_SHAPE_ID = '283';
+const PRE_SERVICE_CHAIR_MAX = 4;
+
+/** 解析会前祷告带领人（换行/逗号分隔，最多 4 人） */
+export function parsePreServiceChairNames(raw: string, max = PRE_SERVICE_CHAIR_MAX): string[] {
+  return raw
+    .split(/[\n,，、]/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, max);
+}
+
+function preServiceChairRunPr(): string {
+  return [
+    '<a:rPr b="1" lang="en" sz="4000">',
+    '<a:solidFill><a:srgbClr val="000000"/></a:solidFill>',
+    '<a:latin typeface="Arial"/><a:ea typeface="Arial"/><a:cs typeface="Arial"/><a:sym typeface="Arial"/>',
+    '</a:rPr>',
+  ].join('');
+}
+
+function preServiceChairParagraph(name: string): string {
+  const rPr = preServiceChairRunPr();
+  return [
+    '<a:p>',
+    '<a:pPr indent="0" lvl="0" marL="0" rtl="0" algn="l">',
+    '<a:spcBef><a:spcPts val="1000"/></a:spcBef>',
+    '<a:spcAft><a:spcPts val="0"/></a:spcAft>',
+    '<a:buNone/>',
+    '</a:pPr>',
+    `<a:r>${rPr}<a:t>${escapeXml(name)}</a:t></a:r>`,
+    '<a:endParaRPr b="1" sz="4000">',
+    '<a:solidFill><a:srgbClr val="000000"/></a:solidFill>',
+    '<a:latin typeface="Arial"/><a:ea typeface="Arial"/><a:cs typeface="Arial"/><a:sym typeface="Arial"/>',
+    '</a:endParaRPr>',
+    '</a:p>',
+  ].join('');
+}
+
+/**
+ * 重写 slide 3 带领人名单。有填写时按行替换；空则不改（保留模板）。
+ */
+export function patchPreServiceChairNamesInSlideXml(xml: string, namesRaw: string): string {
+  const names = parsePreServiceChairNames(namesRaw);
+  if (!names.length) return xml;
+
+  const paragraphs = names.map(preServiceChairParagraph).join('');
+  const txBody = [
+    '<p:txBody>',
+    '<a:bodyPr anchorCtr="0" anchor="b" bIns="91425" lIns="91425" spcFirstLastPara="1" rIns="91425" wrap="square" tIns="91425">',
+    '<a:spAutoFit/>',
+    '</a:bodyPr>',
+    '<a:lstStyle/>',
+    paragraphs,
+    '</p:txBody>',
+  ].join('');
+
+  return replaceShapeBlock(xml, PRE_SERVICE_CHAIR_SHAPE_ID, (shapeXml) =>
+    shapeXml.replace(/<p:txBody>[\s\S]*?<\/p:txBody>/, txBody),
+  );
+}
+
 export type BulletinPreviewPatchInput = {
   serviceDate?: string;
   serviceTime?: string;
   scriptureBook?: string;
   scriptureReference?: string;
+  /** 会前祷告带领人（slide 3），空则保留模板 */
+  preServiceChairNames?: string;
 };
 
 type PptxInputBytes = Buffer | Uint8Array;
 
-/** 预览/导出用：封面 + 读经标题与经文正文（slide 4–6） */
+/** 预览/导出用：封面 + 会前祷告名单 + 读经 */
 export async function patchBulletinPreviewInPptx(
   template: PptxInputBytes,
   input: BulletinPreviewPatchInput,
@@ -198,6 +263,18 @@ export async function patchBulletinPreviewInPptx(
       serviceTime: input.serviceTime,
     });
   }
+
+  const chairNames = input.preServiceChairNames?.trim() ?? '';
+  if (chairNames) {
+    const zip = await JSZip.loadAsync(buf);
+    const slide3 = zip.file('ppt/slides/slide3.xml');
+    if (slide3) {
+      const xml = await slide3.async('string');
+      zip.file('ppt/slides/slide3.xml', patchPreServiceChairNamesInSlideXml(xml, chairNames));
+      buf = await zip.generateAsync({ type: 'uint8array' });
+    }
+  }
+
   const book = input.scriptureBook?.trim() ?? '';
   const reference = input.scriptureReference?.trim() ?? '';
   if (!book && !reference) {

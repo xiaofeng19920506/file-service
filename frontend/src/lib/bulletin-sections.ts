@@ -13,12 +13,7 @@ export type BulletinNavSection = {
  */
 export const BULLETIN_NAV_SECTIONS: BulletinNavSection[] = [
   { id: 'cover', labelKey: 'bulletin.sections.cover', editableStepId: 'cover' },
-  { id: 'pre_service', labelKey: 'bulletin.sections.pre_service', editableStepId: null },
-  {
-    id: 'pre_service_chairs',
-    labelKey: 'bulletin.sections.pre_service_chairs',
-    editableStepId: null,
-  },
+  { id: 'pre_service', labelKey: 'bulletin.sections.pre_service', editableStepId: 'pre_service' },
   { id: 'scripture', labelKey: 'bulletin.sections.scripture', editableStepId: 'scripture' },
   { id: 'worship', labelKey: 'bulletin.sections.worship', editableStepId: 'worship' },
   { id: 'communion', labelKey: 'bulletin.sections.communion', editableStepId: null },

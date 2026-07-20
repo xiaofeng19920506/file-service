@@ -174,6 +174,23 @@ export function BulletinBirthdayStep({ draft, canEdit, saving, onPatch, onSave }
   );
 }
 
+export function BulletinPreServiceStep({ draft, canEdit, saving, onPatch, onSave }: BulletinStepPanelProps) {
+  const { t } = useI18n();
+  return (
+    <StepShell titleKey="bulletin.steps.preServiceTitle" introKey="bulletin.steps.preServiceIntro">
+      <TextField
+        label={t('bulletin.preServiceChairNames')}
+        value={draft.preServiceChairNames ?? ''}
+        disabled={!canEdit}
+        multiline
+        onChange={(v) => onPatch('preServiceChairNames', v)}
+      />
+      <p className="bulletin-field-hint">{t('bulletin.preServiceChairNamesHint')}</p>
+      <SaveButton saving={saving} canEdit={canEdit} onSave={onSave} />
+    </StepShell>
+  );
+}
+
 export type AnnouncementDraft = {
   key: string;
   category?: string;

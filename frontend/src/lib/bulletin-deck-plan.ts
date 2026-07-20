@@ -16,8 +16,7 @@ type TemplateSlideSection = { id: string; slides: number[] };
  */
 export const BULLETIN_TEMPLATE_SLIDE_SECTIONS: TemplateSlideSection[] = [
   { id: 'cover', slides: [1] },
-  { id: 'pre_service', slides: [2] },
-  { id: 'pre_service_chairs', slides: [3] },
+  { id: 'pre_service', slides: [2, 3] },
   { id: 'scripture', slides: [4, 5, 6] },
   { id: 'worship', slides: [7, 8, 9] },
   { id: 'communion', slides: [10, 11, 12, 13] },
@@ -42,6 +41,7 @@ export const BULLETIN_TEMPLATE_SLIDE_SECTIONS: TemplateSlideSection[] = [
 /** 向导步骤对应的模板分区 */
 export const WIZARD_STEP_SECTION_IDS: Record<string, readonly string[]> = {
   cover: ['cover'],
+  pre_service: ['pre_service'],
   scripture: ['scripture'],
   worship: ['worship'],
   offering: ['offering'],
@@ -86,15 +86,26 @@ function buildSlideInFileToSection(sections: TemplateSlideSection[]): Map<number
   return map;
 }
 
-function assignSectionId(
-  slide: { index: number; slideInFile: number },
-  worshipPresentationIndex: number,
-  slideInFileToSection: Map<number, string>,
-): string {
-  const direct = slideInFileToSection.get(slide.slideInFile);
-  if (direct) return direct;
-  if (slide.index < worshipPresentationIndex) return 'scripture';
-  return 'unknown';
+/**
+ * 按演示顺序打分区：碰到模板锚点就切换，否则延续当前分区。
+ * 任意分区中间加页（如读经 4/5 页）都会留在该分区，不写死页数。
+ */
+export function assignSectionsInPresentationOrder(
+  parsed: readonly { index: number; slideInFile: number }[],
+  templateSections: TemplateSlideSection[] = BULLETIN_TEMPLATE_SLIDE_SECTIONS,
+): BulletinDeckSlide[] {
+  const slideInFileToSection = buildSlideInFileToSection(templateSections);
+  let currentSectionId = templateSections[0]?.id ?? 'unknown';
+
+  return parsed.map((slide) => {
+    const mapped = slideInFileToSection.get(slide.slideInFile);
+    if (mapped) currentSectionId = mapped;
+    return {
+      index: slide.index,
+      slideInFile: slide.slideInFile,
+      sectionId: currentSectionId,
+    };
+  });
 }
 
 function groupSections(slides: BulletinDeckSlide[]): BulletinDeckSection[] {
@@ -126,19 +137,11 @@ function buildWizardSteps(sections: BulletinDeckSection[]): BulletinDeckWizardSt
 
 /**
  * 从已补丁的 PPTX（放映顺序与预览 PNG API 一致）生成分区映射。
- * 演示页码与右侧预览 `data-slide` 一一对应，不依赖模板固定页码。
+ * 演示页码与右侧预览 `data-slide` 一一对应；各分区页数随加页/删页变化。
  */
 export async function buildBulletinDeckPlanFromFile(file: Blob): Promise<BulletinDeckPlan> {
   const parsed = await listPptxSlidesInPresentationOrder(file);
-  const slideInFileToSection = buildSlideInFileToSection(BULLETIN_TEMPLATE_SLIDE_SECTIONS);
-  const worshipPresentationIndex = parsed.find((s) => s.slideInFile === 7)?.index ?? 7;
-
-  const slides: BulletinDeckSlide[] = parsed.map((slide) => ({
-    index: slide.index,
-    slideInFile: slide.slideInFile,
-    sectionId: assignSectionId(slide, worshipPresentationIndex, slideInFileToSection),
-  }));
-
+  const slides = assignSectionsInPresentationOrder(parsed);
   const sections = groupSections(slides);
   return {
     totalSlides: slides.length,
@@ -251,7 +254,5 @@ export function slidesForWizardStepId(
     const entry = plan.wizardSteps.find((w) => w.stepId === stepId);
     if (entry) return entry.slides;
   }
-  const step = BULLETIN_WIZARD_STEPS.find((s) => s.id === stepId);
-  if (!step) return [];
-  return [...step.slides, ...(step.companionStaticSlides ?? [])];
+  return [];
 }

@@ -150,4 +150,16 @@ describe('patchScriptureSlideInSlideXml', () => {
     const slide5 = await zip.file('ppt/slides/slide5.xml')!.async('string');
     expect(slide5).toContain('讚美耶和華');
   });
+
+  it('patches pre-service chair names on slide 3', async () => {
+    const tpl = await readFile(templatePath);
+    const patched = await patchBulletinPreviewInPptx(tpl, {
+      preServiceChairNames: '王凯弟兄\n李振成弟兄',
+    });
+    const zip = await JSZip.loadAsync(patched);
+    const slide3 = await zip.file('ppt/slides/slide3.xml')!.async('string');
+    expect(slide3).toContain('王凯弟兄');
+    expect(slide3).toContain('李振成弟兄');
+    expect(slide3).not.toContain('唐毅');
+  });
 });

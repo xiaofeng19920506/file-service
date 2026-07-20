@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { patchBulletinPreviewInPptx } from '../../../shared/src/bulletin-pptx-patch.js';
 import { resolveScriptureSlideBodies } from '../../../shared/src/bible-text.js';
-import { buildBulletinDeckPlanFromFile, composeDeckSectionsForPreview, firstSlideForSection, sectionIdForSlide } from './bulletin-deck-plan';
+import { buildBulletinDeckPlanFromFile, composeDeckSectionsForPreview, assignSectionsInPresentationOrder, firstSlideForSection, sectionIdForSlide } from './bulletin-deck-plan';
 import { buildPreviewMatchingPptx } from './bulletin-preview-pptx';
 import { listPptxSlidesInPresentationOrder } from './pptx-preview';
 
@@ -113,9 +113,7 @@ describe('bulletin deck plan', () => {
     expect(composed[0]?.id).toBe('cover');
     expect(composed[0]?.slides).toEqual([1]);
     expect(composed[1]?.id).toBe('pre_service');
-    expect(composed[1]?.slides).toEqual([2]);
-    expect(composed[2]?.id).toBe('pre_service_chairs');
-    expect(composed[2]?.slides).toEqual([3]);
+    expect(composed[1]?.slides).toEqual([2, 3]);
     expect(composed.find((s) => s.id === 'scripture')?.slides[0]).toBe(4);
 
     const coverStep = plan.wizardSteps.find((w) => w.stepId === 'cover');
@@ -123,11 +121,9 @@ describe('bulletin deck plan', () => {
 
     const ids = composed.map((s) => s.id);
     expect(ids.indexOf('cover')).toBeLessThan(ids.indexOf('pre_service'));
-    expect(ids.indexOf('pre_service')).toBeLessThan(ids.indexOf('pre_service_chairs'));
-    expect(ids.indexOf('pre_service_chairs')).toBeLessThan(ids.indexOf('scripture'));
+    expect(ids.indexOf('pre_service')).toBeLessThan(ids.indexOf('scripture'));
     expect(ids.indexOf('worship')).toBeLessThan(ids.indexOf('communion'));
 
-    // 读经加页不得并入会前祷告
     const pre = composed.find((s) => s.id === 'pre_service')!;
     const scripture = composed.find((s) => s.id === 'scripture')!;
     expect(scripture.slides.length).toBeGreaterThanOrEqual(3);
@@ -135,7 +131,25 @@ describe('bulletin deck plan', () => {
       expect(scripture.slides).not.toContain(slide);
     }
     expect(sectionIdForSlide(2, plan)).toBe('pre_service');
-    expect(sectionIdForSlide(3, plan)).toBe('pre_service_chairs');
+    expect(sectionIdForSlide(3, plan)).toBe('pre_service');
     expect(sectionIdForSlide(4, plan)).toBe('scripture');
+  });
+
+  it('keeps expanded pages inside their section via presentation-order anchors', () => {
+    const slides = assignSectionsInPresentationOrder([
+      { index: 1, slideInFile: 1 },
+      { index: 2, slideInFile: 2 },
+      { index: 3, slideInFile: 3 },
+      { index: 4, slideInFile: 4 },
+      { index: 5, slideInFile: 5 },
+      { index: 6, slideInFile: 39 },
+      { index: 7, slideInFile: 40 },
+      { index: 8, slideInFile: 6 },
+      { index: 9, slideInFile: 7 },
+    ]);
+    expect(slides.filter((s) => s.sectionId === 'scripture').map((s) => s.index)).toEqual([
+      4, 5, 6, 7, 8,
+    ]);
+    expect(slides.find((s) => s.index === 9)?.sectionId).toBe('worship');
   });
 });

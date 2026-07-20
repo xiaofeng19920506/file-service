@@ -82,7 +82,7 @@ export default function BulletinWorshipMaximizeOverlay({
       .then((parsed) => {
         if (!cancelled) {
           setSlides(parsed);
-          const worshipIdx = parsed.findIndex((s) => s.index === 7);
+          const worshipIdx = parsed.findIndex((s) => s.slideInFile === 7);
           setSlideIndex(worshipIdx >= 0 ? worshipIdx : 0);
         }
       })

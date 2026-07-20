@@ -198,6 +198,8 @@ const en: MessageTree = {
     offeringQuarter: 'Quarter offering label',
     birthdayMonth: 'Birthday month',
     birthdayNames: 'Birthday names',
+    preServiceChairNames: 'Chair / prayer leaders',
+    preServiceChairNamesHint: 'One name per line, up to 4 (e.g. 唐毅弟兄)',
     staffMeeting: 'Staff meeting date',
     testimonyShare: 'Testimony share date',
     serviceRoster: 'Next Sunday roster',
@@ -247,7 +249,6 @@ const en: MessageTree = {
     sections: {
       cover: 'Cover',
       pre_service: 'Pre-service prayer',
-      pre_service_chairs: 'Prayer leaders',
       scripture: 'Scripture',
       worship: 'Praise & worship',
       communion: 'Communion',
@@ -287,7 +288,11 @@ const en: MessageTree = {
     steps: {
       cover: 'Cover date',
       coverTitle: 'Cover · service date',
-      coverIntro: 'Edit the service date and time on slide 1 only; slide 2 (chair pre-service prayer) stays fixed and follows automatically.',
+      coverIntro: 'Edit the service date and time on slide 1.',
+      pre_service: 'Pre-service prayer',
+      preServiceTitle: 'Pre-service prayer',
+      preServiceIntro:
+        'Slide 2 is the prayer title page. To show chair/leader names on the deck, enter them below (written to slide 3). Leave blank to keep the template names.',
       scripture: 'Scripture',
       scriptureTitle: 'Scripture · slide 4',
       scriptureIntro: 'Weekly book name and verse range; the Scripture Reading title is not edited.',

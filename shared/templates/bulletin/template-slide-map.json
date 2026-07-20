@@ -6,9 +6,8 @@
   "nativeHiddenSlides": [],
   "sections": [
     { "id": "cover", "slides": [1], "role": "service_date", "notes": "封面：主日日期 06/14/2026、崇拜时间 11:00" },
-    { "id": "pre_service", "slides": [2], "role": "static", "notes": "会前祷告（仅第 2 页）" },
-    { "id": "pre_service_chairs", "slides": [3], "role": "chair_names", "notes": "会前祷告带领人名单（可选；有名单时显示）" },
-    { "id": "scripture", "slides": [4, 5, 6], "role": "scripture_passage", "notes": "读经：书名与经节（slide 4）；中英文正文（5–6）" },
+    { "id": "pre_service", "slides": [2, 3], "role": "chair_names", "notes": "会前祷告：第 2 页标题页；第 3 页可改主席/带领人姓名" },
+    { "id": "scripture", "slides": [4, 5, 6], "role": "scripture_passage", "notes": "读经：书名与经节（slide 4）；中英文正文（5–6），页数随经文变长" },
     { "id": "worship", "slides": [7, 8, 9], "role": "worship_break", "notes": "敬拜赞美段落；敬拜团可跳转歌单或继续 PPT" },
     { "id": "communion", "slides": [10, 11, 12, 13], "role": "static", "notes": "圣餐" },
     { "id": "welcome", "slides": [14], "role": "static", "notes": "欢迎新朋友" },
