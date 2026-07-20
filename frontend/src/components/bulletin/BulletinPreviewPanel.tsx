@@ -83,6 +83,8 @@ export default function BulletinPreviewPanel({
     bulletin.serviceTime,
     bulletin.scriptureBook,
     bulletin.scriptureReference,
+    bulletin.showPreServiceChairName,
+    bulletin.preServiceChairNames,
     bulletin.skipTestimonyWeek,
     bulletin.skipDepartmentReports,
     bulletin.weeklyMeetingVariant,
