@@ -6,7 +6,7 @@ import {
   patchPreServiceChairNameOnSlide2Xml,
 } from './bulletin-pptx-patches';
 import { applyIndexedTextReplacementsToSlideXml } from './pptx-preview';
-import { removeSlidesFromPptxZip } from '../../../shared/src/pptx-duplicate-slide.js';
+import { removeSlidesFromPptxZip } from './pptx-duplicate-slide';
 
 const PPTX_MIME =
   'application/vnd.openxmlformats-officedocument.presentationml.presentation';
