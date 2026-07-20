@@ -226,9 +226,12 @@ const en: MessageTree = {
     coverPreviewEmpty: 'Pick a service date to preview the cover',
     editorPanel: 'Bulletin editor',
     previewTitle: 'PPT preview',
-    previewHint: 'Scroll through every slide in the PPT (LibreOffice render). Cover date/time follow the form; highlighted slides match the current step',
+    previewHint:
+      'Browse the PPT by composed sections (LibreOffice). Cover, pre-service prayer, etc. are separate blocks; highlighted slides match the current section',
     previewDeckMeta: '{count} slides',
     previewDeckHighlightNote: 'highlighted = preview section',
+    previewSectionComposeMeta: '{count} sections',
+    previewSectionPages: '{count} slides',
     previewPlanLoading: 'Calculating slide layout…',
     previewUnavailableHint: 'Install LibreOffice on the API server to enable slide preview, or download the PPT to view in PowerPoint.',
     previewSlideSingle: 'PPT page {page}',

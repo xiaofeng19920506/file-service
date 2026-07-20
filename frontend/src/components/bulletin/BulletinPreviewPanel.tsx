@@ -51,9 +51,9 @@ export default function BulletinPreviewPanel({
   const [worshipItems, setWorshipItems] = useState<PlaylistItem[]>([]);
   const [worshipPlaylistTitle, setWorshipPlaylistTitle] = useState('');
 
-  const requestScroll = useCallback((slide: number) => {
+  const requestScroll = useCallback((slide: number, sectionId?: string) => {
     if (slide < 1) return;
-    setScrollRequest((prev) => ({ slide, id: prev.id + 1 }));
+    setScrollRequest((prev) => ({ slide, id: prev.id + 1, sectionId }));
   }, []);
 
   useEffect(() => {
@@ -91,13 +91,14 @@ export default function BulletinPreviewPanel({
   useEffect(() => {
     if (!deckPlan) return;
     const slide = firstSlideForSection(scrollToSectionId, deckPlan);
-    if (slide != null) requestScroll(slide);
+    if (slide != null) requestScroll(slide, scrollToSectionId);
   }, [scrollToSectionId, scrollToSectionBump, deckPlan, requestScroll]);
 
   useEffect(() => {
     if (!deckPlan || !scrollToPresentationSlide) return;
     requestScroll(scrollToPresentationSlide.slide);
   }, [scrollToPresentationSlide?.bump, deckPlan, requestScroll, scrollToPresentationSlide]);
+
 
   useEffect(() => {
     if (!bulletin.servicePlaylistId) {
@@ -172,6 +173,7 @@ export default function BulletinPreviewPanel({
         bulletin={bulletin}
         deckPlan={deckPlan}
         highlightSlides={highlightSlides}
+        highlightSectionId={highlightSectionId}
         scrollRequest={scrollRequest}
         worshipItems={worshipItems}
         worshipPlaylistTitle={worshipPlaylistTitle}

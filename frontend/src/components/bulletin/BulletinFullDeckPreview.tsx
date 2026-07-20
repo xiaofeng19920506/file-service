@@ -3,7 +3,11 @@ import type { WeeklyBulletin } from '../../api/bulletins';
 import type { PlaylistItem } from '../../api/playlists';
 import { useI18n } from '../../i18n';
 import type { BulletinDeckPlan } from '../../lib/bulletin-deck-plan';
-import { worshipFirstPresentationSlide } from '../../lib/bulletin-deck-plan';
+import {
+  composeDeckSectionsForPreview,
+  worshipFirstPresentationSlide,
+} from '../../lib/bulletin-deck-plan';
+import { navSectionById } from '../../lib/bulletin-sections';
 import { nextSundayIso } from '../../lib/bulletin-date';
 import BulletinPptSlidePreview from './BulletinPptSlidePreview';
 import BulletinWorshipEmbeddedPlayer, {
@@ -13,6 +17,7 @@ import BulletinWorshipEmbeddedPlayer, {
 export type BulletinPreviewScrollRequest = {
   slide: number;
   id: number;
+  sectionId?: string;
 };
 
 type DeckSlideItemProps = {
@@ -80,19 +85,30 @@ function DeckSlideItem({
   );
 }
 
-function scrollSlideIntoDeck(root: HTMLElement, slideNumber: number, behavior: ScrollBehavior): boolean {
-  const el = root.querySelector<HTMLElement>(`[data-slide="${slideNumber}"]`);
+function scrollTargetIntoDeck(
+  root: HTMLElement,
+  opts: { slide: number; sectionId?: string },
+  behavior: ScrollBehavior,
+): boolean {
+  if (opts.sectionId) {
+    const section = root.querySelector<HTMLElement>(`[data-section="${opts.sectionId}"]`);
+    if (section) {
+      section.scrollIntoView({ behavior, block: 'start' });
+      return true;
+    }
+  }
+  const el = root.querySelector<HTMLElement>(`[data-slide="${opts.slide}"]`);
   if (!el) return false;
   el.scrollIntoView({ behavior, block: 'start' });
   return true;
 }
 
-function runScrollToSlide(root: HTMLElement, slide: number): void {
-  scrollSlideIntoDeck(root, slide, 'auto');
+function runScrollToTarget(root: HTMLElement, opts: { slide: number; sectionId?: string }): void {
+  scrollTargetIntoDeck(root, opts, 'auto');
   window.requestAnimationFrame(() => {
-    scrollSlideIntoDeck(root, slide, 'auto');
+    scrollTargetIntoDeck(root, opts, 'auto');
     window.requestAnimationFrame(() => {
-      scrollSlideIntoDeck(root, slide, 'smooth');
+      scrollTargetIntoDeck(root, opts, 'smooth');
     });
   });
 }
@@ -101,6 +117,7 @@ type BulletinFullDeckPreviewProps = {
   bulletin: WeeklyBulletin;
   deckPlan: BulletinDeckPlan | null;
   highlightSlides?: number[];
+  highlightSectionId?: string;
   scrollRequest?: BulletinPreviewScrollRequest | null;
   worshipItems?: PlaylistItem[];
   worshipPlaylistTitle?: string;
@@ -111,6 +128,7 @@ export default function BulletinFullDeckPreview({
   bulletin,
   deckPlan,
   highlightSlides = [],
+  highlightSectionId = '',
   scrollRequest = null,
   worshipItems = [],
   worshipPlaylistTitle = '',
@@ -122,6 +140,11 @@ export default function BulletinFullDeckPreview({
   const highlightSet = useMemo(() => new Set(highlightSlides), [highlightSlides]);
 
   const worshipFirstSlide = worshipFirstPresentationSlide(deckPlan);
+
+  const composedSections = useMemo(
+    () => (deckPlan ? composeDeckSectionsForPreview(deckPlan) : []),
+    [deckPlan],
+  );
 
   const patch = useMemo(
     () => ({
@@ -148,11 +171,12 @@ export default function BulletinFullDeckPreview({
     const root = scrollRootRef.current;
     if (!root) return;
 
-    runScrollToSlide(root, slide);
+    const target = { slide, sectionId: scrollRequest.sectionId };
+    runScrollToTarget(root, target);
 
     const retryTimers = [80, 220, 500].map((delay) =>
       window.setTimeout(() => {
-        runScrollToSlide(root, slide);
+        runScrollToTarget(root, target);
         if (delay === 500) {
           scrollSyncUntilRef.current = Date.now() + 200;
         }
@@ -160,7 +184,7 @@ export default function BulletinFullDeckPreview({
     );
 
     return () => retryTimers.forEach((timer) => window.clearTimeout(timer));
-  }, [scrollRequest?.id, scrollRequest?.slide, deckPlan]);
+  }, [scrollRequest?.id, scrollRequest?.slide, scrollRequest?.sectionId, deckPlan]);
 
   const reportVisibleSlide = useCallback(() => {
     if (!onVisibleSlideChange || Date.now() < scrollSyncUntilRef.current) return;
@@ -170,7 +194,6 @@ export default function BulletinFullDeckPreview({
     const rootRect = root.getBoundingClientRect();
     if (rootRect.height < 8) return;
 
-    // 取视口上半区“锚点”之上的最后一页，更接近用户当前阅读位置
     const anchorY = rootRect.top + Math.min(160, rootRect.height * 0.28);
     let bestSlide = 0;
     let bestTop = Number.NEGATIVE_INFINITY;
@@ -223,11 +246,6 @@ export default function BulletinFullDeckPreview({
     };
   }, [onVisibleSlideChange, reportVisibleSlide, deckPlan]);
 
-  const slides = useMemo(
-    () => (deckPlan ? Array.from({ length: deckPlan.totalSlides }, (_, i) => i + 1) : []),
-    [deckPlan],
-  );
-
   if (!deckPlan) {
     return (
       <div className="bulletin-deck-preview bulletin-deck-preview--loading-plan">
@@ -241,23 +259,45 @@ export default function BulletinFullDeckPreview({
     <div ref={scrollRootRef} className="bulletin-deck-preview">
       <p className="bulletin-deck-preview-meta">
         {t('bulletin.previewDeckMeta', { count: deckPlan.totalSlides })}
+        {` · ${t('bulletin.previewSectionComposeMeta', { count: composedSections.length })}`}
         {highlightSlides.length > 0 ? ` · ${t('bulletin.previewDeckHighlightNote')}` : ''}
       </p>
-      {slides.map((page) => (
-        <DeckSlideItem
-          key={page}
-          slideNumber={page}
-          patch={patch}
-          highlight={highlightSet.has(page)}
-          label={t('bulletin.previewSlideSingle', { page })}
-          emptyLabel={t('bulletin.coverPreviewEmpty')}
-          bulletinId={bulletin.id}
-          worshipPlaylistId={bulletin.servicePlaylistId}
-          worshipPlaylistTitle={worshipPlaylistTitle}
-          worshipItems={worshipItems}
-          worshipFirstSlide={worshipFirstSlide}
-        />
-      ))}
+      {composedSections.map((section) => {
+        const nav = navSectionById(section.id);
+        const title = nav ? t(nav.labelKey) : section.id;
+        const active = highlightSectionId === section.id;
+        return (
+          <section
+            key={section.id}
+            className={`bulletin-deck-section${active ? ' bulletin-deck-section--active' : ''}`}
+            data-section={section.id}
+          >
+            <header className="bulletin-deck-section-header">
+              <h3 className="bulletin-deck-section-title">{title}</h3>
+              <span className="bulletin-deck-section-pages">
+                {t('bulletin.previewSectionPages', { count: section.slides.length })}
+              </span>
+            </header>
+            <div className="bulletin-deck-section-slides">
+              {section.slides.map((page) => (
+                <DeckSlideItem
+                  key={page}
+                  slideNumber={page}
+                  patch={patch}
+                  highlight={highlightSet.has(page)}
+                  label={t('bulletin.previewSlideSingle', { page })}
+                  emptyLabel={t('bulletin.coverPreviewEmpty')}
+                  bulletinId={bulletin.id}
+                  worshipPlaylistId={bulletin.servicePlaylistId}
+                  worshipPlaylistTitle={worshipPlaylistTitle}
+                  worshipItems={worshipItems}
+                  worshipFirstSlide={worshipFirstSlide}
+                />
+              ))}
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 }

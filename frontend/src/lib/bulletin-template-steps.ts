@@ -1,6 +1,3 @@
-/** 封面之后自动接上的固定页（模板原样，不在 stepper 中编辑） */
-export const BULLETIN_STATIC_SLIDES_AFTER_COVER = [2] as const;
-
 /** 周报编辑向导步骤（按 PPT 模板分区，静态页后续可标记为跳过） */
 export type BulletinWizardStep = {
   id: string;
@@ -28,7 +25,6 @@ export const BULLETIN_WIZARD_STEPS: BulletinWizardStep[] = [
     id: 'cover',
     sectionId: 'cover',
     slides: [1],
-    companionStaticSlides: BULLETIN_STATIC_SLIDES_AFTER_COVER,
     labelKey: 'bulletin.steps.cover',
     enabled: true,
   },

@@ -6,6 +6,7 @@ import {
 import { buildPreviewMatchingPptx } from './bulletin-preview-pptx';
 import { listPptxSlidesInPresentationOrder } from './pptx-preview';
 import { BULLETIN_WIZARD_STEPS } from './bulletin-template-steps';
+import { BULLETIN_NAV_SECTIONS } from './bulletin-sections';
 
 type TemplateSlideSection = { id: string; slides: number[] };
 
@@ -39,7 +40,7 @@ export const BULLETIN_TEMPLATE_SLIDE_SECTIONS: TemplateSlideSection[] = [
 
 /** 向导步骤对应的模板分区 */
 export const WIZARD_STEP_SECTION_IDS: Record<string, readonly string[]> = {
-  cover: ['cover', 'pre_service'],
+  cover: ['cover'],
   scripture: ['scripture'],
   worship: ['worship'],
   offering: ['offering'],
@@ -163,6 +164,32 @@ export async function buildBulletinDeckPlan(bulletin: WeeklyBulletin): Promise<B
     'bulletin-deck-plan.pptx',
   );
   return buildBulletinDeckPlanFromFile(file);
+}
+
+/** 按导航顺序拼装预览分区（像 code splitting 后再 compose） */
+export function composeDeckSectionsForPreview(plan: BulletinDeckPlan): BulletinDeckSection[] {
+  const byId = new Map(plan.sections.map((s) => [s.id, s]));
+  const ordered: BulletinDeckSection[] = [];
+
+  for (const nav of BULLETIN_NAV_SECTIONS) {
+    const section = byId.get(nav.id);
+    if (section?.slides.length) {
+      ordered.push({ id: section.id, slides: [...section.slides] });
+      byId.delete(nav.id);
+    }
+  }
+
+  for (const leftover of byId.values()) {
+    if (!leftover.slides.length) continue;
+    if (leftover.id === 'unknown' && ordered.length) {
+      const last = ordered[ordered.length - 1]!;
+      last.slides.push(...leftover.slides);
+      continue;
+    }
+    ordered.push({ id: leftover.id, slides: [...leftover.slides] });
+  }
+
+  return ordered;
 }
 
 /** 预览 deck 中敬拜段的首个演示页（`data-slide`），无 deck 时返回 null */

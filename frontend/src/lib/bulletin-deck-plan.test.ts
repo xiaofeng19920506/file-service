@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { patchBulletinPreviewInPptx } from '../../../shared/src/bulletin-pptx-patch.js';
 import { resolveScriptureSlideBodies } from '../../../shared/src/bible-text.js';
-import { buildBulletinDeckPlanFromFile, firstSlideForSection, sectionIdForSlide } from './bulletin-deck-plan';
+import { buildBulletinDeckPlanFromFile, composeDeckSectionsForPreview, firstSlideForSection, sectionIdForSlide } from './bulletin-deck-plan';
 import { buildPreviewMatchingPptx } from './bulletin-preview-pptx';
 import { listPptxSlidesInPresentationOrder } from './pptx-preview';
 
@@ -103,5 +103,27 @@ describe('bulletin deck plan', () => {
     for (const slide of scriptureSlides) {
       expect(sectionIdForSlide(slide, plan)).toBe('scripture');
     }
+  });
+
+  it('composes preview as discrete template sections (cover ≠ pre_service)', async () => {
+    const file = await patchedPreviewFile('119:1-8');
+    const plan = await buildBulletinDeckPlanFromFile(file);
+    const composed = composeDeckSectionsForPreview(plan);
+
+    expect(composed[0]?.id).toBe('cover');
+    expect(composed[0]?.slides).toEqual([1]);
+    expect(composed[1]?.id).toBe('pre_service');
+    expect(composed[1]?.slides.length).toBeGreaterThanOrEqual(1);
+    expect(composed.find((s) => s.id === 'cover')?.slides).not.toEqual(
+      composed.find((s) => s.id === 'pre_service')?.slides,
+    );
+
+    const coverStep = plan.wizardSteps.find((w) => w.stepId === 'cover');
+    expect(coverStep?.slides).toEqual([1]);
+
+    const ids = composed.map((s) => s.id);
+    expect(ids.indexOf('cover')).toBeLessThan(ids.indexOf('pre_service'));
+    expect(ids.indexOf('pre_service')).toBeLessThan(ids.indexOf('scripture'));
+    expect(ids.indexOf('worship')).toBeLessThan(ids.indexOf('communion'));
   });
 });
