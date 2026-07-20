@@ -113,8 +113,8 @@ describe('bulletin deck plan', () => {
     expect(composed[0]?.id).toBe('cover');
     expect(composed[0]?.slides).toEqual([1]);
     expect(composed[1]?.id).toBe('pre_service');
-    expect(composed[1]?.slides).toEqual([2, 3]);
-    expect(composed.find((s) => s.id === 'scripture')?.slides[0]).toBe(4);
+    expect(composed[1]?.slides).toEqual([2]);
+    expect(composed.find((s) => s.id === 'scripture')?.slides[0]).toBe(3);
 
     const coverStep = plan.wizardSteps.find((w) => w.stepId === 'cover');
     expect(coverStep?.slides).toEqual([1]);
@@ -126,30 +126,30 @@ describe('bulletin deck plan', () => {
 
     const pre = composed.find((s) => s.id === 'pre_service')!;
     const scripture = composed.find((s) => s.id === 'scripture')!;
+    expect(pre.slides).toHaveLength(1);
     expect(scripture.slides.length).toBeGreaterThanOrEqual(3);
     for (const slide of pre.slides) {
       expect(scripture.slides).not.toContain(slide);
     }
     expect(sectionIdForSlide(2, plan)).toBe('pre_service');
-    expect(sectionIdForSlide(3, plan)).toBe('pre_service');
-    expect(sectionIdForSlide(4, plan)).toBe('scripture');
+    expect(sectionIdForSlide(3, plan)).toBe('scripture');
   });
 
   it('keeps expanded pages inside their section via presentation-order anchors', () => {
     const slides = assignSectionsInPresentationOrder([
       { index: 1, slideInFile: 1 },
       { index: 2, slideInFile: 2 },
-      { index: 3, slideInFile: 3 },
-      { index: 4, slideInFile: 4 },
-      { index: 5, slideInFile: 5 },
-      { index: 6, slideInFile: 39 },
-      { index: 7, slideInFile: 40 },
-      { index: 8, slideInFile: 6 },
-      { index: 9, slideInFile: 7 },
+      { index: 3, slideInFile: 4 },
+      { index: 4, slideInFile: 5 },
+      { index: 5, slideInFile: 39 },
+      { index: 6, slideInFile: 40 },
+      { index: 7, slideInFile: 6 },
+      { index: 8, slideInFile: 7 },
     ]);
+    expect(slides.filter((s) => s.sectionId === 'pre_service').map((s) => s.index)).toEqual([2]);
     expect(slides.filter((s) => s.sectionId === 'scripture').map((s) => s.index)).toEqual([
-      4, 5, 6, 7, 8,
+      3, 4, 5, 6, 7,
     ]);
-    expect(slides.find((s) => s.index === 9)?.sectionId).toBe('worship');
+    expect(slides.find((s) => s.index === 8)?.sectionId).toBe('worship');
   });
 });

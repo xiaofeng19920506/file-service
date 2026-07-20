@@ -32,7 +32,7 @@ export const BULLETIN_WIZARD_STEPS: BulletinWizardStep[] = [
   {
     id: 'pre_service',
     sectionId: 'pre_service',
-    slides: [2, 3],
+    slides: [2],
     labelKey: 'bulletin.steps.pre_service',
     enabled: true,
   },

@@ -151,15 +151,16 @@ describe('patchScriptureSlideInSlideXml', () => {
     expect(slide5).toContain('讚美耶和華');
   });
 
-  it('patches pre-service chair names on slide 3', async () => {
+  it('patches chair name on slide 2 and removes slide 3', async () => {
     const tpl = await readFile(templatePath);
     const patched = await patchBulletinPreviewInPptx(tpl, {
-      preServiceChairNames: '王凯弟兄\n李振成弟兄',
+      showPreServiceChairName: true,
+      preServiceChairNames: '王凯弟兄',
     });
     const zip = await JSZip.loadAsync(patched);
-    const slide3 = await zip.file('ppt/slides/slide3.xml')!.async('string');
-    expect(slide3).toContain('王凯弟兄');
-    expect(slide3).toContain('李振成弟兄');
-    expect(slide3).not.toContain('唐毅');
+    expect(zip.file('ppt/slides/slide3.xml')).toBeNull();
+    const slide2 = await zip.file('ppt/slides/slide2.xml')!.async('string');
+    expect(slide2).toContain('王凯弟兄');
+    expect(slide2).toContain('主席會前禱');
   });
 });

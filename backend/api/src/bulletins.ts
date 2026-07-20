@@ -55,7 +55,7 @@ const BULLETIN_TEMPLATE_DIR = resolveBulletinTemplateDir();
 
 const slidePreviewCache = new Map<string, Buffer>();
 /** 封面补丁版本；变更后自动失效旧 PNG 缓存 */
-const SLIDE_PREVIEW_PATCH_REV = 'v20';
+const SLIDE_PREVIEW_PATCH_REV = 'v21';
 
 export type BulletinAnnouncementDto = {
   id: string;
@@ -74,6 +74,7 @@ export type WeeklyBulletinDto = {
   offeringQuarterLabel: string;
   birthdayMonth: string;
   birthdayNames: string;
+  showPreServiceChairName: boolean;
   preServiceChairNames: string;
   staffMeetingDate: string;
   testimonyShareDate: string;
@@ -132,6 +133,7 @@ async function mapBulletin(
     offeringQuarterLabel: row.offeringQuarterLabel,
     birthdayMonth: row.birthdayMonth,
     birthdayNames: row.birthdayNames,
+    showPreServiceChairName: row.showPreServiceChairName,
     preServiceChairNames: row.preServiceChairNames,
     staffMeetingDate: row.staffMeetingDate,
     testimonyShareDate: row.testimonyShareDate,
@@ -160,6 +162,7 @@ type BulletinPatchBody = Partial<{
   offeringQuarterLabel: string;
   birthdayMonth: string;
   birthdayNames: string;
+  showPreServiceChairName: boolean;
   preServiceChairNames: string;
   staffMeetingDate: string;
   testimonyShareDate: string;
@@ -376,6 +379,7 @@ export function registerBulletinRoutes(
       serviceTime?: string;
       scriptureBook?: string;
       scriptureReference?: string;
+      showPreServiceChairName?: string;
       preServiceChairNames?: string;
     };
   }>('/v1/bulletins/template/slides/:slide/preview.png', async (request, reply) => {
@@ -393,12 +397,15 @@ export function registerBulletinRoutes(
     const serviceTime = request.query.serviceTime?.trim() || '11:00';
     const scriptureBook = request.query.scriptureBook?.trim() ?? '';
     const scriptureReference = request.query.scriptureReference?.trim() ?? '';
+    const showPreServiceChairName =
+      request.query.showPreServiceChairName === '1' ||
+      request.query.showPreServiceChairName === 'true';
     const preServiceChairNames = request.query.preServiceChairNames?.trim() ?? '';
     if (serviceDate && !/^\d{4}-\d{2}-\d{2}$/.test(serviceDate)) {
       return reply.code(400).send({ error: 'invalid_service_date' });
     }
 
-    const cacheKey = `${SLIDE_PREVIEW_PATCH_REV}:${slideNumber}:${serviceDate ?? ''}:${serviceTime}:${scriptureBook}:${scriptureReference}:${preServiceChairNames}`;
+    const cacheKey = `${SLIDE_PREVIEW_PATCH_REV}:${slideNumber}:${serviceDate ?? ''}:${serviceTime}:${scriptureBook}:${scriptureReference}:${showPreServiceChairName}:${preServiceChairNames}`;
     const cached = slidePreviewCache.get(cacheKey);
     if (cached) {
       return reply.header('Content-Type', 'image/png').header('X-Preview-Cached', 'true').send(cached);
@@ -413,6 +420,7 @@ export function registerBulletinRoutes(
           serviceTime,
           scriptureBook,
           scriptureReference,
+          showPreServiceChairName,
           preServiceChairNames,
         }),
       );
@@ -540,6 +548,9 @@ export function registerBulletinRoutes(
       assignText('offeringQuarterLabel', 'offeringQuarterLabel');
       assignText('birthdayMonth', 'birthdayMonth');
       assignText('birthdayNames', 'birthdayNames');
+      if (body.showPreServiceChairName !== undefined) {
+        patch.showPreServiceChairName = body.showPreServiceChairName;
+      }
       assignText('preServiceChairNames', 'preServiceChairNames');
       assignText('staffMeetingDate', 'staffMeetingDate');
       assignText('testimonyShareDate', 'testimonyShareDate');

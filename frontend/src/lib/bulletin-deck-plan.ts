@@ -16,7 +16,7 @@ type TemplateSlideSection = { id: string; slides: number[] };
  */
 export const BULLETIN_TEMPLATE_SLIDE_SECTIONS: TemplateSlideSection[] = [
   { id: 'cover', slides: [1] },
-  { id: 'pre_service', slides: [2, 3] },
+  { id: 'pre_service', slides: [2] },
   { id: 'scripture', slides: [4, 5, 6] },
   { id: 'worship', slides: [7, 8, 9] },
   { id: 'communion', slides: [10, 11, 12, 13] },

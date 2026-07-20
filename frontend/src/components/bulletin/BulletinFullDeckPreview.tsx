@@ -152,6 +152,7 @@ export default function BulletinFullDeckPreview({
       serviceTime: bulletin.serviceTime || '11:00',
       scriptureBook: bulletin.scriptureBook,
       scriptureReference: bulletin.scriptureReference,
+      showPreServiceChairName: bulletin.showPreServiceChairName,
       preServiceChairNames: bulletin.preServiceChairNames,
     }),
     [
@@ -159,6 +160,7 @@ export default function BulletinFullDeckPreview({
       bulletin.serviceTime,
       bulletin.scriptureBook,
       bulletin.scriptureReference,
+      bulletin.showPreServiceChairName,
       bulletin.preServiceChairNames,
     ],
   );

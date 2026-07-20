@@ -226,7 +226,9 @@ export const weeklyBulletins = pgTable('weekly_bulletins', {
   offeringQuarterLabel: text('offering_quarter_label').notNull().default(''),
   birthdayMonth: text('birthday_month').notNull().default(''),
   birthdayNames: text('birthday_names').notNull().default(''),
-  /** 会前祷告带领人（slide 3），空则保留模板原名 */
+  /** 会前祷告是否在第 2 页显示主席姓名 */
+  showPreServiceChairName: boolean('show_pre_service_chair_name').notNull().default(false),
+  /** 主席姓名（勾选显示时写入第 2 页；第 3 页名单页会从 deck 删除） */
   preServiceChairNames: text('pre_service_chair_names').notNull().default(''),
   staffMeetingDate: text('staff_meeting_date').notNull().default(''),
   testimonyShareDate: text('testimony_share_date').notNull().default(''),

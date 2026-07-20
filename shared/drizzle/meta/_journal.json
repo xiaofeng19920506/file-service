@@ -162,6 +162,13 @@
       "when": 1753027200000,
       "tag": "0024_bulletin_pre_service_chair",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1753113600000,
+      "tag": "0025_bulletin_show_pre_service_chair",
+      "breakpoints": true
     }
   ]
 }

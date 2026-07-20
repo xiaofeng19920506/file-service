@@ -176,15 +176,26 @@ export function BulletinBirthdayStep({ draft, canEdit, saving, onPatch, onSave }
 
 export function BulletinPreServiceStep({ draft, canEdit, saving, onPatch, onSave }: BulletinStepPanelProps) {
   const { t } = useI18n();
+  const showChair = Boolean(draft.showPreServiceChairName);
   return (
     <StepShell titleKey="bulletin.steps.preServiceTitle" introKey="bulletin.steps.preServiceIntro">
-      <TextField
-        label={t('bulletin.preServiceChairNames')}
-        value={draft.preServiceChairNames ?? ''}
-        disabled={!canEdit}
-        multiline
-        onChange={(v) => onPatch('preServiceChairNames', v)}
-      />
+      <label className="bulletin-field bulletin-field--checkbox">
+        <input
+          type="checkbox"
+          checked={showChair}
+          disabled={!canEdit}
+          onChange={(e) => onPatch('showPreServiceChairName', e.target.checked)}
+        />
+        <span>{t('bulletin.showPreServiceChairName')}</span>
+      </label>
+      {showChair ? (
+        <TextField
+          label={t('bulletin.preServiceChairNames')}
+          value={draft.preServiceChairNames ?? ''}
+          disabled={!canEdit}
+          onChange={(v) => onPatch('preServiceChairNames', v)}
+        />
+      ) : null}
       <p className="bulletin-field-hint">{t('bulletin.preServiceChairNamesHint')}</p>
       <SaveButton saving={saving} canEdit={canEdit} onSave={onSave} />
     </StepShell>

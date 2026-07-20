@@ -7504,6 +7504,17 @@ body.bulletin-slideshow-window {
   font-size: 0.9rem;
 }
 
+.bulletin-field--checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.bulletin-field--checkbox input[type='checkbox'] {
+  width: auto;
+  margin: 0;
+}
+
 .bulletin-field input,
 .bulletin-field select,
 .bulletin-field textarea {

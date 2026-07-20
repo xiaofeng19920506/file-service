@@ -19,6 +19,7 @@ export type WeeklyBulletin = {
   offeringQuarterLabel: string;
   birthdayMonth: string;
   birthdayNames: string;
+  showPreServiceChairName: boolean;
   preServiceChairNames: string;
   staffMeetingDate: string;
   testimonyShareDate: string;
@@ -46,6 +47,7 @@ export type BulletinPatch = Partial<{
   offeringQuarterLabel: string;
   birthdayMonth: string;
   birthdayNames: string;
+  showPreServiceChairName: boolean;
   preServiceChairNames: string;
   staffMeetingDate: string;
   testimonyShareDate: string;
@@ -222,6 +224,7 @@ export type BulletinSlidePreviewParams = {
   serviceTime?: string;
   scriptureBook?: string;
   scriptureReference?: string;
+  showPreServiceChairName?: boolean;
   preServiceChairNames?: string;
 };
 
@@ -234,6 +237,7 @@ export async function fetchBulletinSlidePreviewPng(
   if (params.serviceTime) qs.set('serviceTime', params.serviceTime);
   if (params.scriptureBook) qs.set('scriptureBook', params.scriptureBook);
   if (params.scriptureReference) qs.set('scriptureReference', params.scriptureReference);
+  if (params.showPreServiceChairName) qs.set('showPreServiceChairName', '1');
   if (params.preServiceChairNames) qs.set('preServiceChairNames', params.preServiceChairNames);
   const query = qs.toString();
   const res = await runBulletinPreviewTask(() =>

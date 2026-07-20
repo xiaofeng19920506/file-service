@@ -140,3 +140,38 @@ export async function duplicateSlideInZip(
 
   return newSlidePath;
 }
+
+async function removeContentTypeAsync(zip: JSZip, partPath: string) {
+  const ctPath = '[Content_Types].xml';
+  const entry = zip.file(ctPath);
+  if (!entry) return;
+  const norm = partPath.startsWith('/') ? partPath : `/ppt/${partPath.replace(/^ppt\//, '')}`;
+  let xml = await entry.async('string');
+  xml = xml.replace(new RegExp(`<Override PartName="${norm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"[^/]*/>`, 'g'), '');
+  zip.file(ctPath, xml);
+}
+
+/** 从 PPTX zip 中移除指定幻灯片（同步改 presentation / rels / content types） */
+export async function removeSlidesFromPptxZip(zip: JSZip, slidePaths: string[]): Promise<void> {
+  if (!slidePaths.length) return;
+  const { presPath, relsPath, presEntry, relsEntry } = readPresentationParts(zip);
+  let presXml = await presEntry.async('string');
+  let presRels = await relsEntry.async('string');
+
+  for (const slidePath of slidePaths) {
+    const relId = slidePathToRelId(presRels, slidePath);
+    if (relId) {
+      presXml = presXml.replace(new RegExp(`<p:sldId[^>]*r:id="${relId}"[^/]*/>`, 'g'), '');
+      presRels = presRels.replace(new RegExp(`<Relationship Id="${relId}"[^/]*/>`, 'g'), '');
+    }
+    const relsFile = slidePath
+      .replace('ppt/slides/', 'ppt/slides/_rels/')
+      .replace('.xml', '.xml.rels');
+    zip.remove(slidePath);
+    zip.remove(relsFile);
+    await removeContentTypeAsync(zip, slidePath);
+  }
+
+  zip.file(presPath, presXml);
+  zip.file(relsPath, presRels);
+}

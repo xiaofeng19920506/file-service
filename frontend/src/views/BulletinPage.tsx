@@ -429,6 +429,7 @@ export default function BulletinPage() {
             {...common}
             onSave={() =>
               void handleSaveFields({
+                showPreServiceChairName: draft.showPreServiceChairName,
                 preServiceChairNames: draft.preServiceChairNames,
               })
             }

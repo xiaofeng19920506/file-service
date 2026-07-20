@@ -1,8 +1,12 @@
 import JSZip from 'jszip';
 import type { ScriptureSlideBodies, WeeklyBulletin } from '../api/bulletins';
 import { applyScripturePagesToZip } from './bulletin-scripture-pptx-zip';
-import { patchCoverDateLineInSlideXml } from './bulletin-pptx-patches';
+import {
+  patchCoverDateLineInSlideXml,
+  patchPreServiceChairNameOnSlide2Xml,
+} from './bulletin-pptx-patches';
 import { applyIndexedTextReplacementsToSlideXml } from './pptx-preview';
+import { removeSlidesFromPptxZip } from '../../../shared/src/pptx-duplicate-slide.js';
 
 const PPTX_MIME =
   'application/vnd.openxmlformats-officedocument.presentationml.presentation';
@@ -21,13 +25,18 @@ function formatScriptureReferenceRun(reference: string): string {
 
 /**
  * 生成与预览 PNG API（`patchBulletinPreviewInPptx`）放映顺序一致的 PPTX。
- * 浏览器端使用 API 拉取的经文分页，避免 deckPlan 与 `data-slide` 错位。
+ * 会前祷告仅保留第 2 页（删除模板第 3 页），读经可加页。
  */
 export async function buildPreviewMatchingPptx(
   templateBlob: Blob,
   bulletin: Pick<
     WeeklyBulletin,
-    'serviceDate' | 'serviceTime' | 'scriptureBook' | 'scriptureReference'
+    | 'serviceDate'
+    | 'serviceTime'
+    | 'scriptureBook'
+    | 'scriptureReference'
+    | 'showPreServiceChairName'
+    | 'preServiceChairNames'
   >,
   scriptureBodies: ScriptureSlideBodies | null,
   filename = 'bulletin-preview.pptx',
@@ -45,6 +54,17 @@ export async function buildPreviewMatchingPptx(
           bulletin.serviceDate,
           bulletin.serviceTime || '11:00',
         ),
+      );
+    }
+  }
+
+  if (bulletin.showPreServiceChairName && bulletin.preServiceChairNames?.trim()) {
+    const slide2 = zip.file('ppt/slides/slide2.xml');
+    if (slide2) {
+      const xml = await slide2.async('string');
+      zip.file(
+        'ppt/slides/slide2.xml',
+        patchPreServiceChairNameOnSlide2Xml(xml, bulletin.preServiceChairNames.trim()),
       );
     }
   }
@@ -75,6 +95,9 @@ export async function buildPreviewMatchingPptx(
       scriptureBodies.englishPages,
     );
   }
+
+  // 与 API preview 一致：去掉模板第 3 页，会前祷告只剩 1 页
+  await removeSlidesFromPptxZip(zip, ['ppt/slides/slide3.xml']);
 
   const buf = await zip.generateAsync({ type: 'arraybuffer' });
   return new File([buf], filename, { type: PPTX_MIME });
