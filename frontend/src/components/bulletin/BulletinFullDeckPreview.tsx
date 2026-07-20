@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import type { WeeklyBulletin } from '../../api/bulletins';
 import type { PlaylistItem } from '../../api/playlists';
 import { useI18n } from '../../i18n';
@@ -7,6 +7,11 @@ import {
   composeDeckSectionsForPreview,
   worshipFirstPresentationSlide,
 } from '../../lib/bulletin-deck-plan';
+import {
+  bulletinPreviewCacheKey,
+  previewPatchForSection,
+  type BulletinPreviewPatchFields,
+} from '../../lib/bulletin-preview-patch';
 import { navSectionById } from '../../lib/bulletin-sections';
 import { nextSundayIso } from '../../lib/bulletin-date';
 import BulletinPptSlidePreview from './BulletinPptSlidePreview';
@@ -22,12 +27,8 @@ export type BulletinPreviewScrollRequest = {
 
 type DeckSlideItemProps = {
   slideNumber: number;
-  patch: {
-    serviceDate: string;
-    serviceTime: string;
-    scriptureBook?: string;
-    scriptureReference?: string;
-  };
+  sectionId: string;
+  patch: BulletinPreviewPatchFields;
   highlight: boolean;
   label: string;
   emptyLabel: string;
@@ -38,8 +39,35 @@ type DeckSlideItemProps = {
   worshipFirstSlide: number | null;
 };
 
-function DeckSlideItem({
+function deckSlidePropsEqual(prev: DeckSlideItemProps, next: DeckSlideItemProps): boolean {
+  if (
+    prev.slideNumber !== next.slideNumber ||
+    prev.sectionId !== next.sectionId ||
+    prev.highlight !== next.highlight ||
+    prev.label !== next.label ||
+    prev.emptyLabel !== next.emptyLabel ||
+    prev.bulletinId !== next.bulletinId ||
+    prev.worshipPlaylistId !== next.worshipPlaylistId ||
+    prev.worshipPlaylistTitle !== next.worshipPlaylistTitle ||
+    prev.worshipFirstSlide !== next.worshipFirstSlide ||
+    prev.worshipItems !== next.worshipItems
+  ) {
+    return false;
+  }
+  const prevKey = bulletinPreviewCacheKey(
+    prev.slideNumber,
+    previewPatchForSection(prev.sectionId, prev.patch),
+  );
+  const nextKey = bulletinPreviewCacheKey(
+    next.slideNumber,
+    previewPatchForSection(next.sectionId, next.patch),
+  );
+  return prevKey === nextKey;
+}
+
+const DeckSlideItem = memo(function DeckSlideItem({
   slideNumber,
+  sectionId,
   patch,
   highlight,
   label,
@@ -50,6 +78,11 @@ function DeckSlideItem({
   worshipItems,
   worshipFirstSlide,
 }: DeckSlideItemProps) {
+  const slidePatch = useMemo(
+    () => previewPatchForSection(sectionId, patch),
+    [sectionId, patch],
+  );
+
   const showWorshipPlayer =
     worshipFirstSlide != null &&
     slideNumber === worshipFirstSlide &&
@@ -68,14 +101,14 @@ function DeckSlideItem({
           playlistTitle={worshipPlaylistTitle}
           items={worshipItems}
           slideNumber={slideNumber}
-          patch={patch}
+          patch={slidePatch}
           slideLabel={label}
           emptyLabel={emptyLabel}
         />
       ) : (
         <BulletinPptSlidePreview
           slideNumber={slideNumber}
-          patch={patch}
+          patch={slidePatch}
           requireDate={false}
           emptyLabel={emptyLabel}
           slideLabel={label}
@@ -83,7 +116,7 @@ function DeckSlideItem({
       )}
     </div>
   );
-}
+}, deckSlidePropsEqual);
 
 function scrollTargetIntoDeck(
   root: HTMLElement,
@@ -146,8 +179,8 @@ export default function BulletinFullDeckPreview({
     [deckPlan],
   );
 
-  const patch = useMemo(
-    () => ({
+  const fullPatch = useMemo(
+    (): BulletinPreviewPatchFields => ({
       serviceDate: bulletin.serviceDate || nextSundayIso(),
       serviceTime: bulletin.serviceTime || '11:00',
       scriptureBook: bulletin.scriptureBook,
@@ -287,7 +320,8 @@ export default function BulletinFullDeckPreview({
                 <DeckSlideItem
                   key={page}
                   slideNumber={page}
-                  patch={patch}
+                  sectionId={section.id}
+                  patch={fullPatch}
                   highlight={highlightSet.has(page)}
                   label={t('bulletin.previewSlideSingle', { page })}
                   emptyLabel={t('bulletin.coverPreviewEmpty')}

@@ -4,6 +4,7 @@ import YoutubePlaylistPlayer, { type YoutubePlayerItem } from '../YoutubePlaylis
 import { ListPlayIcon } from '../icons';
 import { usePlaylistPlaybackTransport } from '../../hooks/usePlaylistPlaybackTransport';
 import { useI18n } from '../../i18n';
+import type { BulletinSlidePreviewParams } from '../../api/bulletins';
 import BulletinPptSlidePreview from './BulletinPptSlidePreview';
 import BulletinWorshipMaximizeOverlay from './BulletinWorshipMaximizeOverlay';
 import type { WorshipLiveMode } from '../../lib/worship-live-config';
@@ -14,12 +15,7 @@ type BulletinWorshipEmbeddedPlayerProps = {
   playlistTitle?: string;
   items: PlaylistItem[];
   slideNumber: number;
-  patch: {
-    serviceDate: string;
-    serviceTime: string;
-    scriptureBook?: string;
-    scriptureReference?: string;
-  };
+  patch: BulletinSlidePreviewParams;
   slideLabel: string;
   emptyLabel: string;
 };

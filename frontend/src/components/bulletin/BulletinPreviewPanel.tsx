@@ -77,18 +77,8 @@ export default function BulletinPreviewPanel({
       cancelled = true;
       window.clearTimeout(debounceTimer);
     };
-  }, [
-    bulletin.id,
-    bulletin.serviceDate,
-    bulletin.serviceTime,
-    bulletin.scriptureBook,
-    bulletin.scriptureReference,
-    bulletin.showPreServiceChairName,
-    bulletin.preServiceChairNames,
-    bulletin.skipTestimonyWeek,
-    bulletin.skipDepartmentReports,
-    bulletin.weeklyMeetingVariant,
-  ]);
+    // 仅结构相关字段会改变页数/演示顺序；封面日期与会前姓名不影响 deckPlan
+  }, [bulletin.id, bulletin.scriptureBook, bulletin.scriptureReference]);
 
   useEffect(() => {
     if (!deckPlan) return;

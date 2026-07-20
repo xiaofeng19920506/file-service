@@ -6567,6 +6567,11 @@ body.bulletin-slideshow-window {
   color: var(--text-secondary);
 }
 
+.bulletin-slide-preview--refreshing .bulletin-slide-preview-img {
+  opacity: 0.72;
+  transition: opacity 0.15s ease;
+}
+
 .bulletin-slide-preview--large .bulletin-slide-preview-frame {
   width: 100%;
 }
