@@ -39,10 +39,14 @@ function readPresentationParts(zip: JSZip) {
 
 function slidePathToRelId(relsXml: string, slidePath: string): string | null {
   const fileName = slidePath.split('/').pop()!;
-  const re = new RegExp(
-    `Id="(rId\\d+)"[^>]*Target="(?:slides/)?${fileName.replace('.', '\\.')}"`,
+  const escaped = fileName.replace(/\./g, '\\.');
+  const byIdFirst = new RegExp(
+    `Id="(rId\\d+)"[^>]*Target="(?:(?:\\.\\./)?slides/)?${escaped}"`,
   );
-  return re.exec(relsXml)?.[1] ?? null;
+  const byTargetFirst = new RegExp(
+    `Target="(?:(?:\\.\\./)?slides/)?${escaped}"[^>]*Id="(rId\\d+)"`,
+  );
+  return byIdFirst.exec(relsXml)?.[1] ?? byTargetFirst.exec(relsXml)?.[1] ?? null;
 }
 
 async function addContentTypeAsync(zip: JSZip, partPath: string) {
@@ -148,7 +152,7 @@ async function removeContentTypeAsync(zip: JSZip, partPath: string) {
   const norm = partPath.startsWith('/') ? partPath : `/ppt/${partPath.replace(/^ppt\//, '')}`;
   let xml = await entry.async('string');
   xml = xml.replace(
-    new RegExp(`<Override PartName="${norm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"[^/]*/>`, 'g'),
+    new RegExp(`<Override PartName="${norm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"[^>]*/>`, 'g'),
     '',
   );
   zip.file(ctPath, xml);
@@ -164,8 +168,13 @@ export async function removeSlidesFromPptxZip(zip: JSZip, slidePaths: string[]):
   for (const slidePath of slidePaths) {
     const relId = slidePathToRelId(presRels, slidePath);
     if (relId) {
-      presXml = presXml.replace(new RegExp(`<p:sldId[^>]*r:id="${relId}"[^/]*/>`, 'g'), '');
-      presRels = presRels.replace(new RegExp(`<Relationship Id="${relId}"[^/]*/>`, 'g'), '');
+      // 不能用 [^/]*：Relationship@Type 的 URL 含大量 "/"
+      presXml = presXml.replace(new RegExp(`<p:sldId[^>]*r:id="${relId}"[^>]*/>`, 'g'), '');
+      presRels = presRels.replace(new RegExp(`<Relationship[^>]*Id="${relId}"[^>]*/>`, 'g'), '');
+      presRels = presRels.replace(
+        new RegExp(`<Relationship[^>]*Id="${relId}"[^>]*>\\s*</Relationship>`, 'g'),
+        '',
+      );
     }
     const relsFile = slidePath
       .replace('ppt/slides/', 'ppt/slides/_rels/')

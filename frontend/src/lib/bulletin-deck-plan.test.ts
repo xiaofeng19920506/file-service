@@ -174,3 +174,42 @@ describe('bulletin deck plan', () => {
     ]);
   });
 });
+
+  it('does not put welcome under worship when communion is hidden', async () => {
+    const tpl = await readFile(templatePath);
+    const { buildPreviewMatchingPptx } = await import('./bulletin-preview-pptx');
+    const file = await buildPreviewMatchingPptx(
+      new Blob([tpl], { type: PPTX_MIME }),
+      {
+        serviceDate: '2026-07-26',
+        serviceTime: '11:00',
+        scriptureBook: '箴言 Proverbs',
+        scriptureReference: '15:12-23',
+        hiddenSections: ['communion'],
+        weeklyMeetingVariant: 28,
+      },
+      null,
+    );
+    const plan = await buildBulletinDeckPlanFromFile(file);
+    const worship = plan.sections.find((s) => s.id === 'worship');
+    const welcome = plan.sections.find((s) => s.id === 'welcome');
+    const order = await listPptxSlidesInPresentationOrder(file);
+    const welcomeFile = order.find((s) => s.slideInFile === 14);
+    expect(welcomeFile).toBeDefined();
+    expect(sectionIdForSlide(welcomeFile!.index, plan)).toBe('welcome');
+    expect(worship?.slides ?? []).not.toContain(welcomeFile!.index);
+    expect(order.some((s) => [10, 11, 12, 13].includes(s.slideInFile))).toBe(false);
+  });
+
+  it('worship section only contains template slides 7-9 even with long scripture', async () => {
+    const file = await patchedPreviewFile('119:1-40');
+    const plan = await buildBulletinDeckPlanFromFile(file);
+    const order = await listPptxSlidesInPresentationOrder(file);
+    const worship = plan.sections.find((s) => s.id === 'worship')!;
+    const welcome = plan.sections.find((s) => s.id === 'welcome')!;
+    const worshipFiles = worship.slides.map((i) => order.find((o) => o.index === i)!.slideInFile);
+    const welcomeFiles = welcome.slides.map((i) => order.find((o) => o.index === i)!.slideInFile);
+    expect(worshipFiles).toEqual([7, 8, 9]);
+    expect(welcomeFiles).toEqual([14]);
+    expect(worship.slides).toHaveLength(3);
+  });

@@ -95,8 +95,7 @@ function buildSlideInFileToSection(sections: TemplateSlideSection[]): Map<number
 }
 
 /**
- * 按演示顺序打分区：碰到模板锚点就切换，否则延续当前分区。
- * 任意分区中间加页（如读经 4/5 页）都会留在该分区，不写死页数。
+ * 按演示顺序打分区：碰到模板锚点就切换；复制加页（文件号大于模板）延续当前分区。
  */
 export function assignSectionsInPresentationOrder(
   parsed: readonly { index: number; slideInFile: number }[],
@@ -104,13 +103,26 @@ export function assignSectionsInPresentationOrder(
 ): BulletinDeckSlide[] {
   const slideInFileToSection = buildSlideInFileToSection(templateSections);
   const omitted = new Set<number>(BULLETIN_OMITTED_TEMPLATE_SLIDES);
+  const maxTemplateSlide = Math.max(0, ...slideInFileToSection.keys());
   let currentSectionId = templateSections[0]?.id ?? 'unknown';
 
   const assigned: BulletinDeckSlide[] = [];
   for (const slide of parsed) {
     if (omitted.has(slide.slideInFile)) continue;
     const mapped = slideInFileToSection.get(slide.slideInFile);
-    if (mapped) currentSectionId = mapped;
+    if (mapped) {
+      currentSectionId = mapped;
+    } else if (slide.slideInFile <= maxTemplateSlide) {
+      // 模板范围内未登记的页：按「不大于该文件号的最近锚点」归属，避免串到上一分区
+      let inferred = templateSections[0]?.id ?? 'unknown';
+      for (const section of templateSections) {
+        for (const n of section.slides) {
+          if (n <= slide.slideInFile) inferred = section.id;
+        }
+      }
+      currentSectionId = inferred;
+    }
+    // else: 读经等复制出来的高编号页，延续当前分区
     assigned.push({
       index: slide.index,
       slideInFile: slide.slideInFile,

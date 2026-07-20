@@ -326,7 +326,7 @@ export default function BulletinFullDeckPreview({
             <div className="bulletin-deck-section-slides">
               {section.slides.map((page) => (
                 <DeckSlideItem
-                  key={page}
+                  key={`${section.id}-${page}`}
                   slideNumber={page}
                   sectionId={section.id}
                   patch={fullPatch}

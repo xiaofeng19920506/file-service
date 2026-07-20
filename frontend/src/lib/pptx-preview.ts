@@ -42,9 +42,11 @@ export type PptxPresentationSlideRef = {
 };
 
 function relTargetToSlidePath(target: string): string {
-  if (target.startsWith('ppt/')) return target;
-  if (target.startsWith('slides/')) return `ppt/${target}`;
-  return `ppt/slides/${target.replace(/^\/?slides\//, '')}`;
+  const normalized = target.replace(/\\/g, '/');
+  if (normalized.startsWith('ppt/')) return normalized;
+  if (normalized.startsWith('slides/')) return `ppt/${normalized}`;
+  const file = normalized.split('/').pop();
+  return file ? `ppt/slides/${file}` : `ppt/slides/${normalized}`;
 }
 
 /** 按 presentation.xml 放映顺序列出幻灯片（复制加页后不能用文件编号排序） */
@@ -57,17 +59,22 @@ export async function listPptxSlidesInPresentationOrder(
   const relsXml = await relsEntry.async('string');
 
   const relIdToPath = new Map<string, string>();
-  for (const match of relsXml.matchAll(/<Relationship Id="(rId\d+)"[^>]*Target="([^"]+)"/g)) {
+  for (const match of relsXml.matchAll(/<Relationship[^>]*Id="(rId\d+)"[^>]*Target="([^"]+)"/g)) {
     const target = match[2];
     if (!target.includes('slide')) continue;
     relIdToPath.set(match[1], relTargetToSlidePath(target));
+  }
+  for (const match of relsXml.matchAll(/<Relationship[^>]*Target="([^"]+)"[^>]*Id="(rId\d+)"/g)) {
+    const target = match[1];
+    if (!target.includes('slide')) continue;
+    if (!relIdToPath.has(match[2])) relIdToPath.set(match[2], relTargetToSlidePath(target));
   }
 
   const slides: PptxPresentationSlideRef[] = [];
   let index = 0;
   for (const match of presXml.matchAll(/<p:sldId[^>]*r:id="(rId\d+)"[^>]*\/>/g)) {
     const slidePath = relIdToPath.get(match[1]);
-    if (!slidePath) continue;
+    if (!slidePath || !zip.file(slidePath)) continue;
     index += 1;
     slides.push({
       index,
