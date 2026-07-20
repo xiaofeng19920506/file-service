@@ -247,6 +247,7 @@ const en: MessageTree = {
     sections: {
       cover: 'Cover',
       pre_service: 'Pre-service prayer',
+      pre_service_chairs: 'Prayer leaders',
       scripture: 'Scripture',
       worship: 'Praise & worship',
       communion: 'Communion',

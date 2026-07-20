@@ -6,7 +6,8 @@
   "nativeHiddenSlides": [],
   "sections": [
     { "id": "cover", "slides": [1], "role": "service_date", "notes": "封面：主日日期 06/14/2026、崇拜时间 11:00" },
-    { "id": "pre_service", "slides": [2, 3], "role": "static", "notes": "会前祷告（通用页 + 当週带领人）" },
+    { "id": "pre_service", "slides": [2], "role": "static", "notes": "会前祷告（仅第 2 页）" },
+    { "id": "pre_service_chairs", "slides": [3], "role": "chair_names", "notes": "会前祷告带领人名单（可选；有名单时显示）" },
     { "id": "scripture", "slides": [4, 5, 6], "role": "scripture_passage", "notes": "读经：书名与经节（slide 4）；中英文正文（5–6）" },
     { "id": "worship", "slides": [7, 8, 9], "role": "worship_break", "notes": "敬拜赞美段落；敬拜团可跳转歌单或继续 PPT" },
     { "id": "communion", "slides": [10, 11, 12, 13], "role": "static", "notes": "圣餐" },
@@ -33,6 +34,12 @@
       "fields": [
         { "key": "serviceDate", "textIndex": 8, "example": "06/14/2026" },
         { "key": "serviceTime", "textIndex": 9, "example": "11:00" }
+      ]
+    },
+    {
+      "slide": 3,
+      "fields": [
+        { "key": "preServiceChairNames", "shapeId": "283", "example": "唐毅弟兄\\n李振成弟兄" }
       ]
     },
     {

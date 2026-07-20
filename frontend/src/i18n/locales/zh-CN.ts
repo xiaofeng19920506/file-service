@@ -237,6 +237,7 @@ export default {
     sections: {
       cover: '封面',
       pre_service: '会前祷告',
+      pre_service_chairs: '会前祷告带领',
       scripture: '读经',
       worship: '敬拜赞美',
       communion: '圣餐',

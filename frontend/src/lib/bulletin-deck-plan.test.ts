@@ -105,7 +105,7 @@ describe('bulletin deck plan', () => {
     }
   });
 
-  it('composes preview as discrete template sections (cover ≠ pre_service)', async () => {
+  it('composes preview as discrete template sections (cover ≠ pre_service ≠ scripture)', async () => {
     const file = await patchedPreviewFile('119:1-8');
     const plan = await buildBulletinDeckPlanFromFile(file);
     const composed = composeDeckSectionsForPreview(plan);
@@ -113,17 +113,29 @@ describe('bulletin deck plan', () => {
     expect(composed[0]?.id).toBe('cover');
     expect(composed[0]?.slides).toEqual([1]);
     expect(composed[1]?.id).toBe('pre_service');
-    expect(composed[1]?.slides.length).toBeGreaterThanOrEqual(1);
-    expect(composed.find((s) => s.id === 'cover')?.slides).not.toEqual(
-      composed.find((s) => s.id === 'pre_service')?.slides,
-    );
+    expect(composed[1]?.slides).toEqual([2]);
+    expect(composed[2]?.id).toBe('pre_service_chairs');
+    expect(composed[2]?.slides).toEqual([3]);
+    expect(composed.find((s) => s.id === 'scripture')?.slides[0]).toBe(4);
 
     const coverStep = plan.wizardSteps.find((w) => w.stepId === 'cover');
     expect(coverStep?.slides).toEqual([1]);
 
     const ids = composed.map((s) => s.id);
     expect(ids.indexOf('cover')).toBeLessThan(ids.indexOf('pre_service'));
-    expect(ids.indexOf('pre_service')).toBeLessThan(ids.indexOf('scripture'));
+    expect(ids.indexOf('pre_service')).toBeLessThan(ids.indexOf('pre_service_chairs'));
+    expect(ids.indexOf('pre_service_chairs')).toBeLessThan(ids.indexOf('scripture'));
     expect(ids.indexOf('worship')).toBeLessThan(ids.indexOf('communion'));
+
+    // 读经加页不得并入会前祷告
+    const pre = composed.find((s) => s.id === 'pre_service')!;
+    const scripture = composed.find((s) => s.id === 'scripture')!;
+    expect(scripture.slides.length).toBeGreaterThanOrEqual(3);
+    for (const slide of pre.slides) {
+      expect(scripture.slides).not.toContain(slide);
+    }
+    expect(sectionIdForSlide(2, plan)).toBe('pre_service');
+    expect(sectionIdForSlide(3, plan)).toBe('pre_service_chairs');
+    expect(sectionIdForSlide(4, plan)).toBe('scripture');
   });
 });
