@@ -5990,6 +5990,22 @@
 
 .bulletin-page--workspace {
   max-width: min(1440px, 100%);
+  width: 100%;
+  box-sizing: border-box;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 1rem 1rem 1.25rem;
+}
+
+.bulletin-page--workspace > .bulletin-header,
+.bulletin-page--workspace > .form-error,
+.bulletin-page--workspace > .form-success,
+.bulletin-page--workspace > .bulletin-empty,
+.bulletin-page--workspace > .bulletin-loading {
+  flex-shrink: 0;
 }
 
 .bulletin-header-actions {
@@ -6008,10 +6024,12 @@
 }
 
 .bulletin-workspace {
+  flex: 1;
+  min-height: 0;
   display: grid;
   grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
   gap: 1.25rem;
-  align-items: start;
+  align-items: stretch;
 }
 
 .bulletin-workspace-editor {
@@ -6019,6 +6037,9 @@
   flex-direction: column;
   gap: 1rem;
   min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.15rem;
 }
 
 .bulletin-workspace-editor-inner {
@@ -6037,20 +6058,24 @@
 }
 
 .bulletin-workspace-preview {
-  position: sticky;
-  top: 1rem;
+  position: static;
   min-width: 0;
+  min-height: 0;
   border: 1px solid var(--border-light);
   border-radius: 14px;
   padding: 1rem;
   background: var(--surface);
-  align-self: start;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .bulletin-preview-panel {
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
 }
 
 .bulletin-preview-stack {
@@ -6107,7 +6132,9 @@
 
 .bulletin-deck-preview {
   width: 100%;
-  max-height: min(72vh, 900px);
+  flex: 1;
+  min-height: 0;
+  max-height: none;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -6503,12 +6530,33 @@ body.bulletin-slideshow-window {
 }
 
 @media (max-width: 960px) {
+  .bulletin-page--workspace {
+    overflow-y: auto;
+  }
+
   .bulletin-workspace {
     grid-template-columns: 1fr;
+    align-items: start;
+    flex: none;
+    min-height: auto;
+  }
+
+  .bulletin-workspace-editor {
+    overflow: visible;
   }
 
   .bulletin-workspace-preview {
     position: static;
+    overflow: visible;
+    min-height: min(70vh, 640px);
+  }
+
+  .bulletin-preview-panel {
+    min-height: min(65vh, 580px);
+  }
+
+  .bulletin-deck-preview {
+    max-height: min(65vh, 580px);
   }
 
   .bulletin-workspace-editor-inner {
@@ -7275,9 +7323,9 @@ body.bulletin-slideshow-window {
 .progress-stepper--vertical .progress-stepper-list {
   flex-direction: column;
   flex-wrap: nowrap;
-  max-height: min(70vh, 42rem);
-  overflow-y: auto;
-  padding-right: 0.15rem;
+  max-height: none;
+  overflow: visible;
+  padding-right: 0;
 }
 
 .progress-stepper--vertical .progress-stepper-item {
