@@ -2,6 +2,7 @@ import {
   bigint,
   boolean,
   date,
+  jsonb,
   pgTable,
   text,
   timestamp,
