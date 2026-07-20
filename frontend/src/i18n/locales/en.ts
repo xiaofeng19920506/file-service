@@ -230,7 +230,7 @@ const en: MessageTree = {
     editorPanel: 'Bulletin editor',
     previewTitle: 'PPT preview',
     previewHint:
-      'Browse the PPT by composed sections (LibreOffice). Cover, pre-service prayer, etc. are separate blocks; highlighted slides match the current section',
+      'Browse the PPT by section. Changes apply to the preview only after you click Save, so it won’t refresh while you’re still editing.',
     previewDeckMeta: '{count} slides',
     previewDeckHighlightNote: 'highlighted = preview section',
     previewSectionComposeMeta: '{count} sections',

@@ -73,6 +73,8 @@ export default function BulletinPage() {
   const [bulletins, setBulletins] = useState<WeeklyBulletin[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<WeeklyBulletin | null>(null);
+  /** 右侧预览只反映已保存（或已加载）快照，编辑中不刷新 */
+  const [previewBulletin, setPreviewBulletin] = useState<WeeklyBulletin | null>(null);
   const [announcements, setAnnouncements] = useState<AnnouncementDraft[]>([emptyAnnouncement()]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -185,6 +187,7 @@ export default function BulletinPage() {
           if (!prev || prev.id !== remote.id) return remote;
           return remote;
         });
+        setPreviewBulletin(remote);
         setAnnouncements(toDrafts(remote));
       })();
     },
@@ -220,6 +223,7 @@ export default function BulletinPage() {
   useEffect(() => {
     if (!selectedId) {
       setDraft(null);
+      setPreviewBulletin(null);
       return;
     }
     let cancelled = false;
@@ -229,6 +233,7 @@ export default function BulletinPage() {
         const bulletin = await getBulletin(selectedId);
         if (cancelled) return;
         setDraft(bulletin);
+        setPreviewBulletin(bulletin);
         setAnnouncements(toDrafts(bulletin));
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : String(err));
@@ -269,6 +274,7 @@ export default function BulletinPage() {
         serviceTime: draft.serviceTime,
       });
       setDraft(updated);
+      setPreviewBulletin(updated);
       await refreshList();
       setMessage(t('bulletin.saved'));
     } catch (err) {
@@ -296,6 +302,7 @@ export default function BulletinPage() {
         );
       }
       setDraft(updated);
+      setPreviewBulletin(updated);
       setAnnouncements(toDrafts(updated));
       await refreshList();
       setMessage(t('bulletin.saved'));
@@ -380,6 +387,7 @@ export default function BulletinPage() {
       );
       const { bulletin } = await publishBulletinPptx(withAnnouncements);
       setDraft(bulletin);
+      setPreviewBulletin(bulletin);
       setAnnouncements(toDrafts(bulletin));
       await refreshList();
       setMessage(t('bulletin.published'));
@@ -458,6 +466,9 @@ export default function BulletinPage() {
             onClearOauthError={() => setWorshipOauthError(null)}
             onPlaylistReady={(playlistId) => {
               setDraft((prev) => (prev ? { ...prev, servicePlaylistId: playlistId } : prev));
+              setPreviewBulletin((prev) =>
+                prev ? { ...prev, servicePlaylistId: playlistId } : prev,
+              );
               setWorshipPreviewRevision((v) => v + 1);
             }}
             onPlaylistChanged={() => setWorshipPreviewRevision((v) => v + 1)}
@@ -643,7 +654,7 @@ export default function BulletinPage() {
               scrollToSectionBump={previewScrollBump}
               scrollToPresentationSlide={previewScrollToSlide}
               highlightSectionId={previewSectionId}
-              bulletin={draft}
+              bulletin={previewBulletin ?? draft}
               worshipRefreshKey={worshipPreviewRevision}
               onVisibleSectionChange={handleVisibleSectionChange}
             />

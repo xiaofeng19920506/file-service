@@ -221,7 +221,7 @@ export default {
     coverPreviewEmpty: '请选择主日日期以预览封面',
     editorPanel: '周报编辑',
     previewTitle: 'PPT 预览',
-    previewHint: '按分区浏览整份 PPT（LibreOffice 渲染）：封面、会前祷告等各自成块再拼成完整预览；高亮为当前分区',
+    previewHint: '按分区浏览整份 PPT。左侧修改后需点「保存」才会更新预览，避免选填过程中反复刷新。',
     previewDeckMeta: '共 {count} 页',
     previewDeckHighlightNote: '高亮为当前预览分区',
     previewSectionComposeMeta: '{count} 个分区',
