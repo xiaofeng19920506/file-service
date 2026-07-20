@@ -82,17 +82,20 @@ describe('bulletin deck plan', () => {
 
     const worshipFirst = firstSlideForSection('worship', plan);
     const communionFirst = firstSlideForSection('communion', plan);
-    const closingFirst = firstSlideForSection('closing', plan);
+    const doxologyFirst = firstSlideForSection('doxology', plan);
+    const benedictionFirst = firstSlideForSection('benediction', plan);
 
     expect(worshipFirst).toBe(order.find((s) => s.slideInFile === 7)?.index);
     expect(worshipFirst).toBeGreaterThan(6);
     expect(communionFirst).toBe(order.find((s) => s.slideInFile === 10)?.index);
     expect(communionFirst).toBeGreaterThan(worshipFirst!);
-    expect(closingFirst).toBe(order.find((s) => s.slideInFile === 37)?.index);
+    expect(doxologyFirst).toBe(order.find((s) => s.slideInFile === 37)?.index);
+    expect(benedictionFirst).toBe(order.find((s) => s.slideInFile === 38)?.index);
 
     expect(sectionIdForSlide(worshipFirst!, plan)).toBe('worship');
     expect(sectionIdForSlide(communionFirst!, plan)).toBe('communion');
-    expect(sectionIdForSlide(closingFirst!, plan)).toBe('closing');
+    expect(sectionIdForSlide(doxologyFirst!, plan)).toBe('doxology');
+    expect(sectionIdForSlide(benedictionFirst!, plan)).toBe('benediction');
   });
 
   it('maps every scripture presentation slide including expanded pages', async () => {
@@ -151,5 +154,23 @@ describe('bulletin deck plan', () => {
       3, 4, 5, 6, 7,
     ]);
     expect(slides.find((s) => s.index === 8)?.sectionId).toBe('worship');
+  });
+
+  it('never assigns omitted template slide 3 to pre_service or scripture', () => {
+    const slides = assignSectionsInPresentationOrder([
+      { index: 1, slideInFile: 1 },
+      { index: 2, slideInFile: 2 },
+      { index: 3, slideInFile: 3 },
+      { index: 4, slideInFile: 4 },
+      { index: 5, slideInFile: 5 },
+      { index: 6, slideInFile: 6 },
+    ]);
+    expect(slides.map((s) => s.slideInFile)).not.toContain(3);
+    expect(slides.filter((s) => s.sectionId === 'pre_service')).toEqual([
+      { index: 2, slideInFile: 2, sectionId: 'pre_service' },
+    ]);
+    expect(slides.filter((s) => s.sectionId === 'scripture').map((s) => s.slideInFile)).toEqual([
+      4, 5, 6,
+    ]);
   });
 });

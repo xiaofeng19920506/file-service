@@ -32,7 +32,8 @@ export const BULLETIN_NAV_SECTIONS: BulletinNavSection[] = [
   { id: 'service_roster', labelKey: 'bulletin.sections.service_roster', editableStepId: 'more' },
   { id: 'verse_of_week', labelKey: 'bulletin.sections.verse_of_week', editableStepId: 'verse' },
   { id: 'department_reports', labelKey: 'bulletin.sections.department_reports', editableStepId: 'more' },
-  { id: 'closing', labelKey: 'bulletin.sections.closing', editableStepId: null },
+  { id: 'doxology', labelKey: 'bulletin.sections.doxology', editableStepId: null },
+  { id: 'benediction', labelKey: 'bulletin.sections.benediction', editableStepId: null },
 ];
 
 export function navSectionIndexById(sectionId: string): number {
