@@ -18,6 +18,18 @@ type ProgressStepperProps = {
   orientation?: 'horizontal' | 'vertical';
 };
 
+function scrollItemIntoScroller(item: HTMLElement) {
+  const scroller = item.closest('.bulletin-workspace-editor') as HTMLElement | null;
+  if (!scroller) return;
+  const itemRect = item.getBoundingClientRect();
+  const scrollerRect = scroller.getBoundingClientRect();
+  if (itemRect.top < scrollerRect.top + 4) {
+    scroller.scrollTop -= scrollerRect.top - itemRect.top + 8;
+  } else if (itemRect.bottom > scrollerRect.bottom - 4) {
+    scroller.scrollTop += itemRect.bottom - scrollerRect.bottom + 8;
+  }
+}
+
 export default function ProgressStepper({
   steps,
   currentIndex,
@@ -33,7 +45,7 @@ export default function ProgressStepper({
     const list = listRef.current;
     if (!list || focusIndex < 0) return;
     const item = list.children[focusIndex] as HTMLElement | undefined;
-    item?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+    if (item) scrollItemIntoScroller(item);
   }, [focusIndex]);
 
   return (
@@ -46,7 +58,7 @@ export default function ProgressStepper({
           const isFocused = index === focusIndex;
           const isEditing =
             index === currentIndex && previewIndex != null && previewIndex !== currentIndex;
-          const isComplete = index < currentIndex;
+          const isComplete = index < focusIndex;
           const isDisabled = step.enabled === false;
           const isReadonly = Boolean(step.readonly);
           const canSelect = !isDisabled && Boolean(onStepSelect);

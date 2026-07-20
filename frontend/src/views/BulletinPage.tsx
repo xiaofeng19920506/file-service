@@ -112,6 +112,14 @@ export default function BulletinPage() {
 
   const handleVisibleSectionChange = useCallback((sectionId: string) => {
     setPreviewSectionId((prev) => (prev === sectionId ? prev : sectionId));
+    setActiveSectionId((prev) => {
+      if (prev === sectionId) return prev;
+      return sectionId;
+    });
+    const section = navSectionById(sectionId);
+    if (!section?.editableStepId) return;
+    const stepIdx = BULLETIN_WIZARD_STEPS.findIndex((s) => s.id === section.editableStepId);
+    if (stepIdx >= 0) setWizardStep(stepIdx);
   }, []);
 
   const selectNavSection = useCallback((sectionId: string) => {
@@ -130,10 +138,6 @@ export default function BulletinPage() {
       const stepIdx = BULLETIN_WIZARD_STEPS.findIndex((s) => s.id === section.editableStepId);
       if (stepIdx >= 0) setWizardStep(stepIdx);
     }
-  }, [activeSectionId]);
-
-  useEffect(() => {
-    setPreviewSectionId(activeSectionId);
   }, [activeSectionId]);
 
   useEffect(() => {

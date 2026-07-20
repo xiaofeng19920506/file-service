@@ -94,4 +94,14 @@ describe('bulletin deck plan', () => {
     expect(sectionIdForSlide(communionFirst!, plan)).toBe('communion');
     expect(sectionIdForSlide(closingFirst!, plan)).toBe('closing');
   });
+
+  it('maps every scripture presentation slide including expanded pages', async () => {
+    const file = await patchedPreviewFile('119:1-40');
+    const plan = await buildBulletinDeckPlanFromFile(file);
+    const scriptureSlides = plan.sections.find((s) => s.id === 'scripture')?.slides ?? [];
+    expect(scriptureSlides.length).toBeGreaterThan(3);
+    for (const slide of scriptureSlides) {
+      expect(sectionIdForSlide(slide, plan)).toBe('scripture');
+    }
+  });
 });

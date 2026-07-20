@@ -198,7 +198,7 @@ export function slidesForSection(
   return plan.sections.find((s) => s.id === sectionId)?.slides ?? [];
 }
 
-/** 可见演示页 → 模板分区 id（读经加页归 scripture；未知页返回 null） */
+/** 可见演示页 → 模板分区 id（读经加页归 scripture；unknown 回退到上一已知分区） */
 export function sectionIdForSlide(
   slideNumber: number,
   plan: BulletinDeckPlan | null | undefined,
@@ -206,8 +206,13 @@ export function sectionIdForSlide(
   if (!plan || slideNumber < 1) return null;
   const hit = plan.slides.find((s) => s.index === slideNumber);
   if (!hit) return null;
-  if (hit.sectionId === 'unknown') return null;
-  return hit.sectionId;
+  if (hit.sectionId !== 'unknown') return hit.sectionId;
+
+  for (let i = slideNumber - 1; i >= 1; i--) {
+    const prev = plan.slides.find((s) => s.index === i);
+    if (prev && prev.sectionId !== 'unknown') return prev.sectionId;
+  }
+  return null;
 }
 
 export function slidesForWizardStepId(

@@ -169,24 +169,33 @@ export default function BulletinFullDeckPreview({
 
     const rootRect = root.getBoundingClientRect();
     if (rootRect.height < 8) return;
-    const centerY = rootRect.top + rootRect.height * 0.35;
-    let bestSlide = 1;
-    let bestDistance = Number.POSITIVE_INFINITY;
+
+    // 取视口上半区“锚点”之上的最后一页，更接近用户当前阅读位置
+    const anchorY = rootRect.top + Math.min(160, rootRect.height * 0.28);
+    let bestSlide = 0;
+    let bestTop = Number.NEGATIVE_INFINITY;
+    let fallbackSlide = 0;
+    let fallbackDistance = Number.POSITIVE_INFINITY;
 
     root.querySelectorAll<HTMLElement>('[data-slide]').forEach((el) => {
       const slide = Number(el.dataset.slide);
       if (!slide) return;
       const rect = el.getBoundingClientRect();
-      if (rect.bottom < rootRect.top || rect.top > rootRect.bottom) return;
-      const slideCenter = rect.top + rect.height / 2;
-      const distance = Math.abs(slideCenter - centerY);
-      if (distance < bestDistance) {
-        bestDistance = distance;
+      if (rect.bottom <= rootRect.top || rect.top >= rootRect.bottom) return;
+
+      const distance = Math.abs(rect.top + rect.height * 0.2 - anchorY);
+      if (distance < fallbackDistance) {
+        fallbackDistance = distance;
+        fallbackSlide = slide;
+      }
+
+      if (rect.top <= anchorY && rect.top >= bestTop) {
+        bestTop = rect.top;
         bestSlide = slide;
       }
     });
 
-    onVisibleSlideChange(bestSlide);
+    onVisibleSlideChange(bestSlide || fallbackSlide || 1);
   }, [onVisibleSlideChange]);
 
   useEffect(() => {
