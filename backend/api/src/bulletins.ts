@@ -54,8 +54,38 @@ const BULLETIN_TEMPLATE_FILE = '06_14_2026.pptx';
 const BULLETIN_TEMPLATE_DIR = resolveBulletinTemplateDir();
 
 const slidePreviewCache = new Map<string, Buffer>();
+/** 同一套补丁参数共享已补丁 PPTX，避免每页都重新 patch */
+const patchedPptxCache = new Map<string, Buffer>();
 /** 封面补丁版本；变更后自动失效旧 PNG 缓存 */
-const SLIDE_PREVIEW_PATCH_REV = 'v21';
+const SLIDE_PREVIEW_PATCH_REV = 'v22';
+
+let previewRenderActive = 0;
+const previewRenderWaiters: Array<() => void> = [];
+const PREVIEW_RENDER_MAX = 2;
+
+async function withPreviewRenderSlot<T>(fn: () => Promise<T>): Promise<T> {
+  if (previewRenderActive >= PREVIEW_RENDER_MAX) {
+    await new Promise<void>((resolve) => previewRenderWaiters.push(resolve));
+  }
+  previewRenderActive++;
+  try {
+    return await fn();
+  } finally {
+    previewRenderActive--;
+    const next = previewRenderWaiters.shift();
+    if (next) next();
+  }
+}
+
+function rememberLru(map: Map<string, Buffer>, key: string, value: Buffer, max: number) {
+  if (map.has(key)) map.delete(key);
+  map.set(key, value);
+  while (map.size > max) {
+    const oldest = map.keys().next().value;
+    if (oldest == null) break;
+    map.delete(oldest);
+  }
+}
 
 export type BulletinAnnouncementDto = {
   id: string;
@@ -411,39 +441,45 @@ export function registerBulletinRoutes(
       return reply.header('Content-Type', 'image/png').header('X-Preview-Cached', 'true').send(cached);
     }
 
+    const patchKey = `${SLIDE_PREVIEW_PATCH_REV}:pptx:${serviceDate ?? ''}:${serviceTime}:${scriptureBook}:${scriptureReference}:${showPreServiceChairName}:${preServiceChairNames}`;
     const workRoot = await mkdtemp(join(tmpdir(), 'fs-bulletin-preview-'));
     try {
-      const templateBuf = await readFile(join(BULLETIN_TEMPLATE_DIR, BULLETIN_TEMPLATE_FILE));
-      const pptxBuf = Buffer.from(
-        await patchBulletinPreviewInPptx(templateBuf, {
-          serviceDate,
-          serviceTime,
-          scriptureBook,
-          scriptureReference,
-          showPreServiceChairName,
-          preServiceChairNames,
-        }),
-      );
+      let pptxBuf = patchedPptxCache.get(patchKey);
+      if (!pptxBuf) {
+        const templateBuf = await readFile(join(BULLETIN_TEMPLATE_DIR, BULLETIN_TEMPLATE_FILE));
+        pptxBuf = Buffer.from(
+          await patchBulletinPreviewInPptx(templateBuf, {
+            serviceDate,
+            serviceTime,
+            scriptureBook,
+            scriptureReference,
+            showPreServiceChairName,
+            preServiceChairNames,
+          }),
+        );
+        rememberLru(patchedPptxCache, patchKey, pptxBuf, 12);
+      }
 
       const pptxPath = join(workRoot, 'preview.pptx');
       await writeFile(pptxPath, pptxBuf);
 
-      const pngBuf = sofficePreviewUrl
-        ? await renderSlidePngViaService(sofficePreviewUrl, pptxBuf, slideNumber)
-        : await (async () => {
-            const pngPath = await exportPptxSlidePng({
-              sofficePath,
-              inputPath: pptxPath,
-              outDir: workRoot,
-              slideNumber,
-            });
-            return readFile(pngPath);
-          })();
-      slidePreviewCache.set(cacheKey, pngBuf);
-      if (slidePreviewCache.size > 80) {
-        const oldest = slidePreviewCache.keys().next().value;
-        if (oldest) slidePreviewCache.delete(oldest);
-      }
+      const pngBuf = await withPreviewRenderSlot(async () =>
+        sofficePreviewUrl
+          ? await renderSlidePngViaService(sofficePreviewUrl, pptxBuf!, slideNumber, {
+              timeoutMs: 90_000,
+              retries: 2,
+            })
+          : await (async () => {
+              const pngPath = await exportPptxSlidePng({
+                sofficePath,
+                inputPath: pptxPath,
+                outDir: workRoot,
+                slideNumber,
+              });
+              return readFile(pngPath);
+            })(),
+      );
+      rememberLru(slidePreviewCache, cacheKey, pngBuf, 120);
       return reply.header('Content-Type', 'image/png').header('X-Preview-Cached', 'false').send(pngBuf);
     } catch (err) {
       request.log.warn({ err, slideNumber }, 'bulletin slide preview failed');

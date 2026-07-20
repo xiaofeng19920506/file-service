@@ -1,4 +1,4 @@
-const MAX_CONCURRENT = 3;
+const MAX_CONCURRENT = 2;
 let active = 0;
 const waiters: Array<() => void> = [];
 

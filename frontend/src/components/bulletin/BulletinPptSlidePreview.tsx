@@ -13,7 +13,7 @@ import PreviewConversionGuide from '../PreviewConversionGuide';
 
 type BulletinPptSlidePreviewProps = {
   slideNumber: number;
-  /** 仅包含会影响本页像素的字段（由 previewPatchForSection 裁剪） */
+  /** 由 previewPatchForSection 裁剪；经文参数须与 deck 结构一致 */
   patch?: BulletinSlidePreviewParams;
   requireDate?: boolean;
   loading?: boolean;
@@ -21,6 +21,8 @@ type BulletinPptSlidePreviewProps = {
   slideLabel?: string;
   large?: boolean;
   overlay?: ReactNode;
+  /** 进入视口后再拉 PNG；默认 true（整卷 deck 用）。单页场景可关 */
+  lazy?: boolean;
 };
 
 export default function BulletinPptSlidePreview({
@@ -32,8 +34,11 @@ export default function BulletinPptSlidePreview({
   slideLabel,
   large,
   overlay,
+  lazy = true,
 }: BulletinPptSlidePreviewProps) {
   const { t } = useI18n();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(!lazy);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
@@ -45,6 +50,26 @@ export default function BulletinPptSlidePreview({
   const cacheKey = bulletinPreviewCacheKey(slideNumber, patch ?? {});
 
   useEffect(() => {
+    if (!lazy || inView) return;
+    const el = rootRef.current;
+    if (!el) return;
+    const root = el.closest('.bulletin-deck-preview') ?? null;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setInView(true);
+          obs.disconnect();
+        }
+      },
+      { root, rootMargin: '280px 0px', threshold: 0.01 },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [lazy, inView]);
+
+  useEffect(() => {
+    if (!inView) return;
+
     const currentPatch = patchRef.current;
     if (requireDate && !currentPatch?.serviceDate) {
       setPreviewUrl((prev) => {
@@ -79,7 +104,6 @@ export default function BulletinPptSlidePreview({
     }
 
     const timer = window.setTimeout(() => {
-      // stale-while-revalidate：已有图时不卸图，避免无关页整卷闪白
       if (!previewUrlRef.current) setLoading(true);
       setUnavailable(false);
       void fetchBulletinSlidePreviewPng(slideNumber, patchRef.current ?? {})
@@ -95,7 +119,7 @@ export default function BulletinPptSlidePreview({
           }
           setLoading(false);
         });
-    }, 250);
+    }, 180);
 
     return () => {
       cancelled = true;
@@ -104,7 +128,7 @@ export default function BulletinPptSlidePreview({
         URL.revokeObjectURL(createdUrl);
       }
     };
-  }, [cacheKey, slideNumber, requireDate]);
+  }, [cacheKey, slideNumber, requireDate, inView]);
 
   useEffect(() => {
     return () => {
@@ -113,11 +137,11 @@ export default function BulletinPptSlidePreview({
   }, []);
 
   const rootClass = `bulletin-slide-preview${large ? ' bulletin-slide-preview--large' : ''}`;
-  const showLoading = externalLoading || loading;
+  const showLoading = externalLoading || loading || (lazy && !inView);
 
   if (showLoading && !previewUrl) {
     return (
-      <div className={`${rootClass} bulletin-slide-preview--loading`}>
+      <div ref={rootRef} className={`${rootClass} bulletin-slide-preview--loading`}>
         <div className="preview-spinner" />
       </div>
     );
@@ -125,7 +149,7 @@ export default function BulletinPptSlidePreview({
 
   if (requireDate && !patch?.serviceDate) {
     return (
-      <div className={`${rootClass} bulletin-slide-preview--empty`}>
+      <div ref={rootRef} className={`${rootClass} bulletin-slide-preview--empty`}>
         <p>{emptyLabel}</p>
       </div>
     );
@@ -133,7 +157,7 @@ export default function BulletinPptSlidePreview({
 
   if (unavailable && !previewUrl) {
     return (
-      <figure className={rootClass}>
+      <figure ref={rootRef} className={rootClass}>
         {slideLabel && <figcaption className="bulletin-slide-preview-caption">{slideLabel}</figcaption>}
         <PreviewConversionGuide fileName="06_14_2026.pptx" compact />
         <p className="bulletin-slide-preview-fallback-note">{t('bulletin.previewUnavailableHint')}</p>
@@ -143,14 +167,17 @@ export default function BulletinPptSlidePreview({
 
   if (!previewUrl) {
     return (
-      <div className={`${rootClass} bulletin-slide-preview--empty`}>
+      <div ref={rootRef} className={`${rootClass} bulletin-slide-preview--empty`}>
         <p>{emptyLabel}</p>
       </div>
     );
   }
 
   return (
-    <figure className={`${rootClass}${showLoading ? ' bulletin-slide-preview--refreshing' : ''}`}>
+    <figure
+      ref={rootRef}
+      className={`${rootClass}${showLoading ? ' bulletin-slide-preview--refreshing' : ''}`}
+    >
       {slideLabel && <figcaption className="bulletin-slide-preview-caption">{slideLabel}</figcaption>}
       <div className="bulletin-slide-preview-frame bulletin-slide-preview-frame--png">
         <img className="bulletin-slide-preview-img" src={previewUrl} alt="" draggable={false} />

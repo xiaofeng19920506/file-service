@@ -240,20 +240,28 @@ export async function fetchBulletinSlidePreviewPng(
   if (params.showPreServiceChairName) qs.set('showPreServiceChairName', '1');
   if (params.preServiceChairNames) qs.set('preServiceChairNames', params.preServiceChairNames);
   const query = qs.toString();
-  const res = await runBulletinPreviewTask(() =>
-    apiFetch(
-      `/v1/bulletins/template/slides/${slideNumber}/preview.png${query ? `?${query}` : ''}`,
-    ),
-  );
-  if (!res.ok) {
+  const path = `/v1/bulletins/template/slides/${slideNumber}/preview.png${query ? `?${query}` : ''}`;
+
+  const maxAttempts = 3;
+  let lastError = 'slide_preview_unavailable';
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const res = await runBulletinPreviewTask(() => apiFetch(path));
+    if (res.ok) return res.blob();
+
     const data = await res.json().catch(() => ({}));
-    const msg =
+    lastError =
       typeof data === 'object' && data && 'error' in data
         ? String((data as { error: string }).error)
         : res.statusText;
-    throw new Error(msg);
+
+    // LibreOffice 过载时短暂退避重试
+    if (res.status === 503 && attempt < maxAttempts - 1) {
+      await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+      continue;
+    }
+    throw new Error(lastError);
   }
-  return res.blob();
+  throw new Error(lastError);
 }
 
 export type WorshipPlaylistInvite = {
