@@ -234,6 +234,7 @@ export default function WorshipSongsEditor({
           existingVideoIds={existingVideoIds}
           onAdded={handleAdded}
           showHint={!compact}
+          resultLayout="video"
         />
       </section>
 

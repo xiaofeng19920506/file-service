@@ -11,9 +11,11 @@ import {
   type TrendingSong,
 } from '../api/youtube-trending';
 import { friendlyError } from '../lib/error-messages';
+import { resolveYoutubeThumbnailUrl } from '../lib/youtube-thumbnail';
 import PickPlaylistForAddModal from './PickPlaylistForAddModal';
 import { CheckIcon, PlusIcon } from './icons';
 import { useI18n } from '../i18n';
+import type { YoutubeSearchResultLayout } from './PlaylistYoutubeSearchPanel';
 
 type PendingAdd = { videoId: string; title: string };
 
@@ -29,6 +31,7 @@ type YoutubeTrendingSongsProps = {
   onAdded: (detail: PlaylistDetail, meta: { addedCount: number; skippedCount: number }) => void;
   onPreviewTrack?: (track: { videoId: string; title: string }) => void;
   className?: string;
+  resultLayout?: YoutubeSearchResultLayout;
 };
 
 export default function YoutubeTrendingSongs({
@@ -43,6 +46,7 @@ export default function YoutubeTrendingSongs({
   onAdded,
   onPreviewTrack,
   className = '',
+  resultLayout = 'list',
 }: YoutubeTrendingSongsProps) {
   const { t } = useI18n();
   const [songs, setSongs] = useState<TrendingSong[]>([]);
@@ -145,11 +149,107 @@ export default function YoutubeTrendingSongs({
           <h3 className="youtube-trending-title">{t('playlists.trendingTitle')}</h3>
           <p className="youtube-trending-subtitle">{scopeLabel}</p>
         </div>
-        <ul className="search-results youtube-search-results youtube-trending-results">
+        <ul
+          className={
+            resultLayout === 'video'
+              ? 'youtube-search-results youtube-search-results--video youtube-trending-results'
+              : 'search-results youtube-search-results youtube-trending-results'
+          }
+        >
           {songs.map((row) => {
             const inCurrentPlaylist = !pickPlaylistOnAdd && isInCurrentPlaylist(row.videoId);
             const alreadyAdded = pickPlaylistOnAdd && isInAnyPlaylist(row.videoId, row.inLibrary);
             const adding = addingVideoId === row.videoId;
+            const thumb = resolveYoutubeThumbnailUrl(row.videoId);
+            const addControl = inCurrentPlaylist ? (
+              <button
+                type="button"
+                className="youtube-search-add-btn added"
+                disabled
+                aria-label={t('search.added')}
+                title={t('search.added')}
+              >
+                <CheckIcon />
+              </button>
+            ) : alreadyAdded ? (
+              <button
+                type="button"
+                className={`youtube-search-added-btn${adding ? ' loading' : ''}`}
+                onClick={() => void handleAdd(row.videoId, row.title)}
+                disabled={addingVideoId !== null}
+                aria-label={adding ? t('playlists.adding') : t('search.alreadyAdded')}
+                title={adding ? t('playlists.adding') : t('search.alreadyAdded')}
+              >
+                {adding ? (
+                  <span className="youtube-search-add-spinner" aria-hidden />
+                ) : (
+                  t('search.alreadyAdded')
+                )}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className={`youtube-search-add-btn${adding ? ' loading' : ''}`}
+                onClick={() => void handleAdd(row.videoId, row.title)}
+                disabled={addingVideoId !== null}
+                aria-label={adding ? t('playlists.adding') : t('search.add')}
+                title={adding ? t('playlists.adding') : t('search.add')}
+              >
+                {adding ? (
+                  <span className="youtube-search-add-spinner" aria-hidden />
+                ) : (
+                  <PlusIcon />
+                )}
+              </button>
+            );
+
+            if (resultLayout === 'video') {
+              return (
+                <li key={row.videoId} className="youtube-search-video-card">
+                  <div className="youtube-search-video-card-main">
+                    {onPreviewTrack ? (
+                      <button
+                        type="button"
+                        className="youtube-search-video-thumb-btn"
+                        onClick={() =>
+                          onPreviewTrack({ videoId: row.videoId, title: row.title })
+                        }
+                        disabled={addingVideoId !== null}
+                        aria-label={row.title}
+                      >
+                        <img
+                          className="youtube-search-video-thumb"
+                          src={thumb}
+                          alt=""
+                          loading="lazy"
+                        />
+                      </button>
+                    ) : (
+                      <span className="youtube-search-video-thumb-wrap">
+                        <img
+                          className="youtube-search-video-thumb"
+                          src={thumb}
+                          alt=""
+                          loading="lazy"
+                        />
+                      </span>
+                    )}
+                    <span className="youtube-search-video-add">{addControl}</span>
+                    <span className="youtube-search-video-meta">
+                      <strong className="youtube-search-video-title" title={row.title}>
+                        {row.title}
+                      </strong>
+                      {row.channelTitle ? (
+                        <span className="youtube-search-video-channel" title={row.channelTitle}>
+                          {row.channelTitle}
+                        </span>
+                      ) : null}
+                    </span>
+                  </div>
+                </li>
+              );
+            }
+
             return (
               <li key={row.videoId} className="search-result-item youtube-search-result">
                 {onPreviewTrack ? (
@@ -182,47 +282,7 @@ export default function YoutubeTrendingSongs({
                     )}
                   </div>
                 )}
-                {inCurrentPlaylist ? (
-                  <button
-                    type="button"
-                    className="youtube-search-add-btn added"
-                    disabled
-                    aria-label={t('search.added')}
-                    title={t('search.added')}
-                  >
-                    <CheckIcon />
-                  </button>
-                ) : alreadyAdded ? (
-                  <button
-                    type="button"
-                    className={`youtube-search-added-btn${adding ? ' loading' : ''}`}
-                    onClick={() => void handleAdd(row.videoId, row.title)}
-                    disabled={addingVideoId !== null}
-                    aria-label={adding ? t('playlists.adding') : t('search.alreadyAdded')}
-                    title={adding ? t('playlists.adding') : t('search.alreadyAdded')}
-                  >
-                    {adding ? (
-                      <span className="youtube-search-add-spinner" aria-hidden />
-                    ) : (
-                      t('search.alreadyAdded')
-                    )}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className={`youtube-search-add-btn${adding ? ' loading' : ''}`}
-                    onClick={() => void handleAdd(row.videoId, row.title)}
-                    disabled={addingVideoId !== null}
-                    aria-label={adding ? t('playlists.adding') : t('search.add')}
-                    title={adding ? t('playlists.adding') : t('search.add')}
-                  >
-                    {adding ? (
-                      <span className="youtube-search-add-spinner" aria-hidden />
-                    ) : (
-                      <PlusIcon />
-                    )}
-                  </button>
-                )}
+                {addControl}
               </li>
             );
           })}

@@ -10,12 +10,15 @@ import { addBulletinWorshipPlaylistItemsByVideos } from '../api/bulletins';
 import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 import { useDebouncedYoutubeSearch } from '../hooks/useDebouncedYoutubeSearch';
 import { friendlyError } from '../lib/error-messages';
+import { resolveYoutubeThumbnailUrl } from '../lib/youtube-thumbnail';
 import PickPlaylistForAddModal from './PickPlaylistForAddModal';
 import YoutubeTrendingSongs from './YoutubeTrendingSongs';
 import { CheckIcon, CloseIcon, PlusIcon, SearchIcon } from './icons';
 import { useI18n } from '../i18n';
 
 type PendingAdd = { videoId: string; title: string };
+
+export type YoutubeSearchResultLayout = 'list' | 'video';
 
 type PlaylistYoutubeSearchPanelProps = {
   playlistId?: string;
@@ -34,6 +37,8 @@ type PlaylistYoutubeSearchPanelProps = {
   className?: string;
   /** 桌面弹窗：将搜索框渲染到指定容器（通常为 modal 顶栏中间） */
   searchHeaderEl?: HTMLElement | null;
+  /** list=歌单式文字列表；video=带缩略图的视频卡片（敬拜/加歌弹窗） */
+  resultLayout?: YoutubeSearchResultLayout;
 };
 
 export default function PlaylistYoutubeSearchPanel({
@@ -52,6 +57,7 @@ export default function PlaylistYoutubeSearchPanel({
   onPreviewTrack,
   className = '',
   searchHeaderEl = null,
+  resultLayout = 'list',
 }: PlaylistYoutubeSearchPanelProps) {
   const { t } = useI18n();
   const isMobileViewport = useMediaQuery(MOBILE_MEDIA_QUERY);
@@ -254,6 +260,7 @@ export default function PlaylistYoutubeSearchPanel({
             onCreatePlaylist={onCreatePlaylist}
             onAdded={onAdded}
             onPreviewTrack={onPreviewTrack}
+            resultLayout={resultLayout}
           />
         )}
 
@@ -272,12 +279,106 @@ export default function PlaylistYoutubeSearchPanel({
         {searchResults.length > 0 && (
           <ul
             ref={resultsListRef}
-            className="search-results youtube-search-results playlists-youtube-search-results"
+            className={
+              resultLayout === 'video'
+                ? 'youtube-search-results youtube-search-results--video playlists-youtube-search-results'
+                : 'search-results youtube-search-results playlists-youtube-search-results'
+            }
           >
             {searchResults.map((row) => {
               const inCurrentPlaylist = !pickPlaylistOnAdd && isInCurrentPlaylist(row.videoId);
               const alreadyAdded = pickPlaylistOnAdd && isInAnyPlaylist(row.videoId, row.inLibrary);
               const adding = addingVideoId === row.videoId;
+              const thumb = resolveYoutubeThumbnailUrl(row.videoId, row.thumbnailUrl);
+              const addControl = inCurrentPlaylist ? (
+                <button
+                  type="button"
+                  className={`youtube-search-add-btn added${adding ? ' loading' : ''}`}
+                  disabled
+                  aria-label={t('search.added')}
+                  title={t('search.added')}
+                >
+                  <CheckIcon />
+                </button>
+              ) : alreadyAdded ? (
+                <button
+                  type="button"
+                  className={`youtube-search-added-btn${adding ? ' loading' : ''}`}
+                  onClick={() => void handleAddSearchResult(row.videoId, row.title)}
+                  disabled={addingVideoId !== null}
+                  aria-label={adding ? t('playlists.adding') : t('search.alreadyAdded')}
+                  title={adding ? t('playlists.adding') : t('search.alreadyAdded')}
+                >
+                  {adding ? (
+                    <span className="youtube-search-add-spinner" aria-hidden />
+                  ) : (
+                    t('search.alreadyAdded')
+                  )}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={`youtube-search-add-btn${adding ? ' loading' : ''}`}
+                  onClick={() => void handleAddSearchResult(row.videoId, row.title)}
+                  disabled={addingVideoId !== null}
+                  aria-label={adding ? t('playlists.adding') : t('search.add')}
+                  title={adding ? t('playlists.adding') : t('search.add')}
+                >
+                  {adding ? (
+                    <span className="youtube-search-add-spinner" aria-hidden />
+                  ) : (
+                    <PlusIcon />
+                  )}
+                </button>
+              );
+
+              if (resultLayout === 'video') {
+                return (
+                  <li key={row.videoId} className="youtube-search-video-card">
+                    <div className="youtube-search-video-card-main">
+                      {onPreviewTrack ? (
+                        <button
+                          type="button"
+                          className="youtube-search-video-thumb-btn"
+                          onClick={() =>
+                            onPreviewTrack({ videoId: row.videoId, title: row.title })
+                          }
+                          disabled={addingVideoId !== null}
+                          aria-label={row.title}
+                        >
+                          <img
+                            className="youtube-search-video-thumb"
+                            src={thumb}
+                            alt=""
+                            loading="lazy"
+                          />
+                        </button>
+                      ) : (
+                        <span className="youtube-search-video-thumb-wrap">
+                          <img
+                            className="youtube-search-video-thumb"
+                            src={thumb}
+                            alt=""
+                            loading="lazy"
+                          />
+                        </span>
+                      )}
+                      <span className="youtube-search-video-add">{addControl}</span>
+                      <span className="youtube-search-video-meta">
+                        <strong className="youtube-search-video-title" title={row.title}>
+                          {row.title}
+                        </strong>
+                        {row.channelTitle ? (
+                          <span className="youtube-search-video-channel" title={row.channelTitle}>
+                            {row.channelTitle}
+                          </span>
+                        ) : null}
+                      </span>
+                    </div>
+                  </li>
+                );
+              }
+
               return (
                 <li key={row.videoId} className="search-result-item youtube-search-result">
                   {onPreviewTrack ? (
@@ -310,52 +411,19 @@ export default function PlaylistYoutubeSearchPanel({
                       )}
                     </div>
                   )}
-                  {inCurrentPlaylist ? (
-                    <button
-                      type="button"
-                      className={`youtube-search-add-btn added${adding ? ' loading' : ''}`}
-                      disabled
-                      aria-label={t('search.added')}
-                      title={t('search.added')}
-                    >
-                      <CheckIcon />
-                    </button>
-                  ) : alreadyAdded ? (
-                    <button
-                      type="button"
-                      className={`youtube-search-added-btn${adding ? ' loading' : ''}`}
-                      onClick={() => void handleAddSearchResult(row.videoId, row.title)}
-                      disabled={addingVideoId !== null}
-                      aria-label={adding ? t('playlists.adding') : t('search.alreadyAdded')}
-                      title={adding ? t('playlists.adding') : t('search.alreadyAdded')}
-                    >
-                      {adding ? (
-                        <span className="youtube-search-add-spinner" aria-hidden />
-                      ) : (
-                        t('search.alreadyAdded')
-                      )}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className={`youtube-search-add-btn${adding ? ' loading' : ''}`}
-                      onClick={() => void handleAddSearchResult(row.videoId, row.title)}
-                      disabled={addingVideoId !== null}
-                      aria-label={adding ? t('playlists.adding') : t('search.add')}
-                      title={adding ? t('playlists.adding') : t('search.add')}
-                    >
-                      {adding ? (
-                        <span className="youtube-search-add-spinner" aria-hidden />
-                      ) : (
-                        <PlusIcon />
-                      )}
-                    </button>
-                  )}
+                  {addControl}
                 </li>
               );
             })}
             {(hasMore || loadMoreLoading) && (
-              <li className="youtube-search-load-more" aria-hidden={!loadMoreLoading}>
+              <li
+                className={
+                  resultLayout === 'video'
+                    ? 'youtube-search-load-more youtube-search-load-more--video'
+                    : 'youtube-search-load-more'
+                }
+                aria-hidden={!loadMoreLoading}
+              >
                 <div ref={loadMoreRef} className="youtube-search-load-more-sentinel">
                   {loadMoreLoading && (
                     <>

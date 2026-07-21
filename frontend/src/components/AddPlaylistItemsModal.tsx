@@ -143,6 +143,7 @@ export default function AddPlaylistItemsModal({
               bulletinId={bulletinId}
               existingVideoIds={existingVideoIds}
               onAdded={onAdded}
+              resultLayout={bulletinId ? 'video' : 'list'}
             />
           </section>
 
