@@ -21,12 +21,15 @@ describe('bulletin section visibility', () => {
     expect(setBulletinSectionVisible(['birthday'], 'birthday', true)).toEqual([]);
   });
 
-  it('always deletes slide 3 and hidden section slides', () => {
+  it('always deletes slide 3, worship extras 7/9, and hidden section slides', () => {
     const paths = bulletinSlidePathsToDelete({
       hiddenSections: ['communion', 'testimony_week'],
       weeklyMeetingVariant: 28,
     });
     expect(paths).toContain('ppt/slides/slide3.xml');
+    expect(paths).toContain('ppt/slides/slide7.xml');
+    expect(paths).toContain('ppt/slides/slide9.xml');
+    expect(paths).not.toContain('ppt/slides/slide8.xml');
     expect(paths).toContain('ppt/slides/slide10.xml');
     expect(paths).toContain('ppt/slides/slide16.xml');
     expect(paths).toContain('ppt/slides/slide29.xml');

@@ -4,8 +4,8 @@
   "sourceWeek": "2026-06-14",
   "totalSlides": 38,
   "nativeHiddenSlides": [],
-  "alwaysOmitSlideFiles": [3],
-  "notes": "2026-07-21 读完全部 38 页正文（presentation 无 show=0；含始终省略的 P3）后按主题分区。分区归属只认 slide 文件号；预览演示页码在删页/读经加页后会变，必须与 PNG API 使用同一套补丁。",
+  "alwaysOmitSlideFiles": [3, 7, 9],
+  "notes": "2026-07-21 读完全部 38 页正文后按主题分区。P3 会前名单、P7/P9 敬拜多余页始终省略，敬拜只留 P8。分区归属只认 slide 文件号；预览演示页码在删页/读经加页后会变，必须与 PNG API 使用同一套补丁。",
   "contentVerifiedAt": "2026-07-21",
   "sections": [
     {
@@ -31,10 +31,10 @@
     },
     {
       "id": "worship",
-      "slides": [7, 8, 9],
+      "slides": [8],
       "role": "worship_break",
-      "titleFromSlide": "敬拜讚美 / Praise and Worship",
-      "notes": "P7–P9：敬拜赞美（三页标题页）"
+      "titleFromSlide": "敬拜讚美",
+      "notes": "只保留模板第 2 页敬拜（P8）。P7/P9 同为敬拜标题页，始终省略"
     },
     {
       "id": "communion",

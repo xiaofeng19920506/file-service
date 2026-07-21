@@ -11,20 +11,19 @@ type TemplateSlideSection = { id: string; slides: number[] };
 
 /**
  * 模板内永不进入 deck 的 slide 文件编号。
- * P3 与 P2 同为「主席會前禱告」，但是多人名单页；周报只保留 P2，主席姓名用勾选写到 P2。
+ * P3：会前祷告名单；P7/P9：敬拜多余页（只保留 P8）。
  */
-export const BULLETIN_OMITTED_TEMPLATE_SLIDES = [3] as const;
+export const BULLETIN_OMITTED_TEMPLATE_SLIDES = [3, 7, 9] as const;
 
 /**
  * 模板内 slide 文件编号 → 分区（非放映页码）。
- * 2026-07-21 读完 06_14_2026.pptx 全部 38 页正文后按主题划分：
- * 圣餐=P10–13，欢迎新朋友=P14，青少年儿童祷告=P15，主日信息=P17（彼此独立）。
+ * 敬拜赞美只保留 P8（模板第 2 页敬拜）。
  */
 export const BULLETIN_TEMPLATE_SLIDE_SECTIONS: TemplateSlideSection[] = [
   { id: 'cover', slides: [1] },
   { id: 'pre_service', slides: [2] },
   { id: 'scripture', slides: [4, 5, 6] },
-  { id: 'worship', slides: [7, 8, 9] },
+  { id: 'worship', slides: [8] },
   { id: 'communion', slides: [10, 11, 12, 13] },
   { id: 'welcome', slides: [14] },
   { id: 'youth_prayer', slides: [15] },

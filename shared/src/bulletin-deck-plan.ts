@@ -28,8 +28,8 @@ export type BulletinDeckPlanCore = {
 export const BULLETIN_TEMPLATE_SLIDE_SECTIONS: { id: string; slides: readonly number[] }[] =
   Object.entries(BULLETIN_SECTION_TEMPLATE_SLIDES).map(([id, slides]) => ({ id, slides }));
 
-/** 始终省略：P3 与 P2 同为「主席會前禱告」但为多人名单 */
-export const BULLETIN_OMITTED_TEMPLATE_SLIDES = [3] as const;
+/** 始终省略：P3 会前名单；P7/P9 敬拜多余页（只留 P8） */
+export const BULLETIN_OMITTED_TEMPLATE_SLIDES = [3, 7, 9] as const;
 
 function buildSlideInFileToSection(
   sections: { id: string; slides: readonly number[] }[] = BULLETIN_TEMPLATE_SLIDE_SECTIONS,
@@ -117,12 +117,14 @@ export function assertSectionSlideMapCoversTemplate(): void {
     }
   }
   for (let n = 1; n <= 38; n++) {
-    if (n === 3) continue;
+    if ((BULLETIN_OMITTED_TEMPLATE_SLIDES as readonly number[]).includes(n)) continue;
     if (!covered.has(n)) throw new Error(`unmapped_template_slide:${n}`);
   }
-  // P3 必须在删页列表中
+  // 始终省略页必须在删页列表中
   const deleted = bulletinSlidePathsToDelete({});
-  if (!deleted.includes('ppt/slides/slide3.xml')) {
-    throw new Error('slide3_must_always_omit');
+  for (const n of BULLETIN_OMITTED_TEMPLATE_SLIDES) {
+    if (!deleted.includes(`ppt/slides/slide${n}.xml`)) {
+      throw new Error(`slide${n}_must_always_omit`);
+    }
   }
 }

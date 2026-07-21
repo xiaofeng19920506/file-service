@@ -59,8 +59,8 @@ const BULLETIN_TEMPLATE_DIR = resolveBulletinTemplateDir();
 const slidePreviewCache = new Map<string, Buffer>();
 /** 同一套补丁参数共享已补丁 PPTX，避免每页都重新 patch */
 const patchedPptxCache = new Map<string, Buffer>();
-/** 预览补丁版本；v25=单页抽出后再渲染，避免 LO 加页后页序错位 */
-const SLIDE_PREVIEW_PATCH_REV = 'v25';
+/** 预览补丁版本；v26=敬拜只留 P8，始终删 P7/P9 */
+const SLIDE_PREVIEW_PATCH_REV = 'v26';
 
 let previewRenderActive = 0;
 const previewRenderWaiters: Array<() => void> = [];

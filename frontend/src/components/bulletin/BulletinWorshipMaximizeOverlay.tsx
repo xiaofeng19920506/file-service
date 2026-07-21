@@ -101,7 +101,7 @@ export default function BulletinWorshipMaximizeOverlay({
       const parsed = await rebuildBulletinSlides(bulletin);
       if (cancelled) return;
       setSlides(parsed);
-      const worshipIdx = parsed.findIndex((s) => s.slideInFile === 7);
+      const worshipIdx = parsed.findIndex((s) => s.slideInFile === 8);
       setSlideIndex(worshipIdx >= 0 ? worshipIdx : 0);
       setUsingLyricsUpload(false);
     };

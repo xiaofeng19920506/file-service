@@ -22,9 +22,9 @@ const CONTENT_SECTION_BY_FILE: Record<number, string> = {
   4: 'scripture',
   5: 'scripture',
   6: 'scripture',
-  7: 'worship',
+  // 7 omitted (extra worship)
   8: 'worship',
-  9: 'worship',
+  // 9 omitted (extra worship)
   10: 'communion',
   11: 'communion',
   12: 'communion',
@@ -57,7 +57,7 @@ const CONTENT_SECTION_BY_FILE: Record<number, string> = {
 };
 
 describe('bulletin deck plan from template content', () => {
-  it('maps every template file 1-38 except omitted P3', () => {
+  it('maps every template file 1-38 except always-omitted slides', () => {
     assertSectionSlideMapCoversTemplate();
     for (const [file, sectionId] of Object.entries(CONTENT_SECTION_BY_FILE)) {
       const n = Number(file);

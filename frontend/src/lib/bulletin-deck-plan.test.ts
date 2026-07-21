@@ -24,7 +24,7 @@ describe('bulletin deck plan', () => {
   it('places worship after expanded scripture pages in presentation order', async () => {
     const file = await patchedPreviewFile('119:1-40');
     const order = await listPptxSlidesInPresentationOrder(file);
-    const worship = order.find((s) => s.slideInFile === 7);
+    const worship = order.find((s) => s.slideInFile === 8);
     expect(worship).toBeDefined();
     expect(worship!.index).toBeGreaterThan(7);
 
@@ -32,7 +32,7 @@ describe('bulletin deck plan', () => {
       order
         .slice()
         .sort((a, b) => a.slideInFile - b.slideInFile)
-        .findIndex((s) => s.slideInFile === 7) + 1;
+        .findIndex((s) => s.slideInFile === 8) + 1;
     expect(worship!.index).not.toBe(fileSortedWorshipIndex);
   });
 
@@ -41,7 +41,7 @@ describe('bulletin deck plan', () => {
     const plan = await buildBulletinDeckPlanFromFile(file);
     const worship = plan.wizardSteps.find((w) => w.stepId === 'worship');
     const order = await listPptxSlidesInPresentationOrder(file);
-    const worshipPresentation = order.find((s) => s.slideInFile === 7);
+    const worshipPresentation = order.find((s) => s.slideInFile === 8);
 
     expect(worshipPresentation).toBeDefined();
     expect(worship?.slides[0]).toBe(worshipPresentation!.index);
@@ -68,8 +68,8 @@ describe('bulletin deck plan', () => {
 
     const browserOrder = await listPptxSlidesInPresentationOrder(browserFile);
     const apiOrder = await listPptxSlidesInPresentationOrder(apiFile);
-    const browserWorship = browserOrder.find((s) => s.slideInFile === 7);
-    const apiWorship = apiOrder.find((s) => s.slideInFile === 7);
+    const browserWorship = browserOrder.find((s) => s.slideInFile === 8);
+    const apiWorship = apiOrder.find((s) => s.slideInFile === 8);
 
     expect(browserWorship?.index).toBe(apiWorship?.index);
     expect(browserOrder.length).toBe(apiOrder.length);
@@ -85,7 +85,7 @@ describe('bulletin deck plan', () => {
     const doxologyFirst = firstSlideForSection('doxology', plan);
     const benedictionFirst = firstSlideForSection('benediction', plan);
 
-    expect(worshipFirst).toBe(order.find((s) => s.slideInFile === 7)?.index);
+    expect(worshipFirst).toBe(order.find((s) => s.slideInFile === 8)?.index);
     expect(worshipFirst).toBeGreaterThan(6);
     expect(communionFirst).toBe(order.find((s) => s.slideInFile === 10)?.index);
     expect(communionFirst).toBeGreaterThan(worshipFirst!);
@@ -147,7 +147,7 @@ describe('bulletin deck plan', () => {
       { index: 5, slideInFile: 39 },
       { index: 6, slideInFile: 40 },
       { index: 7, slideInFile: 6 },
-      { index: 8, slideInFile: 7 },
+      { index: 8, slideInFile: 8 },
     ]);
     expect(slides.filter((s) => s.sectionId === 'pre_service').map((s) => s.index)).toEqual([2]);
     expect(slides.filter((s) => s.sectionId === 'scripture').map((s) => s.index)).toEqual([
@@ -201,7 +201,7 @@ describe('bulletin deck plan', () => {
     expect(order.some((s) => [10, 11, 12, 13].includes(s.slideInFile))).toBe(false);
   });
 
-  it('worship section only contains template slides 7-9 even with long scripture', async () => {
+  it('worship section only contains template slide 8 even with long scripture', async () => {
     const file = await patchedPreviewFile('119:1-40');
     const plan = await buildBulletinDeckPlanFromFile(file);
     const order = await listPptxSlidesInPresentationOrder(file);
@@ -209,7 +209,7 @@ describe('bulletin deck plan', () => {
     const welcome = plan.sections.find((s) => s.id === 'welcome')!;
     const worshipFiles = worship.slides.map((i) => order.find((o) => o.index === i)!.slideInFile);
     const welcomeFiles = welcome.slides.map((i) => order.find((o) => o.index === i)!.slideInFile);
-    expect(worshipFiles).toEqual([7, 8, 9]);
+    expect(worshipFiles).toEqual([8]);
     expect(welcomeFiles).toEqual([14]);
-    expect(worship.slides).toHaveLength(3);
+    expect(worship.slides).toHaveLength(1);
   });

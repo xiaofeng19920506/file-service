@@ -6,7 +6,8 @@ export const BULLETIN_SECTION_TEMPLATE_SLIDES: Record<string, readonly number[]>
   cover: [1],
   pre_service: [2],
   scripture: [4, 5, 6],
-  worship: [7, 8, 9],
+  /** 敬拜赞美只保留模板第 2 页（P8）；P7/P9 见 ALWAYS_OMIT */
+  worship: [8],
   communion: [10, 11, 12, 13],
   welcome: [14],
   youth_prayer: [15],
@@ -26,6 +27,9 @@ export const BULLETIN_SECTION_TEMPLATE_SLIDES: Record<string, readonly number[]>
   doxology: [37],
   benediction: [38],
 };
+
+/** 始终从周报 deck 删除：P3 会前名单；P7/P9 敬拜多余页（只留 P8） */
+export const BULLETIN_ALWAYS_OMIT_SLIDE_FILES = [3, 7, 9] as const;
 
 const WEEKLY_MEETING_VARIANTS = [28, 29, 30] as const;
 
@@ -81,7 +85,7 @@ function slidePath(n: number): string {
 
 /**
  * 需要从 PPTX 删除的 slide 路径：
- * - 始终删第 3 页（会前名单）
+ * - 始终删 P3（会前名单）、P7/P9（敬拜多余页，只留 P8）
  * - 隐藏分区对应页
  * - 本週聚会未选中的版式页
  */
@@ -92,7 +96,9 @@ export function bulletinSlidePathsToDelete(input: {
   weeklyMeetingVariant?: number | null;
 }): string[] {
   const hidden = resolveHiddenSections(input);
-  const paths = new Set<string>([slidePath(3)]);
+  const paths = new Set<string>(
+    BULLETIN_ALWAYS_OMIT_SLIDE_FILES.map((n) => slidePath(n)),
+  );
 
   for (const sectionId of hidden) {
     const slides = BULLETIN_SECTION_TEMPLATE_SLIDES[sectionId];

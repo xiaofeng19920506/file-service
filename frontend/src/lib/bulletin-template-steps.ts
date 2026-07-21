@@ -46,7 +46,7 @@ export const BULLETIN_WIZARD_STEPS: BulletinWizardStep[] = [
   {
     id: 'worship',
     sectionId: 'worship',
-    slides: [7, 8, 9],
+    slides: [8],
     labelKey: 'bulletin.steps.worship',
     enabled: true,
   },
@@ -90,7 +90,7 @@ export const BULLETIN_WIZARD_STEPS: BulletinWizardStep[] = [
 import type { BulletinDeckPlan } from './bulletin-deck-plan';
 
 /** 敬拜赞美模板页（无 deckPlan 时的回退） */
-export const BULLETIN_WORSHIP_SLIDES = [7, 8, 9] as const;
+export const BULLETIN_WORSHIP_SLIDES = [8] as const;
 
 export function isBulletinWorshipSlide(slideNumber: number, plan?: BulletinDeckPlan | null): boolean {
   if (plan) {
