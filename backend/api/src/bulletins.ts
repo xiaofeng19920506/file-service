@@ -63,8 +63,8 @@ const BULLETIN_TEMPLATE_DIR = resolveBulletinTemplateDir();
 const slidePreviewCache = new Map<string, Buffer>();
 /** 同一套补丁参数共享已补丁 PPTX，避免每页都重新 patch */
 const patchedPptxCache = new Map<string, Buffer>();
-/** 预览补丁版本；v27=分区幻灯片文字覆盖 */
-const SLIDE_PREVIEW_PATCH_REV = 'v27';
+/** 预览补丁版本；v29=生日只留 P24 + 生日/金句实时补丁 */
+const SLIDE_PREVIEW_PATCH_REV = 'v29';
 
 function slideOverridesCacheKey(overrides: readonly SlideTextOverride[]): string {
   if (!overrides.length) return '';
@@ -72,6 +72,64 @@ function slideOverridesCacheKey(overrides: readonly SlideTextOverride[]): string
     .map((o) => `${o.slide}:${o.textIndex}:${o.text}`)
     .join('\n');
   return createHash('sha1').update(payload).digest('hex').slice(0, 16);
+}
+
+type PreviewQueryFields = {
+  serviceDate?: string;
+  serviceTime: string;
+  scriptureBook: string;
+  scriptureReference: string;
+  showPreServiceChairName: boolean;
+  preServiceChairNames: string;
+  birthdayMonth: string;
+  birthdayNames: string;
+  verseOfWeek: string;
+  hiddenSections: string[];
+  weeklyMeetingVariant: number | null;
+};
+
+function parsePreviewQuery(query: {
+  serviceDate?: string;
+  serviceTime?: string;
+  scriptureBook?: string;
+  scriptureReference?: string;
+  showPreServiceChairName?: string;
+  preServiceChairNames?: string;
+  birthdayMonth?: string;
+  birthdayNames?: string;
+  verseOfWeek?: string;
+  hiddenSections?: string;
+  weeklyMeetingVariant?: string;
+}): PreviewQueryFields {
+  const variantRaw = query.weeklyMeetingVariant?.trim();
+  return {
+    serviceDate: query.serviceDate?.trim(),
+    serviceTime: query.serviceTime?.trim() || '11:00',
+    scriptureBook: query.scriptureBook?.trim() ?? '',
+    scriptureReference: query.scriptureReference?.trim() ?? '',
+    showPreServiceChairName:
+      query.showPreServiceChairName === '1' || query.showPreServiceChairName === 'true',
+    preServiceChairNames: query.preServiceChairNames?.trim() ?? '',
+    birthdayMonth: query.birthdayMonth?.trim() ?? '',
+    birthdayNames: query.birthdayNames?.trim() ?? '',
+    verseOfWeek: query.verseOfWeek?.trim() ?? '',
+    hiddenSections: normalizeHiddenSections(
+      (query.hiddenSections ?? '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
+    ),
+    weeklyMeetingVariant:
+      variantRaw && /^\d+$/.test(variantRaw) ? Number.parseInt(variantRaw, 10) : null,
+  };
+}
+
+function previewPatchCacheSuffix(
+  q: PreviewQueryFields,
+  overridesKey: string,
+): string {
+  const hiddenKey = q.hiddenSections.slice().sort().join(',');
+  return `${q.serviceDate ?? ''}:${q.serviceTime}:${q.scriptureBook}:${q.scriptureReference}:${q.showPreServiceChairName}:${q.preServiceChairNames}:${q.birthdayMonth}:${q.birthdayNames}:${q.verseOfWeek}:${hiddenKey}:${q.weeklyMeetingVariant ?? ''}:${overridesKey}`;
 }
 
 let previewRenderActive = 0;
@@ -460,6 +518,9 @@ export function registerBulletinRoutes(
       preServiceChairNames?: string;
       hiddenSections?: string;
       weeklyMeetingVariant?: string;
+      birthdayMonth?: string;
+      birthdayNames?: string;
+      verseOfWeek?: string;
       bulletinId?: string;
       slideTextOverrides?: string;
     };
@@ -469,24 +530,8 @@ export function registerBulletinRoutes(
       return reply.code(403).send({ error: 'bulletin_forbidden' });
     }
 
-    const serviceDate = request.query.serviceDate?.trim();
-    const serviceTime = request.query.serviceTime?.trim() || '11:00';
-    const scriptureBook = request.query.scriptureBook?.trim() ?? '';
-    const scriptureReference = request.query.scriptureReference?.trim() ?? '';
-    const showPreServiceChairName =
-      request.query.showPreServiceChairName === '1' ||
-      request.query.showPreServiceChairName === 'true';
-    const preServiceChairNames = request.query.preServiceChairNames?.trim() ?? '';
-    const hiddenSections = normalizeHiddenSections(
-      (request.query.hiddenSections ?? '')
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean),
-    );
-    const variantRaw = request.query.weeklyMeetingVariant?.trim();
-    const weeklyMeetingVariant =
-      variantRaw && /^\d+$/.test(variantRaw) ? Number.parseInt(variantRaw, 10) : null;
-    if (serviceDate && !/^\d{4}-\d{2}-\d{2}$/.test(serviceDate)) {
+    const q = parsePreviewQuery(request.query);
+    if (q.serviceDate && !/^\d{4}-\d{2}-\d{2}$/.test(q.serviceDate)) {
       return reply.code(400).send({ error: 'invalid_service_date' });
     }
 
@@ -508,9 +553,8 @@ export function registerBulletinRoutes(
       slideTextOverrides = normalizeSlideTextOverrides(row?.slideTextOverrides);
     }
 
-    const hiddenKey = hiddenSections.slice().sort().join(',');
     const overridesKey = slideOverridesCacheKey(slideTextOverrides);
-    const patchKey = `${SLIDE_PREVIEW_PATCH_REV}:pptx:${serviceDate ?? ''}:${serviceTime}:${scriptureBook}:${scriptureReference}:${showPreServiceChairName}:${preServiceChairNames}:${hiddenKey}:${weeklyMeetingVariant ?? ''}:${overridesKey}`;
+    const patchKey = `${SLIDE_PREVIEW_PATCH_REV}:pptx:${previewPatchCacheSuffix(q, overridesKey)}`;
 
     try {
       let pptxBuf = patchedPptxCache.get(patchKey);
@@ -518,14 +562,17 @@ export function registerBulletinRoutes(
         const templateBuf = await readFile(join(BULLETIN_TEMPLATE_DIR, BULLETIN_TEMPLATE_FILE));
         pptxBuf = Buffer.from(
           await patchBulletinPreviewInPptx(templateBuf, {
-            serviceDate,
-            serviceTime,
-            scriptureBook,
-            scriptureReference,
-            showPreServiceChairName,
-            preServiceChairNames,
-            hiddenSections,
-            weeklyMeetingVariant,
+            serviceDate: q.serviceDate,
+            serviceTime: q.serviceTime,
+            scriptureBook: q.scriptureBook,
+            scriptureReference: q.scriptureReference,
+            showPreServiceChairName: q.showPreServiceChairName,
+            preServiceChairNames: q.preServiceChairNames,
+            birthdayMonth: q.birthdayMonth,
+            birthdayNames: q.birthdayNames,
+            verseOfWeek: q.verseOfWeek,
+            hiddenSections: q.hiddenSections,
+            weeklyMeetingVariant: q.weeklyMeetingVariant,
             slideTextOverrides,
           }),
         );
@@ -556,6 +603,9 @@ export function registerBulletinRoutes(
       preServiceChairNames?: string;
       hiddenSections?: string;
       weeklyMeetingVariant?: string;
+      birthdayMonth?: string;
+      birthdayNames?: string;
+      verseOfWeek?: string;
       bulletinId?: string;
       slideTextOverrides?: string;
     };
@@ -570,24 +620,8 @@ export function registerBulletinRoutes(
       return reply.code(400).send({ error: 'invalid_slide' });
     }
 
-    const serviceDate = request.query.serviceDate?.trim();
-    const serviceTime = request.query.serviceTime?.trim() || '11:00';
-    const scriptureBook = request.query.scriptureBook?.trim() ?? '';
-    const scriptureReference = request.query.scriptureReference?.trim() ?? '';
-    const showPreServiceChairName =
-      request.query.showPreServiceChairName === '1' ||
-      request.query.showPreServiceChairName === 'true';
-    const preServiceChairNames = request.query.preServiceChairNames?.trim() ?? '';
-    const hiddenSections = normalizeHiddenSections(
-      (request.query.hiddenSections ?? '')
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean),
-    );
-    const variantRaw = request.query.weeklyMeetingVariant?.trim();
-    const weeklyMeetingVariant =
-      variantRaw && /^\d+$/.test(variantRaw) ? Number.parseInt(variantRaw, 10) : null;
-    if (serviceDate && !/^\d{4}-\d{2}-\d{2}$/.test(serviceDate)) {
+    const q = parsePreviewQuery(request.query);
+    if (q.serviceDate && !/^\d{4}-\d{2}-\d{2}$/.test(q.serviceDate)) {
       return reply.code(400).send({ error: 'invalid_service_date' });
     }
 
@@ -609,15 +643,14 @@ export function registerBulletinRoutes(
       slideTextOverrides = normalizeSlideTextOverrides(row?.slideTextOverrides);
     }
 
-    const hiddenKey = hiddenSections.slice().sort().join(',');
     const overridesKey = slideOverridesCacheKey(slideTextOverrides);
-    const cacheKey = `${SLIDE_PREVIEW_PATCH_REV}:${slideNumber}:${serviceDate ?? ''}:${serviceTime}:${scriptureBook}:${scriptureReference}:${showPreServiceChairName}:${preServiceChairNames}:${hiddenKey}:${weeklyMeetingVariant ?? ''}:${overridesKey}`;
+    const cacheKey = `${SLIDE_PREVIEW_PATCH_REV}:${slideNumber}:${previewPatchCacheSuffix(q, overridesKey)}`;
     const cached = slidePreviewCache.get(cacheKey);
     if (cached) {
       return reply.header('Content-Type', 'image/png').header('X-Preview-Cached', 'true').send(cached);
     }
 
-    const patchKey = `${SLIDE_PREVIEW_PATCH_REV}:pptx:${serviceDate ?? ''}:${serviceTime}:${scriptureBook}:${scriptureReference}:${showPreServiceChairName}:${preServiceChairNames}:${hiddenKey}:${weeklyMeetingVariant ?? ''}:${overridesKey}`;
+    const patchKey = `${SLIDE_PREVIEW_PATCH_REV}:pptx:${previewPatchCacheSuffix(q, overridesKey)}`;
     const workRoot = await mkdtemp(join(tmpdir(), 'fs-bulletin-preview-'));
     try {
       let pptxBuf = patchedPptxCache.get(patchKey);
@@ -625,14 +658,17 @@ export function registerBulletinRoutes(
         const templateBuf = await readFile(join(BULLETIN_TEMPLATE_DIR, BULLETIN_TEMPLATE_FILE));
         pptxBuf = Buffer.from(
           await patchBulletinPreviewInPptx(templateBuf, {
-            serviceDate,
-            serviceTime,
-            scriptureBook,
-            scriptureReference,
-            showPreServiceChairName,
-            preServiceChairNames,
-            hiddenSections,
-            weeklyMeetingVariant,
+            serviceDate: q.serviceDate,
+            serviceTime: q.serviceTime,
+            scriptureBook: q.scriptureBook,
+            scriptureReference: q.scriptureReference,
+            showPreServiceChairName: q.showPreServiceChairName,
+            preServiceChairNames: q.preServiceChairNames,
+            birthdayMonth: q.birthdayMonth,
+            birthdayNames: q.birthdayNames,
+            verseOfWeek: q.verseOfWeek,
+            hiddenSections: q.hiddenSections,
+            weeklyMeetingVariant: q.weeklyMeetingVariant,
             slideTextOverrides,
           }),
         );

@@ -260,6 +260,12 @@ export type BulletinPreviewPatchInput = {
   showPreServiceChairName?: boolean;
   /** 主席姓名（单人） */
   preServiceChairNames?: string;
+  /** 生日页月份标题（P24 textIndex 2） */
+  birthdayMonth?: string;
+  /** 生日名单，换行/逗号分隔最多 3 人（P24 textIndex 5–7） */
+  birthdayNames?: string;
+  /** 本週金句（P35 textIndex 18） */
+  verseOfWeek?: string;
   hiddenSections?: string[];
   skipTestimonyWeek?: boolean;
   skipDepartmentReports?: boolean;
@@ -319,9 +325,63 @@ async function applySlideTextOverridesToZip(
   }
 }
 
+function splitBirthdayNameLines(names: string, max = 3): string[] {
+  return names
+    .split(/[\n,，、]/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, max);
+}
+
+export function buildBirthdaySlideReplacements(
+  birthdayMonth: string,
+  birthdayNames: string,
+): TextRunReplacement[] {
+  const reps: TextRunReplacement[] = [];
+  const month = birthdayMonth.trim();
+  if (month) reps.push({ textIndex: 2, text: month });
+  const nameLines = splitBirthdayNameLines(birthdayNames, 3);
+  for (let i = 0; i < 3; i++) {
+    reps.push({ textIndex: 5 + i, text: nameLines[i] ?? ' ' });
+  }
+  return reps;
+}
+
+async function applyBirthdayFieldsToZip(
+  zip: JSZip,
+  birthdayMonth: string | undefined,
+  birthdayNames: string | undefined,
+): Promise<void> {
+  const month = birthdayMonth?.trim() ?? '';
+  const names = birthdayNames?.trim() ?? '';
+  if (!month && !names) return;
+  const entry = zip.file('ppt/slides/slide24.xml');
+  if (!entry) return;
+  const xml = await entry.async('string');
+  zip.file(
+    'ppt/slides/slide24.xml',
+    applyIndexedTextReplacementsToSlideXml(
+      xml,
+      buildBirthdaySlideReplacements(birthdayMonth ?? '', birthdayNames ?? ''),
+    ),
+  );
+}
+
+async function applyVerseOfWeekToZip(zip: JSZip, verseOfWeek: string | undefined): Promise<void> {
+  const verse = verseOfWeek?.trim() ?? '';
+  if (!verse) return;
+  const entry = zip.file('ppt/slides/slide35.xml');
+  if (!entry) return;
+  const xml = await entry.async('string');
+  zip.file(
+    'ppt/slides/slide35.xml',
+    applyIndexedTextReplacementsToSlideXml(xml, [{ textIndex: 18, text: verse }]),
+  );
+}
+
 type PptxInputBytes = Buffer | Uint8Array;
 
-/** 预览/导出用：封面 + 会前祷告（仅第 2 页）+ 读经 + 按隐藏分区删页 */
+/** 预览/导出用：封面 + 会前祷告 + 读经 + 生日/金句 + 按隐藏分区删页 */
 export async function patchBulletinPreviewInPptx(
   template: PptxInputBytes,
   input: BulletinPreviewPatchInput,
@@ -368,6 +428,9 @@ export async function patchBulletinPreviewInPptx(
       await applyScripturePagesToZip(zip, bodies.chinesePages, bodies.englishPages);
     }
   }
+
+  await applyBirthdayFieldsToZip(zip, input.birthdayMonth, input.birthdayNames);
+  await applyVerseOfWeekToZip(zip, input.verseOfWeek);
 
   const overrides = normalizeSlideTextOverrides(input.slideTextOverrides);
   if (overrides.length) {

@@ -159,6 +159,21 @@ function splitNameLines(names: string, max = 3): string[] {
     .slice(0, max);
 }
 
+/** 生日页 P24：月份标题 textIndex=2，名单 5/6/7 */
+export function buildBirthdaySlideReplacements(
+  birthdayMonth: string,
+  birthdayNames: string,
+): { textIndex: number; text: string }[] {
+  const reps: { textIndex: number; text: string }[] = [];
+  const month = birthdayMonth.trim();
+  if (month) reps.push({ textIndex: 2, text: month });
+  const nameLines = splitNameLines(birthdayNames, 3);
+  for (let i = 0; i < 3; i++) {
+    reps.push({ textIndex: 5 + i, text: nameLines[i] ?? ' ' });
+  }
+  return reps;
+}
+
 function formatScriptureBookRun(book: string): string {
   const trimmed = book.trim();
   if (!trimmed) return '';
@@ -214,19 +229,18 @@ export function patchesForStep(stepId: string, bulletin: WeeklyBulletin): SlideT
       return patches;
     }
     case 'birthday': {
-      const patches: SlideTextPatch[] = [];
-      if (bulletin.birthdayMonth.trim()) {
-        patches.push({
+      const month = bulletin.birthdayMonth.trim();
+      const names = bulletin.birthdayNames.trim();
+      if (!month && !names) return [];
+      return [
+        {
           slideNumber: 24,
-          replacements: [{ textIndex: 1, text: bulletin.birthdayMonth.trim() }],
-        });
-      }
-      const nameLines = splitNameLines(bulletin.birthdayNames);
-      if (nameLines.length) {
-        const replacements = nameLines.map((text, i) => ({ textIndex: 3 + i, text }));
-        patches.push({ slideNumber: 24, replacements });
-      }
-      return patches;
+          replacements: buildBirthdaySlideReplacements(
+            bulletin.birthdayMonth,
+            bulletin.birthdayNames,
+          ),
+        },
+      ];
     }
     case 'announcements': {
       const announcementSlides = [25, 26, 27];
@@ -246,7 +260,7 @@ export function patchesForStep(stepId: string, bulletin: WeeklyBulletin): SlideT
     }
     case 'verse':
       return bulletin.verseOfWeek.trim()
-        ? [{ slideNumber: 35, replacements: [{ textIndex: 10, text: bulletin.verseOfWeek.trim() }] }]
+        ? [{ slideNumber: 35, replacements: [{ textIndex: 18, text: bulletin.verseOfWeek.trim() }] }]
         : [];
     case 'more': {
       const patches: SlideTextPatch[] = [];

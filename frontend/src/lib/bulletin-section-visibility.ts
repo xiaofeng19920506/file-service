@@ -14,8 +14,10 @@ export const BULLETIN_SECTION_TEMPLATE_SLIDES: Record<string, readonly number[]>
   testimony_week: [16],
   message: [17],
   family_time: [18],
-  offering: [19, 20, 21, 22],
-  birthday: [23, 24],
+  /** 奉献报告只保留前两页（P19–P20）；P21/P22 见 ALWAYS_OMIT */
+  offering: [19, 20],
+  /** 生日只保留第 2 页（P24）；P23 见 ALWAYS_OMIT */
+  birthday: [24],
   announcements: [25, 26, 27],
   weekly_meetings: [28, 29, 30],
   staff_meeting: [31],
@@ -28,8 +30,8 @@ export const BULLETIN_SECTION_TEMPLATE_SLIDES: Record<string, readonly number[]>
   benediction: [38],
 };
 
-/** 始终从周报 deck 删除：P3 会前名单；P7/P9 敬拜多余页（只留 P8） */
-export const BULLETIN_ALWAYS_OMIT_SLIDE_FILES = [3, 7, 9] as const;
+/** 始终删：P3 会前名单；P7/P9 敬拜；P21/P22 奉献；P23 生日提醒页 */
+export const BULLETIN_ALWAYS_OMIT_SLIDE_FILES = [3, 7, 9, 21, 22, 23] as const;
 
 const WEEKLY_MEETING_VARIANTS = [28, 29, 30] as const;
 

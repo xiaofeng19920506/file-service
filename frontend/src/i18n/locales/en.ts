@@ -213,7 +213,7 @@ const en: MessageTree = {
     previewSectionHiddenHint:
       'This section is hidden, so it has no slides in the preview. Check “Show” on the left — Communion is template slides 10–13; Welcome is slide 14. They are never mixed.',
     sectionVisibleNavHint:
-      'You can also toggle visibility next to each section in the left nav; Save updates the preview.',
+      'Toggle visibility next to each section, or tap Edit to change that section’s slide text.',
     skipTestimony: 'Skip testimony week slide (16)',
     skipDepartment: 'Skip department reports slide (36)',
     meetingVariant: 'Weekly meeting layout',
@@ -238,7 +238,7 @@ const en: MessageTree = {
     editorPanel: 'Bulletin editor',
     previewTitle: 'PPT preview',
     previewHint:
-      'Browse the PPT by section. Changes apply to the preview only after you click Save, so it won’t refresh while you’re still editing.',
+      'Browse the PPT by section. Left-side fields stay in sync with the slides; the preview refreshes as you edit.',
     previewDeckMeta: '{count} slides',
     previewDeckHighlightNote: 'highlighted = preview section',
     previewSectionComposeMeta: '{count} sections',
@@ -255,6 +255,7 @@ const en: MessageTree = {
     sectionReadonlyHint:
       'This section uses fixed template slides. Use “Edit slides” below to change text; preview is on the right.',
     editSlides: 'Edit slides',
+    editSlidesShort: 'Edit',
     editSlidesTitle: 'Edit section slide text',
     editSlidesHint:
       'Text only — backgrounds and images stay unchanged. Unchanged lines keep the template wording.',
@@ -315,10 +316,10 @@ const en: MessageTree = {
       scripture: 'Scripture',
       scriptureTitle: 'Scripture · slide 4',
       scriptureIntro: 'Weekly book name and verse range; the Scripture Reading title is not edited.',
-      offeringTitle: 'Offering · slides 19–22',
-      offeringIntro: 'Last week’s offering date and quarter label for the offering slides.',
-      birthdayTitle: 'Birthdays · slides 23–24',
-      birthdayIntro: 'Birthday month heading and names (one per line or comma-separated, up to 3).',
+      offeringTitle: 'Offering · slides 19–20',
+      offeringIntro: 'Last week’s offering date and quarter label (first two offering slides only).',
+      birthdayTitle: 'Birthdays · slide 24',
+      birthdayIntro: 'Edit the month heading and up to 3 names; the preview updates as you type.',
       announcementsTitle: 'Announcements · slides 25–27',
       announcementsIntro: 'Special thanks and celebration slides; baptism text is under More.',
       verseTitle: 'Verse of the week · slide 35',

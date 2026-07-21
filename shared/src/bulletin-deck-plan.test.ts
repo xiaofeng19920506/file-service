@@ -36,9 +36,8 @@ const CONTENT_SECTION_BY_FILE: Record<number, string> = {
   18: 'family_time',
   19: 'offering',
   20: 'offering',
-  21: 'offering',
-  22: 'offering',
-  23: 'birthday',
+  // 21–22 omitted (extra offering)
+  // 23 omitted (birthday reminder)
   24: 'birthday',
   25: 'announcements',
   26: 'announcements',

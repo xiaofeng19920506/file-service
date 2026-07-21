@@ -8,6 +8,9 @@ export type BulletinPreviewPatchFields = {
   scriptureReference?: string;
   showPreServiceChairName?: boolean;
   preServiceChairNames?: string;
+  birthdayMonth?: string;
+  birthdayNames?: string;
+  verseOfWeek?: string;
   hiddenSections?: string[];
   skipTestimonyWeek?: boolean;
   skipDepartmentReports?: boolean;
@@ -20,6 +23,9 @@ function structureParams(full: BulletinPreviewPatchFields): BulletinSlidePreview
   return {
     scriptureBook: full.scriptureBook,
     scriptureReference: full.scriptureReference,
+    birthdayMonth: full.birthdayMonth,
+    birthdayNames: full.birthdayNames,
+    verseOfWeek: full.verseOfWeek,
     hiddenSections: hidden,
     weeklyMeetingVariant: full.weeklyMeetingVariant ?? null,
     slideTextOverrides: full.slideTextOverrides,
@@ -70,6 +76,9 @@ export function bulletinPreviewCacheKey(
     params.scriptureReference ?? '',
     params.showPreServiceChairName ? '1' : '0',
     params.preServiceChairNames ?? '',
+    params.birthdayMonth ?? '',
+    params.birthdayNames ?? '',
+    params.verseOfWeek ?? '',
     hidden,
     params.weeklyMeetingVariant == null ? '' : String(params.weeklyMeetingVariant),
     overrides,

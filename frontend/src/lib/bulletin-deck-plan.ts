@@ -11,13 +11,13 @@ type TemplateSlideSection = { id: string; slides: number[] };
 
 /**
  * 模板内永不进入 deck 的 slide 文件编号。
- * P3：会前祷告名单；P7/P9：敬拜多余页（只保留 P8）。
+ * P3：会前祷告名单；P7/P9：敬拜多余页（只保留 P8）；P21/P22：奉献多余页（只保留 P19–P20）；P23：生日提醒（只保留 P24）。
  */
-export const BULLETIN_OMITTED_TEMPLATE_SLIDES = [3, 7, 9] as const;
+export const BULLETIN_OMITTED_TEMPLATE_SLIDES = [3, 7, 9, 21, 22, 23] as const;
 
 /**
  * 模板内 slide 文件编号 → 分区（非放映页码）。
- * 敬拜赞美只保留 P8（模板第 2 页敬拜）。
+ * 敬拜赞美只保留 P8；奉献只保留 P19–P20；生日只保留 P24。
  */
 export const BULLETIN_TEMPLATE_SLIDE_SECTIONS: TemplateSlideSection[] = [
   { id: 'cover', slides: [1] },
@@ -30,8 +30,8 @@ export const BULLETIN_TEMPLATE_SLIDE_SECTIONS: TemplateSlideSection[] = [
   { id: 'testimony_week', slides: [16] },
   { id: 'message', slides: [17] },
   { id: 'family_time', slides: [18] },
-  { id: 'offering', slides: [19, 20, 21, 22] },
-  { id: 'birthday', slides: [23, 24] },
+  { id: 'offering', slides: [19, 20] },
+  { id: 'birthday', slides: [24] },
   { id: 'announcements', slides: [25, 26, 27] },
   { id: 'weekly_meetings', slides: [28, 29, 30] },
   { id: 'staff_meeting', slides: [31] },
@@ -187,6 +187,9 @@ export async function buildBulletinDeckPlan(bulletin: WeeklyBulletin): Promise<B
     scriptureReference: bulletin.scriptureReference,
     showPreServiceChairName: bulletin.showPreServiceChairName,
     preServiceChairNames: bulletin.preServiceChairNames,
+    birthdayMonth: bulletin.birthdayMonth,
+    birthdayNames: bulletin.birthdayNames,
+    verseOfWeek: bulletin.verseOfWeek,
     hiddenSections,
     weeklyMeetingVariant: bulletin.weeklyMeetingVariant,
     slideTextOverrides: bulletin.slideTextOverrides,

@@ -7562,6 +7562,9 @@ body.bulletin-slideshow-window {
   flex: none;
   min-width: 0;
   width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 
 .progress-stepper--vertical .progress-stepper-btn {
@@ -7569,6 +7572,30 @@ body.bulletin-slideshow-window {
   justify-content: flex-start;
   padding: 0.35rem 0.55rem;
   font-size: 0.8rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.progress-stepper-edit-slides {
+  flex-shrink: 0;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.68rem;
+  line-height: 1.2;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.progress-stepper-edit-slides:hover:not(:disabled) {
+  background: var(--border-light);
+}
+
+.progress-stepper-edit-slides:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .progress-stepper-item.is-readonly .progress-stepper-btn {

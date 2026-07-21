@@ -80,17 +80,17 @@
     },
     {
       "id": "offering",
-      "slides": [19, 20, 21, 22],
+      "slides": [19, 20],
       "role": "date_sensitive",
       "titleFromSlide": "奉獻報告 / Church Tithes and Offering",
-      "notes": "P19 上週奉献；P20 林后 9 提醒；P21 季度提醒；P22 季度明细"
+      "notes": "只保留 P19 上週奉献、P20 林后 9 提醒；P21/P22 始终省略"
     },
     {
       "id": "birthday",
-      "slides": [23, 24],
+      "slides": [24],
       "role": "date_sensitive",
       "titleFromSlide": "Birthday Reminder / 生日",
-      "notes": "P23 英文提醒；P24 当月寿星名单"
+      "notes": "只保留 P24 月份与名单；P23 Month End Reminder 始终省略"
     },
     {
       "id": "announcements",

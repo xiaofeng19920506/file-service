@@ -18,7 +18,10 @@ type ProgressStepperProps = {
   previewIndex?: number | null;
   onStepSelect?: (index: number) => void;
   onStepVisibilityChange?: (sectionId: string, visible: boolean) => void;
+  /** 每个分区旁的「修改幻灯片」 */
+  onEditSlides?: (sectionId: string) => void;
   canEditVisibility?: boolean;
+  canEditSlides?: boolean;
   orientation?: 'horizontal' | 'vertical';
 };
 
@@ -40,7 +43,9 @@ export default function ProgressStepper({
   previewIndex = null,
   onStepSelect,
   onStepVisibilityChange,
+  onEditSlides,
   canEditVisibility = false,
+  canEditSlides = false,
   orientation = 'horizontal',
 }: ProgressStepperProps) {
   const { t } = useI18n();
@@ -70,6 +75,7 @@ export default function ProgressStepper({
           const canSelect = !isDisabled && Boolean(onStepSelect);
           const showVisibility = typeof step.visible === 'boolean';
           const isHidden = showVisibility && step.visible === false;
+          const showEditSlides = Boolean(onEditSlides) && canEditSlides;
 
           return (
             <li
@@ -107,6 +113,20 @@ export default function ProgressStepper({
                   <span className="progress-stepper-label">{step.label}</span>
                 </span>
               )}
+              {showEditSlides ? (
+                <button
+                  type="button"
+                  className="progress-stepper-edit-slides"
+                  title={t('bulletin.editSlides')}
+                  disabled={isDisabled}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditSlides?.(step.id);
+                  }}
+                >
+                  {t('bulletin.editSlidesShort')}
+                </button>
+              ) : null}
             </li>
           );
         })}

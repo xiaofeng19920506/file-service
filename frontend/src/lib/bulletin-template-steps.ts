@@ -53,14 +53,14 @@ export const BULLETIN_WIZARD_STEPS: BulletinWizardStep[] = [
   {
     id: 'offering',
     sectionId: 'offering',
-    slides: [19, 20, 21, 22],
+    slides: [19, 20],
     labelKey: 'bulletin.steps.offering',
     enabled: true,
   },
   {
     id: 'birthday',
     sectionId: 'birthday',
-    slides: [23, 24],
+    slides: [24],
     labelKey: 'bulletin.steps.birthday',
     enabled: true,
   },

@@ -29,7 +29,7 @@ export const BULLETIN_TEMPLATE_SLIDE_SECTIONS: { id: string; slides: readonly nu
   Object.entries(BULLETIN_SECTION_TEMPLATE_SLIDES).map(([id, slides]) => ({ id, slides }));
 
 /** 始终省略：P3 会前名单；P7/P9 敬拜多余页（只留 P8） */
-export const BULLETIN_OMITTED_TEMPLATE_SLIDES = [3, 7, 9] as const;
+export const BULLETIN_OMITTED_TEMPLATE_SLIDES = [3, 7, 9, 21, 22, 23] as const;
 
 function buildSlideInFileToSection(
   sections: { id: string; slides: readonly number[] }[] = BULLETIN_TEMPLATE_SLIDE_SECTIONS,

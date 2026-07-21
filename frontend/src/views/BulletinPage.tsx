@@ -23,6 +23,7 @@ import {
   BulletinVerseStep,
 } from '../components/bulletin/BulletinWizardSteps';
 import ProgressStepper from '../components/ProgressStepper';
+import { BulletinEditSlidesModal } from '../components/bulletin/BulletinEditSlidesControl';
 import { useBulletinRealtime } from '../hooks/useBulletinRealtime';
 import { useBulletinScripturePersistence } from '../hooks/useBulletinScripturePersistence';
 import { useI18n } from '../i18n';
@@ -32,6 +33,7 @@ import {
   resolveHiddenSections,
   setBulletinSectionVisible,
 } from '../lib/bulletin-section-visibility';
+import { withTemplateFieldDefaults } from '../lib/bulletin-template-field-defaults';
 import {
   BULLETIN_NAV_SECTIONS,
   isReadonlyNavSection,
@@ -71,13 +73,13 @@ function toDrafts(bulletin: WeeklyBulletin): AnnouncementDraft[] {
 }
 
 function withHiddenSections(bulletin: WeeklyBulletin): WeeklyBulletin {
-  return {
+  return withTemplateFieldDefaults({
     ...bulletin,
     hiddenSections: resolveHiddenSections(bulletin),
     slideTextOverrides: Array.isArray(bulletin.slideTextOverrides)
       ? bulletin.slideTextOverrides
       : [],
-  };
+  });
 }
 
 function visibilitySaveFields(draft: WeeklyBulletin) {
@@ -98,8 +100,6 @@ export default function BulletinPage() {
   const [bulletins, setBulletins] = useState<WeeklyBulletin[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<WeeklyBulletin | null>(null);
-  /** 右侧预览只反映已保存（或已加载）快照，编辑中不刷新 */
-  const [previewBulletin, setPreviewBulletin] = useState<WeeklyBulletin | null>(null);
   const [announcements, setAnnouncements] = useState<AnnouncementDraft[]>([emptyAnnouncement()]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -118,6 +118,7 @@ export default function BulletinPage() {
   const [worshipPreviewRevision, setWorshipPreviewRevision] = useState(0);
   const [worshipYoutubeOauthReady, setWorshipYoutubeOauthReady] = useState(false);
   const [worshipOauthError, setWorshipOauthError] = useState<string | null>(null);
+  const [editSlidesSectionId, setEditSlidesSectionId] = useState<string | null>(null);
   const savingRef = useRef(false);
   const scripturePersistingRef = useRef(false);
   savingRef.current = saving || publishing;
@@ -214,7 +215,6 @@ export default function BulletinPage() {
           if (!prev || prev.id !== normalized.id) return normalized;
           return normalized;
         });
-        setPreviewBulletin(normalized);
         setAnnouncements(toDrafts(normalized));
       })();
     },
@@ -250,7 +250,6 @@ export default function BulletinPage() {
   useEffect(() => {
     if (!selectedId) {
       setDraft(null);
-      setPreviewBulletin(null);
       return;
     }
     let cancelled = false;
@@ -261,7 +260,6 @@ export default function BulletinPage() {
         if (cancelled) return;
         const normalized = withHiddenSections(bulletin);
         setDraft(normalized);
-        setPreviewBulletin(normalized);
         setAnnouncements(toDrafts(normalized));
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : String(err));
@@ -273,6 +271,7 @@ export default function BulletinPage() {
   }, [selectedId]);
 
   const patchField = <K extends keyof WeeklyBulletin>(key: K, value: WeeklyBulletin[K]) => {
+    // 左右实时一致：草稿一改，右侧预览同步用同一份数据
     setDraft((prev) => (prev ? { ...prev, [key]: value } : prev));
   };
 
@@ -284,9 +283,8 @@ export default function BulletinPage() {
       skipTestimonyWeek: hiddenSections.includes('testimony_week'),
       skipDepartmentReports: hiddenSections.includes('department_reports'),
     };
-    // 勾选「显示」后立即反映到预览（否则仍用旧的 previewBulletin，圣餐等只读分区会看起来「勾了也不出」）
+    // 勾选「显示」后立即反映到预览
     setDraft((prev) => (prev ? { ...prev, ...patch } : prev));
-    setPreviewBulletin((prev) => (prev ? { ...prev, ...patch } : prev));
 
     if (visible) {
       setActiveSectionId(sectionId);
@@ -300,7 +298,6 @@ export default function BulletinPage() {
       .then((updated) => {
         const normalized = withHiddenSections(updated);
         setDraft(normalized);
-        setPreviewBulletin(normalized);
         if (visible) {
           setActiveSectionId(sectionId);
           setPreviewSectionId(sectionId);
@@ -318,6 +315,20 @@ export default function BulletinPage() {
       scripturePersistingRef.current = busy;
     },
   });
+
+  // 生日月份/名单：预览即时更新，并防抖自动保存
+  useEffect(() => {
+    if (!canManage || !draft) return;
+    const timer = window.setTimeout(() => {
+      void updateBulletin(draft.id, {
+        birthdayMonth: draft.birthdayMonth,
+        birthdayNames: draft.birthdayNames,
+      }).catch(() => {
+        /* 预览已即时；保存失败不打断编辑 */
+      });
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }, [canManage, draft?.id, draft?.birthdayMonth, draft?.birthdayNames]);
 
   const handleServiceDateChange = (isoDate: string) => {
     const existing = bulletins.find((b) => b.serviceDate === isoDate);
@@ -340,7 +351,6 @@ export default function BulletinPage() {
       });
       const normalized = withHiddenSections(updated);
       setDraft(normalized);
-      setPreviewBulletin(normalized);
       await refreshList();
       setMessage(t('bulletin.saved'));
     } catch (err) {
@@ -372,7 +382,6 @@ export default function BulletinPage() {
       }
       const normalized = withHiddenSections(updated);
       setDraft(normalized);
-      setPreviewBulletin(normalized);
       setAnnouncements(toDrafts(normalized));
       await refreshList();
       setMessage(t('bulletin.saved'));
@@ -457,7 +466,6 @@ export default function BulletinPage() {
       const { bulletin } = await publishBulletinPptx(withAnnouncements);
       const normalized = withHiddenSections(bulletin);
       setDraft(normalized);
-      setPreviewBulletin(normalized);
       setAnnouncements(toDrafts(normalized));
       await refreshList();
       setMessage(t('bulletin.published'));
@@ -470,7 +478,6 @@ export default function BulletinPage() {
 
   const handleSlideTextOverridesSaved = (overrides: WeeklyBulletin['slideTextOverrides']) => {
     setDraft((prev) => (prev ? { ...prev, slideTextOverrides: overrides } : prev));
-    setPreviewBulletin((prev) => (prev ? { ...prev, slideTextOverrides: overrides } : prev));
   };
 
   const renderStepPanel = () => {
@@ -561,17 +568,11 @@ export default function BulletinPage() {
             onClearOauthError={() => setWorshipOauthError(null)}
             onPlaylistReady={(playlistId) => {
               setDraft((prev) => (prev ? { ...prev, servicePlaylistId: playlistId } : prev));
-              setPreviewBulletin((prev) =>
-                prev ? { ...prev, servicePlaylistId: playlistId } : prev,
-              );
               setWorshipPreviewRevision((v) => v + 1);
             }}
             onPlaylistChanged={() => setWorshipPreviewRevision((v) => v + 1)}
             onLyricsPptxChange={(blobId) => {
               setDraft((prev) => (prev ? { ...prev, worshipLyricsPptxBlobId: blobId } : prev));
-              setPreviewBulletin((prev) =>
-                prev ? { ...prev, worshipLyricsPptxBlobId: blobId } : prev,
-              );
               setWorshipPreviewRevision((v) => v + 1);
             }}
             onSectionVisibilityChange={handleSectionVisibilityChange}
@@ -609,7 +610,23 @@ export default function BulletinPage() {
           <BulletinAnnouncementsStep
             {...common}
             announcements={announcements}
-            onAnnouncementsChange={setAnnouncements}
+            onAnnouncementsChange={(next) => {
+              setAnnouncements(next);
+              setDraft((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      announcements: next.map((a, i) => ({
+                        id: a.key,
+                        sortOrder: i,
+                        category: a.category ?? 'general',
+                        title: a.title ?? '',
+                        body: a.body,
+                      })),
+                    }
+                  : prev,
+              );
+            }}
             onSave={() => void handleSaveFields({}, true)}
           />
         );
@@ -707,7 +724,12 @@ export default function BulletinPage() {
                 previewIndex={navPreviewIndex}
                 orientation="vertical"
                 canEditVisibility={canManage}
+                canEditSlides={canManage}
                 onStepVisibilityChange={handleSectionVisibilityChange}
+                onEditSlides={(sectionId) => {
+                  selectNavSection(sectionId);
+                  setEditSlidesSectionId(sectionId);
+                }}
                 onStepSelect={(index) => {
                   const section = BULLETIN_NAV_SECTIONS[index];
                   if (!section) return;
@@ -716,6 +738,17 @@ export default function BulletinPage() {
               />
               <div className="bulletin-step-panel">{renderStepPanel()}</div>
             </div>
+
+            {editSlidesSectionId ? (
+              <BulletinEditSlidesModal
+                sectionId={editSlidesSectionId}
+                draft={draft}
+                canEdit={canManage}
+                open
+                onClose={() => setEditSlidesSectionId(null)}
+                onSaved={handleSlideTextOverridesSaved}
+              />
+            ) : null}
 
             <div className="bulletin-actions">
               {canPublish && (
@@ -760,7 +793,7 @@ export default function BulletinPage() {
               scrollToSectionBump={previewScrollBump}
               scrollToPresentationSlide={previewScrollToSlide}
               highlightSectionId={previewSectionId}
-              bulletin={previewBulletin ?? draft}
+              bulletin={draft}
               worshipRefreshKey={worshipPreviewRevision}
               onVisibleSectionChange={handleVisibleSectionChange}
             />

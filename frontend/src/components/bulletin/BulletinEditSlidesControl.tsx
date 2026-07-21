@@ -22,21 +22,24 @@ type SlideDraft = {
   error: string | null;
 };
 
-type BulletinEditSlidesControlProps = {
+export type BulletinEditSlidesModalProps = {
   sectionId: string;
   draft: WeeklyBulletin;
   canEdit: boolean;
+  open: boolean;
+  onClose: () => void;
   onSaved: (overrides: SlideTextOverride[]) => void;
 };
 
-export default function BulletinEditSlidesControl({
+export function BulletinEditSlidesModal({
   sectionId,
   draft,
   canEdit,
+  open,
+  onClose,
   onSaved,
-}: BulletinEditSlidesControlProps) {
+}: BulletinEditSlidesModalProps) {
   const { t } = useI18n();
-  const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [slides, setSlides] = useState<SlideDraft[]>([]);
@@ -97,6 +100,8 @@ export default function BulletinEditSlidesControl({
     };
   }, [open, slideNumbers, draft.slideTextOverrides]);
 
+  if (!open) return null;
+
   const handleSave = async () => {
     if (!canEdit) return;
     setSaving(true);
@@ -120,7 +125,7 @@ export default function BulletinEditSlidesControl({
       );
       const updated = await updateBulletin(draft.id, { slideTextOverrides: merged });
       onSaved(updated.slideTextOverrides ?? merged);
-      setOpen(false);
+      onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -128,109 +133,129 @@ export default function BulletinEditSlidesControl({
     }
   };
 
-  if (!slideNumbers.length) return null;
+  return (
+    <div
+      className="metadata-modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="bulletin-edit-slides-title"
+      onClick={() => !saving && onClose()}
+    >
+      <div className="metadata-modal bulletin-edit-slides-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="metadata-modal-header">
+          <h3 id="bulletin-edit-slides-title">{t('bulletin.editSlidesTitle')}</h3>
+          <button
+            type="button"
+            className="modal-close-btn"
+            disabled={saving}
+            onClick={onClose}
+            aria-label={t('common.close')}
+          >
+            ×
+          </button>
+        </div>
+        <div className="metadata-modal-body">
+          <p className="bulletin-edit-slides-hint">{t('bulletin.editSlidesHint')}</p>
+          {!slideNumbers.length ? (
+            <p className="playlists-muted">{t('bulletin.editSlidesEmpty')}</p>
+          ) : null}
+          {slides.map((slide) => (
+            <section key={slide.slide} className="bulletin-edit-slides-section">
+              <h4>{t('bulletin.editSlidesPage', { page: String(slide.slide) })}</h4>
+              {slide.loading ? (
+                <p className="playlists-muted">{t('bulletin.editSlidesLoading')}</p>
+              ) : null}
+              {slide.error ? <p className="form-error">{slide.error}</p> : null}
+              {!slide.loading && !slide.error && !slide.runs.length ? (
+                <p className="playlists-muted">{t('bulletin.editSlidesEmpty')}</p>
+              ) : null}
+              {slide.runs.map((run) => (
+                <label key={`${slide.slide}-${run.textIndex}`} className="bulletin-field">
+                  <span className="bulletin-edit-slides-run-label">
+                    {t('bulletin.editSlidesRun', { index: String(run.textIndex + 1) })}
+                  </span>
+                  <textarea
+                    rows={Math.min(6, Math.max(2, run.text.split('\n').length))}
+                    value={run.text}
+                    disabled={!canEdit || saving}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSlides((prev) =>
+                        prev.map((s) =>
+                          s.slide !== slide.slide
+                            ? s
+                            : {
+                                ...s,
+                                runs: s.runs.map((r) =>
+                                  r.textIndex === run.textIndex ? { ...r, text: value } : r,
+                                ),
+                              },
+                        ),
+                      );
+                    }}
+                  />
+                </label>
+              ))}
+            </section>
+          ))}
+          {error ? <p className="form-error">{error}</p> : null}
+        </div>
+        <div className="metadata-modal-actions">
+          <button type="button" className="btn-secondary" disabled={saving} onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={!canEdit || saving || slides.some((s) => s.loading)}
+            onClick={() => void handleSave()}
+          >
+            {saving ? t('bulletin.saving') : t('bulletin.editSlidesSave')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type BulletinEditSlidesControlProps = {
+  sectionId: string;
+  draft: WeeklyBulletin;
+  canEdit: boolean;
+  onSaved: (overrides: SlideTextOverride[]) => void;
+};
+
+/** 编辑面板内的「修改幻灯片」按钮 */
+export default function BulletinEditSlidesControl({
+  sectionId,
+  draft,
+  canEdit,
+  onSaved,
+}: BulletinEditSlidesControlProps) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const hasSlides = Boolean(BULLETIN_SECTION_TEMPLATE_SLIDES[sectionId]?.length);
+
+  if (!hasSlides) return null;
 
   return (
     <>
       <button
         type="button"
-        className="btn-secondary bulletin-edit-slides-btn"
+        className="btn-primary bulletin-edit-slides-btn"
         disabled={!canEdit}
         onClick={() => setOpen(true)}
       >
         {t('bulletin.editSlides')}
       </button>
-
-      {open ? (
-        <div
-          className="metadata-modal-overlay"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="bulletin-edit-slides-title"
-          onClick={() => !saving && setOpen(false)}
-        >
-          <div
-            className="metadata-modal bulletin-edit-slides-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="metadata-modal-header">
-              <h3 id="bulletin-edit-slides-title">{t('bulletin.editSlidesTitle')}</h3>
-              <button
-                type="button"
-                className="modal-close-btn"
-                disabled={saving}
-                onClick={() => setOpen(false)}
-                aria-label={t('common.close')}
-              >
-                ×
-              </button>
-            </div>
-            <div className="metadata-modal-body">
-              <p className="bulletin-edit-slides-hint">{t('bulletin.editSlidesHint')}</p>
-              {slides.map((slide) => (
-                <section key={slide.slide} className="bulletin-edit-slides-section">
-                  <h4>
-                    {t('bulletin.editSlidesPage', { page: String(slide.slide) })}
-                  </h4>
-                  {slide.loading ? (
-                    <p className="playlists-muted">{t('bulletin.editSlidesLoading')}</p>
-                  ) : null}
-                  {slide.error ? <p className="form-error">{slide.error}</p> : null}
-                  {!slide.loading && !slide.error && !slide.runs.length ? (
-                    <p className="playlists-muted">{t('bulletin.editSlidesEmpty')}</p>
-                  ) : null}
-                  {slide.runs.map((run) => (
-                    <label key={`${slide.slide}-${run.textIndex}`} className="bulletin-field">
-                      <span className="bulletin-edit-slides-run-label">
-                        {t('bulletin.editSlidesRun', { index: String(run.textIndex + 1) })}
-                      </span>
-                      <textarea
-                        rows={Math.min(6, Math.max(2, run.text.split('\n').length))}
-                        value={run.text}
-                        disabled={!canEdit || saving}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setSlides((prev) =>
-                            prev.map((s) =>
-                              s.slide !== slide.slide
-                                ? s
-                                : {
-                                    ...s,
-                                    runs: s.runs.map((r) =>
-                                      r.textIndex === run.textIndex ? { ...r, text: value } : r,
-                                    ),
-                                  },
-                            ),
-                          );
-                        }}
-                      />
-                    </label>
-                  ))}
-                </section>
-              ))}
-              {error ? <p className="form-error">{error}</p> : null}
-            </div>
-            <div className="metadata-modal-actions">
-              <button
-                type="button"
-                className="btn-secondary"
-                disabled={saving}
-                onClick={() => setOpen(false)}
-              >
-                {t('common.cancel')}
-              </button>
-              <button
-                type="button"
-                className="btn-primary"
-                disabled={!canEdit || saving || slides.some((s) => s.loading)}
-                onClick={() => void handleSave()}
-              >
-                {saving ? t('bulletin.saving') : t('bulletin.editSlidesSave')}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <BulletinEditSlidesModal
+        sectionId={sectionId}
+        draft={draft}
+        canEdit={canEdit}
+        open={open}
+        onClose={() => setOpen(false)}
+        onSaved={onSaved}
+      />
     </>
   );
 }
