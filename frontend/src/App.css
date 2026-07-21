@@ -4768,8 +4768,8 @@
 }
 
 .add-playlist-items-modal--split {
-  width: min(100%, 56rem);
-  max-height: min(90vh, 40rem);
+  width: min(100%, 68rem);
+  max-height: min(90vh, 44rem);
 }
 
 .add-playlist-items-header {
@@ -5989,7 +5989,7 @@
 }
 
 .bulletin-page--workspace {
-  max-width: min(1440px, 100%);
+  max-width: min(1760px, 100%);
   width: 100%;
   box-sizing: border-box;
   flex: 1;
@@ -6027,7 +6027,8 @@
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+  /* 编辑区与预览接近对半分，避免表单/歌单被挤在 ~420px 里 */
+  grid-template-columns: minmax(440px, 1.05fr) minmax(480px, 1fr);
   gap: 1.25rem;
   align-items: stretch;
 }
