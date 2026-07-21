@@ -18,6 +18,7 @@ import {
   normalizeUserRole,
   patchBulletinPreviewInPptx,
   buildBulletinDeckPlanFromPptxBytes,
+  extractPresentationSlideAsPptx,
   playlistItems,
   playlists,
   renderSlidePngViaService,
@@ -58,8 +59,8 @@ const BULLETIN_TEMPLATE_DIR = resolveBulletinTemplateDir();
 const slidePreviewCache = new Map<string, Buffer>();
 /** 同一套补丁参数共享已补丁 PPTX，避免每页都重新 patch */
 const patchedPptxCache = new Map<string, Buffer>();
-/** 封面/读经补丁版本；变更后自动失效旧 PNG / deck 缓存 */
-const SLIDE_PREVIEW_PATCH_REV = 'v24';
+/** 预览补丁版本；v25=单页抽出后再渲染，避免 LO 加页后页序错位 */
+const SLIDE_PREVIEW_PATCH_REV = 'v25';
 
 let previewRenderActive = 0;
 const previewRenderWaiters: Array<() => void> = [];
@@ -556,11 +557,15 @@ export function registerBulletinRoutes(
       }
 
       const pptxPath = join(workRoot, 'preview.pptx');
-      await writeFile(pptxPath, pptxBuf);
+      // 按演示顺序抽出目标页，始终渲染第 1 页，避免 LO/PDF 在加页后按文件号错位
+      const singleSlidePptx = Buffer.from(
+        await extractPresentationSlideAsPptx(pptxBuf, slideNumber),
+      );
+      await writeFile(pptxPath, singleSlidePptx);
 
       const pngBuf = await withPreviewRenderSlot(async () =>
         sofficePreviewUrl
-          ? await renderSlidePngViaService(sofficePreviewUrl, pptxBuf!, slideNumber, {
+          ? await renderSlidePngViaService(sofficePreviewUrl, singleSlidePptx, 1, {
               timeoutMs: 90_000,
               retries: 2,
             })
@@ -569,7 +574,7 @@ export function registerBulletinRoutes(
                 sofficePath,
                 inputPath: pptxPath,
                 outDir: workRoot,
-                slideNumber,
+                slideNumber: 1,
               });
               return readFile(pngPath);
             })(),
