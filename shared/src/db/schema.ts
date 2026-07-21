@@ -244,6 +244,10 @@ export const weeklyBulletins = pgTable('weekly_bulletins', {
   /** 不进入 PPT / 预览的分区 id 列表（与 BULLETIN_NAV_SECTIONS id 对齐） */
   hiddenSections: jsonb('hidden_sections').$type<string[]>().notNull().default([]),
   servicePlaylistId: uuid('service_playlist_id').references(() => playlists.id, { onDelete: 'set null' }),
+  /** 敬拜赞美歌词 PPT（用户上传，投影时音乐在后台） */
+  worshipLyricsPptxBlobId: uuid('worship_lyrics_pptx_blob_id').references(() => blobs.id, {
+    onDelete: 'set null',
+  }),
   outputBlobId: uuid('output_blob_id').references(() => blobs.id, { onDelete: 'set null' }),
   createdByUserId: uuid('created_by_user_id')
     .notNull()

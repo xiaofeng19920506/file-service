@@ -37,6 +37,7 @@ type DeckSlideItemProps = {
   worshipPlaylistTitle: string;
   worshipItems: PlaylistItem[];
   worshipFirstSlide: number | null;
+  worshipLyricsPptxBlobId: string | null;
 };
 
 function deckSlidePropsEqual(prev: DeckSlideItemProps, next: DeckSlideItemProps): boolean {
@@ -50,6 +51,7 @@ function deckSlidePropsEqual(prev: DeckSlideItemProps, next: DeckSlideItemProps)
     prev.worshipPlaylistId !== next.worshipPlaylistId ||
     prev.worshipPlaylistTitle !== next.worshipPlaylistTitle ||
     prev.worshipFirstSlide !== next.worshipFirstSlide ||
+    prev.worshipLyricsPptxBlobId !== next.worshipLyricsPptxBlobId ||
     prev.worshipItems !== next.worshipItems
   ) {
     return false;
@@ -77,6 +79,7 @@ const DeckSlideItem = memo(function DeckSlideItem({
   worshipPlaylistTitle,
   worshipItems,
   worshipFirstSlide,
+  worshipLyricsPptxBlobId,
 }: DeckSlideItemProps) {
   const slidePatch = useMemo(
     () => previewPatchForSection(sectionId, patch),
@@ -104,6 +107,7 @@ const DeckSlideItem = memo(function DeckSlideItem({
           patch={slidePatch}
           slideLabel={label}
           emptyLabel={emptyLabel}
+          lyricsPptxBlobId={worshipLyricsPptxBlobId}
         />
       ) : (
         <BulletinPptSlidePreview
@@ -338,6 +342,7 @@ export default function BulletinFullDeckPreview({
                   worshipPlaylistTitle={worshipPlaylistTitle}
                   worshipItems={worshipItems}
                   worshipFirstSlide={worshipFirstSlide}
+                  worshipLyricsPptxBlobId={bulletin.worshipLyricsPptxBlobId}
                 />
               ))}
             </div>

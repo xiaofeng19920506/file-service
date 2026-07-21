@@ -18,6 +18,7 @@ type BulletinWorshipEmbeddedPlayerProps = {
   patch: BulletinSlidePreviewParams;
   slideLabel: string;
   emptyLabel: string;
+  lyricsPptxBlobId?: string | null;
 };
 
 function toPlayerItems(items: PlaylistItem[]): YoutubePlayerItem[] {
@@ -42,6 +43,7 @@ export default function BulletinWorshipEmbeddedPlayer({
   patch,
   slideLabel,
   emptyLabel,
+  lyricsPptxBlobId = null,
 }: BulletinWorshipEmbeddedPlayerProps) {
   const { t } = useI18n();
   const playerItems = useMemo(() => toPlayerItems(items), [items]);
@@ -151,6 +153,7 @@ export default function BulletinWorshipEmbeddedPlayer({
           playlistTitle={playlistTitle}
           items={items}
           transport={transport}
+          lyricsPptxBlobId={lyricsPptxBlobId}
         />
       )}
     </figure>

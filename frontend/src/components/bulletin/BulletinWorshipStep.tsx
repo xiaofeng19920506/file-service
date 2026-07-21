@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ensureBulletinWorshipPlaylist,
   getBulletinWorshipPlaylist,
   inviteBulletinWorshipLeader,
   removeBulletinWorshipPlaylistItem,
   reorderBulletinWorshipPlaylistItems,
+  updateBulletin,
   type WeeklyBulletin,
 } from '../../api/bulletins';
+import { uploadFile } from '../../api/client';
 import type { PlaylistDetail, PlaylistItem } from '../../api/playlists';
 import AddPlaylistItemsModal from '../AddPlaylistItemsModal';
 import MobileSegmentedControl from '../MobileSegmentedControl';
@@ -26,6 +28,7 @@ type BulletinWorshipStepProps = {
   onClearOauthError?: () => void;
   onPlaylistReady: (playlistId: string) => void;
   onPlaylistChanged?: () => void;
+  onLyricsPptxChange?: (blobId: string | null) => void;
   onSectionVisibilityChange?: (sectionId: string, visible: boolean) => void;
   onSaveVisibility?: () => void;
   saving?: boolean;
@@ -48,17 +51,20 @@ export default function BulletinWorshipStep({
   onClearOauthError,
   onPlaylistReady,
   onPlaylistChanged,
+  onLyricsPptxChange,
   onSectionVisibilityChange,
   onSaveVisibility,
   saving,
 }: BulletinWorshipStepProps) {
   const { t } = useI18n();
+  const lyricsFileInputRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<PlaylistItem[]>([]);
   const [inviteUrl, setInviteUrl] = useState('');
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [lyricsUploading, setLyricsUploading] = useState(false);
   const [sourceTab, setSourceTab] = useState<WorshipSourceTab>(
     oauthJustConnected || oauthError ? 'youtube' : 'youtube',
   );
@@ -66,6 +72,7 @@ export default function BulletinWorshipStep({
   const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   const canAddSongs = canEditSongs || canManage;
+  const hasLyricsPptx = Boolean(draft.worshipLyricsPptxBlobId);
 
   const existingVideoIds = useMemo(
     () => new Set(items.map((item) => item.youtubeVideoId)),
@@ -192,6 +199,49 @@ export default function BulletinWorshipStep({
     }
   };
 
+  const handleLyricsPptxSelected = async (file: File | null) => {
+    if (!file || !canManage) return;
+    const name = file.name.toLowerCase();
+    if (!name.endsWith('.pptx') && !name.endsWith('.ppt')) {
+      setError(t('bulletin.worshipLyricsPptxInvalid'));
+      return;
+    }
+    setLyricsUploading(true);
+    setError(null);
+    try {
+      const uploaded = await uploadFile(file, {
+        title: `${draft.serviceDate} 敬拜歌词`,
+        titleZhCn: `${draft.serviceDate} 敬拜歌词`,
+        notes: `bulletin:${draft.id}:worship-lyrics`,
+      });
+      const updated = await updateBulletin(draft.id, {
+        worshipLyricsPptxBlobId: uploaded.blobId,
+      });
+      onLyricsPptxChange?.(updated.worshipLyricsPptxBlobId);
+      setStatus(t('bulletin.worshipLyricsPptxUploaded'));
+    } catch (err) {
+      setError(friendlyError(err instanceof Error ? err.message : 'upload_failed', t));
+    } finally {
+      setLyricsUploading(false);
+      if (lyricsFileInputRef.current) lyricsFileInputRef.current.value = '';
+    }
+  };
+
+  const clearLyricsPptx = async () => {
+    if (!canManage || !draft.worshipLyricsPptxBlobId) return;
+    setLyricsUploading(true);
+    setError(null);
+    try {
+      await updateBulletin(draft.id, { worshipLyricsPptxBlobId: null });
+      onLyricsPptxChange?.(null);
+      setStatus(t('bulletin.worshipLyricsPptxCleared'));
+    } catch (err) {
+      setError(friendlyError(err instanceof Error ? err.message : 'update_failed', t));
+    } finally {
+      setLyricsUploading(false);
+    }
+  };
+
   return (
     <div className="bulletin-wizard-step bulletin-worship-step">
       <header className="bulletin-step-header">
@@ -219,6 +269,55 @@ export default function BulletinWorshipStep({
           ) : null}
         </div>
       ) : null}
+
+      {(canManage || hasLyricsPptx) && (
+        <section className="bulletin-worship-lyrics-pptx">
+          <h4 className="bulletin-worship-playlist-heading">{t('bulletin.worshipLyricsPptxTitle')}</h4>
+          <p className="bulletin-worship-search-hint">{t('bulletin.worshipLyricsPptxHint')}</p>
+          <div className="bulletin-worship-lyrics-pptx-actions">
+            {canManage ? (
+              <>
+                <input
+                  ref={lyricsFileInputRef}
+                  type="file"
+                  accept=".pptx,.ppt,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-powerpoint"
+                  hidden
+                  onChange={(e) => void handleLyricsPptxSelected(e.target.files?.[0] ?? null)}
+                />
+                <button
+                  type="button"
+                  className="btn-primary btn-sm"
+                  disabled={lyricsUploading}
+                  onClick={() => lyricsFileInputRef.current?.click()}
+                >
+                  {lyricsUploading
+                    ? t('bulletin.worshipLyricsPptxUploading')
+                    : hasLyricsPptx
+                      ? t('bulletin.worshipLyricsPptxReplace')
+                      : t('bulletin.worshipLyricsPptxUpload')}
+                </button>
+                {hasLyricsPptx ? (
+                  <button
+                    type="button"
+                    className="btn-secondary btn-sm"
+                    disabled={lyricsUploading}
+                    onClick={() => void clearLyricsPptx()}
+                  >
+                    {t('bulletin.worshipLyricsPptxClear')}
+                  </button>
+                ) : null}
+              </>
+            ) : null}
+            {hasLyricsPptx ? (
+              <span className="bulletin-worship-lyrics-pptx-ready">
+                {t('bulletin.worshipLyricsPptxReady')}
+              </span>
+            ) : (
+              <span className="playlists-muted">{t('bulletin.worshipLyricsPptxEmpty')}</span>
+            )}
+          </div>
+        </section>
+      )}
 
       {canAddSongs && (
         <>

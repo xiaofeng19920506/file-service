@@ -119,6 +119,7 @@ export type WeeklyBulletinDto = {
   skipDepartmentReports: boolean;
   hiddenSections: string[];
   servicePlaylistId: string | null;
+  worshipLyricsPptxBlobId: string | null;
   outputBlobId: string | null;
   createdByUserId: string;
   createdAt: string;
@@ -179,6 +180,7 @@ async function mapBulletin(
     skipDepartmentReports: row.skipDepartmentReports,
     hiddenSections: Array.isArray(row.hiddenSections) ? row.hiddenSections : [],
     servicePlaylistId: row.servicePlaylistId,
+    worshipLyricsPptxBlobId: row.worshipLyricsPptxBlobId,
     outputBlobId: row.outputBlobId,
     createdByUserId: row.createdByUserId,
     createdAt: row.createdAt.toISOString(),
@@ -208,6 +210,7 @@ type BulletinPatchBody = Partial<{
   skipTestimonyWeek: boolean;
   skipDepartmentReports: boolean;
   hiddenSections: string[];
+  worshipLyricsPptxBlobId: string | null;
   outputBlobId: string | null;
 }>;
 
@@ -642,6 +645,20 @@ export function registerBulletinRoutes(
             return reply.code(400).send({ error: 'invalid_blob_id' });
           }
           patch.outputBlobId = body.outputBlobId;
+        }
+      }
+      if (body.worshipLyricsPptxBlobId !== undefined) {
+        if (body.worshipLyricsPptxBlobId === null) {
+          patch.worshipLyricsPptxBlobId = null;
+        } else {
+          const [blob] = await db
+            .select({ id: blobs.id })
+            .from(blobs)
+            .where(eq(blobs.id, body.worshipLyricsPptxBlobId));
+          if (!blob) {
+            return reply.code(400).send({ error: 'invalid_blob_id' });
+          }
+          patch.worshipLyricsPptxBlobId = body.worshipLyricsPptxBlobId;
         }
       }
 

@@ -6976,6 +6976,27 @@ body.bulletin-slideshow-window {
   gap: 0.5rem;
 }
 
+.bulletin-worship-lyrics-pptx {
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.bulletin-worship-lyrics-pptx-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-top: 0.55rem;
+}
+
+.bulletin-worship-lyrics-pptx-ready {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
 .bulletin-worship-search-hint {
   margin: 0;
   font-size: 0.85rem;

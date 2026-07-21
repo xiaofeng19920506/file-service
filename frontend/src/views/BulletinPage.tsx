@@ -533,6 +533,13 @@ export default function BulletinPage() {
               setWorshipPreviewRevision((v) => v + 1);
             }}
             onPlaylistChanged={() => setWorshipPreviewRevision((v) => v + 1)}
+            onLyricsPptxChange={(blobId) => {
+              setDraft((prev) => (prev ? { ...prev, worshipLyricsPptxBlobId: blobId } : prev));
+              setPreviewBulletin((prev) =>
+                prev ? { ...prev, worshipLyricsPptxBlobId: blobId } : prev,
+              );
+              setWorshipPreviewRevision((v) => v + 1);
+            }}
             onSectionVisibilityChange={handleSectionVisibilityChange}
             onSaveVisibility={() => void handleSaveFields(visibilitySaveFields(draft))}
             saving={saving}

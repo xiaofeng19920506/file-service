@@ -363,6 +363,21 @@ export default {
     worshipSlideModePpt: '歌词 PPT',
     worshipSlideMaximize: '最大化',
     worshipSlideExitMaximize: '退出全屏',
+    worshipLyricsPptxTitle: '歌词 PPT',
+    worshipLyricsPptxHint:
+      '上传歌词 PPT 后，播放歌单时可点「歌词 PPT」：音乐在后台继续，主画面显示 PPT；用方向键翻页，Esc 或「退出全屏」离开。',
+    worshipLyricsPptxUpload: '上传歌词 PPT',
+    worshipLyricsPptxReplace: '更换 PPT',
+    worshipLyricsPptxClear: '移除',
+    worshipLyricsPptxUploading: '上传中…',
+    worshipLyricsPptxUploaded: '歌词 PPT 已上传',
+    worshipLyricsPptxCleared: '已移除歌词 PPT',
+    worshipLyricsPptxReady: '已上传，可在播放时显示',
+    worshipLyricsPptxEmpty: '尚未上传',
+    worshipLyricsPptxInvalid: '请选择 .pptx 或 .ppt 文件',
+    worshipLyricsPptxMissing: '尚未上传歌词 PPT，请先在敬拜赞美步骤上传',
+    worshipLyricsPptxPlayHint:
+      '音乐在后台播放。←→↑↓ 或 PgUp/PgDn 翻页；Esc 或「退出全屏」离开。',
   },
   worshipSongs: {
     title: '敬拜赞美',

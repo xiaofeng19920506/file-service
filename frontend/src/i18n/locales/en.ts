@@ -378,6 +378,21 @@ const en: MessageTree = {
     worshipSlideModePpt: 'Lyrics PPT',
     worshipSlideMaximize: 'Maximize',
     worshipSlideExitMaximize: 'Exit fullscreen',
+    worshipLyricsPptxTitle: 'Lyrics PPT',
+    worshipLyricsPptxHint:
+      'Upload a lyrics PPT, then while the playlist plays choose “Lyrics PPT”: music stays in the background while you advance slides with the arrow keys. Press Esc or Exit to leave.',
+    worshipLyricsPptxUpload: 'Upload lyrics PPT',
+    worshipLyricsPptxReplace: 'Replace PPT',
+    worshipLyricsPptxClear: 'Remove',
+    worshipLyricsPptxUploading: 'Uploading…',
+    worshipLyricsPptxUploaded: 'Lyrics PPT uploaded',
+    worshipLyricsPptxCleared: 'Lyrics PPT removed',
+    worshipLyricsPptxReady: 'Ready — show during playback',
+    worshipLyricsPptxEmpty: 'Not uploaded yet',
+    worshipLyricsPptxInvalid: 'Please choose a .pptx or .ppt file',
+    worshipLyricsPptxMissing: 'No lyrics PPT yet — upload one in the worship step first',
+    worshipLyricsPptxPlayHint:
+      'Music plays in the background. Use ←→↑↓ or PgUp/PgDn to change slides; Esc or Exit to leave.',
   },
   worshipSongs: {
     title: 'Praise & worship',

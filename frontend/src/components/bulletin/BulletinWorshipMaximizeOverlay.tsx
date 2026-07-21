@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { getBulletin } from '../../api/bulletins';
+import { fetchBlobPreviewPptx } from '../../api/client';
 import type { PlaylistItem } from '../../api/playlists';
 import PlaylistAudioPlayer from '../PlaylistAudioPlayer';
 import YoutubePlaylistPlayer, { type YoutubePlayerItem } from '../YoutubePlaylistPlayer';
 import { useI18n } from '../../i18n';
 import { rebuildBulletinSlides } from '../../lib/bulletin-slides';
-import type { EditableSlide } from '../../lib/pptx-preview';
+import { parsePptxSlidesDetailed, type EditableSlide } from '../../lib/pptx-preview';
 import type { WorshipLiveMode } from '../../lib/worship-live-config';
 
 type Transport = {
@@ -29,6 +30,8 @@ type BulletinWorshipMaximizeOverlayProps = {
   playlistTitle: string;
   items: PlaylistItem[];
   transport: Transport;
+  /** 用户上传的歌词 PPT；有则优先于周报 PPT */
+  lyricsPptxBlobId?: string | null;
 };
 
 function toYoutubeItems(items: PlaylistItem[]): YoutubePlayerItem[] {
@@ -52,6 +55,7 @@ export default function BulletinWorshipMaximizeOverlay({
   playlistTitle,
   items,
   transport,
+  lyricsPptxBlobId = null,
 }: BulletinWorshipMaximizeOverlayProps) {
   const { t } = useI18n();
   const stageRef = useRef<HTMLDivElement>(null);
@@ -59,6 +63,7 @@ export default function BulletinWorshipMaximizeOverlay({
   const [slideIndex, setSlideIndex] = useState(0);
   const [slidesLoading, setSlidesLoading] = useState(mode === 'ppt');
   const [slidesError, setSlidesError] = useState<string | null>(null);
+  const [usingLyricsUpload, setUsingLyricsUpload] = useState(false);
   const [musicOpen, setMusicOpen] = useState(false);
 
   const youtubeItems = useMemo(() => toYoutubeItems(items), [items]);
@@ -77,27 +82,45 @@ export default function BulletinWorshipMaximizeOverlay({
     let cancelled = false;
     setSlidesLoading(true);
     setSlidesError(null);
-    void getBulletin(bulletinId)
-      .then((bulletin) => rebuildBulletinSlides(bulletin))
-      .then((parsed) => {
-        if (!cancelled) {
-          setSlides(parsed);
-          const worshipIdx = parsed.findIndex((s) => s.slideInFile === 7);
-          setSlideIndex(worshipIdx >= 0 ? worshipIdx : 0);
-        }
-      })
+    setUsingLyricsUpload(false);
+
+    const load = async () => {
+      if (lyricsPptxBlobId) {
+        const pptx = await fetchBlobPreviewPptx(lyricsPptxBlobId);
+        const parsed = await parsePptxSlidesDetailed(pptx, {
+          sourceFile: 'worship-lyrics.pptx',
+        });
+        if (cancelled) return;
+        setSlides(parsed);
+        setSlideIndex(0);
+        setUsingLyricsUpload(true);
+        return;
+      }
+
+      const bulletin = await getBulletin(bulletinId);
+      const parsed = await rebuildBulletinSlides(bulletin);
+      if (cancelled) return;
+      setSlides(parsed);
+      const worshipIdx = parsed.findIndex((s) => s.slideInFile === 7);
+      setSlideIndex(worshipIdx >= 0 ? worshipIdx : 0);
+      setUsingLyricsUpload(false);
+    };
+
+    void load()
       .catch((err) => {
         if (!cancelled) {
           setSlidesError(err instanceof Error ? err.message : String(err));
+          setSlides([]);
         }
       })
       .finally(() => {
         if (!cancelled) setSlidesLoading(false);
       });
+
     return () => {
       cancelled = true;
     };
-  }, [bulletinId, mode]);
+  }, [bulletinId, mode, lyricsPptxBlobId]);
 
   const { setPlaying } = transport;
 
@@ -117,12 +140,24 @@ export default function BulletinWorshipMaximizeOverlay({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+        return;
+      }
       if (mode !== 'ppt' || slides.length === 0) return;
-      if (event.key === 'ArrowRight' || event.key === 'PageDown') {
+      if (
+        event.key === 'ArrowRight' ||
+        event.key === 'ArrowDown' ||
+        event.key === 'PageDown'
+      ) {
         event.preventDefault();
         setSlideIndex((i) => Math.min(slides.length - 1, i + 1));
-      } else if (event.key === 'ArrowLeft' || event.key === 'PageUp') {
+      } else if (
+        event.key === 'ArrowLeft' ||
+        event.key === 'ArrowUp' ||
+        event.key === 'PageUp'
+      ) {
         event.preventDefault();
         setSlideIndex((i) => Math.max(0, i - 1));
       }
@@ -217,7 +252,11 @@ export default function BulletinWorshipMaximizeOverlay({
                 </div>
               )
             ) : (
-              <p className="bulletin-worship-maximize-muted">{t('worship.noSlides')}</p>
+              <p className="bulletin-worship-maximize-muted">
+                {lyricsPptxBlobId
+                  ? t('worship.noSlides')
+                  : t('bulletin.worshipLyricsPptxMissing')}
+              </p>
             )}
           </div>
 
@@ -252,7 +291,11 @@ export default function BulletinWorshipMaximizeOverlay({
             </button>
           </div>
 
-          <p className="bulletin-worship-maximize-ppt-hint">{t('worship.worshipSlideHint')}</p>
+          <p className="bulletin-worship-maximize-ppt-hint">
+            {usingLyricsUpload
+              ? t('bulletin.worshipLyricsPptxPlayHint')
+              : t('worship.worshipSlideHint')}
+          </p>
 
           <div className={`bulletin-worship-maximize-music${musicOpen ? ' is-open' : ''}`}>
             <PlaylistAudioPlayer

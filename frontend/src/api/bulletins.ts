@@ -35,6 +35,8 @@ export type WeeklyBulletin = {
   hiddenSections: string[];
   outputBlobId: string | null;
   servicePlaylistId: string | null;
+  /** 敬拜赞美歌词 PPT blob */
+  worshipLyricsPptxBlobId: string | null;
   createdByUserId: string;
   createdAt: string;
   updatedAt: string | null;
@@ -63,6 +65,7 @@ export type BulletinPatch = Partial<{
   skipDepartmentReports: boolean;
   hiddenSections: string[];
   outputBlobId: string | null;
+  worshipLyricsPptxBlobId: string | null;
 }>;
 
 export type AnnouncementInput = {
