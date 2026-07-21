@@ -24,6 +24,13 @@ describe('shouldSkipRateLimit', () => {
     expect(shouldSkipRateLimit('GET', '/v1/youtube/videos/abc123/video/stream')).toBe(false);
     expect(shouldSkipRateLimit('POST', '/v1/youtube/video/status')).toBe(true);
   });
+
+  it('skips bulletin preview deck-plan and slide png', () => {
+    expect(shouldSkipRateLimit('GET', '/v1/bulletins/template/deck-plan')).toBe(true);
+    expect(shouldSkipRateLimit('GET', '/v1/bulletins/template/slides/12/preview.png')).toBe(true);
+    expect(shouldSkipRateLimit('GET', '/v1/bulletins')).toBe(false);
+    expect(shouldSkipRateLimit('GET', '/v1/auth/session')).toBe(false);
+  });
 });
 
 describe('isUploadRateLimitPath', () => {
