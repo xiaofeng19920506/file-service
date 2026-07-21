@@ -96,16 +96,7 @@ export async function updateJobOutput(
 }
 
 export async function downloadBlobContent(blobId: string, filename: string): Promise<void> {
-  const res = await apiFetch(`/v1/blobs/${blobId}/content`);
-  if (!res.ok) {
-    const data = await res.json().catch(() => null);
-    const code =
-      typeof data === 'object' && data && 'error' in data
-        ? String((data as { error: string }).error)
-        : res.statusText;
-    throw new Error(code);
-  }
-  const blob = await res.blob();
+  const blob = await fetchBlobContent(blobId);
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
@@ -115,6 +106,19 @@ export async function downloadBlobContent(blobId: string, filename: string): Pro
   anchor.click();
   anchor.remove();
   URL.revokeObjectURL(url);
+}
+
+export async function fetchBlobContent(blobId: string): Promise<Blob> {
+  const res = await apiFetch(`/v1/blobs/${blobId}/content`);
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    const code =
+      typeof data === 'object' && data && 'error' in data
+        ? String((data as { error: string }).error)
+        : res.statusText;
+    throw new Error(code);
+  }
+  return res.blob();
 }
 
 export function openBlobPreviewTab(blobId: string, title: string): void {

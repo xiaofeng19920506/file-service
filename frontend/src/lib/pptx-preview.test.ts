@@ -32,6 +32,7 @@ describe('slidesContentEqual', () => {
     textLines: ['Body'],
     imageUrls: [],
     imageMediaPaths: [],
+    backgroundKind: 'none',
     editable: true,
     blank: false,
     isNew: false,

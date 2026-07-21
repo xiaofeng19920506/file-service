@@ -251,6 +251,14 @@ export const weeklyBulletins = pgTable('weekly_bulletins', {
     .$type<{ slide: number; textIndex: number; text: string }[]>()
     .notNull()
     .default([]),
+  /**
+   * 分区迷你 PPTX 覆盖：sectionId → blobId。
+   * 有值时该分区以二进制页为准（预览/导出 splice）。
+   */
+  sectionPptxOverrides: jsonb('section_pptx_overrides')
+    .$type<Record<string, string>>()
+    .notNull()
+    .default({}),
   servicePlaylistId: uuid('service_playlist_id').references(() => playlists.id, { onDelete: 'set null' }),
   /** 敬拜赞美歌词 PPT（用户上传，投影时音乐在后台） */
   worshipLyricsPptxBlobId: uuid('worship_lyrics_pptx_blob_id').references(() => blobs.id, {

@@ -1,4 +1,4 @@
-import { fetchBlobPreviewPptx, uploadFile } from '../api/client';
+import { fetchBlobContent, fetchBlobPreviewPptx, uploadFile } from '../api/client';
 import {
   fetchBulletinTemplateFile,
   updateBulletin,
@@ -10,9 +10,21 @@ export function bulletinPptxTitle(serviceDate: string): string {
   return `周报 ${serviceDate}`;
 }
 
+async function loadSectionPptxBlobs(
+  overrides: Record<string, string> | undefined,
+): Promise<Record<string, Blob>> {
+  const out: Record<string, Blob> = {};
+  for (const [sectionId, blobId] of Object.entries(overrides ?? {})) {
+    if (!sectionId || !blobId) continue;
+    out[sectionId] = await fetchBlobContent(blobId);
+  }
+  return out;
+}
+
 export async function buildBulletinPptxFile(bulletin: WeeklyBulletin): Promise<File> {
   const template = await fetchBulletinTemplateFile();
-  return generateBulletinPptx(template, bulletin);
+  const sectionBlobs = await loadSectionPptxBlobs(bulletin.sectionPptxOverrides);
+  return generateBulletinPptx(template, bulletin, sectionBlobs);
 }
 
 /** 优先使用已发布到诗库的 PPT，否则客户端即时生成 */

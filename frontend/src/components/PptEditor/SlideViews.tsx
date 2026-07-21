@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { useI18n } from '../../i18n';
 import {
   slideDisplayImageUrl,
@@ -240,12 +241,22 @@ export function PptCanvasSlide({ slide, zoom = 100 }: { slide: EditableSlide; zo
       : slide.snippet
         ? slide.snippet.split('\n').filter(Boolean)
         : [];
+  const bgStyle: CSSProperties | undefined =
+    slide.backgroundKind === 'solid' && slide.backgroundColor
+      ? { backgroundColor: `#${slide.backgroundColor}` }
+      : slide.backgroundPreviewUrl
+        ? {
+            backgroundImage: `url(${slide.backgroundPreviewUrl})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }
+        : undefined;
 
   return (
     <div className="ppt-canvas-slide">
       <div
         className={`ppt-slide-frame${slide.pending ? ' pending' : ''}${slide.isNew ? ' is-new' : ''}`}
-        style={{ transform: `scale(${scale})` }}
+        style={{ transform: `scale(${scale})`, ...bgStyle }}
         aria-label={t('preview.slideNumber', { n: slide.index })}
       >
         {hasImages ? (

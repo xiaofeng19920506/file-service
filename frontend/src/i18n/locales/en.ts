@@ -213,7 +213,7 @@ const en: MessageTree = {
     previewSectionHiddenHint:
       'This section is hidden, so it has no slides in the preview. Check “Show” on the left — Communion is template slides 10–13; Welcome is slide 14. They are never mixed.',
     sectionVisibleNavHint:
-      'Toggle visibility next to each section, or tap Edit to change that section’s slide text.',
+      'Toggle visibility next to each section, or open “Edit slides” to edit that section’s PowerPoint pages.',
     skipTestimony: 'Skip testimony week slide (16)',
     skipDepartment: 'Skip department reports slide (36)',
     meetingVariant: 'Weekly meeting layout',
@@ -253,9 +253,11 @@ const en: MessageTree = {
     previewStaticPreService: 'PPT page {page} · Chair pre-service prayer',
     sectionReadonlyTitle: 'Fixed template section',
     sectionReadonlyHint:
-      'This section uses fixed template slides. Use “Edit slides” below to change text; preview is on the right.',
+      'This section uses fixed template slides. Use “Edit slides” to change pages (including backgrounds); preview is on the right.',
     editSlides: 'Edit slides',
-    editSlidesShort: 'Edit',
+    editSlidesShort: 'Edit slides',
+    editSlidesSectionTitle: 'Edit section: {section}',
+    editSlidesSaved: 'Section slides saved',
     editSlidesTitle: 'Edit section slide text',
     editSlidesHint:
       'Text only — backgrounds and images stay unchanged. Unchanged lines keep the template wording.',
@@ -822,6 +824,9 @@ const en: MessageTree = {
     moveDown: 'Move down',
     replaceImage: 'Replace image',
     cropImage: 'Crop image',
+    replaceBackground: 'Replace background',
+    cropBackground: 'Crop background',
+    backgroundColor: 'Background color',
     dragToReorder: 'Drag to reorder',
     dropToReorder: 'Drop on a slide to reorder',
     shortcutUndo: 'Undo (⌘Z)',

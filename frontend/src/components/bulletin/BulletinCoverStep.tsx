@@ -1,6 +1,6 @@
 import { useI18n } from '../../i18n';
 import { nextSundayIso } from '../../lib/bulletin-date';
-import type { SlideTextOverride, WeeklyBulletin } from '../../api/bulletins';
+import type { WeeklyBulletin } from '../../api/bulletins';
 import { BulletinSectionControls } from './BulletinWizardSteps';
 
 const DEFAULT_SERVICE_TIME = '11:00';
@@ -24,7 +24,6 @@ type BulletinCoverStepProps = {
   onServiceDateChange: (isoDate: string) => void;
   onServiceTimeChange: (time: string) => void;
   onSectionVisibilityChange: (sectionId: string, visible: boolean) => void;
-  onSlideTextOverridesSaved: (overrides: SlideTextOverride[]) => void;
   onSave?: () => void;
   onCoverPreviewFocus?: () => void;
 };
@@ -38,7 +37,6 @@ export default function BulletinCoverStep({
   onServiceDateChange,
   onServiceTimeChange,
   onSectionVisibilityChange,
-  onSlideTextOverridesSaved,
   onSave,
   onCoverPreviewFocus,
 }: BulletinCoverStepProps) {
@@ -59,7 +57,6 @@ export default function BulletinCoverStep({
           draft={draft}
           canEdit={canEdit}
           onSectionVisibilityChange={onSectionVisibilityChange}
-          onSlideTextOverridesSaved={onSlideTextOverridesSaved}
         />
         <label className="bulletin-field">
           {t('bulletin.pickServiceDate')}

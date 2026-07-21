@@ -1,5 +1,7 @@
 import JSZip from 'jszip';
 
+export type SlideBackgroundKind = 'image' | 'solid' | 'none';
+
 export type EditableSlide = {
   index: number;
   slideInFile: number;
@@ -16,6 +18,16 @@ export type EditableSlide = {
   imageReplacements?: Record<string, Blob>;
   /** 替换图预览 URL（mediaPath → blob:） */
   imagePreviewUrls?: Record<string, string>;
+  /** 幻灯片背景：图 / 纯色 / 无 */
+  backgroundKind: SlideBackgroundKind;
+  /** 背景图在 zip 内的 media 路径 */
+  backgroundMediaPath?: string;
+  /** 背景纯色（RRGGBB，无 #） */
+  backgroundColor?: string;
+  /** 背景预览 URL（原图或替换后） */
+  backgroundPreviewUrl?: string;
+  /** 待写入的背景图替换 */
+  backgroundReplacement?: Blob;
   pending?: boolean;
   editable: boolean;
   /** 尚未写入 PPTX，确认保存时再复制 */
@@ -291,6 +303,9 @@ export function revokeSlideUrls(slides: EditableSlide[]): void {
         if (url.startsWith('blob:')) URL.revokeObjectURL(url);
       }
     }
+    if (s.backgroundPreviewUrl?.startsWith('blob:')) {
+      URL.revokeObjectURL(s.backgroundPreviewUrl);
+    }
   }
 }
 
@@ -346,11 +361,50 @@ export async function resolvePreviewBlob(
   throw new Error('unsupported_preview_format');
 }
 
+async function extractSlideBackground(
+  zip: JSZip,
+  slidePath: string,
+  xml: string,
+): Promise<{
+  kind: SlideBackgroundKind;
+  mediaPath?: string;
+  color?: string;
+  url?: string;
+}> {
+  const bgBlock = xml.match(/<p:bg>[\s\S]*?<\/p:bg>/)?.[0];
+  if (!bgBlock) return { kind: 'none' };
+
+  const solid = bgBlock.match(/<a:solidFill>[\s\S]*?<a:srgbClr val="([0-9A-Fa-f]{6})"/);
+  if (solid) {
+    return { kind: 'solid', color: solid[1]!.toUpperCase() };
+  }
+
+  const embed =
+    bgBlock.match(/<a:blip[^>]*r:embed="([^"]+)"/)?.[1] ??
+    bgBlock.match(/r:embed="([^"]+)"/)?.[1];
+  if (embed) {
+    const mediaPath = await resolveMediaPath(zip, slidePath, embed);
+    if (mediaPath) {
+      const url = await mediaPathToUrl(zip, mediaPath, new Set());
+      if (url) return { kind: 'image', mediaPath, url };
+      return { kind: 'image', mediaPath };
+    }
+  }
+
+  return { kind: 'none' };
+}
+
 function buildSlideFromParts(
   slideInFile: number,
   path: string,
   texts: string[],
   images: { url: string; mediaPath: string }[],
+  background: {
+    kind: SlideBackgroundKind;
+    mediaPath?: string;
+    color?: string;
+    url?: string;
+  },
   meta?: { sourceFile?: string; sourceItemId?: string },
   displayIndex?: number,
 ): EditableSlide {
@@ -369,7 +423,11 @@ function buildSlideFromParts(
     textLines: texts,
     imageUrls,
     imageMediaPaths,
-    editable: texts.length > 0 || imageUrls.length > 0,
+    backgroundKind: background.kind,
+    backgroundMediaPath: background.mediaPath,
+    backgroundColor: background.color,
+    backgroundPreviewUrl: background.url,
+    editable: texts.length > 0 || imageUrls.length > 0 || background.kind !== 'none',
   };
 }
 
@@ -389,12 +447,14 @@ export async function parsePptxSlidesDetailed(
     const xml = await entry.async('string');
     const texts = extractTexts(xml);
     const images = await extractSlideImages(zip, path, xml);
+    const background = await extractSlideBackground(zip, path, xml);
     slides.push(
       buildSlideFromParts(
         slideNumber(path),
         path,
         texts,
         images,
+        background,
         meta,
         slides.length + 1,
       ),
@@ -453,6 +513,7 @@ export async function buildMergePreview(
             textLines: [],
             imageUrls: [],
             imageMediaPaths: [],
+            backgroundKind: 'none',
             editable: false,
           });
           continue;
@@ -482,6 +543,7 @@ export async function buildMergePreview(
       textLines: [],
       imageUrls: [],
       imageMediaPaths: [],
+      backgroundKind: 'none',
       pending: true,
       previewFailed: needsPreviewConversion(name),
       editable: false,
@@ -517,6 +579,17 @@ export function slidesContentEqual(a: EditableSlide[], b: EditableSlide[]): bool
   return a.every((s, i) => {
     const t = b[i];
     if (s.title !== t.title || s.snippet !== t.snippet) return false;
+    if (s.backgroundKind !== t.backgroundKind) return false;
+    if ((s.backgroundColor ?? '') !== (t.backgroundColor ?? '')) return false;
+    if (!!s.backgroundReplacement !== !!t.backgroundReplacement) return false;
+    if (s.backgroundReplacement && t.backgroundReplacement) {
+      if (
+        s.backgroundReplacement.size !== t.backgroundReplacement.size ||
+        s.backgroundReplacement.type !== t.backgroundReplacement.type
+      ) {
+        return false;
+      }
+    }
     const repA = s.imageReplacements ?? {};
     const repB = t.imageReplacements ?? {};
     const keysA = Object.keys(repA).sort();
@@ -587,6 +660,135 @@ export async function applyImageReplacementsToPptx(
     const buf = await blob.arrayBuffer();
     zip.file(mediaPath, buf);
   }
+  const filename = file instanceof File ? file.name : 'presentation.pptx';
+  const out = await zip.generateAsync({ type: 'arraybuffer' });
+  return new File([out], filename, { type: PPTX_MIME });
+}
+
+function mimeExt(blob: Blob): string {
+  const t = (blob.type || '').toLowerCase();
+  if (t.includes('jpeg') || t.includes('jpg')) return 'jpg';
+  if (t.includes('png')) return 'png';
+  if (t.includes('gif')) return 'gif';
+  if (t.includes('webp')) return 'webp';
+  return 'png';
+}
+
+function nextMediaPath(zip: JSZip, ext: string): string {
+  const existing = Object.keys(zip.files)
+    .filter((n) => n.startsWith('ppt/media/'))
+    .map((n) => n.replace(/^ppt\/media\//, ''));
+  let i = 1;
+  while (existing.includes(`image${i}.${ext}`)) i += 1;
+  return `ppt/media/image${i}.${ext}`;
+}
+
+function buildSolidBgXml(hex: string): string {
+  const val = hex.replace(/^#/, '').toUpperCase();
+  return `<p:bg><p:bgPr><a:solidFill><a:srgbClr val="${val}"/></a:solidFill></p:bgPr></p:bg>`;
+}
+
+function buildBlipBgXml(rId: string): string {
+  return `<p:bg><p:bgPr><a:blipFill><a:blip r:embed="${rId}"><a:alphaModFix/></a:blip><a:stretch><a:fillRect/></a:stretch></a:blipFill></p:bgPr></p:bg>`;
+}
+
+function replaceOrInsertBg(xml: string, bgXml: string): string {
+  if (/<p:bg>[\s\S]*?<\/p:bg>/.test(xml)) {
+    return xml.replace(/<p:bg>[\s\S]*?<\/p:bg>/, bgXml);
+  }
+  if (xml.includes('<p:cSld>')) {
+    return xml.replace('<p:cSld>', `<p:cSld>${bgXml}`);
+  }
+  return xml;
+}
+
+function ensureImageRelationship(relsXml: string, mediaFileName: string): { relsXml: string; rId: string } {
+  const target = `../media/${mediaFileName}`;
+  const existing = relsXml.match(
+    new RegExp(`Id="(rId\\d+)"[^>]*Target="${target.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`),
+  );
+  if (existing) return { relsXml, rId: existing[1]! };
+  const byTargetFirst = relsXml.match(
+    new RegExp(`Target="${target.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"[^>]*Id="(rId\\d+)"`),
+  );
+  if (byTargetFirst) return { relsXml, rId: byTargetFirst[1]! };
+
+  const rId = nextNumericRelId(relsXml);
+  const rel = `<Relationship Id="${rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="${target}"/>`;
+  const next = relsXml.includes('</Relationships>')
+    ? relsXml.replace('</Relationships>', `${rel}</Relationships>`)
+    : `${relsXml}${rel}`;
+  return { relsXml: next, rId };
+}
+
+/** 将背景图/纯色写入 PPTX */
+export async function applyBackgroundEditsToPptx(
+  file: Blob,
+  slides: EditableSlide[],
+): Promise<File> {
+  const toWrite = slides.filter((s) => {
+    if (!s.slidePath) return false;
+    if (s.backgroundReplacement) return true;
+    // solid color without replacement — write if kind is solid
+    if (s.backgroundKind === 'solid' && s.backgroundColor) return true;
+    return false;
+  });
+  if (!toWrite.length) {
+    return file instanceof File
+      ? file
+      : new File([file], 'presentation.pptx', { type: PPTX_MIME });
+  }
+
+  const zip = await JSZip.loadAsync(file);
+  for (const slide of toWrite) {
+    const entry = zip.file(slide.slidePath);
+    if (!entry) continue;
+    let xml = await entry.async('string');
+    const relsPath = slide.slidePath
+      .replace('ppt/slides/', 'ppt/slides/_rels/')
+      .replace('.xml', '.xml.rels');
+    const relsEntry = zip.file(relsPath);
+    let relsXml = relsEntry ? await relsEntry.async('string') : null;
+
+    if (slide.backgroundKind === 'solid' && slide.backgroundColor && !slide.backgroundReplacement) {
+      xml = replaceOrInsertBg(xml, buildSolidBgXml(slide.backgroundColor));
+      zip.file(slide.slidePath, xml);
+      continue;
+    }
+
+    if (slide.backgroundReplacement) {
+      const ext = mimeExt(slide.backgroundReplacement);
+      let mediaPath = slide.backgroundMediaPath;
+      let rId: string | null = null;
+
+      if (mediaPath && zip.file(mediaPath)) {
+        zip.file(mediaPath, await slide.backgroundReplacement.arrayBuffer());
+        // Keep existing bg embed if present
+        const embed =
+          xml.match(/<p:bg>[\s\S]*?<a:blip[^>]*r:embed="([^"]+)"/)?.[1] ??
+          xml.match(/<p:bg>[\s\S]*?r:embed="([^"]+)"/)?.[1];
+        if (embed) {
+          xml = replaceOrInsertBg(xml, buildBlipBgXml(embed));
+          zip.file(slide.slidePath, xml);
+          continue;
+        }
+      }
+
+      mediaPath = nextMediaPath(zip, ext);
+      zip.file(mediaPath, await slide.backgroundReplacement.arrayBuffer());
+      const mediaFileName = mediaPath.replace(/^ppt\/media\//, '');
+      if (!relsXml) {
+        relsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`;
+      }
+      const ensured = ensureImageRelationship(relsXml, mediaFileName);
+      relsXml = ensured.relsXml;
+      rId = ensured.rId;
+      zip.file(relsPath, relsXml);
+      xml = replaceOrInsertBg(xml, buildBlipBgXml(rId));
+      zip.file(slide.slidePath, xml);
+    }
+  }
+
   const filename = file instanceof File ? file.name : 'presentation.pptx';
   const out = await zip.generateAsync({ type: 'arraybuffer' });
   return new File([out], filename, { type: PPTX_MIME });
@@ -892,6 +1094,22 @@ export async function applySlideEditsToPptx(
 
   working = await applyImageReplacementsToPptx(working, target);
 
+  const bgTargets = target.filter((s) => {
+    if (!s.slidePath) return false;
+    if (s.backgroundReplacement) return true;
+    const base = baseline.find(
+      (b) => slideIdentity(b) === slideIdentity(s) || b.slidePath === s.slidePath,
+    );
+    if (!base) return s.backgroundKind === 'solid' && !!s.backgroundColor;
+    return (
+      s.backgroundKind !== base.backgroundKind ||
+      (s.backgroundColor ?? '') !== (base.backgroundColor ?? '')
+    );
+  });
+  if (bgTargets.length) {
+    working = await applyBackgroundEditsToPptx(working, bgTargets);
+  }
+
   return working;
 }
 
@@ -972,6 +1190,10 @@ export function createSlidePlaceholder(
     textLines: options.blank ? [] : [...template.textLines],
     imageUrls: options.blank ? [] : [...template.imageUrls],
     imageMediaPaths: options.blank ? [] : [...template.imageMediaPaths],
+    backgroundKind: options.blank ? 'none' : template.backgroundKind,
+    backgroundMediaPath: options.blank ? undefined : template.backgroundMediaPath,
+    backgroundColor: options.blank ? undefined : template.backgroundColor,
+    backgroundPreviewUrl: options.blank ? undefined : template.backgroundPreviewUrl,
     editable: options.blank || template.editable,
   };
 }

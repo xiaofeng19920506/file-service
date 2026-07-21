@@ -21,12 +21,17 @@ import {
 
 type UseMergedPptEditorProps = {
   mergedUrl: string | null;
-  jobId: string | null;
+  jobId?: string | null;
+  /** 自定义保存（周报分区等）；未提供时走 job 输出 */
+  onSaveFile?: (file: File) => Promise<void>;
   onSaved?: () => void;
 };
 
 type SkipConfirmState = { kind: 'one'; index: number } | { kind: 'batch' } | null;
-type CropTargetState = { arrayIndex: number; imageIndex: number; url: string } | null;
+type CropTargetState =
+  | { kind: 'image'; arrayIndex: number; imageIndex: number; url: string }
+  | { kind: 'background'; arrayIndex: number; url: string }
+  | null;
 
 function normalizeFetchUrl(url: string): string {
   try {
@@ -38,7 +43,12 @@ function normalizeFetchUrl(url: string): string {
   return url;
 }
 
-export function useMergedPptEditor({ mergedUrl, jobId, onSaved }: UseMergedPptEditorProps) {
+export function useMergedPptEditor({
+  mergedUrl,
+  jobId = null,
+  onSaveFile,
+  onSaved,
+}: UseMergedPptEditorProps) {
   const {
     slides,
     replaceSlides,
@@ -78,10 +88,16 @@ export function useMergedPptEditor({ mergedUrl, jobId, onSaved }: UseMergedPptEd
 
   const setSlidesSafe = useCallback(
     (next: EditableSlide[]) => {
-      const nextUrls = new Set(next.flatMap((s) => s.imageUrls));
+      const nextUrls = new Set([
+        ...next.flatMap((s) => s.imageUrls),
+        ...next.map((s) => s.backgroundPreviewUrl).filter(Boolean),
+      ]);
       for (const s of slidesRef.current) {
         for (const url of s.imageUrls) {
           if (!nextUrls.has(url)) URL.revokeObjectURL(url);
+        }
+        if (s.backgroundPreviewUrl && !nextUrls.has(s.backgroundPreviewUrl)) {
+          URL.revokeObjectURL(s.backgroundPreviewUrl);
         }
       }
       slidesRef.current = next;
@@ -285,8 +301,56 @@ export function useMergedPptEditor({ mergedUrl, jobId, onSaved }: UseMergedPptEd
     [updateSlides],
   );
 
+  const setSlideBackgroundImage = useCallback(
+    (arrayIndex: number, blob: Blob) => {
+      updateSlides((prev) =>
+        prev.map((s, i) => {
+          if (i !== arrayIndex) return s;
+          if (s.backgroundPreviewUrl?.startsWith('blob:') && s.backgroundReplacement) {
+            URL.revokeObjectURL(s.backgroundPreviewUrl);
+          }
+          const previewUrl = URL.createObjectURL(blob);
+          return {
+            ...s,
+            backgroundKind: 'image' as const,
+            backgroundColor: undefined,
+            backgroundReplacement: blob,
+            backgroundPreviewUrl: previewUrl,
+          };
+        }),
+      );
+    },
+    [updateSlides],
+  );
+
+  const setSlideBackgroundColor = useCallback(
+    (arrayIndex: number, hex: string) => {
+      const color = hex.replace(/^#/, '').toUpperCase();
+      updateSlides((prev) =>
+        prev.map((s, i) => {
+          if (i !== arrayIndex) return s;
+          if (s.backgroundPreviewUrl?.startsWith('blob:') && s.backgroundReplacement) {
+            URL.revokeObjectURL(s.backgroundPreviewUrl);
+          }
+          return {
+            ...s,
+            backgroundKind: 'solid' as const,
+            backgroundColor: color,
+            backgroundReplacement: undefined,
+            backgroundPreviewUrl: undefined,
+          };
+        }),
+      );
+    },
+    [updateSlides],
+  );
+
   const openCrop = useCallback((arrayIndex: number, imageIndex: number, url: string) => {
-    setCropTarget({ arrayIndex, imageIndex, url });
+    setCropTarget({ kind: 'image', arrayIndex, imageIndex, url });
+  }, []);
+
+  const openBackgroundCrop = useCallback((arrayIndex: number, url: string) => {
+    setCropTarget({ kind: 'background', arrayIndex, url });
   }, []);
 
   const discardChanges = useCallback(() => {
@@ -296,6 +360,9 @@ export function useMergedPptEditor({ mergedUrl, jobId, onSaved }: UseMergedPptEd
           if (url.startsWith('blob:')) URL.revokeObjectURL(url);
         }
       }
+      if (s.backgroundReplacement && s.backgroundPreviewUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(s.backgroundPreviewUrl);
+      }
     }
     const restored = reindexSlides(cloneSlides(savedSlides));
     replaceSlides(restored);
@@ -304,7 +371,8 @@ export function useMergedPptEditor({ mergedUrl, jobId, onSaved }: UseMergedPptEd
   }, [replaceSlides, savedSlides, slides]);
 
   const saveChanges = useCallback(async () => {
-    if (!dirty || !jobId || !mergedSourceFileRef.current) return;
+    if (!dirty || !mergedSourceFileRef.current) return;
+    if (!onSaveFile && !jobId) return;
     setSaving(true);
     setSaveError(null);
     try {
@@ -314,7 +382,11 @@ export function useMergedPptEditor({ mergedUrl, jobId, onSaved }: UseMergedPptEd
         slides,
         { sourceFile: 'merged.pptx' },
       );
-      await updateJobOutput(jobId, updatedFile);
+      if (onSaveFile) {
+        await onSaveFile(updatedFile);
+      } else if (jobId) {
+        await updateJobOutput(jobId, updatedFile);
+      }
       mergedSourceFileRef.current = updatedFile;
       const parsed = await parsePptxSlidesDetailed(updatedFile, { sourceFile: 'merged.pptx' });
       setSlidesSafe(parsed);
@@ -325,7 +397,7 @@ export function useMergedPptEditor({ mergedUrl, jobId, onSaved }: UseMergedPptEd
     } finally {
       setSaving(false);
     }
-  }, [dirty, jobId, onSaved, savedSlides, setSavedSlidesSafe, setSlidesSafe, slides]);
+  }, [dirty, jobId, onSaveFile, onSaved, savedSlides, setSavedSlidesSafe, setSlidesSafe, slides]);
 
   const pptFocusIndex = Math.min(focusIndex, Math.max(0, slides.length - 1));
   const currentSlide = slides[pptFocusIndex];
@@ -335,10 +407,12 @@ export function useMergedPptEditor({ mergedUrl, jobId, onSaved }: UseMergedPptEd
   const canMoveUp = pptFocusIndex > 0;
   const canMoveDown = pptFocusIndex < slides.length - 1;
   const canEditImages = !!currentSlide && currentSlide.imageMediaPaths.length > 0;
+  const canEditBackground = !!currentSlide && !currentSlide.pending;
   const firstImageUrl =
     currentSlide && currentSlide.imageMediaPaths.length > 0
       ? slideDisplayImageUrl(currentSlide, 0)
       : null;
+  const backgroundPreviewUrl = currentSlide?.backgroundPreviewUrl ?? null;
 
   return {
     slides,
@@ -367,7 +441,9 @@ export function useMergedPptEditor({ mergedUrl, jobId, onSaved }: UseMergedPptEd
     canMoveUp,
     canMoveDown,
     canEditImages,
+    canEditBackground,
     firstImageUrl,
+    backgroundPreviewUrl,
     undo,
     redo,
     updateSlide,
@@ -381,7 +457,10 @@ export function useMergedPptEditor({ mergedUrl, jobId, onSaved }: UseMergedPptEd
     selectAllSlides,
     clearSlideSelection,
     setSlideImageReplacement,
+    setSlideBackgroundImage,
+    setSlideBackgroundColor,
     openCrop,
+    openBackgroundCrop,
     discardChanges,
     saveChanges,
   };

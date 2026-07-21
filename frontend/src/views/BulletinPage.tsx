@@ -23,7 +23,7 @@ import {
   BulletinVerseStep,
 } from '../components/bulletin/BulletinWizardSteps';
 import ProgressStepper from '../components/ProgressStepper';
-import { BulletinEditSlidesModal } from '../components/bulletin/BulletinEditSlidesControl';
+import BulletinSectionPptEditor from '../components/bulletin/BulletinSectionPptEditor';
 import { useBulletinRealtime } from '../hooks/useBulletinRealtime';
 import { useBulletinScripturePersistence } from '../hooks/useBulletinScripturePersistence';
 import { useI18n } from '../i18n';
@@ -41,7 +41,7 @@ import {
   navSectionIndexById,
 } from '../lib/bulletin-sections';
 import { BULLETIN_WIZARD_STEPS } from '../lib/bulletin-template-steps';
-import { publishBulletinPptx, resolveBulletinPptxBlob } from '../lib/bulletin-publish';
+import { buildBulletinPptxFile, publishBulletinPptx } from '../lib/bulletin-publish';
 import { friendlyError } from '../lib/error-messages';
 import { readWorshipLiveConfig, writeWorshipLiveConfig } from '../lib/worship-live-config';
 
@@ -79,6 +79,10 @@ function withHiddenSections(bulletin: WeeklyBulletin): WeeklyBulletin {
     slideTextOverrides: Array.isArray(bulletin.slideTextOverrides)
       ? bulletin.slideTextOverrides
       : [],
+    sectionPptxOverrides:
+      bulletin.sectionPptxOverrides && typeof bulletin.sectionPptxOverrides === 'object'
+        ? bulletin.sectionPptxOverrides
+        : {},
   });
 }
 
@@ -414,7 +418,7 @@ export default function BulletinPage() {
     try {
       setGenerating(true);
       setError(null);
-      const file = await resolveBulletinPptxBlob(draft);
+      const file = await buildBulletinPptxFile(draft);
       const downloadFile =
         file instanceof File
           ? file
@@ -476,8 +480,10 @@ export default function BulletinPage() {
     }
   };
 
-  const handleSlideTextOverridesSaved = (overrides: WeeklyBulletin['slideTextOverrides']) => {
-    setDraft((prev) => (prev ? { ...prev, slideTextOverrides: overrides } : prev));
+  const handleSectionPptxSaved = (bulletin: WeeklyBulletin) => {
+    setDraft(withHiddenSections(bulletin));
+    setEditSlidesSectionId(null);
+    setMessage(t('bulletin.editSlidesSaved'));
   };
 
   const renderStepPanel = () => {
@@ -486,7 +492,6 @@ export default function BulletinPage() {
     const visibilityProps = {
       sectionId: activeSectionId,
       onSectionVisibilityChange: handleSectionVisibilityChange,
-      onSlideTextOverridesSaved: handleSlideTextOverridesSaved,
     };
 
     if (activeSectionReadonly) {
@@ -497,7 +502,6 @@ export default function BulletinPage() {
           canEdit={canManage}
           saving={saving}
           onSectionVisibilityChange={handleSectionVisibilityChange}
-          onSlideTextOverridesSaved={handleSlideTextOverridesSaved}
           onSave={() => void handleSaveFields(visibilitySaveFields(draft))}
         />
       );
@@ -523,8 +527,7 @@ export default function BulletinPage() {
             onServiceDateChange={handleServiceDateChange}
             onServiceTimeChange={(time) => patchField('serviceTime', time)}
             onSectionVisibilityChange={handleSectionVisibilityChange}
-            onSlideTextOverridesSaved={handleSlideTextOverridesSaved}
-            onSave={handleSaveCover}
+              onSave={handleSaveCover}
             onCoverPreviewFocus={() =>
               setPreviewScrollToSlide((prev) => ({
                 slide: 1,
@@ -576,8 +579,7 @@ export default function BulletinPage() {
               setWorshipPreviewRevision((v) => v + 1);
             }}
             onSectionVisibilityChange={handleSectionVisibilityChange}
-            onSlideTextOverridesSaved={handleSlideTextOverridesSaved}
-            onSaveVisibility={() => void handleSaveFields(visibilitySaveFields(draft))}
+              onSaveVisibility={() => void handleSaveFields(visibilitySaveFields(draft))}
             saving={saving}
           />
         );
@@ -740,13 +742,11 @@ export default function BulletinPage() {
             </div>
 
             {editSlidesSectionId ? (
-              <BulletinEditSlidesModal
+              <BulletinSectionPptEditor
                 sectionId={editSlidesSectionId}
                 draft={draft}
-                canEdit={canManage}
-                open
                 onClose={() => setEditSlidesSectionId(null)}
-                onSaved={handleSlideTextOverridesSaved}
+                onSaved={handleSectionPptxSaved}
               />
             ) : null}
 

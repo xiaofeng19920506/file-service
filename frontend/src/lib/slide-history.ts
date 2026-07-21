@@ -8,6 +8,7 @@ export function cloneSlides(slides: EditableSlide[]): EditableSlide[] {
     imageMediaPaths: [...s.imageMediaPaths],
     imageReplacements: s.imageReplacements ? { ...s.imageReplacements } : undefined,
     imagePreviewUrls: s.imagePreviewUrls ? { ...s.imagePreviewUrls } : undefined,
+    backgroundReplacement: s.backgroundReplacement,
   }));
 }
 

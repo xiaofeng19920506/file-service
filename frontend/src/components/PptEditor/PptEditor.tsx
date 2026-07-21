@@ -7,7 +7,8 @@ import { PptCanvasSlide, PptSlidesPane } from './SlideViews';
 
 type PptEditorProps = {
   mergedUrl: string | null;
-  jobId: string | null;
+  jobId?: string | null;
+  onSaveFile?: (file: File) => Promise<void>;
   title: string;
   onSaved?: () => void;
   onDownload?: () => void;
@@ -18,7 +19,8 @@ type PptEditorProps = {
 
 export default function PptEditor({
   mergedUrl,
-  jobId,
+  jobId = null,
+  onSaveFile,
   title,
   onSaved,
   onDownload,
@@ -29,7 +31,8 @@ export default function PptEditor({
   const { t } = useI18n();
   const [zoom, setZoom] = useState(100);
   const imageReplaceInputRef = useRef<HTMLInputElement>(null);
-  const editor = useMergedPptEditor({ mergedUrl, jobId, onSaved });
+  const backgroundReplaceInputRef = useRef<HTMLInputElement>(null);
+  const editor = useMergedPptEditor({ mergedUrl, jobId, onSaveFile, onSaved });
   const {
     slides,
     loading,
@@ -56,7 +59,9 @@ export default function PptEditor({
     canMoveUp,
     canMoveDown,
     canEditImages,
+    canEditBackground,
     firstImageUrl,
+    backgroundPreviewUrl,
     undo,
     redo,
     reorderSlideAt,
@@ -69,9 +74,13 @@ export default function PptEditor({
     selectAllSlides,
     clearSlideSelection,
     setSlideImageReplacement,
+    setSlideBackgroundImage,
+    setSlideBackgroundColor,
     openCrop,
+    openBackgroundCrop,
     discardChanges,
     saveChanges,
+    currentSlide,
   } = editor;
 
   useEffect(() => {
@@ -130,33 +139,21 @@ export default function PptEditor({
     setPptDragOverIndex(null);
   };
 
+  const bgColorValue =
+    currentSlide?.backgroundKind === 'solid' && currentSlide.backgroundColor
+      ? `#${currentSlide.backgroundColor}`
+      : '#ffffff';
+
   return (
     <>
       <div className="ppt-editor">
-        <input
-          ref={imageReplaceInputRef}
-          type="file"
-          accept="image/*"
-          hidden
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            e.target.value = '';
-            if (file && canEditImages) {
-              setSlideImageReplacement(focusIndex, 0, file);
-            }
-          }}
-        />
-
-        <header className="ppt-titlebar">
-          <h1 className="ppt-title">{title || t('slides.documentUntitled')}</h1>
-          <div className="ppt-titlebar-meta">
-            <span className={`ppt-save-state${dirty ? ' dirty' : ''}`}>
-              {saving ? t('preview.saving') : dirty ? t('files.unsaved') : t('ppt.saved')}
-            </span>
+        <header className="ppt-editor-header">
+          <h2 className="ppt-editor-title">{title}</h2>
+          <div className="ppt-editor-header-actions">
             {onDownload && (
               <button
                 type="button"
-                className="btn-primary btn-sm"
+                className="btn-secondary btn-sm"
                 disabled={!canDownload || downloading}
                 onClick={() => onDownload()}
               >
@@ -273,6 +270,39 @@ export default function PptEditor({
               {t('ppt.cropImage')}
             </button>
           </div>
+          <div className="ppt-ribbon-sep" aria-hidden />
+          <div className="ppt-ribbon-group">
+            <button
+              type="button"
+              className="ppt-ribbon-btn"
+              disabled={!canEditBackground}
+              onClick={() => backgroundReplaceInputRef.current?.click()}
+            >
+              {t('ppt.replaceBackground')}
+            </button>
+            <button
+              type="button"
+              className="ppt-ribbon-btn"
+              disabled={!backgroundPreviewUrl}
+              onClick={() =>
+                backgroundPreviewUrl && openBackgroundCrop(focusIndex, backgroundPreviewUrl)
+              }
+            >
+              {t('ppt.cropBackground')}
+            </button>
+            <label
+              className={`ppt-ribbon-btn ppt-bg-color-btn${!canEditBackground ? ' is-disabled' : ''}`}
+              title={t('ppt.backgroundColor')}
+            >
+              <span>{t('ppt.backgroundColor')}</span>
+              <input
+                type="color"
+                value={bgColorValue}
+                disabled={!canEditBackground}
+                onChange={(e) => setSlideBackgroundColor(focusIndex, e.target.value)}
+              />
+            </label>
+          </div>
           <div className="ppt-ribbon-spacer" />
           <div className="ppt-ribbon-group">
             <label className="ppt-zoom-control">
@@ -308,6 +338,31 @@ export default function PptEditor({
             </button>
           </div>
         </div>
+
+        <input
+          ref={imageReplaceInputRef}
+          type="file"
+          accept="image/*"
+          hidden
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (!file || !currentSlide?.imageMediaPaths[0]) return;
+            void setSlideImageReplacement(focusIndex, 0, file);
+          }}
+        />
+        <input
+          ref={backgroundReplaceInputRef}
+          type="file"
+          accept="image/*"
+          hidden
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (!file) return;
+            void setSlideBackgroundImage(focusIndex, file);
+          }}
+        />
 
         <div className="ppt-workspace">
           <PptSlidesPane
@@ -367,7 +422,9 @@ export default function PptEditor({
           title={t('preview.confirmSkipTitle')}
           message={
             skipConfirm.kind === 'one'
-              ? t('preview.confirmSkipSingle', { n: slides[skipConfirm.index]?.index ?? skipConfirm.index + 1 })
+              ? t('preview.confirmSkipSingle', {
+                  n: slides[skipConfirm.index]?.index ?? skipConfirm.index + 1,
+                })
               : t('preview.confirmSkipBatch', { count: selectedSlideIds.size })
           }
           onCancel={() => setSkipConfirm(null)}
@@ -387,7 +444,11 @@ export default function PptEditor({
           imageUrl={cropTarget.url}
           onClose={() => setCropTarget(null)}
           onConfirm={(blob) => {
-            setSlideImageReplacement(cropTarget.arrayIndex, cropTarget.imageIndex, blob);
+            if (cropTarget.kind === 'background') {
+              setSlideBackgroundImage(cropTarget.arrayIndex, blob);
+            } else {
+              setSlideImageReplacement(cropTarget.arrayIndex, cropTarget.imageIndex, blob);
+            }
             setCropTarget(null);
           }}
         />

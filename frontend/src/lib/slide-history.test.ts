@@ -19,6 +19,7 @@ function slide(_id: string, sourceItemId: string, index: number): EditableSlide 
     textLines: [],
     imageUrls: [],
     imageMediaPaths: [],
+    backgroundKind: 'none',
     editable: true,
   };
 }

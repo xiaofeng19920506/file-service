@@ -6,7 +6,6 @@ import {
   removeBulletinWorshipPlaylistItem,
   reorderBulletinWorshipPlaylistItems,
   updateBulletin,
-  type SlideTextOverride,
   type WeeklyBulletin,
 } from '../../api/bulletins';
 import { uploadFile } from '../../api/client';
@@ -31,7 +30,6 @@ type BulletinWorshipStepProps = {
   onPlaylistChanged?: () => void;
   onLyricsPptxChange?: (blobId: string | null) => void;
   onSectionVisibilityChange?: (sectionId: string, visible: boolean) => void;
-  onSlideTextOverridesSaved?: (overrides: SlideTextOverride[]) => void;
   onSaveVisibility?: () => void;
   saving?: boolean;
 };
@@ -55,7 +53,6 @@ export default function BulletinWorshipStep({
   onPlaylistChanged,
   onLyricsPptxChange,
   onSectionVisibilityChange,
-  onSlideTextOverridesSaved,
   onSaveVisibility,
   saving,
 }: BulletinWorshipStepProps) {
@@ -252,14 +249,13 @@ export default function BulletinWorshipStep({
         <p className="bulletin-step-intro">{t('bulletin.steps.worshipIntro')}</p>
       </header>
 
-      {onSectionVisibilityChange && onSlideTextOverridesSaved ? (
+      {onSectionVisibilityChange ? (
         <div className="bulletin-cover-step-fields" style={{ marginBottom: '0.75rem' }}>
           <BulletinSectionControls
             sectionId="worship"
             draft={draft}
             canEdit={canManage}
             onSectionVisibilityChange={onSectionVisibilityChange}
-            onSlideTextOverridesSaved={onSlideTextOverridesSaved}
           />
           {canManage && onSaveVisibility ? (
             <button

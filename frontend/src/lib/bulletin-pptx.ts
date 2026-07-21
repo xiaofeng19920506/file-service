@@ -4,7 +4,12 @@ import {
   patchesFromBulletin,
 } from './bulletin-pptx-patches';
 import { bulletinSlidePathsToDelete } from './bulletin-section-visibility';
+import { BULLETIN_SECTION_TEMPLATE_SLIDES } from './bulletin-section-visibility';
 import { deleteSlidesFromPptx } from './pptx-preview';
+import { spliceAllSectionOverridesIntoPptx } from './pptx-splice-section';
+
+const PPTX_MIME =
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation';
 
 export function slidesToDelete(bulletin: WeeklyBulletin): string[] {
   return bulletinSlidePathsToDelete(bulletin);
@@ -13,6 +18,7 @@ export function slidesToDelete(bulletin: WeeklyBulletin): string[] {
 export async function generateBulletinPptx(
   templateBlob: Blob,
   bulletin: WeeklyBulletin,
+  sectionBlobs?: Record<string, Blob>,
 ): Promise<File> {
   const { patches, scriptureBodies } = await patchesFromBulletin(bulletin);
   const filename = `bulletin-${bulletin.serviceDate}.pptx`;
@@ -22,6 +28,19 @@ export async function generateBulletinPptx(
   const deletePaths = slidesToDelete(bulletin);
   if (deletePaths.length) {
     file = await deleteSlidesFromPptx(file, deletePaths);
+  }
+
+  const sections: { slideInFiles: readonly number[]; miniPptx: Blob }[] = [];
+  for (const [sectionId, mini] of Object.entries(sectionBlobs ?? {})) {
+    const slideInFiles = BULLETIN_SECTION_TEMPLATE_SLIDES[sectionId];
+    if (!slideInFiles?.length || !mini) continue;
+    sections.push({ slideInFiles, miniPptx: mini });
+  }
+  if (sections.length) {
+    const buf = await spliceAllSectionOverridesIntoPptx(file, sections);
+    const copy = new Uint8Array(buf.byteLength);
+    copy.set(buf);
+    file = new File([copy.buffer], filename, { type: PPTX_MIME });
   }
 
   return file;

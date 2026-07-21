@@ -190,6 +190,13 @@
       "when": 1753372800000,
       "tag": "0028_bulletin_slide_text_overrides",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1753459200000,
+      "tag": "0029_bulletin_section_pptx_overrides",
+      "breakpoints": true
     }
   ]
 }

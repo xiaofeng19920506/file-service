@@ -3379,6 +3379,42 @@
   color: var(--text-tertiary);
 }
 
+.ppt-bg-color-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+
+.ppt-bg-color-btn.is-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.ppt-bg-color-btn input[type='color'] {
+  width: 1.5rem;
+  height: 1.25rem;
+  padding: 0;
+  border: 1px solid var(--border, #ccc);
+  border-radius: 3px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.bulletin-section-ppt-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: var(--bg, #fff);
+  display: flex;
+  flex-direction: column;
+}
+
+.bulletin-section-ppt-overlay .ppt-editor {
+  flex: 1;
+  min-height: 0;
+}
+
 .ppt-workspace {
   flex: 1;
   min-height: 0;

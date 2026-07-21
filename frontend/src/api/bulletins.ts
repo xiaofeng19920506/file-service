@@ -41,6 +41,8 @@ export type WeeklyBulletin = {
   hiddenSections: string[];
   /** 各分区幻灯片文字覆盖（模板 run 序号） */
   slideTextOverrides: SlideTextOverride[];
+  /** 分区迷你 PPTX blob（sectionId → blobId） */
+  sectionPptxOverrides: Record<string, string>;
   outputBlobId: string | null;
   servicePlaylistId: string | null;
   /** 敬拜赞美歌词 PPT blob */
@@ -73,6 +75,7 @@ export type BulletinPatch = Partial<{
   skipDepartmentReports: boolean;
   hiddenSections: string[];
   slideTextOverrides: SlideTextOverride[];
+  sectionPptxOverrides: Record<string, string>;
   outputBlobId: string | null;
   worshipLyricsPptxBlobId: string | null;
 }>;
