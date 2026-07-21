@@ -12,8 +12,24 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow: hidden;
+  /* 简单页面（敬拜/管理等）依赖此处滚动；分栏工作区子页自行 overflow */
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
   max-width: 100%;
+}
+
+/* 分栏 / 沉浸工作区：占满内容区高度，内部自行滚动，避免被外层裁切 */
+.app-content > .page-body,
+.app-content > .page-body-library,
+.app-content > .page-body-playlists,
+.app-content > .page-body-merge,
+.app-content > .bulletin-page--workspace,
+.app-content > .admin-page {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
 }
 
 /* ── Nav ── */
@@ -830,6 +846,9 @@
   margin: 0 auto;
   width: 100%;
   padding: 1.25rem 1rem 1.5rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .admin-login-card {
@@ -6168,8 +6187,9 @@
   flex: 1;
   min-height: 0;
   display: grid;
-  /* 编辑区与预览接近对半分，避免表单/歌单被挤在 ~420px 里 */
-  grid-template-columns: minmax(440px, 1.05fr) minmax(480px, 1fr);
+  /* 编辑区与预览接近对半分；行高限制为容器高度，否则矮屏会被 overflow:hidden 裁切且无法滚动 */
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   gap: 1.25rem;
   align-items: stretch;
 }
@@ -6180,7 +6200,10 @@
   gap: 1rem;
   min-width: 0;
   min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   padding-right: 0.15rem;
 }
 
@@ -6218,6 +6241,7 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
+  overflow: hidden;
 }
 
 .bulletin-preview-stack {
@@ -6277,7 +6301,10 @@
   flex: 1;
   min-height: 0;
   max-height: none;
+  overflow-x: hidden;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
@@ -6739,13 +6766,19 @@ body.bulletin-slideshow-window {
   min-height: 10rem;
 }
 
-@media (max-width: 960px) {
+/* 窄屏或矮屏（MacBook Air / 分屏）：改为整页滚动，避免双栏被裁切无法滚动 */
+@media (max-width: 1200px), (max-height: 860px) {
   .bulletin-page--workspace {
+    overflow-x: hidden;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    max-height: none;
   }
 
   .bulletin-workspace {
     grid-template-columns: 1fr;
+    grid-template-rows: auto;
     align-items: start;
     flex: none;
     min-height: auto;
@@ -6794,6 +6827,8 @@ body.bulletin-slideshow-window {
   max-width: 720px;
   margin: 0 auto;
   padding: 1.25rem 1rem 5rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .worship-songs-page {
