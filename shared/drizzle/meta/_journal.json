@@ -183,6 +183,13 @@
       "when": 1753286400000,
       "tag": "0027_bulletin_worship_lyrics_pptx",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1753372800000,
+      "tag": "0028_bulletin_slide_text_overrides",
+      "breakpoints": true
     }
   ]
 }

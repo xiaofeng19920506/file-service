@@ -364,7 +364,27 @@ export async function patchesFromBulletin(bulletin: WeeklyBulletin): Promise<{
   const groups = await Promise.all(
     stepIds.map((stepId) => patchesForStepAsync(stepId, bulletin, scriptureBodies)),
   );
-  return { patches: mergePatches(groups.flat()), scriptureBodies };
+  const fieldPatches = mergePatches(groups.flat());
+  const overridePatches = (bulletin.slideTextOverrides ?? []).reduce<SlideTextPatch[]>(
+    (acc, o) => {
+      const existing = acc.find((p) => p.slideNumber === o.slide);
+      if (existing) {
+        existing.replacements.push({ textIndex: o.textIndex, text: o.text });
+        return acc;
+      }
+      acc.push({
+        slideNumber: o.slide,
+        replacements: [{ textIndex: o.textIndex, text: o.text }],
+      });
+      return acc;
+    },
+    [],
+  );
+  // 分区「修改幻灯片」覆盖优先于表单字段补丁
+  return {
+    patches: mergePatches([...fieldPatches, ...overridePatches]),
+    scriptureBodies,
+  };
 }
 
 /** 应用文字补丁并在读经段按需复制额外幻灯片 */

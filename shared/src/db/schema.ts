@@ -243,6 +243,14 @@ export const weeklyBulletins = pgTable('weekly_bulletins', {
   skipDepartmentReports: boolean('skip_department_reports').notNull().default(false),
   /** 不进入 PPT / 预览的分区 id 列表（与 BULLETIN_NAV_SECTIONS id 对齐） */
   hiddenSections: jsonb('hidden_sections').$type<string[]>().notNull().default([]),
+  /**
+   * 各分区幻灯片文字覆盖（只改文字 run，不改背景/图片）。
+   * 形如 [{ slide: 8, textIndex: 0, text: "敬拜讚美" }, ...]
+   */
+  slideTextOverrides: jsonb('slide_text_overrides')
+    .$type<{ slide: number; textIndex: number; text: string }[]>()
+    .notNull()
+    .default([]),
   servicePlaylistId: uuid('service_playlist_id').references(() => playlists.id, { onDelete: 'set null' }),
   /** 敬拜赞美歌词 PPT（用户上传，投影时音乐在后台） */
   worshipLyricsPptxBlobId: uuid('worship_lyrics_pptx_blob_id').references(() => blobs.id, {

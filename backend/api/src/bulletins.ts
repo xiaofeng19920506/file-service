@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { asc, desc, eq, and } from 'drizzle-orm';
 import type { Queue } from 'bullmq';
 import { existsSync } from 'node:fs';
@@ -19,6 +20,7 @@ import {
   patchBulletinPreviewInPptx,
   buildBulletinDeckPlanFromPptxBytes,
   extractPresentationSlideAsPptx,
+  extractIndexedTextRunsFromPptx,
   playlistItems,
   playlists,
   renderSlidePngViaService,
@@ -30,8 +32,10 @@ import {
   signPlaylistEditToken,
   formatUserDisplayName,
   normalizeHiddenSections,
+  normalizeSlideTextOverrides,
   type ApiEnv,
   type Db,
+  type SlideTextOverride,
 } from '@file-service/shared';
 import type { FastifyInstance } from 'fastify';
 import { getValidYoutubeAccessToken, resolveOAuthConfig } from './youtube-oauth-token.js';
@@ -59,8 +63,16 @@ const BULLETIN_TEMPLATE_DIR = resolveBulletinTemplateDir();
 const slidePreviewCache = new Map<string, Buffer>();
 /** 同一套补丁参数共享已补丁 PPTX，避免每页都重新 patch */
 const patchedPptxCache = new Map<string, Buffer>();
-/** 预览补丁版本；v26=敬拜只留 P8，始终删 P7/P9 */
-const SLIDE_PREVIEW_PATCH_REV = 'v26';
+/** 预览补丁版本；v27=分区幻灯片文字覆盖 */
+const SLIDE_PREVIEW_PATCH_REV = 'v27';
+
+function slideOverridesCacheKey(overrides: readonly SlideTextOverride[]): string {
+  if (!overrides.length) return '';
+  const payload = overrides
+    .map((o) => `${o.slide}:${o.textIndex}:${o.text}`)
+    .join('\n');
+  return createHash('sha1').update(payload).digest('hex').slice(0, 16);
+}
 
 let previewRenderActive = 0;
 const previewRenderWaiters: Array<() => void> = [];
@@ -120,6 +132,7 @@ export type WeeklyBulletinDto = {
   skipTestimonyWeek: boolean;
   skipDepartmentReports: boolean;
   hiddenSections: string[];
+  slideTextOverrides: { slide: number; textIndex: number; text: string }[];
   servicePlaylistId: string | null;
   worshipLyricsPptxBlobId: string | null;
   outputBlobId: string | null;
@@ -181,6 +194,7 @@ async function mapBulletin(
     skipTestimonyWeek: row.skipTestimonyWeek,
     skipDepartmentReports: row.skipDepartmentReports,
     hiddenSections: Array.isArray(row.hiddenSections) ? row.hiddenSections : [],
+    slideTextOverrides: normalizeSlideTextOverrides(row.slideTextOverrides),
     servicePlaylistId: row.servicePlaylistId,
     worshipLyricsPptxBlobId: row.worshipLyricsPptxBlobId,
     outputBlobId: row.outputBlobId,
@@ -212,6 +226,7 @@ type BulletinPatchBody = Partial<{
   skipTestimonyWeek: boolean;
   skipDepartmentReports: boolean;
   hiddenSections: string[];
+  slideTextOverrides: { slide: number; textIndex: number; text: string }[];
   worshipLyricsPptxBlobId: string | null;
   outputBlobId: string | null;
 }>;
@@ -310,6 +325,30 @@ export function registerBulletinRoutes(
       )
       .header('Content-Disposition', `attachment; filename="${BULLETIN_TEMPLATE_FILE}"`)
       .send(buf);
+  });
+
+  app.get<{
+    Params: { slide: string };
+  }>('/v1/bulletins/template/slides/:slide/text-runs', async (request, reply) => {
+    const user = requireUser(request);
+    if (!user || !canViewBulletin(user.role)) {
+      return reply.code(403).send({ error: 'bulletin_forbidden' });
+    }
+    const slideNumber = Number.parseInt(request.params.slide, 10);
+    if (!Number.isFinite(slideNumber) || slideNumber < 1) {
+      return reply.code(400).send({ error: 'invalid_slide' });
+    }
+    try {
+      const templateBuf = await readFile(join(BULLETIN_TEMPLATE_DIR, BULLETIN_TEMPLATE_FILE));
+      const runs = await extractIndexedTextRunsFromPptx(templateBuf, slideNumber);
+      return reply.send({
+        slide: slideNumber,
+        runs: runs.filter((r) => r.text.trim().length > 0),
+      });
+    } catch (err) {
+      request.log.warn({ err, slideNumber }, 'bulletin slide text-runs failed');
+      return reply.code(503).send({ error: 'slide_text_runs_unavailable' });
+    }
   });
 
   app.get<{
@@ -421,6 +460,8 @@ export function registerBulletinRoutes(
       preServiceChairNames?: string;
       hiddenSections?: string;
       weeklyMeetingVariant?: string;
+      bulletinId?: string;
+      slideTextOverrides?: string;
     };
   }>('/v1/bulletins/template/deck-plan', async (request, reply) => {
     const user = requireUser(request);
@@ -449,8 +490,27 @@ export function registerBulletinRoutes(
       return reply.code(400).send({ error: 'invalid_service_date' });
     }
 
+    const bulletinId = request.query.bulletinId?.trim() || '';
+    let slideTextOverrides: SlideTextOverride[] = [];
+    const overridesRaw = request.query.slideTextOverrides?.trim();
+    if (overridesRaw) {
+      try {
+        slideTextOverrides = normalizeSlideTextOverrides(JSON.parse(overridesRaw));
+      } catch {
+        slideTextOverrides = [];
+      }
+    } else if (bulletinId) {
+      const [row] = await db
+        .select({ slideTextOverrides: weeklyBulletins.slideTextOverrides })
+        .from(weeklyBulletins)
+        .where(eq(weeklyBulletins.id, bulletinId))
+        .limit(1);
+      slideTextOverrides = normalizeSlideTextOverrides(row?.slideTextOverrides);
+    }
+
     const hiddenKey = hiddenSections.slice().sort().join(',');
-    const patchKey = `${SLIDE_PREVIEW_PATCH_REV}:pptx:${serviceDate ?? ''}:${serviceTime}:${scriptureBook}:${scriptureReference}:${showPreServiceChairName}:${preServiceChairNames}:${hiddenKey}:${weeklyMeetingVariant ?? ''}`;
+    const overridesKey = slideOverridesCacheKey(slideTextOverrides);
+    const patchKey = `${SLIDE_PREVIEW_PATCH_REV}:pptx:${serviceDate ?? ''}:${serviceTime}:${scriptureBook}:${scriptureReference}:${showPreServiceChairName}:${preServiceChairNames}:${hiddenKey}:${weeklyMeetingVariant ?? ''}:${overridesKey}`;
 
     try {
       let pptxBuf = patchedPptxCache.get(patchKey);
@@ -466,6 +526,7 @@ export function registerBulletinRoutes(
             preServiceChairNames,
             hiddenSections,
             weeklyMeetingVariant,
+            slideTextOverrides,
           }),
         );
         rememberLru(patchedPptxCache, patchKey, pptxBuf, 12);
@@ -495,6 +556,8 @@ export function registerBulletinRoutes(
       preServiceChairNames?: string;
       hiddenSections?: string;
       weeklyMeetingVariant?: string;
+      bulletinId?: string;
+      slideTextOverrides?: string;
     };
   }>('/v1/bulletins/template/slides/:slide/preview.png', async (request, reply) => {
     const user = requireUser(request);
@@ -528,14 +591,33 @@ export function registerBulletinRoutes(
       return reply.code(400).send({ error: 'invalid_service_date' });
     }
 
+    const bulletinId = request.query.bulletinId?.trim() || '';
+    let slideTextOverrides: SlideTextOverride[] = [];
+    const overridesRaw = request.query.slideTextOverrides?.trim();
+    if (overridesRaw) {
+      try {
+        slideTextOverrides = normalizeSlideTextOverrides(JSON.parse(overridesRaw));
+      } catch {
+        slideTextOverrides = [];
+      }
+    } else if (bulletinId) {
+      const [row] = await db
+        .select({ slideTextOverrides: weeklyBulletins.slideTextOverrides })
+        .from(weeklyBulletins)
+        .where(eq(weeklyBulletins.id, bulletinId))
+        .limit(1);
+      slideTextOverrides = normalizeSlideTextOverrides(row?.slideTextOverrides);
+    }
+
     const hiddenKey = hiddenSections.slice().sort().join(',');
-    const cacheKey = `${SLIDE_PREVIEW_PATCH_REV}:${slideNumber}:${serviceDate ?? ''}:${serviceTime}:${scriptureBook}:${scriptureReference}:${showPreServiceChairName}:${preServiceChairNames}:${hiddenKey}:${weeklyMeetingVariant ?? ''}`;
+    const overridesKey = slideOverridesCacheKey(slideTextOverrides);
+    const cacheKey = `${SLIDE_PREVIEW_PATCH_REV}:${slideNumber}:${serviceDate ?? ''}:${serviceTime}:${scriptureBook}:${scriptureReference}:${showPreServiceChairName}:${preServiceChairNames}:${hiddenKey}:${weeklyMeetingVariant ?? ''}:${overridesKey}`;
     const cached = slidePreviewCache.get(cacheKey);
     if (cached) {
       return reply.header('Content-Type', 'image/png').header('X-Preview-Cached', 'true').send(cached);
     }
 
-    const patchKey = `${SLIDE_PREVIEW_PATCH_REV}:pptx:${serviceDate ?? ''}:${serviceTime}:${scriptureBook}:${scriptureReference}:${showPreServiceChairName}:${preServiceChairNames}:${hiddenKey}:${weeklyMeetingVariant ?? ''}`;
+    const patchKey = `${SLIDE_PREVIEW_PATCH_REV}:pptx:${serviceDate ?? ''}:${serviceTime}:${scriptureBook}:${scriptureReference}:${showPreServiceChairName}:${preServiceChairNames}:${hiddenKey}:${weeklyMeetingVariant ?? ''}:${overridesKey}`;
     const workRoot = await mkdtemp(join(tmpdir(), 'fs-bulletin-preview-'));
     try {
       let pptxBuf = patchedPptxCache.get(patchKey);
@@ -551,6 +633,7 @@ export function registerBulletinRoutes(
             preServiceChairNames,
             hiddenSections,
             weeklyMeetingVariant,
+            slideTextOverrides,
           }),
         );
         rememberLru(patchedPptxCache, patchKey, pptxBuf, 12);
@@ -711,6 +794,9 @@ export function registerBulletinRoutes(
         patch.hiddenSections = hidden;
         patch.skipTestimonyWeek = hidden.includes('testimony_week');
         patch.skipDepartmentReports = hidden.includes('department_reports');
+      }
+      if (body.slideTextOverrides !== undefined) {
+        patch.slideTextOverrides = normalizeSlideTextOverrides(body.slideTextOverrides);
       }
       if (body.outputBlobId !== undefined) {
         if (body.outputBlobId === null) {

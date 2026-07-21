@@ -12,6 +12,7 @@ export type BulletinPreviewPatchFields = {
   skipTestimonyWeek?: boolean;
   skipDepartmentReports?: boolean;
   weeklyMeetingVariant?: number | null;
+  slideTextOverrides?: BulletinSlidePreviewParams['slideTextOverrides'];
 };
 
 function structureParams(full: BulletinPreviewPatchFields): BulletinSlidePreviewParams {
@@ -21,6 +22,7 @@ function structureParams(full: BulletinPreviewPatchFields): BulletinSlidePreview
     scriptureReference: full.scriptureReference,
     hiddenSections: hidden,
     weeklyMeetingVariant: full.weeklyMeetingVariant ?? null,
+    slideTextOverrides: full.slideTextOverrides,
   };
 }
 
@@ -57,6 +59,9 @@ export function bulletinPreviewCacheKey(
   params: BulletinSlidePreviewParams,
 ): string {
   const hidden = (params.hiddenSections ?? []).slice().sort().join(',');
+  const overrides = (params.slideTextOverrides ?? [])
+    .map((o) => `${o.slide}:${o.textIndex}:${o.text}`)
+    .join('|');
   return [
     slideNumber,
     params.serviceDate ?? '',
@@ -67,5 +72,6 @@ export function bulletinPreviewCacheKey(
     params.preServiceChairNames ?? '',
     hidden,
     params.weeklyMeetingVariant == null ? '' : String(params.weeklyMeetingVariant),
+    overrides,
   ].join('\0');
 }

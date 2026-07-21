@@ -30,6 +30,40 @@ function isIndexedRunContent(text: string): boolean {
   return Boolean(text.trim()) || /\s/.test(text);
 }
 
+/** 与 applyIndexedTextReplacementsToSlideXml 同一套 run 序号 */
+export function extractIndexedTextRuns(xml: string): { textIndex: number; text: string }[] {
+  const out: { textIndex: number; text: string }[] = [];
+  let idx = 0;
+  xml.replace(/<a:r>([\s\S]*?)<\/a:r>/g, (runXml) => {
+    const textMatch = runXml.match(/<a:t([^>]*)>([\s\S]*?)<\/a:t>/);
+    if (!textMatch) return runXml;
+    const content = textMatch[2];
+    if (!isIndexedRunContent(content)) return runXml;
+    out.push({
+      textIndex: idx++,
+      text: content
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&apos;/g, "'"),
+    });
+    return runXml;
+  });
+  return out;
+}
+
+export async function extractIndexedTextRunsFromPptx(
+  pptx: Buffer | Uint8Array,
+  slide: number,
+): Promise<{ textIndex: number; text: string }[]> {
+  if (!Number.isFinite(slide) || slide < 1) return [];
+  const zip = await JSZip.loadAsync(pptx);
+  const entry = zip.file(`ppt/slides/slide${Math.floor(slide)}.xml`);
+  if (!entry) return [];
+  return extractIndexedTextRuns(await entry.async('string'));
+}
+
 /** 按 <a:r> 内文字 run 序号替换（含仅空格的间距 run） */
 export function applyIndexedTextReplacementsToSlideXml(
   xml: string,
@@ -230,7 +264,60 @@ export type BulletinPreviewPatchInput = {
   skipTestimonyWeek?: boolean;
   skipDepartmentReports?: boolean;
   weeklyMeetingVariant?: number | null;
+  /** 幻灯片文字覆盖（slide 文件号 + textIndex） */
+  slideTextOverrides?: SlideTextOverride[];
 };
+
+export type SlideTextOverride = {
+  slide: number;
+  textIndex: number;
+  text: string;
+};
+
+export function normalizeSlideTextOverrides(raw: unknown): SlideTextOverride[] {
+  if (!Array.isArray(raw)) return [];
+  const out: SlideTextOverride[] = [];
+  const seen = new Set<string>();
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const row = item as Record<string, unknown>;
+    const slide = Number(row.slide);
+    const textIndex = Number(row.textIndex);
+    const text = row.text;
+    if (!Number.isFinite(slide) || slide < 1) continue;
+    if (!Number.isFinite(textIndex) || textIndex < 0) continue;
+    if (typeof text !== 'string') continue;
+    const key = `${Math.floor(slide)}:${Math.floor(textIndex)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      slide: Math.floor(slide),
+      textIndex: Math.floor(textIndex),
+      text,
+    });
+  }
+  return out;
+}
+
+async function applySlideTextOverridesToZip(
+  zip: JSZip,
+  overrides: readonly SlideTextOverride[],
+): Promise<void> {
+  if (!overrides.length) return;
+  const bySlide = new Map<number, { textIndex: number; text: string }[]>();
+  for (const o of overrides) {
+    const list = bySlide.get(o.slide) ?? [];
+    list.push({ textIndex: o.textIndex, text: o.text });
+    bySlide.set(o.slide, list);
+  }
+  for (const [slide, reps] of bySlide) {
+    const path = `ppt/slides/slide${slide}.xml`;
+    const entry = zip.file(path);
+    if (!entry) continue;
+    const xml = await entry.async('string');
+    zip.file(path, applyIndexedTextReplacementsToSlideXml(xml, reps));
+  }
+}
 
 type PptxInputBytes = Buffer | Uint8Array;
 
@@ -280,6 +367,11 @@ export async function patchBulletinPreviewInPptx(
     if (bodies) {
       await applyScripturePagesToZip(zip, bodies.chinesePages, bodies.englishPages);
     }
+  }
+
+  const overrides = normalizeSlideTextOverrides(input.slideTextOverrides);
+  if (overrides.length) {
+    await applySlideTextOverridesToZip(zip, overrides);
   }
 
   const removePaths = bulletinSlidePathsToDelete(input);

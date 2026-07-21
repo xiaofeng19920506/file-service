@@ -195,6 +195,7 @@ export default function BulletinFullDeckPreview({
       skipTestimonyWeek: bulletin.skipTestimonyWeek,
       skipDepartmentReports: bulletin.skipDepartmentReports,
       weeklyMeetingVariant: bulletin.weeklyMeetingVariant,
+      slideTextOverrides: bulletin.slideTextOverrides,
     }),
     [
       bulletin.serviceDate,
@@ -207,6 +208,7 @@ export default function BulletinFullDeckPreview({
       bulletin.skipTestimonyWeek,
       bulletin.skipDepartmentReports,
       bulletin.weeklyMeetingVariant,
+      bulletin.slideTextOverrides,
     ],
   );
 

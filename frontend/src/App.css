@@ -7714,6 +7714,52 @@ body.bulletin-slideshow-window {
   margin-top: 0.75rem;
 }
 
+.bulletin-section-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.55rem;
+}
+
+.bulletin-edit-slides-btn {
+  align-self: flex-start;
+}
+
+.bulletin-edit-slides-modal {
+  width: min(560px, 94vw);
+  max-height: min(88vh, 820px);
+  display: flex;
+  flex-direction: column;
+}
+
+.bulletin-edit-slides-modal .metadata-modal-body {
+  overflow: auto;
+  max-height: min(60vh, 560px);
+}
+
+.bulletin-edit-slides-hint {
+  margin: 0 0 0.85rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.bulletin-edit-slides-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-bottom: 1.1rem;
+}
+
+.bulletin-edit-slides-section h4 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.bulletin-edit-slides-run-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
 .bulletin-field {
   display: flex;
   flex-direction: column;

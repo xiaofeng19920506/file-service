@@ -2,6 +2,7 @@ export default {
   common: {
     confirm: '确定',
     cancel: '取消',
+    close: '关闭',
     more: '更多操作',
   },
   app: {
@@ -240,7 +241,15 @@ export default {
     previewStaticPreService: 'PPT 第 {page} 页 · 主席会前祷告',
     previewSectionLabel: 'PPT 第 {pages} 页',
     sectionReadonlyTitle: '模板固定页',
-    sectionReadonlyHint: '此段为 PPT 模板固定内容，无需在此编辑；右侧可预览对应幻灯片。',
+    sectionReadonlyHint: '此段为 PPT 模板固定内容；可用下方「修改幻灯片」编辑本区文字，右侧可预览。',
+    editSlides: '修改幻灯片',
+    editSlidesTitle: '修改本区幻灯片文字',
+    editSlidesHint: '只改文字，不改背景与图片。未改动的行会保持模板原文。',
+    editSlidesPage: '第 {page} 页',
+    editSlidesRun: '文字 {index}',
+    editSlidesLoading: '正在读取模板文字…',
+    editSlidesEmpty: '此页没有可编辑文字。',
+    editSlidesSave: '保存幻灯片文字',
     stepperLabel: '周报分区导航',
     sections: {
       cover: '封面',

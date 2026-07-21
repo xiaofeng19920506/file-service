@@ -189,6 +189,7 @@ export async function buildBulletinDeckPlan(bulletin: WeeklyBulletin): Promise<B
     preServiceChairNames: bulletin.preServiceChairNames,
     hiddenSections,
     weeklyMeetingVariant: bulletin.weeklyMeetingVariant,
+    slideTextOverrides: bulletin.slideTextOverrides,
   });
   const slides = dto.slides.map((s) => ({
     index: s.index,

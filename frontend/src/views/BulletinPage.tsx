@@ -74,6 +74,9 @@ function withHiddenSections(bulletin: WeeklyBulletin): WeeklyBulletin {
   return {
     ...bulletin,
     hiddenSections: resolveHiddenSections(bulletin),
+    slideTextOverrides: Array.isArray(bulletin.slideTextOverrides)
+      ? bulletin.slideTextOverrides
+      : [],
   };
 }
 
@@ -465,12 +468,18 @@ export default function BulletinPage() {
     }
   };
 
+  const handleSlideTextOverridesSaved = (overrides: WeeklyBulletin['slideTextOverrides']) => {
+    setDraft((prev) => (prev ? { ...prev, slideTextOverrides: overrides } : prev));
+    setPreviewBulletin((prev) => (prev ? { ...prev, slideTextOverrides: overrides } : prev));
+  };
+
   const renderStepPanel = () => {
     if (!draft) return null;
 
     const visibilityProps = {
       sectionId: activeSectionId,
       onSectionVisibilityChange: handleSectionVisibilityChange,
+      onSlideTextOverridesSaved: handleSlideTextOverridesSaved,
     };
 
     if (activeSectionReadonly) {
@@ -481,6 +490,7 @@ export default function BulletinPage() {
           canEdit={canManage}
           saving={saving}
           onSectionVisibilityChange={handleSectionVisibilityChange}
+          onSlideTextOverridesSaved={handleSlideTextOverridesSaved}
           onSave={() => void handleSaveFields(visibilitySaveFields(draft))}
         />
       );
@@ -506,6 +516,7 @@ export default function BulletinPage() {
             onServiceDateChange={handleServiceDateChange}
             onServiceTimeChange={(time) => patchField('serviceTime', time)}
             onSectionVisibilityChange={handleSectionVisibilityChange}
+            onSlideTextOverridesSaved={handleSlideTextOverridesSaved}
             onSave={handleSaveCover}
             onCoverPreviewFocus={() =>
               setPreviewScrollToSlide((prev) => ({
@@ -564,6 +575,7 @@ export default function BulletinPage() {
               setWorshipPreviewRevision((v) => v + 1);
             }}
             onSectionVisibilityChange={handleSectionVisibilityChange}
+            onSlideTextOverridesSaved={handleSlideTextOverridesSaved}
             onSaveVisibility={() => void handleSaveFields(visibilitySaveFields(draft))}
             saving={saving}
           />

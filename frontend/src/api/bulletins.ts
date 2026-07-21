@@ -10,6 +10,12 @@ export type BulletinAnnouncement = {
   body: string;
 };
 
+export type SlideTextOverride = {
+  slide: number;
+  textIndex: number;
+  text: string;
+};
+
 export type WeeklyBulletin = {
   id: string;
   serviceDate: string;
@@ -33,6 +39,8 @@ export type WeeklyBulletin = {
   skipDepartmentReports: boolean;
   /** 不显示的分区 id */
   hiddenSections: string[];
+  /** 各分区幻灯片文字覆盖（模板 run 序号） */
+  slideTextOverrides: SlideTextOverride[];
   outputBlobId: string | null;
   servicePlaylistId: string | null;
   /** 敬拜赞美歌词 PPT blob */
@@ -64,6 +72,7 @@ export type BulletinPatch = Partial<{
   skipTestimonyWeek: boolean;
   skipDepartmentReports: boolean;
   hiddenSections: string[];
+  slideTextOverrides: SlideTextOverride[];
   outputBlobId: string | null;
   worshipLyricsPptxBlobId: string | null;
 }>;
@@ -234,6 +243,8 @@ export type BulletinSlidePreviewParams = {
   preServiceChairNames?: string;
   hiddenSections?: string[];
   weeklyMeetingVariant?: number | null;
+  /** 草稿文字覆盖（与预览/导出一致） */
+  slideTextOverrides?: SlideTextOverride[];
 };
 
 export type BulletinDeckPlanDto = {
@@ -255,7 +266,20 @@ function bulletinPreviewQuery(params: BulletinSlidePreviewParams): string {
   if (params.weeklyMeetingVariant != null) {
     qs.set('weeklyMeetingVariant', String(params.weeklyMeetingVariant));
   }
+  if (params.slideTextOverrides?.length) {
+    qs.set('slideTextOverrides', JSON.stringify(params.slideTextOverrides));
+  }
   return qs.toString();
+}
+
+/** 模板某页可编辑文字 run（与补丁 textIndex 对齐） */
+export async function fetchBulletinSlideTextRuns(
+  slideNumber: number,
+): Promise<{ slide: number; runs: { textIndex: number; text: string }[] }> {
+  const res = await apiFetch(
+    `/v1/bulletins/template/slides/${slideNumber}/text-runs`,
+  );
+  return parseJson(res);
 }
 
 /** 与预览 PNG 同一套补丁算出的分区（避免读经加页后前端页码错位） */

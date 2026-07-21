@@ -85,6 +85,7 @@ export default function BulletinPreviewPanel({
     bulletin.skipTestimonyWeek,
     bulletin.skipDepartmentReports,
     bulletin.weeklyMeetingVariant,
+    bulletin.slideTextOverrides,
   ]);
 
   useEffect(() => {
@@ -147,6 +148,7 @@ export default function BulletinPreviewPanel({
       preServiceChairNames: bulletin.preServiceChairNames,
       hiddenSections: bulletin.hiddenSections,
       weeklyMeetingVariant: bulletin.weeklyMeetingVariant,
+      slideTextOverrides: bulletin.slideTextOverrides,
     }),
     [
       bulletin.serviceDate,
@@ -157,6 +159,7 @@ export default function BulletinPreviewPanel({
       bulletin.preServiceChairNames,
       bulletin.hiddenSections,
       bulletin.weeklyMeetingVariant,
+      bulletin.slideTextOverrides,
     ],
   );
 

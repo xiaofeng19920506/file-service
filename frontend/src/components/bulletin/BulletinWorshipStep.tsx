@@ -6,6 +6,7 @@ import {
   removeBulletinWorshipPlaylistItem,
   reorderBulletinWorshipPlaylistItems,
   updateBulletin,
+  type SlideTextOverride,
   type WeeklyBulletin,
 } from '../../api/bulletins';
 import { uploadFile } from '../../api/client';
@@ -15,7 +16,7 @@ import MobileSegmentedControl from '../MobileSegmentedControl';
 import BulletinWorshipYoutubeImportPanel from './BulletinWorshipYoutubeImportPanel';
 import { friendlyError } from '../../lib/error-messages';
 import { useI18n } from '../../i18n';
-import { SectionVisibleCheckbox } from './BulletinWizardSteps';
+import { BulletinSectionControls } from './BulletinWizardSteps';
 
 type WorshipSourceTab = 'youtube' | 'search';
 
@@ -30,6 +31,7 @@ type BulletinWorshipStepProps = {
   onPlaylistChanged?: () => void;
   onLyricsPptxChange?: (blobId: string | null) => void;
   onSectionVisibilityChange?: (sectionId: string, visible: boolean) => void;
+  onSlideTextOverridesSaved?: (overrides: SlideTextOverride[]) => void;
   onSaveVisibility?: () => void;
   saving?: boolean;
 };
@@ -53,6 +55,7 @@ export default function BulletinWorshipStep({
   onPlaylistChanged,
   onLyricsPptxChange,
   onSectionVisibilityChange,
+  onSlideTextOverridesSaved,
   onSaveVisibility,
   saving,
 }: BulletinWorshipStepProps) {
@@ -249,13 +252,14 @@ export default function BulletinWorshipStep({
         <p className="bulletin-step-intro">{t('bulletin.steps.worshipIntro')}</p>
       </header>
 
-      {onSectionVisibilityChange ? (
+      {onSectionVisibilityChange && onSlideTextOverridesSaved ? (
         <div className="bulletin-cover-step-fields" style={{ marginBottom: '0.75rem' }}>
-          <SectionVisibleCheckbox
+          <BulletinSectionControls
             sectionId="worship"
             draft={draft}
             canEdit={canManage}
             onSectionVisibilityChange={onSectionVisibilityChange}
+            onSlideTextOverridesSaved={onSlideTextOverridesSaved}
           />
           {canManage && onSaveVisibility ? (
             <button

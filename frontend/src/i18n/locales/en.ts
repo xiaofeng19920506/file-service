@@ -4,6 +4,7 @@ const en: MessageTree = {
   common: {
     confirm: 'Confirm',
     cancel: 'Cancel',
+    close: 'Close',
     more: 'More actions',
   },
   app: {
@@ -252,7 +253,16 @@ const en: MessageTree = {
     previewStaticPreService: 'PPT page {page} · Chair pre-service prayer',
     sectionReadonlyTitle: 'Fixed template section',
     sectionReadonlyHint:
-      'This section is fixed in the PPT template and does not need editing here. Use the preview on the right to view the slides.',
+      'This section uses fixed template slides. Use “Edit slides” below to change text; preview is on the right.',
+    editSlides: 'Edit slides',
+    editSlidesTitle: 'Edit section slide text',
+    editSlidesHint:
+      'Text only — backgrounds and images stay unchanged. Unchanged lines keep the template wording.',
+    editSlidesPage: 'Slide {page}',
+    editSlidesRun: 'Text {index}',
+    editSlidesLoading: 'Loading template text…',
+    editSlidesEmpty: 'No editable text on this slide.',
+    editSlidesSave: 'Save slide text',
     stepperLabel: 'Bulletin sections',
     sections: {
       cover: 'Cover',

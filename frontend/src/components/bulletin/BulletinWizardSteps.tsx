@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
-import type { WeeklyBulletin } from '../../api/bulletins';
+import type { SlideTextOverride, WeeklyBulletin } from '../../api/bulletins';
 import { BIBLE_BOOKS } from '../../lib/bible-books';
 import { useI18n } from '../../i18n';
+import BulletinEditSlidesControl from './BulletinEditSlidesControl';
 import BulletinScriptureReferenceFields from './BulletinScriptureReferenceFields';
 
 type StepShellProps = {
@@ -102,6 +103,7 @@ export type BulletinStepPanelProps = {
   onSave: () => void;
   sectionId: string;
   onSectionVisibilityChange: (sectionId: string, visible: boolean) => void;
+  onSlideTextOverridesSaved: (overrides: SlideTextOverride[]) => void;
 };
 
 export function SectionVisibleCheckbox({
@@ -134,12 +136,44 @@ export function SectionVisibleCheckbox({
   );
 }
 
+export function BulletinSectionControls({
+  sectionId,
+  draft,
+  canEdit,
+  onSectionVisibilityChange,
+  onSlideTextOverridesSaved,
+}: {
+  sectionId: string;
+  draft: WeeklyBulletin;
+  canEdit: boolean;
+  onSectionVisibilityChange: (sectionId: string, visible: boolean) => void;
+  onSlideTextOverridesSaved: (overrides: SlideTextOverride[]) => void;
+}) {
+  return (
+    <div className="bulletin-section-controls">
+      <SectionVisibleCheckbox
+        sectionId={sectionId}
+        draft={draft}
+        canEdit={canEdit}
+        onSectionVisibilityChange={onSectionVisibilityChange}
+      />
+      <BulletinEditSlidesControl
+        sectionId={sectionId}
+        draft={draft}
+        canEdit={canEdit}
+        onSaved={onSlideTextOverridesSaved}
+      />
+    </div>
+  );
+}
+
 export function BulletinReadonlySectionStep({
   sectionId,
   draft,
   canEdit,
   saving,
   onSectionVisibilityChange,
+  onSlideTextOverridesSaved,
   onSave,
 }: {
   sectionId: string;
@@ -147,6 +181,7 @@ export function BulletinReadonlySectionStep({
   canEdit: boolean;
   saving?: boolean;
   onSectionVisibilityChange: (sectionId: string, visible: boolean) => void;
+  onSlideTextOverridesSaved: (overrides: SlideTextOverride[]) => void;
   onSave: () => void;
 }) {
   const { t } = useI18n();
@@ -154,14 +189,15 @@ export function BulletinReadonlySectionStep({
     <div className="bulletin-wizard-step">
       <header className="bulletin-step-header">
         <h3>{t('bulletin.sectionReadonlyTitle')}</h3>
-        <p className="bulletin-step-intro">{t('bulletin.sectionVisibleHint')}</p>
+        <p className="bulletin-step-intro">{t('bulletin.sectionReadonlyHint')}</p>
       </header>
       <div className="bulletin-cover-step-fields">
-        <SectionVisibleCheckbox
+        <BulletinSectionControls
           sectionId={sectionId}
           draft={draft}
           canEdit={canEdit}
           onSectionVisibilityChange={onSectionVisibilityChange}
+          onSlideTextOverridesSaved={onSlideTextOverridesSaved}
         />
         <SaveButton saving={saving} canEdit={canEdit} onSave={onSave} />
       </div>
@@ -177,15 +213,17 @@ export function BulletinScriptureStep({
   onSave,
   sectionId,
   onSectionVisibilityChange,
+  onSlideTextOverridesSaved,
 }: BulletinStepPanelProps) {
   const { t } = useI18n();
   return (
     <StepShell titleKey="bulletin.steps.scriptureTitle" introKey="bulletin.steps.scriptureIntro">
-      <SectionVisibleCheckbox
+      <BulletinSectionControls
         sectionId={sectionId}
         draft={draft}
         canEdit={canEdit}
         onSectionVisibilityChange={onSectionVisibilityChange}
+        onSlideTextOverridesSaved={onSlideTextOverridesSaved}
       />
       <div className="bulletin-scripture-picker">
         <SelectField
@@ -220,15 +258,17 @@ export function BulletinOfferingStep({
   onSave,
   sectionId,
   onSectionVisibilityChange,
+  onSlideTextOverridesSaved,
 }: BulletinStepPanelProps) {
   const { t } = useI18n();
   return (
     <StepShell titleKey="bulletin.steps.offeringTitle" introKey="bulletin.steps.offeringIntro">
-      <SectionVisibleCheckbox
+      <BulletinSectionControls
         sectionId={sectionId}
         draft={draft}
         canEdit={canEdit}
         onSectionVisibilityChange={onSectionVisibilityChange}
+        onSlideTextOverridesSaved={onSlideTextOverridesSaved}
       />
       <TextField
         label={t('bulletin.lastWeekOffering')}
@@ -255,15 +295,17 @@ export function BulletinBirthdayStep({
   onSave,
   sectionId,
   onSectionVisibilityChange,
+  onSlideTextOverridesSaved,
 }: BulletinStepPanelProps) {
   const { t } = useI18n();
   return (
     <StepShell titleKey="bulletin.steps.birthdayTitle" introKey="bulletin.steps.birthdayIntro">
-      <SectionVisibleCheckbox
+      <BulletinSectionControls
         sectionId={sectionId}
         draft={draft}
         canEdit={canEdit}
         onSectionVisibilityChange={onSectionVisibilityChange}
+        onSlideTextOverridesSaved={onSlideTextOverridesSaved}
       />
       <TextField
         label={t('bulletin.birthdayMonth')}
@@ -291,16 +333,18 @@ export function BulletinPreServiceStep({
   onSave,
   sectionId,
   onSectionVisibilityChange,
+  onSlideTextOverridesSaved,
 }: BulletinStepPanelProps) {
   const { t } = useI18n();
   const showChair = Boolean(draft.showPreServiceChairName);
   return (
     <StepShell titleKey="bulletin.steps.preServiceTitle" introKey="bulletin.steps.preServiceIntro">
-      <SectionVisibleCheckbox
+      <BulletinSectionControls
         sectionId={sectionId}
         draft={draft}
         canEdit={canEdit}
         onSectionVisibilityChange={onSectionVisibilityChange}
+        onSlideTextOverridesSaved={onSlideTextOverridesSaved}
       />
       <label className="bulletin-field bulletin-field--checkbox">
         <input
@@ -346,15 +390,17 @@ export function BulletinAnnouncementsStep({
   onSave,
   sectionId,
   onSectionVisibilityChange,
+  onSlideTextOverridesSaved,
 }: AnnouncementsProps) {
   const { t } = useI18n();
   return (
     <StepShell titleKey="bulletin.steps.announcementsTitle" introKey="bulletin.steps.announcementsIntro">
-      <SectionVisibleCheckbox
+      <BulletinSectionControls
         sectionId={sectionId}
         draft={draft}
         canEdit={canEdit}
         onSectionVisibilityChange={onSectionVisibilityChange}
+        onSlideTextOverridesSaved={onSlideTextOverridesSaved}
       />
       {announcements.map((item, index) => (
         <div key={item.key} className="bulletin-announcement-block">
@@ -394,15 +440,17 @@ export function BulletinVerseStep({
   onSave,
   sectionId,
   onSectionVisibilityChange,
+  onSlideTextOverridesSaved,
 }: BulletinStepPanelProps) {
   const { t } = useI18n();
   return (
     <StepShell titleKey="bulletin.steps.verseTitle" introKey="bulletin.steps.verseIntro">
-      <SectionVisibleCheckbox
+      <BulletinSectionControls
         sectionId={sectionId}
         draft={draft}
         canEdit={canEdit}
         onSectionVisibilityChange={onSectionVisibilityChange}
+        onSlideTextOverridesSaved={onSlideTextOverridesSaved}
       />
       <TextField
         label={t('bulletin.verseOfWeek')}
@@ -424,15 +472,17 @@ export function BulletinMoreStep({
   onSave,
   sectionId,
   onSectionVisibilityChange,
+  onSlideTextOverridesSaved,
 }: BulletinStepPanelProps) {
   const { t } = useI18n();
   return (
     <StepShell titleKey="bulletin.steps.moreTitle" introKey="bulletin.steps.moreIntro">
-      <SectionVisibleCheckbox
+      <BulletinSectionControls
         sectionId={sectionId}
         draft={draft}
         canEdit={canEdit}
         onSectionVisibilityChange={onSectionVisibilityChange}
+        onSlideTextOverridesSaved={onSlideTextOverridesSaved}
       />
       <p className="bulletin-field-hint">{t('bulletin.sectionVisibleNavHint')}</p>
       <TextField
