@@ -349,6 +349,21 @@ export default function BulletinFullDeckPreview({
           </section>
         );
       })}
+      {highlightSectionId &&
+      !composedSections.some((s) => s.id === highlightSectionId) &&
+      navSectionById(highlightSectionId) ? (
+        <section
+          className="bulletin-deck-section bulletin-deck-section--hidden-placeholder"
+          data-section={highlightSectionId}
+        >
+          <header className="bulletin-deck-section-header">
+            <h3 className="bulletin-deck-section-title">
+              {t(navSectionById(highlightSectionId)!.labelKey)}
+            </h3>
+          </header>
+          <p className="bulletin-deck-section-hidden-hint">{t('bulletin.previewSectionHiddenHint')}</p>
+        </section>
+      ) : null}
     </div>
   );
 }

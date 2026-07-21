@@ -285,12 +285,24 @@ export default function BulletinPage() {
     setDraft((prev) => (prev ? { ...prev, ...patch } : prev));
     setPreviewBulletin((prev) => (prev ? { ...prev, ...patch } : prev));
 
+    if (visible) {
+      setActiveSectionId(sectionId);
+      setPreviewSectionId(sectionId);
+      // deck 重建后再滚到该分区
+      window.setTimeout(() => setPreviewScrollBump((b) => b + 1), 280);
+    }
+
     if (!canManage) return;
     void updateBulletin(draft.id, patch)
       .then((updated) => {
         const normalized = withHiddenSections(updated);
         setDraft(normalized);
         setPreviewBulletin(normalized);
+        if (visible) {
+          setActiveSectionId(sectionId);
+          setPreviewSectionId(sectionId);
+          window.setTimeout(() => setPreviewScrollBump((b) => b + 1), 280);
+        }
       })
       .catch((err) => {
         setError(err instanceof Error ? err.message : String(err));

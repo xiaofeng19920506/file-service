@@ -208,7 +208,9 @@ const en: MessageTree = {
     slideOptions: 'Slide options',
     sectionVisible: 'Show this section',
     sectionVisibleHint:
-      'Uncheck to omit this section from the preview and exported PPT. Click Save to apply.',
+      'Uncheck to omit this section from the preview and exported PPT. Checking updates the preview immediately and auto-saves.',
+    previewSectionHiddenHint:
+      'This section is hidden, so it has no slides in the preview. Check “Show” on the left — Communion is template slides 10–13; Welcome is slide 14. They are never mixed.',
     sectionVisibleNavHint:
       'You can also toggle visibility next to each section in the left nav; Save updates the preview.',
     skipTestimony: 'Skip testimony week slide (16)',

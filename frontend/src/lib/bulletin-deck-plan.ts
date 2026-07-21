@@ -95,7 +95,9 @@ function buildSlideInFileToSection(sections: TemplateSlideSection[]): Map<number
 }
 
 /**
- * 按演示顺序打分区：碰到模板锚点就切换；复制加页（文件号大于模板）延续当前分区。
+ * 按演示顺序打分区：只认模板 slide 文件号 → 分区锚点。
+ * 读经等复制加页（文件号大于模板最大锚点）延续当前分区。
+ * 模板范围内未登记的页（如始终省略的 P3）在上游已跳过，这里不再「就近归属」以免串区。
  */
 export function assignSectionsInPresentationOrder(
   parsed: readonly { index: number; slideInFile: number }[],
@@ -113,16 +115,15 @@ export function assignSectionsInPresentationOrder(
     if (mapped) {
       currentSectionId = mapped;
     } else if (slide.slideInFile <= maxTemplateSlide) {
-      // 模板范围内未登记的页：按「不大于该文件号的最近锚点」归属，避免串到上一分区
-      let inferred = templateSections[0]?.id ?? 'unknown';
-      for (const section of templateSections) {
-        for (const n of section.slides) {
-          if (n <= slide.slideInFile) inferred = section.id;
-        }
-      }
-      currentSectionId = inferred;
+      // 模板内未登记页：标 unknown，绝不并入上一分区（避免欢迎被当成圣餐等）
+      assigned.push({
+        index: slide.index,
+        slideInFile: slide.slideInFile,
+        sectionId: 'unknown',
+      });
+      continue;
     }
-    // else: 读经等复制出来的高编号页，延续当前分区
+    // else: 复制加页，延续当前分区
     assigned.push({
       index: slide.index,
       slideInFile: slide.slideInFile,
@@ -207,13 +208,9 @@ export function composeDeckSectionsForPreview(plan: BulletinDeckPlan): BulletinD
     }
   }
 
+  // unknown 单独保留，绝不并入上一分区（否则欢迎等内容会被误标）
   for (const leftover of byId.values()) {
     if (!leftover.slides.length) continue;
-    if (leftover.id === 'unknown' && ordered.length) {
-      const last = ordered[ordered.length - 1]!;
-      last.slides.push(...leftover.slides);
-      continue;
-    }
     ordered.push({ id: leftover.id, slides: [...leftover.slides] });
   }
 

@@ -199,7 +199,9 @@ export default {
     baptism: '受洗公告',
     slideOptions: '幻灯片选项',
     sectionVisible: '显示此分区',
-    sectionVisibleHint: '取消勾选后，本分区不会出现在预览与导出的 PPT 中；修改后请点保存。',
+    sectionVisibleHint: '取消勾选后，本分区不会出现在预览与导出的 PPT 中；勾选会立即更新预览并自动保存。',
+    previewSectionHiddenHint:
+      '此分区当前已隐藏，因此预览里没有对应页。请在左侧勾选「显示」——例如圣餐是模板第 10–13 页，欢迎新朋友是第 14 页，两者不会混用。',
     sectionVisibleNavHint: '左侧导航每个分区旁也可勾选是否显示；保存后才会更新预览。',
     skipTestimony: '跳过见证周页（第 16 页）',
     skipDepartment: '跳过部门报告页（第 36 页）',

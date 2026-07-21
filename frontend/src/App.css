@@ -6288,6 +6288,21 @@
   border-left-color: #0b5394;
 }
 
+.bulletin-deck-section--hidden-placeholder {
+  opacity: 0.92;
+}
+
+.bulletin-deck-section-hidden-hint {
+  margin: 0.5rem 0 0;
+  padding: 0.85rem 1rem;
+  border: 1px dashed var(--border-light);
+  border-radius: 12px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  background: var(--surface);
+}
+
 .bulletin-deck-section-title {
   margin: 0;
   font-size: 0.88rem;
