@@ -32,6 +32,7 @@
     "dev:worker:audio": "tsx watch backend/worker/src/worker-audio.ts",
     "dev:worker:video": "tsx watch backend/worker/src/worker-video.ts",
     "dev:web": "npm run dev -w @file-service/web",
+    "restart:web": "bash scripts/restart-web.sh",
     "start": "node backend/api/dist/index.js",
     "test": "vitest run",
     "test:watch": "vitest",

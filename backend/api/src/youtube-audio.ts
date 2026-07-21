@@ -215,15 +215,30 @@ export function registerYoutubeAudioRoutes(
         request.log.warn({ videoId, stderr: chunk.toString().slice(0, 200) }, 'audio preview stderr');
       });
 
-      // 一旦开始流式响应（headers 已发出），就不能再 reply.send(对象)，
-      // 否则在子进程事件回调里抛出的 FST_ERR_REP_INVALID_PAYLOAD_TYPE 会拖垮整个进程。
+      // 流式音频一旦开始就不能再 reply.send(JSON 对象)：
+      // Content-Type 已是 audio/* 时 send({...}) 会抛 FST_ERR_REP_INVALID_PAYLOAD_TYPE → 500。
       const failPreview = () => {
         cleanup();
-        if (reply.sent || reply.raw.headersSent) return;
+        if (reply.sent || reply.raw.writableEnded || reply.raw.headersSent) {
+          try {
+            if (!reply.raw.writableEnded) reply.raw.destroy();
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
         try {
-          void reply.code(502).send({ error: 'audio_preview_failed' });
+          void reply
+            .code(502)
+            .type('application/json')
+            .send(JSON.stringify({ error: 'audio_preview_failed' }));
         } catch (err) {
           request.log.error({ err, videoId }, 'audio preview reply failed');
+          try {
+            reply.raw.destroy();
+          } catch {
+            /* ignore */
+          }
         }
       };
 
