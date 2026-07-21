@@ -274,16 +274,27 @@ export default function BulletinPage() {
   };
 
   const handleSectionVisibilityChange = (sectionId: string, visible: boolean) => {
-    setDraft((prev) => {
-      if (!prev) return prev;
-      const hiddenSections = setBulletinSectionVisible(prev.hiddenSections, sectionId, visible);
-      return {
-        ...prev,
-        hiddenSections,
-        skipTestimonyWeek: hiddenSections.includes('testimony_week'),
-        skipDepartmentReports: hiddenSections.includes('department_reports'),
-      };
-    });
+    if (!draft) return;
+    const hiddenSections = setBulletinSectionVisible(draft.hiddenSections, sectionId, visible);
+    const patch = {
+      hiddenSections,
+      skipTestimonyWeek: hiddenSections.includes('testimony_week'),
+      skipDepartmentReports: hiddenSections.includes('department_reports'),
+    };
+    // 勾选「显示」后立即反映到预览（否则仍用旧的 previewBulletin，圣餐等只读分区会看起来「勾了也不出」）
+    setDraft((prev) => (prev ? { ...prev, ...patch } : prev));
+    setPreviewBulletin((prev) => (prev ? { ...prev, ...patch } : prev));
+
+    if (!canManage) return;
+    void updateBulletin(draft.id, patch)
+      .then((updated) => {
+        const normalized = withHiddenSections(updated);
+        setDraft(normalized);
+        setPreviewBulletin(normalized);
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : String(err));
+      });
   };
 
   useBulletinScripturePersistence(draft, patchField, {
