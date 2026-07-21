@@ -91,9 +91,6 @@ function rankSearchResults(query: string, items: SearchApiItem[]): YoutubeSearch
     if (shouldSkipSearchResult(title, item.snippet?.liveBroadcastContent)) continue;
 
     seen.add(videoId);
-    const relevanceScore = scoreYoutubeTitleMatch(q, title);
-    if (relevanceScore < 12) continue;
-
     ranked.push({
       videoId,
       title,
@@ -103,11 +100,11 @@ function rankSearchResults(query: string, items: SearchApiItem[]): YoutubeSearch
         item.snippet?.thumbnails?.medium?.url ??
         item.snippet?.thumbnails?.default?.url ??
         null,
-      relevanceScore,
+      // 仅作辅助排序/预取权重；不过滤，保留 YouTube 原始相关度顺序
+      relevanceScore: scoreYoutubeTitleMatch(q, title),
     });
   }
 
-  ranked.sort((a, b) => b.relevanceScore - a.relevanceScore);
   return ranked;
 }
 
@@ -134,7 +131,6 @@ export async function searchYoutubeVideos(
   url.searchParams.set('q', q);
   url.searchParams.set('key', apiKey);
   url.searchParams.set('safeSearch', 'none');
-  url.searchParams.set('videoEmbeddable', 'true');
   if (options?.pageToken) {
     url.searchParams.set('pageToken', options.pageToken);
   }
@@ -225,20 +221,16 @@ export async function searchYoutubeVideosViaYtdlp(
     if (shouldSkipSearchResult(parsed.title)) continue;
 
     seen.add(parsed.videoId);
-    const relevanceScore = scoreYoutubeTitleMatch(q, parsed.title);
-    if (relevanceScore < 12) continue;
-
     ranked.push({
       videoId: parsed.videoId,
       title: parsed.title,
       videoUrl: youtubeVideoUrl(parsed.videoId),
       channelTitle: parsed.channelTitle,
       thumbnailUrl: `https://i.ytimg.com/vi/${parsed.videoId}/mqdefault.jpg`,
-      relevanceScore,
+      relevanceScore: scoreYoutubeTitleMatch(q, parsed.title),
     });
   }
 
-  ranked.sort((a, b) => b.relevanceScore - a.relevanceScore);
   const nextOffset = offset + maxResults;
   const hasMore = rawCount >= maxResults;
 
