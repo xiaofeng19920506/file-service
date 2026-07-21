@@ -5,21 +5,22 @@
   "totalSlides": 38,
   "nativeHiddenSlides": [],
   "alwaysOmitSlideFiles": [3],
-  "notes": "2026-07-21 按模板每一页正文重核分区。presentation 无 show=0 隐藏页；P3 与 P2 同为「主席會前禱告」但为多人名单，周报始终省略。slide 文件号 = 模板锚点；预览演示页码在删页/读经加页后会变，分区归属只认 slide 文件号。",
+  "notes": "2026-07-21 读完全部 38 页正文（presentation 无 show=0；含始终省略的 P3）后按主题分区。分区归属只认 slide 文件号；预览演示页码在删页/读经加页后会变，必须与 PNG API 使用同一套补丁。",
+  "contentVerifiedAt": "2026-07-21",
   "sections": [
     {
       "id": "cover",
       "slides": [1],
       "role": "service_date",
       "titleFromSlide": "預備心靈敬拜 / 主日崇拜",
-      "notes": "P1：预备心灵敬拜 + 日期时间 + 教会名"
+      "notes": "P1：主耶和華神在聖殿中…預備心靈敬拜 + 日期时间 + 教会名"
     },
     {
       "id": "pre_service",
       "slides": [2],
       "role": "chair_name",
       "titleFromSlide": "主席會前禱告",
-      "notes": "P2：会前祷告标题页。可选勾选后在本页写主席姓名。P3 同标题多人名单（唐毅/李振成等）永不进入 deck"
+      "notes": "P2：会前祷告标题页（可写主席姓名）。P3 同标题多人名单（唐毅/李振成/賴建平/王凱）永不进入 deck"
     },
     {
       "id": "scripture",
@@ -33,28 +34,28 @@
       "slides": [7, 8, 9],
       "role": "worship_break",
       "titleFromSlide": "敬拜讚美 / Praise and Worship",
-      "notes": "P7–P9：敬拜赞美（与圣餐/欢迎无关）"
+      "notes": "P7–P9：敬拜赞美（三页标题页）"
     },
     {
       "id": "communion",
       "slides": [10, 11, 12, 13],
       "role": "static",
       "titleFromSlide": "聖餐 / 哥林多前書 11:23-31",
-      "notes": "P10 圣餐标题+经文出处；P11 中文林前 11:23-31；P12–P13 英文续页。不可与 P14 欢迎混淆"
+      "notes": "P10 圣餐标题；P11 中文林前；P12–P13 英文。不是欢迎、不是主日信息"
     },
     {
       "id": "welcome",
       "slides": [14],
       "role": "static",
       "titleFromSlide": "Welcome! / 歡迎新朋友",
-      "notes": "P14：Welcome! 歡迎新朋友（一次欢迎，永远欢迎）。紧接在圣餐之后，不是圣餐页"
+      "notes": "P14：Welcome! 歡迎新朋友, 一次歡迎, 永遠歡迎。独立分区，介于圣餐与青少年祷告之间"
     },
     {
       "id": "youth_prayer",
       "slides": [15],
       "role": "static",
       "titleFromSlide": "為青少年與兒童祝福禱告",
-      "notes": "P15"
+      "notes": "P15：為青少年與兒童祝福禱告 / Prayer for Youth and Children。独立分区，介于欢迎与见证周之间"
     },
     {
       "id": "testimony_week",
@@ -68,7 +69,7 @@
       "slides": [17],
       "role": "static",
       "titleFromSlide": "主日信息",
-      "notes": "P17"
+      "notes": "P17：主日信息（仅此页）。不可与圣餐混淆"
     },
     {
       "id": "family_time",
@@ -117,7 +118,7 @@
       "slides": [32],
       "role": "date_sensitive",
       "titleFromSlide": "清潔/服事輪值表",
-      "notes": "P32 本季度轮值表提醒"
+      "notes": "P32"
     },
     {
       "id": "future_testimony",
@@ -131,7 +132,7 @@
       "slides": [34],
       "role": "date_sensitive",
       "titleFromSlide": "下主日服事輪值",
-      "notes": "P34 主席/敬拜/招待/清洁等"
+      "notes": "P34"
     },
     {
       "id": "verse_of_week",
@@ -145,7 +146,7 @@
       "slides": [36],
       "role": "optional",
       "titleFromSlide": "各部門同工報告與討論",
-      "notes": "P36，同工会时用，可隐藏"
+      "notes": "P36，可隐藏"
     },
     {
       "id": "doxology",

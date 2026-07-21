@@ -17,6 +17,7 @@ import {
   mapYoutubeApiError,
   normalizeUserRole,
   patchBulletinPreviewInPptx,
+  buildBulletinDeckPlanFromPptxBytes,
   playlistItems,
   playlists,
   renderSlidePngViaService,
@@ -57,8 +58,8 @@ const BULLETIN_TEMPLATE_DIR = resolveBulletinTemplateDir();
 const slidePreviewCache = new Map<string, Buffer>();
 /** 同一套补丁参数共享已补丁 PPTX，避免每页都重新 patch */
 const patchedPptxCache = new Map<string, Buffer>();
-/** 封面补丁版本；变更后自动失效旧 PNG 缓存 */
-const SLIDE_PREVIEW_PATCH_REV = 'v23';
+/** 封面/读经补丁版本；变更后自动失效旧 PNG / deck 缓存 */
+const SLIDE_PREVIEW_PATCH_REV = 'v24';
 
 let previewRenderActive = 0;
 const previewRenderWaiters: Array<() => void> = [];
@@ -406,6 +407,79 @@ export function registerBulletinRoutes(
     } catch (err) {
       request.log.error(err, 'upsert scripture preference failed');
       return reply.code(500).send({ error: 'bulletin_db_error' });
+    }
+  });
+
+  app.get<{
+    Querystring: {
+      serviceDate?: string;
+      serviceTime?: string;
+      scriptureBook?: string;
+      scriptureReference?: string;
+      showPreServiceChairName?: string;
+      preServiceChairNames?: string;
+      hiddenSections?: string;
+      weeklyMeetingVariant?: string;
+    };
+  }>('/v1/bulletins/template/deck-plan', async (request, reply) => {
+    const user = requireUser(request);
+    if (!user || !canViewBulletin(user.role)) {
+      return reply.code(403).send({ error: 'bulletin_forbidden' });
+    }
+
+    const serviceDate = request.query.serviceDate?.trim();
+    const serviceTime = request.query.serviceTime?.trim() || '11:00';
+    const scriptureBook = request.query.scriptureBook?.trim() ?? '';
+    const scriptureReference = request.query.scriptureReference?.trim() ?? '';
+    const showPreServiceChairName =
+      request.query.showPreServiceChairName === '1' ||
+      request.query.showPreServiceChairName === 'true';
+    const preServiceChairNames = request.query.preServiceChairNames?.trim() ?? '';
+    const hiddenSections = normalizeHiddenSections(
+      (request.query.hiddenSections ?? '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
+    );
+    const variantRaw = request.query.weeklyMeetingVariant?.trim();
+    const weeklyMeetingVariant =
+      variantRaw && /^\d+$/.test(variantRaw) ? Number.parseInt(variantRaw, 10) : null;
+    if (serviceDate && !/^\d{4}-\d{2}-\d{2}$/.test(serviceDate)) {
+      return reply.code(400).send({ error: 'invalid_service_date' });
+    }
+
+    const hiddenKey = hiddenSections.slice().sort().join(',');
+    const patchKey = `${SLIDE_PREVIEW_PATCH_REV}:pptx:${serviceDate ?? ''}:${serviceTime}:${scriptureBook}:${scriptureReference}:${showPreServiceChairName}:${preServiceChairNames}:${hiddenKey}:${weeklyMeetingVariant ?? ''}`;
+
+    try {
+      let pptxBuf = patchedPptxCache.get(patchKey);
+      if (!pptxBuf) {
+        const templateBuf = await readFile(join(BULLETIN_TEMPLATE_DIR, BULLETIN_TEMPLATE_FILE));
+        pptxBuf = Buffer.from(
+          await patchBulletinPreviewInPptx(templateBuf, {
+            serviceDate,
+            serviceTime,
+            scriptureBook,
+            scriptureReference,
+            showPreServiceChairName,
+            preServiceChairNames,
+            hiddenSections,
+            weeklyMeetingVariant,
+          }),
+        );
+        rememberLru(patchedPptxCache, patchKey, pptxBuf, 12);
+      }
+
+      const plan = await buildBulletinDeckPlanFromPptxBytes(pptxBuf);
+      return reply.send({
+        rev: SLIDE_PREVIEW_PATCH_REV,
+        totalSlides: plan.totalSlides,
+        slides: plan.slides,
+        sections: plan.sections,
+      });
+    } catch (err) {
+      request.log.warn({ err }, 'bulletin deck-plan failed');
+      return reply.code(503).send({ error: 'deck_plan_unavailable' });
     }
   });
 

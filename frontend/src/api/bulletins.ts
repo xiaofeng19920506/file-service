@@ -236,10 +236,14 @@ export type BulletinSlidePreviewParams = {
   weeklyMeetingVariant?: number | null;
 };
 
-export async function fetchBulletinSlidePreviewPng(
-  slideNumber: number,
-  params: BulletinSlidePreviewParams,
-): Promise<Blob> {
+export type BulletinDeckPlanDto = {
+  rev: string;
+  totalSlides: number;
+  slides: { index: number; slideInFile: number; sectionId: string }[];
+  sections: { id: string; slides: number[] }[];
+};
+
+function bulletinPreviewQuery(params: BulletinSlidePreviewParams): string {
   const qs = new URLSearchParams();
   if (params.serviceDate) qs.set('serviceDate', params.serviceDate);
   if (params.serviceTime) qs.set('serviceTime', params.serviceTime);
@@ -251,7 +255,24 @@ export async function fetchBulletinSlidePreviewPng(
   if (params.weeklyMeetingVariant != null) {
     qs.set('weeklyMeetingVariant', String(params.weeklyMeetingVariant));
   }
-  const query = qs.toString();
+  return qs.toString();
+}
+
+/** 与预览 PNG 同一套补丁算出的分区（避免读经加页后前端页码错位） */
+export async function fetchBulletinDeckPlan(
+  params: BulletinSlidePreviewParams,
+): Promise<BulletinDeckPlanDto> {
+  const query = bulletinPreviewQuery(params);
+  const path = `/v1/bulletins/template/deck-plan${query ? `?${query}` : ''}`;
+  const res = await apiFetch(path);
+  return parseJson<BulletinDeckPlanDto>(res);
+}
+
+export async function fetchBulletinSlidePreviewPng(
+  slideNumber: number,
+  params: BulletinSlidePreviewParams,
+): Promise<Blob> {
+  const query = bulletinPreviewQuery(params);
   const path = `/v1/bulletins/template/slides/${slideNumber}/preview.png${query ? `?${query}` : ''}`;
 
   const maxAttempts = 3;

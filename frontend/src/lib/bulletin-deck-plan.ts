@@ -1,12 +1,11 @@
 import {
-  fetchBulletinTemplateFile,
-  fetchScriptureSlideBodies,
+  fetchBulletinDeckPlan,
   type WeeklyBulletin,
 } from '../api/bulletins';
-import { buildPreviewMatchingPptx } from './bulletin-preview-pptx';
 import { listPptxSlidesInPresentationOrder } from './pptx-preview';
 import { BULLETIN_WIZARD_STEPS } from './bulletin-template-steps';
 import { BULLETIN_NAV_SECTIONS } from './bulletin-sections';
+import { resolveHiddenSections } from './bulletin-section-visibility';
 
 type TemplateSlideSection = { id: string; slides: number[] };
 
@@ -18,32 +17,32 @@ export const BULLETIN_OMITTED_TEMPLATE_SLIDES = [3] as const;
 
 /**
  * 模板内 slide 文件编号 → 分区（非放映页码）。
- * 分区按幻灯片正文划分（见 shared/templates/bulletin/template-slide-map.json）。
- * 演示页码在已补丁预览 PPTX 的 presentation 顺序上解析；中间加页延续当前分区。
+ * 2026-07-21 读完 06_14_2026.pptx 全部 38 页正文后按主题划分：
+ * 圣餐=P10–13，欢迎新朋友=P14，青少年儿童祷告=P15，主日信息=P17（彼此独立）。
  */
 export const BULLETIN_TEMPLATE_SLIDE_SECTIONS: TemplateSlideSection[] = [
-  { id: 'cover', slides: [1] }, // P1 封面
-  { id: 'pre_service', slides: [2] }, // P2 主席會前禱告（仅 1 页；P3 省略）
-  { id: 'scripture', slides: [4, 5, 6] }, // P4 标题经节；P5 中文；P6 英文
-  { id: 'worship', slides: [7, 8, 9] }, // 敬拜讚美
-  { id: 'communion', slides: [10, 11, 12, 13] }, // 聖餐
-  { id: 'welcome', slides: [14] }, // 歡迎新朋友
-  { id: 'youth_prayer', slides: [15] }, // 青少年與兒童禱告
-  { id: 'testimony_week', slides: [16] }, // 主日見證週
-  { id: 'message', slides: [17] }, // 主日信息
-  { id: 'family_time', slides: [18] }, // 大家庭時間
-  { id: 'offering', slides: [19, 20, 21, 22] }, // 奉獻
-  { id: 'birthday', slides: [23, 24] }, // 生日
-  { id: 'announcements', slides: [25, 26, 27] }, // 特別感謝 / 家有喜事 / 受洗
-  { id: 'weekly_meetings', slides: [28, 29, 30] }, // 本週聚會（三选一）
-  { id: 'staff_meeting', slides: [31] }, // 同工會
-  { id: 'rotation', slides: [32] }, // 服事輪值表
-  { id: 'future_testimony', slides: [33] }, // 下主日見證
-  { id: 'service_roster', slides: [34] }, // 下主日服事
-  { id: 'verse_of_week', slides: [35] }, // 本週金句
-  { id: 'department_reports', slides: [36] }, // 部門報告
-  { id: 'doxology', slides: [37] }, // 三一頌
-  { id: 'benediction', slides: [38] }, // 祝福禱告
+  { id: 'cover', slides: [1] },
+  { id: 'pre_service', slides: [2] },
+  { id: 'scripture', slides: [4, 5, 6] },
+  { id: 'worship', slides: [7, 8, 9] },
+  { id: 'communion', slides: [10, 11, 12, 13] },
+  { id: 'welcome', slides: [14] },
+  { id: 'youth_prayer', slides: [15] },
+  { id: 'testimony_week', slides: [16] },
+  { id: 'message', slides: [17] },
+  { id: 'family_time', slides: [18] },
+  { id: 'offering', slides: [19, 20, 21, 22] },
+  { id: 'birthday', slides: [23, 24] },
+  { id: 'announcements', slides: [25, 26, 27] },
+  { id: 'weekly_meetings', slides: [28, 29, 30] },
+  { id: 'staff_meeting', slides: [31] },
+  { id: 'rotation', slides: [32] },
+  { id: 'future_testimony', slides: [33] },
+  { id: 'service_roster', slides: [34] },
+  { id: 'verse_of_week', slides: [35] },
+  { id: 'department_reports', slides: [36] },
+  { id: 'doxology', slides: [37] },
+  { id: 'benediction', slides: [38] },
 ];
 
 /** 向导步骤对应的模板分区 */
@@ -178,21 +177,32 @@ export async function buildBulletinDeckPlanFromFile(file: Blob): Promise<Bulleti
 
 /**
  * 按当前周报字段生成演示顺序与分区映射（含读经加页）。
- * 须与预览 PNG API 使用同一套补丁逻辑，否则敬拜页码会错位。
+ * 必须走服务端 deck-plan：与预览 PNG 共用同一份已补丁 PPTX，否则圣餐等会错位成欢迎/主日信息。
  */
 export async function buildBulletinDeckPlan(bulletin: WeeklyBulletin): Promise<BulletinDeckPlan> {
-  const template = await fetchBulletinTemplateFile();
-  const book = bulletin.scriptureBook?.trim() ?? '';
-  const reference = bulletin.scriptureReference?.trim() ?? '';
-  const scriptureBodies =
-    book && reference ? await fetchScriptureSlideBodies(book, reference) : null;
-  const file = await buildPreviewMatchingPptx(
-    template,
-    bulletin,
-    scriptureBodies,
-    'bulletin-deck-plan.pptx',
-  );
-  return buildBulletinDeckPlanFromFile(file);
+  const hiddenSections = resolveHiddenSections(bulletin);
+  const dto = await fetchBulletinDeckPlan({
+    serviceDate: bulletin.serviceDate,
+    serviceTime: bulletin.serviceTime || '11:00',
+    scriptureBook: bulletin.scriptureBook,
+    scriptureReference: bulletin.scriptureReference,
+    showPreServiceChairName: bulletin.showPreServiceChairName,
+    preServiceChairNames: bulletin.preServiceChairNames,
+    hiddenSections,
+    weeklyMeetingVariant: bulletin.weeklyMeetingVariant,
+  });
+  const slides = dto.slides.map((s) => ({
+    index: s.index,
+    slideInFile: s.slideInFile,
+    sectionId: s.sectionId,
+  }));
+  const sections = dto.sections.map((s) => ({ id: s.id, slides: [...s.slides] }));
+  return {
+    totalSlides: dto.totalSlides,
+    slides,
+    sections,
+    wizardSteps: buildWizardSteps(sections),
+  };
 }
 
 /** 按导航顺序拼装预览分区（像 code splitting 后再 compose） */
