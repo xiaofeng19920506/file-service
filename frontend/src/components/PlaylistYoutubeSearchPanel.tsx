@@ -65,6 +65,7 @@ export default function PlaylistYoutubeSearchPanel({
   const [addingVideoId, setAddingVideoId] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
   const [pendingAdd, setPendingAdd] = useState<PendingAdd | null>(null);
+  const searchOnSubmit = resultLayout === 'video';
 
   const {
     searchQuery,
@@ -80,7 +81,9 @@ export default function PlaylistYoutubeSearchPanel({
     searchNow,
     loadMore,
     resetSearch,
-  } = useDebouncedYoutubeSearch({ debounceEnabled: !isMobileViewport });
+  } = useDebouncedYoutubeSearch({
+    debounceEnabled: searchOnSubmit ? false : !isMobileViewport,
+  });
 
   const resultsListRef = useRef<HTMLUListElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -159,11 +162,16 @@ export default function PlaylistYoutubeSearchPanel({
   const isInAnyPlaylist = (videoId: string, inLibrary?: boolean) =>
     inLibrary === true || libraryVideoIds.has(videoId);
 
-  const showTrending = searchResults.length === 0 && !isSearchBusy && !searchQuery.trim();
+  const showTrending = searchOnSubmit
+    ? !hasSearched && !isSearchBusy
+    : searchResults.length === 0 && !isSearchBusy && !searchQuery.trim();
   const relocateSearchToHeader = Boolean(searchHeaderEl) && !isMobileViewport;
+  const showSearchButton = searchOnSubmit || !isMobileViewport;
 
   const searchBox = (
-    <div className={`search-box${isMobileViewport ? ' search-box--submit-only' : ''}`}>
+    <div
+      className={`search-box${isMobileViewport && !searchOnSubmit ? ' search-box--submit-only' : ''}`}
+    >
       <div className={`search-input-wrap${isSearchBusy ? ' search-input-wrap--busy' : ''}`}>
         {isSearchBusy ? (
           <span className="search-input-spinner" aria-hidden />
@@ -179,15 +187,12 @@ export default function PlaylistYoutubeSearchPanel({
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
-              if (isMobileViewport) {
-                e.currentTarget.blur();
-                return;
-              }
               submitSearch();
+              if (isMobileViewport) e.currentTarget.blur();
             }
           }}
           onBlur={() => {
-            if (isMobileViewport) submitSearch();
+            if (!searchOnSubmit && isMobileViewport) submitSearch();
           }}
           placeholder={t('playlists.searchPlaceholder')}
           enterKeyHint="search"
@@ -209,12 +214,12 @@ export default function PlaylistYoutubeSearchPanel({
           </button>
         )}
       </div>
-      {!isMobileViewport && (
+      {showSearchButton && (
         <button
           type="button"
           className="btn-secondary btn-search"
           onClick={submitSearch}
-          disabled={isSearchBusy || addingVideoId !== null}
+          disabled={isSearchBusy || addingVideoId !== null || !searchQuery.trim()}
         >
           {isSearchBusy ? t('search.searching') : t('search.button')}
         </button>
