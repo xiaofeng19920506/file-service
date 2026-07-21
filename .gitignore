@@ -17,6 +17,7 @@ dist/
 
 # Next.js
 frontend/.next/
+frontend/.next-dev/
 out/
 
 # production

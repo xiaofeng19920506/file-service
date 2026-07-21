@@ -5,6 +5,8 @@ import type { NextConfig } from 'next';
 const backendUrl = process.env.BACKEND_URL ?? 'http://localhost:3000';
 
 const nextConfig: NextConfig = {
+  // 开发与生产分开输出目录，避免 `next build` 与 `next dev` 抢同一 .next → Internal Server Error
+  distDir: process.env.NODE_ENV === 'production' ? '.next' : '.next-dev',
   // 生产构建移除 console.log / debug / info 等；保留 error、warn 便于线上排错
   compiler: {
     removeConsole: {
