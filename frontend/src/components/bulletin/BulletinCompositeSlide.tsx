@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import JSZip from 'jszip';
 import {
   autoFitScale,
@@ -10,6 +10,7 @@ import {
   type SlideTextRun,
   type SlideVisualLayer,
 } from '../../lib/pptx-slide-layers';
+import { shapeParagraphsToPlainText } from '../../lib/pptx-shape-text';
 import type { EditableSlide } from '../../lib/pptx-preview';
 
 type BulletinCompositeSlideProps = {
@@ -19,6 +20,10 @@ type BulletinCompositeSlideProps = {
   emptyLabel: string;
   slideLabel?: string;
   large?: boolean;
+  /** 允许点选文本框编辑 */
+  editable?: boolean;
+  shapeTextOverrides?: Record<number, string>;
+  onShapeTextChange?: (shapeIndex: number, text: string) => void;
 };
 
 const SLIDE_WIDTH_PT = 720;
@@ -86,7 +91,7 @@ function layerZIndex(kind: SlideVisualLayer['kind'], role: ShapeRole): number {
 
 function shapePaddingStyle(
   padding: Extract<SlideVisualLayer, { kind: 'shape' }>['paddingPct'],
-): React.CSSProperties | undefined {
+): CSSProperties | undefined {
   if (!padding) return undefined;
   return {
     paddingTop: `${padding.top.toFixed(2)}cqh`,
@@ -168,6 +173,22 @@ function renderParagraph(
   );
 }
 
+function paragraphsFromOverride(
+  plain: string,
+  template: SlideTextParagraph[],
+): SlideTextParagraph[] {
+  const sample =
+    template.find((p) => !p.spacer && p.runs.length)?.runs[0] ??
+    ({ text: '', color: '#1e2d31', fontSizePt: 14 } satisfies SlideTextRun);
+  const align = template.find((p) => !p.spacer)?.align ?? 'left';
+  const lineSpacing = template.find((p) => !p.spacer)?.lineSpacing ?? 1;
+  return plain.split('\n').map((line) => ({
+    runs: [{ ...sample, text: line }],
+    align,
+    lineSpacing,
+  }));
+}
+
 export default function BulletinCompositeSlide({
   slide,
   pptxBlob,
@@ -175,10 +196,16 @@ export default function BulletinCompositeSlide({
   emptyLabel,
   slideLabel,
   large,
+  editable = false,
+  shapeTextOverrides,
+  onShapeTextChange,
 }: BulletinCompositeSlideProps) {
   const [layers, setLayers] = useState<SlideVisualLayer[]>([]);
   const [slideSize, setSlideSize] = useState<SlideSizeEmu>({ ...DEFAULT_SLIDE_SIZE });
   const [layersLoading, setLayersLoading] = useState(false);
+  const [editingShape, setEditingShape] = useState<number | null>(null);
+  const [draftText, setDraftText] = useState('');
+  const editorRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (!slide?.slidePath || !pptxBlob) {
@@ -191,6 +218,7 @@ export default function BulletinCompositeSlide({
     let activeLayers: SlideVisualLayer[] = [];
 
     setLayersLoading(true);
+    setEditingShape(null);
     void (async () => {
       try {
         const zip = await JSZip.loadAsync(pptxBlob);
@@ -221,6 +249,30 @@ export default function BulletinCompositeSlide({
     };
   }, [slide?.slidePath, pptxBlob]);
 
+  useEffect(() => {
+    if (editingShape == null) return;
+    editorRef.current?.focus();
+    editorRef.current?.select();
+  }, [editingShape]);
+
+  const commitEdit = () => {
+    if (editingShape == null || !onShapeTextChange) {
+      setEditingShape(null);
+      return;
+    }
+    onShapeTextChange(editingShape, draftText);
+    setEditingShape(null);
+  };
+
+  const beginEdit = (shapeIndex: number, paragraphs: SlideTextParagraph[]) => {
+    if (!editable || !onShapeTextChange) return;
+    const override = shapeTextOverrides?.[shapeIndex];
+    const initial =
+      override !== undefined ? override : shapeParagraphsToPlainText(paragraphs);
+    setDraftText(initial);
+    setEditingShape(shapeIndex);
+  };
+
   const rootClass = `bulletin-slide-preview${large ? ' bulletin-slide-preview--large' : ''}`;
 
   if (loading || layersLoading) {
@@ -245,8 +297,15 @@ export default function BulletinCompositeSlide({
     <figure className={rootClass}>
       {slideLabel && <figcaption className="bulletin-slide-preview-caption">{slideLabel}</figcaption>}
       <div
-        className="bulletin-slide-preview-frame bulletin-composite-slide"
+        className={`bulletin-slide-preview-frame bulletin-composite-slide${
+          editable ? ' bulletin-composite-slide--editable' : ''
+        }`}
         style={{ aspectRatio: `${slideSize.cx} / ${slideSize.cy}` }}
+        onMouseDown={(e) => {
+          if (!editable) return;
+          if ((e.target as HTMLElement).closest('.bulletin-composite-shape--editable')) return;
+          if (editingShape != null) commitEdit();
+        }}
       >
         {layers.map((layer, i) => {
           const role = layer.kind === 'shape' ? shapeRole(layer) : 'default';
@@ -289,6 +348,16 @@ export default function BulletinCompositeSlide({
           const useAutoFit = Boolean(layer.autoFit) && role !== 'date';
           const fitScale = autoFitScale(layer, slideSize.cy);
           const shapeTop = role === 'footer' ? 100 - layer.height : shiftedTop;
+          const shapeIndex = layer.shapeIndex;
+          const canEditShape = editable && shapeIndex != null && !!onShapeTextChange;
+          const isEditing = canEditShape && editingShape === shapeIndex;
+          const overrideText =
+            shapeIndex != null ? shapeTextOverrides?.[shapeIndex] : undefined;
+          const displayParagraphs =
+            overrideText !== undefined
+              ? paragraphsFromOverride(overrideText, layer.paragraphs)
+              : layer.paragraphs;
+          const sampleRun = layer.paragraphs.find((p) => !p.spacer)?.runs[0];
 
           return (
             <div
@@ -297,7 +366,11 @@ export default function BulletinCompositeSlide({
                 role === 'footer' ? ' bulletin-composite-shape--footer' : ''
               }${role === 'header' ? ' bulletin-composite-shape--header' : ''}${
                 role === 'date' ? ' bulletin-composite-shape--date' : ''
-              }${role === 'prayer' ? ' bulletin-composite-shape--prayer' : ''}`}
+              }${role === 'prayer' ? ' bulletin-composite-shape--prayer' : ''}${
+                canEditShape ? ' bulletin-composite-shape--editable' : ''
+              }${isEditing ? ' bulletin-composite-shape--editing' : ''}${
+                overrideText !== undefined ? ' bulletin-composite-shape--overridden' : ''
+              }`}
               style={{
                 ...stackStyle,
                 left: `${layer.left}%`,
@@ -306,10 +379,64 @@ export default function BulletinCompositeSlide({
                 height: `${layer.height}%`,
                 backgroundColor: layer.fill,
                 ...shapePaddingStyle(layer.paddingPct),
+                zIndex: isEditing ? 40 : stackStyle.zIndex,
               }}
+              onClick={
+                canEditShape && !isEditing
+                  ? (e) => {
+                      e.stopPropagation();
+                      beginEdit(shapeIndex, layer.paragraphs);
+                    }
+                  : undefined
+              }
+              role={canEditShape ? 'button' : undefined}
+              tabIndex={canEditShape && !isEditing ? 0 : undefined}
+              onKeyDown={
+                canEditShape && !isEditing
+                  ? (e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        beginEdit(shapeIndex, layer.paragraphs);
+                      }
+                    }
+                  : undefined
+              }
             >
-              {layer.paragraphs.map((para, pi) =>
-                renderParagraph(para, role, useAutoFit, fitScale, pi),
+              {isEditing ? (
+                <textarea
+                  ref={editorRef}
+                  className="bulletin-composite-shape-editor"
+                  value={draftText}
+                  onChange={(e) => setDraftText(e.target.value)}
+                  onBlur={commitEdit}
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
+                    if (e.key === 'Escape') {
+                      e.preventDefault();
+                      setEditingShape(null);
+                    }
+                    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                      e.preventDefault();
+                      commitEdit();
+                    }
+                  }}
+                  style={{
+                    color: sampleRun?.color,
+                    fontWeight: sampleRun?.bold ? 700 : undefined,
+                    fontFamily: sampleRun?.fontFamily
+                      ? `"${sampleRun.fontFamily}", sans-serif`
+                      : undefined,
+                    fontSize: runFontSizeCqw(sampleRun?.fontSizePt, useAutoFit, fitScale),
+                    textAlign: layer.paragraphs.find((p) => !p.spacer)?.align ?? 'left',
+                    lineHeight: layer.paragraphs.find((p) => !p.spacer)?.lineSpacing || 1.15,
+                  }}
+                  aria-label={`文本框 ${shapeIndex! + 1}`}
+                />
+              ) : (
+                displayParagraphs.map((para, pi) =>
+                  renderParagraph(para, role, useAutoFit, fitScale, pi),
+                )
               )}
             </div>
           );

@@ -1,4 +1,5 @@
 import JSZip from 'jszip';
+import { applyShapePlainTextToSlideXml } from './pptx-shape-text';
 
 export type SlideBackgroundKind = 'image' | 'solid' | 'none';
 
@@ -28,6 +29,8 @@ export type EditableSlide = {
   backgroundPreviewUrl?: string;
   /** 待写入的背景图替换 */
   backgroundReplacement?: Blob;
+  /** 形状文字覆盖（shapeIndex → 纯文本，换行=段落） */
+  shapeTextOverrides?: Record<number, string>;
   pending?: boolean;
   editable: boolean;
   /** 尚未写入 PPTX，确认保存时再复制 */
@@ -604,10 +607,20 @@ export function slidesContentEqual(a: EditableSlide[], b: EditableSlide[]): bool
     const keysA = Object.keys(repA).sort();
     const keysB = Object.keys(repB).sort();
     if (keysA.length !== keysB.length) return false;
-    return keysA.every((k, j) => {
-      if (keysB[j] !== k) return false;
-      return repA[k].size === repB[k].size && repA[k].type === repB[k].type;
-    });
+    if (
+      !keysA.every((k, j) => {
+        if (keysB[j] !== k) return false;
+        return repA[k].size === repB[k].size && repA[k].type === repB[k].type;
+      })
+    ) {
+      return false;
+    }
+    const textA = s.shapeTextOverrides ?? {};
+    const textB = t.shapeTextOverrides ?? {};
+    const textKeysA = Object.keys(textA).sort();
+    const textKeysB = Object.keys(textB).sort();
+    if (textKeysA.length !== textKeysB.length) return false;
+    return textKeysA.every((k, j) => textKeysB[j] === k && textA[Number(k)] === textB[Number(k)]);
   });
 }
 
@@ -796,6 +809,38 @@ export async function applyBackgroundEditsToPptx(
       xml = replaceOrInsertBg(xml, buildBlipBgXml(rId));
       zip.file(slide.slidePath, xml);
     }
+  }
+
+  const filename = file instanceof File ? file.name : 'presentation.pptx';
+  const out = await zip.generateAsync({ type: 'arraybuffer' });
+  return new File([out], filename, { type: PPTX_MIME });
+}
+
+/** 将画布上编辑的形状文字写入 PPTX */
+export async function applyShapeTextEditsToPptx(
+  file: Blob,
+  slides: EditableSlide[],
+): Promise<File> {
+  const toWrite = slides.filter(
+    (s) => s.slidePath && s.shapeTextOverrides && Object.keys(s.shapeTextOverrides).length > 0,
+  );
+  if (!toWrite.length) {
+    return file instanceof File
+      ? file
+      : new File([file], 'presentation.pptx', { type: PPTX_MIME });
+  }
+
+  const zip = await JSZip.loadAsync(file);
+  for (const slide of toWrite) {
+    const entry = zip.file(slide.slidePath);
+    if (!entry) continue;
+    let xml = await entry.async('string');
+    for (const [idxStr, text] of Object.entries(slide.shapeTextOverrides!)) {
+      const idx = Number(idxStr);
+      if (!Number.isFinite(idx)) continue;
+      xml = applyShapePlainTextToSlideXml(xml, idx, text);
+    }
+    zip.file(slide.slidePath, xml);
   }
 
   const filename = file instanceof File ? file.name : 'presentation.pptx';
@@ -1099,6 +1144,18 @@ export async function applySlideEditsToPptx(
 
   if (textSlides.length) {
     working = await applySlidesToPptx(working, textSlides, file.name);
+  }
+
+  const shapeTextTargets = target
+    .map((s) => ({
+      ...s,
+      slidePath: resolvePath(s),
+    }))
+    .filter(
+      (s) => s.slidePath && s.shapeTextOverrides && Object.keys(s.shapeTextOverrides).length > 0,
+    );
+  if (shapeTextTargets.length) {
+    working = await applyShapeTextEditsToPptx(working, shapeTextTargets);
   }
 
   working = await applyImageReplacementsToPptx(working, target);

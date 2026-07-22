@@ -253,7 +253,7 @@ const en: MessageTree = {
     previewStaticPreService: 'PPT page {page} · Chair pre-service prayer',
     sectionReadonlyTitle: 'Fixed template section',
     sectionReadonlyHint:
-      'This section uses fixed template slides. Download via “Edit slides”, edit in PowerPoint/Keynote, then upload again.',
+      'This section uses template slides. Open “Edit slides” to change text, background, and images in the browser, or download for desktop PowerPoint.',
     editSlides: 'Edit slides',
     editSlidesShort: 'Edit slides',
     editSlidesSectionTitle: 'Edit section: {section}',
@@ -271,6 +271,9 @@ const en: MessageTree = {
     editSlidesQuickOpen: 'Quick web adjust (background/images)',
     editSlidesQuickHint: 'Only for background/image tweaks; use desktop PowerPoint for full edits.',
     editSlidesQuickTitle: 'Quick adjust: {section}',
+    editSlidesWebHint:
+      'Click a text box on the canvas to edit. Use the toolbar for background/images, skip, or duplicate. For full layout work, download via the header, edit in desktop PowerPoint, then upload.',
+    editSlidesUploadNative: 'Upload desktop-edited PPTX',
     editSlidesTitle: 'Edit section slide text',
     editSlidesHint:
       'Text only — backgrounds and images stay unchanged. Unchanged lines keep the template wording.',
@@ -844,7 +847,7 @@ const en: MessageTree = {
     dropToReorder: 'Drop on a slide to reorder',
     shortcutUndo: 'Undo (⌘Z)',
     shortcutRedo: 'Redo (⇧⌘Z)',
-    keyboardHint: '↑↓ switch slides · Delete skip · drag thumbnails to reorder',
+    keyboardHint: 'Click text boxes to edit · ↑↓ switch slides · Delete skip · drag thumbnails to reorder',
   },
   status: {
     queued: 'Preparing…',

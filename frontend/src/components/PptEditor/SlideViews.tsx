@@ -236,10 +236,14 @@ export function PptCanvasSlide({
   slide,
   zoom = 100,
   pptxBlob = null,
+  editable = false,
+  onShapeTextChange,
 }: {
   slide: EditableSlide;
   zoom?: number;
   pptxBlob?: Blob | null;
+  editable?: boolean;
+  onShapeTextChange?: (shapeIndex: number, text: string) => void;
 }) {
   const { t } = useI18n();
   const scale = Math.max(0.5, Math.min(1.5, zoom / 100));
@@ -286,6 +290,9 @@ export function PptCanvasSlide({
             pptxBlob={pptxBlob}
             emptyLabel={t('preview.slideNumber', { n: slide.slideInFile })}
             large
+            editable={editable}
+            shapeTextOverrides={slide.shapeTextOverrides}
+            onShapeTextChange={onShapeTextChange}
           />
           {bgOverrideStyle ? (
             <div className="ppt-slide-bg-override" style={bgOverrideStyle} aria-hidden />

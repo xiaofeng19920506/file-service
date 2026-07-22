@@ -352,6 +352,24 @@ export function useMergedPptEditor({
     [updateSlides],
   );
 
+  const setShapeTextOverride = useCallback(
+    (arrayIndex: number, shapeIndex: number, text: string) => {
+      updateSlides((prev) =>
+        prev.map((s, i) => {
+          if (i !== arrayIndex) return s;
+          return {
+            ...s,
+            shapeTextOverrides: {
+              ...(s.shapeTextOverrides ?? {}),
+              [shapeIndex]: text,
+            },
+          };
+        }),
+      );
+    },
+    [updateSlides],
+  );
+
   const openCrop = useCallback((arrayIndex: number, imageIndex: number, url: string) => {
     setCropTarget({ kind: 'image', arrayIndex, imageIndex, url });
   }, []);
@@ -468,6 +486,7 @@ export function useMergedPptEditor({
     setSlideImageReplacement,
     setSlideBackgroundImage,
     setSlideBackgroundColor,
+    setShapeTextOverride,
     openCrop,
     openBackgroundCrop,
     discardChanges,

@@ -9,6 +9,7 @@ export function cloneSlides(slides: EditableSlide[]): EditableSlide[] {
     imageReplacements: s.imageReplacements ? { ...s.imageReplacements } : undefined,
     imagePreviewUrls: s.imagePreviewUrls ? { ...s.imagePreviewUrls } : undefined,
     backgroundReplacement: s.backgroundReplacement,
+    shapeTextOverrides: s.shapeTextOverrides ? { ...s.shapeTextOverrides } : undefined,
   }));
 }
 

@@ -243,7 +243,7 @@ export default {
     previewSectionLabel: 'PPT 第 {pages} 页',
     sectionReadonlyTitle: '模板固定页',
     sectionReadonlyHint:
-      '此段为 PPT 模板固定内容；点「修改幻灯片」下载后用 PowerPoint / Keynote 编辑，再上传即可。',
+      '此段为 PPT 模板固定内容；点「修改幻灯片」可在网页内编辑文字、背景与图片，也可下载到本机 PowerPoint。',
     editSlides: '修改幻灯片',
     editSlidesShort: '修改幻灯片',
     editSlidesSectionTitle: '编辑分区：{section}',
@@ -261,6 +261,9 @@ export default {
     editSlidesQuickOpen: '网页内快速调整（背景/图片）',
     editSlidesQuickHint: '仅适合换背景或替换图片；完整改版请用本机 PowerPoint。',
     editSlidesQuickTitle: '快速调整：{section}',
+    editSlidesWebHint:
+      '点击画布上的文字框即可改字；工具栏可换背景/图片、跳过或复制页面。需要完整版式时，可先点顶部「下载」，用本机 PowerPoint 编辑后再上传。',
+    editSlidesUploadNative: '上传本机编辑的 PPTX',
     editSlidesTitle: '修改本区幻灯片文字',
     editSlidesHint: '只改文字，不改背景与图片。未改动的行会保持模板原文。',
     editSlidesPage: '第 {page} 页',
@@ -828,7 +831,7 @@ export default {
     dropToReorder: '拖到目标位置释放以调整顺序',
     shortcutUndo: '撤销 (⌘Z)',
     shortcutRedo: '重做 (⇧⌘Z)',
-    keyboardHint: '↑↓ 切换页面 · Delete 跳过 · 拖拽左侧缩略图排序',
+    keyboardHint: '点击文字框编辑 · ↑↓ 切换页面 · Delete 跳过 · 拖拽左侧缩略图排序',
   },
   status: {
     queued: '正在准备…',

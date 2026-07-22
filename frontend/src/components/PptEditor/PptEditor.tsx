@@ -76,6 +76,7 @@ export default function PptEditor({
     setSlideImageReplacement,
     setSlideBackgroundImage,
     setSlideBackgroundColor,
+    setShapeTextOverride,
     openCrop,
     openBackgroundCrop,
     discardChanges,
@@ -402,6 +403,10 @@ export default function PptEditor({
                 slide={slides[focusIndex]}
                 zoom={zoom}
                 pptxBlob={sourceFile}
+                editable
+                onShapeTextChange={(shapeIndex, text) =>
+                  setShapeTextOverride(focusIndex, shapeIndex, text)
+                }
               />
             )}
           </main>

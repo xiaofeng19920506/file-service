@@ -46,6 +46,8 @@ export type SlideVisualLayer =
     }
   | {
       kind: 'shape';
+      /** 带文字的形状序号（仅有 txBody 且计入编辑的形状）；纯色块无 undefined */
+      shapeIndex?: number;
       fill?: string;
       paragraphs: SlideTextParagraph[];
       left: number;
@@ -340,6 +342,7 @@ export async function parseSlideVisualLayers(
 
   const spTree = xml.match(/<p:spTree>([\s\S]*)<\/p:spTree>/)?.[1] ?? xml;
   const blocks = [...spTree.matchAll(/<p:(sp|pic)>[\s\S]*?<\/p:\1>/g)];
+  let textShapeIndex = 0;
 
   for (const block of blocks) {
     const chunk = block[0];
@@ -363,8 +366,21 @@ export async function parseSlideVisualLayers(
       const txBody = chunk.match(/<p:txBody>([\s\S]*?)<\/p:txBody>/)?.[1] ?? '';
       const text = extractTextContent(chunk, schemeColors);
       const paddingPct = extractTextBoxPadding(txBody, box.widthEmu, box.heightEmu);
+      const shapeIndex = textShapeIndex;
+      textShapeIndex += 1;
       if (text.paragraphs.length) {
-        layers.push({ kind: 'shape', fill, ...boxPct, ...text, paddingPct });
+        layers.push({ kind: 'shape', shapeIndex, fill, ...boxPct, ...text, paddingPct });
+      } else {
+        // 空文本框也计入序号，便于与 XML 顺序对齐
+        layers.push({
+          kind: 'shape',
+          shapeIndex,
+          fill,
+          paragraphs: [],
+          ...boxPct,
+          valign: 'top',
+          paddingPct,
+        });
       }
     } else if (fill) {
       layers.push({ kind: 'shape', fill, paragraphs: [], ...boxPct, valign: 'top' });

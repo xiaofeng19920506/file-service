@@ -6,9 +6,7 @@ import { useI18n } from '../../i18n';
 import { buildPatchedBulletinForSectionExtract } from '../../lib/bulletin-pptx';
 import { BULLETIN_SECTION_TEMPLATE_SLIDES } from '../../lib/bulletin-section-visibility';
 import { extractSlidesByFileNumbersAsPptx } from '../../lib/pptx-extract-slide';
-import { parsePptxSlidesDetailed, revokeSlideUrls } from '../../lib/pptx-preview';
 import { navSectionById } from '../../lib/bulletin-sections';
-import BulletinCompositeSlide from './BulletinCompositeSlide';
 
 const PPTX_MIME =
   'application/vnd.openxmlformats-officedocument.presentationml.presentation';
@@ -43,17 +41,12 @@ export default function BulletinSectionPptEditor({
   const draftSnapRef = useRef(draft);
   draftSnapRef.current = draft;
 
-  const [sectionFile, setSectionFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [slideCount, setSlideCount] = useState(0);
-  const [previewSlides, setPreviewSlides] = useState<
-    Awaited<ReturnType<typeof parsePptxSlidesDetailed>>
-  >([]);
+  const [sectionFile, setSectionFile] = useState<File | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [quickEdit, setQuickEdit] = useState(false);
 
   const sectionMeta = navSectionById(sectionId);
   const sectionLabel = sectionMeta ? t(sectionMeta.labelKey) : sectionId;
@@ -84,26 +77,17 @@ export default function BulletinSectionPptEditor({
       setLoading(true);
       setLoadError(null);
       setUploadError(null);
-      setQuickEdit(false);
       try {
         const file = await loadSectionFile();
         if (cancelled) return;
-        const parsed = await parsePptxSlidesDetailed(file, { sourceFile: file.name });
-        if (cancelled) {
-          revokeSlideUrls(parsed);
-          return;
-        }
         objectUrl = URL.createObjectURL(file);
         setSectionFile(file);
         setPreviewUrl(objectUrl);
-        setSlideCount(parsed.length);
-        setPreviewSlides(parsed);
       } catch (e) {
         if (!cancelled) {
           setLoadError(e instanceof Error ? e.message : 'load_failed');
           setSectionFile(null);
           setPreviewUrl(null);
-          setPreviewSlides([]);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -115,13 +99,6 @@ export default function BulletinSectionPptEditor({
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [loadSectionFile, sectionId]);
-
-  useEffect(
-    () => () => {
-      revokeSlideUrls(previewSlides);
-    },
-    [previewSlides],
-  );
 
   const persistSectionFile = async (file: File) => {
     setUploading(true);
@@ -143,6 +120,7 @@ export default function BulletinSectionPptEditor({
       });
     } catch (e) {
       setUploadError(e instanceof Error ? e.message : 'upload_failed');
+      throw e;
     } finally {
       setUploading(false);
     }
@@ -161,109 +139,73 @@ export default function BulletinSectionPptEditor({
       setUploadError(t('bulletin.editSlidesNeedPptx'));
       return;
     }
-    await persistSectionFile(picked);
+    try {
+      await persistSectionFile(picked);
+      onClose();
+    } catch {
+      /* uploadError already set */
+    }
   };
 
-  if (quickEdit && previewUrl) {
+  if (loading) {
     return (
       <div className="bulletin-section-ppt-overlay" role="dialog" aria-modal="true">
-        <PptEditor
-          title={t('bulletin.editSlidesQuickTitle', { section: sectionLabel })}
-          mergedUrl={previewUrl}
-          onSaveFile={persistSectionFile}
-          onClose={() => setQuickEdit(false)}
-        />
+        <div className="preview-empty">
+          <div className="preview-spinner" />
+          <p>{t('preview.converting')}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError || !previewUrl) {
+    return (
+      <div className="bulletin-section-ppt-overlay" role="dialog" aria-modal="true">
+        <div className="bulletin-section-ppt-native">
+          <header className="bulletin-section-ppt-native-header">
+            <h2>{t('bulletin.editSlidesSectionTitle', { section: sectionLabel })}</h2>
+            <button type="button" className="btn-secondary btn-sm" onClick={onClose}>
+              {t('library.closePreviewTab')}
+            </button>
+          </header>
+          <p className="form-error">{loadError ?? t('preview.emptyFile')}</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="bulletin-section-ppt-overlay" role="dialog" aria-modal="true">
-      <div className="bulletin-section-ppt-native">
-        <header className="bulletin-section-ppt-native-header">
-          <div>
-            <h2>{t('bulletin.editSlidesSectionTitle', { section: sectionLabel })}</h2>
-            <p className="bulletin-section-ppt-native-intro">{t('bulletin.editSlidesNativeIntro')}</p>
-          </div>
-          <button type="button" className="btn-secondary btn-sm" onClick={onClose}>
-            {t('library.closePreviewTab')}
-          </button>
-        </header>
-
-        {loading && (
-          <div className="preview-empty">
-            <div className="preview-spinner" />
-            <p>{t('preview.converting')}</p>
-          </div>
-        )}
-
-        {loadError && (
-          <div className="preview-empty">
-            <p className="form-error">{loadError}</p>
-          </div>
-        )}
-
-        {!loading && !loadError && sectionFile && (
-          <>
-            <ol className="bulletin-section-ppt-native-steps">
-              <li>{t('bulletin.editSlidesNativeStep1')}</li>
-              <li>{t('bulletin.editSlidesNativeStep2')}</li>
-              <li>{t('bulletin.editSlidesNativeStep3')}</li>
-            </ol>
-
-            <div className="bulletin-section-ppt-native-actions">
-              <button type="button" className="btn-primary" onClick={handleDownload}>
-                {t('bulletin.editSlidesDownload')}
-              </button>
-              <button
-                type="button"
-                className="btn-primary"
-                disabled={uploading}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {uploading ? t('bulletin.editSlidesUploading') : t('bulletin.editSlidesUpload')}
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation"
-                hidden
-                onChange={(e) => {
-                  const files = e.target.files;
-                  e.target.value = '';
-                  void handleUploadPick(files);
-                }}
-              />
-            </div>
-
-            {uploadError && <p className="form-error">{uploadError}</p>}
-
-            <p className="bulletin-section-ppt-native-meta">
-              {t('bulletin.editSlidesNativeMeta', { count: slideCount })}
-            </p>
-
-            <div className="bulletin-section-ppt-native-preview" aria-label={t('bulletin.previewTitle')}>
-              {previewSlides.slice(0, 4).map((slide) => (
-                <BulletinCompositeSlide
-                  key={slide.slidePath || slide.index}
-                  slide={slide}
-                  pptxBlob={sectionFile}
-                  emptyLabel={t('preview.slideNumber', { n: slide.index })}
-                  slideLabel={t('preview.slideNumber', { n: slide.index })}
-                />
-              ))}
-            </div>
-
-            <div className="bulletin-section-ppt-native-secondary">
-              <button type="button" className="btn-secondary btn-sm" onClick={() => setQuickEdit(true)}>
-                {t('bulletin.editSlidesQuickOpen')}
-              </button>
-              <span className="bulletin-section-ppt-native-secondary-hint">
-                {t('bulletin.editSlidesQuickHint')}
-              </span>
-            </div>
-          </>
-        )}
+      <PptEditor
+        title={t('bulletin.editSlidesSectionTitle', { section: sectionLabel })}
+        mergedUrl={previewUrl}
+        onSaveFile={persistSectionFile}
+        onClose={onClose}
+        onDownload={handleDownload}
+        canDownload={!!sectionFile}
+      />
+      <div className="bulletin-section-ppt-native-secondary bulletin-section-ppt-editor-extra">
+        <p className="bulletin-section-ppt-native-secondary-hint">{t('bulletin.editSlidesWebHint')}</p>
+        <button
+          type="button"
+          className="btn-secondary btn-sm"
+          disabled={uploading}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          {uploading ? t('bulletin.editSlidesUploading') : t('bulletin.editSlidesUploadNative')}
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+          hidden
+          onChange={(e) => {
+            const files = e.target.files;
+            e.target.value = '';
+            void handleUploadPick(files);
+          }}
+        />
+        {uploadError && <p className="form-error">{uploadError}</p>}
       </div>
     </div>
   );
