@@ -127,16 +127,21 @@ function scrollTargetIntoDeck(
   opts: { slide: number; sectionId?: string },
   behavior: ScrollBehavior,
 ): boolean {
-  if (opts.sectionId) {
-    const section = root.querySelector<HTMLElement>(`[data-section="${opts.sectionId}"]`);
-    if (section) {
-      section.scrollIntoView({ behavior, block: 'start' });
-      return true;
-    }
-  }
-  const el = root.querySelector<HTMLElement>(`[data-slide="${opts.slide}"]`);
+  const target = opts.sectionId
+    ? root.querySelector<HTMLElement>(`[data-section="${opts.sectionId}"]`)
+    : null;
+  const el =
+    target ?? root.querySelector<HTMLElement>(`[data-slide="${opts.slide}"]`);
   if (!el) return false;
-  el.scrollIntoView({ behavior, block: 'start' });
+
+  // 只在预览列表内滚动，避免 scrollIntoView 把整页/左侧表单顶出视野
+  const delta =
+    el.getBoundingClientRect().top - root.getBoundingClientRect().top + root.scrollTop;
+  if (typeof root.scrollTo === 'function') {
+    root.scrollTo({ top: Math.max(0, delta), behavior });
+  } else {
+    root.scrollTop = Math.max(0, delta);
+  }
   return true;
 }
 

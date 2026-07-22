@@ -6856,8 +6856,8 @@ body.bulletin-slideshow-window {
   min-height: 10rem;
 }
 
-/* 窄屏或矮屏（MacBook Air / 分屏）：改为整页滚动，避免双栏被裁切无法滚动 */
-@media (max-width: 1200px), (max-height: 860px) {
+/* 仅窄屏改为上下堆叠；矮但够宽的 MacBook 等保持左右分栏，各栏内部滚动 */
+@media (max-width: 1100px) {
   .bulletin-page--workspace {
     overflow-x: hidden;
     overflow-y: auto;
@@ -6899,6 +6899,24 @@ body.bulletin-slideshow-window {
   .progress-stepper--vertical .progress-stepper-list {
     flex-direction: row;
     flex-wrap: wrap;
+  }
+}
+
+/* 矮屏但仍够宽：保持双栏，由左右栏各自 overflow 滚动，避免整页堆叠把表单滚出视野 */
+@media (max-height: 860px) and (min-width: 1101px) {
+  .bulletin-page--workspace {
+    overflow: hidden;
+  }
+
+  .bulletin-workspace {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  .bulletin-workspace-editor,
+  .bulletin-workspace-preview {
+    min-height: 0;
   }
 }
 
