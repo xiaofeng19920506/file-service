@@ -81,6 +81,7 @@ export default function PptEditor({
     discardChanges,
     saveChanges,
     currentSlide,
+    sourceFile,
   } = editor;
 
   useEffect(() => {
@@ -397,7 +398,11 @@ export default function PptEditor({
               </div>
             )}
             {!loading && slides.length > 0 && slides[focusIndex] && (
-              <PptCanvasSlide slide={slides[focusIndex]} zoom={zoom} />
+              <PptCanvasSlide
+                slide={slides[focusIndex]}
+                zoom={zoom}
+                pptxBlob={sourceFile}
+              />
             )}
           </main>
         </div>

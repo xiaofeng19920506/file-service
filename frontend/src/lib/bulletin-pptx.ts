@@ -45,3 +45,15 @@ export async function generateBulletinPptx(
 
   return file;
 }
+
+/**
+ * 分区编辑用：只打字段补丁，不删「始终省略」页，便于按模板文件号抽出完整原页。
+ */
+export async function buildPatchedBulletinForSectionExtract(
+  templateBlob: Blob,
+  bulletin: WeeklyBulletin,
+): Promise<File> {
+  const { patches, scriptureBodies } = await patchesFromBulletin(bulletin);
+  const filename = `bulletin-section-source-${bulletin.serviceDate}.pptx`;
+  return applyBulletinPatches(templateBlob, patches, scriptureBodies, filename);
+}

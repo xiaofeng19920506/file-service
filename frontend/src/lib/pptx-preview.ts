@@ -242,16 +242,25 @@ async function mediaPathToUrl(
   return URL.createObjectURL(blob);
 }
 
-/** Extract every embedded image on a slide. */
+/** Extract foreground images on a slide（不含 p:bg 背景图） */
 async function extractSlideImages(
   zip: JSZip,
   slidePath: string,
   xml: string,
 ): Promise<{ url: string; mediaPath: string }[]> {
+  const bgBlock = xml.match(/<p:bg>[\s\S]*?<\/p:bg>/)?.[0] ?? '';
+  const bgEmbeds = new Set<string>();
+  for (const m of bgBlock.matchAll(/r:embed="([^"]+)"/g)) {
+    bgEmbeds.add(m[1]!);
+  }
+
   const rIds: string[] = [];
   const rIdRe = /r:embed="([^"]+)"/g;
   let m: RegExpExecArray | null;
-  while ((m = rIdRe.exec(xml)) !== null) rIds.push(m[1]);
+  while ((m = rIdRe.exec(xml)) !== null) {
+    if (bgEmbeds.has(m[1]!)) continue;
+    rIds.push(m[1]!);
+  }
 
   const results: { url: string; mediaPath: string }[] = [];
   const seen = new Set<string>();
@@ -264,7 +273,7 @@ async function extractSlideImages(
     if (url) results.push({ url, mediaPath });
   }
 
-  if (results.length === 0) {
+  if (results.length === 0 && bgEmbeds.size === 0) {
     for (const mediaPath of await listImageRelTargets(zip, slidePath)) {
       if (seen.has(mediaPath)) continue;
       seen.add(mediaPath);

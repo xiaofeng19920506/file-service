@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { fetchBlobContent, uploadFile } from '../../api/client';
-import { updateBulletin, type WeeklyBulletin } from '../../api/bulletins';
+import { fetchBulletinTemplateFile, updateBulletin, type WeeklyBulletin } from '../../api/bulletins';
 import PptEditor from '../PptEditor/PptEditor';
 import { useI18n } from '../../i18n';
-import { buildBulletinPptxFile } from '../../lib/bulletin-publish';
+import { buildPatchedBulletinForSectionExtract } from '../../lib/bulletin-pptx';
 import { BULLETIN_SECTION_TEMPLATE_SLIDES } from '../../lib/bulletin-section-visibility';
 import { extractSlidesByFileNumbersAsPptx } from '../../lib/pptx-extract-slide';
 import { navSectionById } from '../../lib/bulletin-sections';
@@ -51,14 +51,10 @@ export default function BulletinSectionPptEditor({
         } else {
           const slideNums = BULLETIN_SECTION_TEMPLATE_SLIDES[sectionId];
           if (!slideNums?.length) throw new Error('section_has_no_slides');
-          const forExtract: WeeklyBulletin = {
-            ...snap,
-            sectionPptxOverrides: Object.fromEntries(
-              Object.entries(snap.sectionPptxOverrides ?? {}).filter(([id]) => id !== sectionId),
-            ),
-          };
-          const full = await buildBulletinPptxFile(forExtract);
-          const bytes = await extractSlidesByFileNumbersAsPptx(full, slideNums);
+          // 只打表单补丁、不删省略页，再按模板文件号抽出 — 保证打开的是原版该区页
+          const template = await fetchBulletinTemplateFile();
+          const patched = await buildPatchedBulletinForSectionExtract(template, snap);
+          const bytes = await extractSlidesByFileNumbersAsPptx(patched, slideNums);
           const copy = new Uint8Array(bytes.byteLength);
           copy.set(bytes);
           file = new File([copy.buffer], `section-${sectionId}.pptx`, { type: PPTX_MIME });

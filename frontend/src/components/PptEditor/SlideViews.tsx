@@ -5,6 +5,7 @@ import {
   slideIdentity,
   type EditableSlide,
 } from '../../lib/pptx-preview';
+import BulletinCompositeSlide from '../bulletin/BulletinCompositeSlide';
 
 export function SlideContent({
   slide,
@@ -230,8 +231,16 @@ export function PptSlidesPane({
   );
 }
 
-/** Google Slides / PPT style canvas: slide only, no inputs or image overlays. */
-export function PptCanvasSlide({ slide, zoom = 100 }: { slide: EditableSlide; zoom?: number }) {
+/** Google Slides / PPT style canvas: prefer faithful layer render from PPTX. */
+export function PptCanvasSlide({
+  slide,
+  zoom = 100,
+  pptxBlob = null,
+}: {
+  slide: EditableSlide;
+  zoom?: number;
+  pptxBlob?: Blob | null;
+}) {
   const { t } = useI18n();
   const scale = Math.max(0.5, Math.min(1.5, zoom / 100));
   const hasImages = slide.imageMediaPaths.length > 0;
@@ -241,8 +250,19 @@ export function PptCanvasSlide({ slide, zoom = 100 }: { slide: EditableSlide; zo
       : slide.snippet
         ? slide.snippet.split('\n').filter(Boolean)
         : [];
-  const bgStyle: CSSProperties | undefined =
+  const useComposite = Boolean(pptxBlob && slide.slidePath && !slide.isNew && !slide.pending);
+  const bgOverrideStyle: CSSProperties | undefined =
     slide.backgroundKind === 'solid' && slide.backgroundColor
+      ? { backgroundColor: `#${slide.backgroundColor}` }
+      : slide.backgroundReplacement && slide.backgroundPreviewUrl
+        ? {
+            backgroundImage: `url(${slide.backgroundPreviewUrl})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }
+        : undefined;
+  const bgStyle: CSSProperties | undefined = !useComposite
+    ? slide.backgroundKind === 'solid' && slide.backgroundColor
       ? { backgroundColor: `#${slide.backgroundColor}` }
       : slide.backgroundPreviewUrl
         ? {
@@ -250,13 +270,36 @@ export function PptCanvasSlide({ slide, zoom = 100 }: { slide: EditableSlide; zo
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           }
-        : undefined;
+        : undefined
+    : undefined;
+
+  if (useComposite) {
+    return (
+      <div className="ppt-canvas-slide">
+        <div
+          className={`ppt-slide-frame ppt-slide-frame--composite${slide.pending ? ' pending' : ''}${slide.isNew ? ' is-new' : ''}`}
+          style={{ transform: `scale(${scale})` }}
+          aria-label={t('preview.slideNumber', { n: slide.index })}
+        >
+          <BulletinCompositeSlide
+            slide={slide}
+            pptxBlob={pptxBlob}
+            emptyLabel={t('preview.slideNumber', { n: slide.slideInFile })}
+            large
+          />
+          {bgOverrideStyle ? (
+            <div className="ppt-slide-bg-override" style={bgOverrideStyle} aria-hidden />
+          ) : null}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="ppt-canvas-slide">
       <div
         className={`ppt-slide-frame${slide.pending ? ' pending' : ''}${slide.isNew ? ' is-new' : ''}`}
-        style={{ transform: `scale(${scale})`, ...bgStyle }}
+        style={{ transform: `scale(${scale})`, ...(bgStyle || {}) }}
         aria-label={t('preview.slideNumber', { n: slide.index })}
       >
         {hasImages ? (
@@ -277,8 +320,9 @@ export function PptCanvasSlide({ slide, zoom = 100 }: { slide: EditableSlide; zo
               );
             })}
           </div>
-        ) : slide.textLines.length > 0 || slide.snippet ? (
-          <div className="ppt-slide-frame-text">
+        ) : null}
+        {slide.textLines.length > 0 || slide.snippet ? (
+          <div className={`ppt-slide-frame-text${hasImages ? ' ppt-slide-frame-text--overlay' : ''}`}>
             {slide.textLines.length > 0 ? (
               slide.textLines.map((line, i) => (
                 <p key={i} className={i === 0 ? 'preview-line-title' : 'preview-line-body'}>
@@ -296,13 +340,13 @@ export function PptCanvasSlide({ slide, zoom = 100 }: { slide: EditableSlide; zo
               </>
             )}
           </div>
-        ) : (
+        ) : !hasImages ? (
           <p className="ppt-slide-frame-empty">
             {slide.pending
               ? t('preview.converting')
               : t('preview.slideNumber', { n: slide.slideInFile })}
           </p>
-        )}
+        ) : null}
       </div>
     </div>
   );

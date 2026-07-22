@@ -107,6 +107,40 @@
   outline-offset: -2px;
 }
 
+.ppt-slide-frame--composite {
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ppt-slide-frame--composite .bulletin-slide-preview {
+  width: 100%;
+  margin: 0;
+}
+
+.ppt-slide-frame--composite .bulletin-slide-preview-frame,
+.ppt-slide-frame--composite .bulletin-composite-slide {
+  width: 100%;
+  box-shadow: none;
+}
+
+.ppt-slide-bg-override {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background-size: cover;
+  background-position: center;
+}
+
+.ppt-slide-frame-text--overlay {
+  z-index: 2;
+  background: transparent;
+  justify-content: flex-start;
+  padding-top: 18%;
+}
+
 .ppt-slide-frame-images {
   position: absolute;
   inset: 0;

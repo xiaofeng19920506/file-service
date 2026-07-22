@@ -72,6 +72,7 @@ export function useMergedPptEditor({
   const loadToken = useRef(0);
   const slidesRef = useRef<EditableSlide[]>([]);
   const mergedSourceFileRef = useRef<File | null>(null);
+  const [sourceFile, setSourceFile] = useState<File | null>(null);
 
   const dirty = useMemo(() => !slidesContentEqual(slides, savedSlides), [slides, savedSlides]);
 
@@ -127,6 +128,8 @@ export function useMergedPptEditor({
     if (!mergedUrl) {
       setSlidesSafe([]);
       setSavedSlidesSafe([]);
+      mergedSourceFileRef.current = null;
+      setSourceFile(null);
       setLoading(false);
       return;
     }
@@ -138,15 +141,19 @@ export function useMergedPptEditor({
         const blob = await res.blob();
         const parsed = await parsePptxSlidesDetailed(blob, { sourceFile: 'merged.pptx' });
         if (token !== loadToken.current) return;
-        mergedSourceFileRef.current = new File([blob], 'merged.pptx', {
+        const file = new File([blob], 'merged.pptx', {
           type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
         });
+        mergedSourceFileRef.current = file;
+        setSourceFile(file);
         setSlidesSafe(parsed);
         setSavedSlidesSafe(parsed);
       } catch (e) {
         if (token !== loadToken.current) return;
         setSlidesSafe([]);
         setSavedSlidesSafe([]);
+        mergedSourceFileRef.current = null;
+        setSourceFile(null);
         setSaveError(e instanceof Error ? e.message : 'load_failed');
       } finally {
         if (token === loadToken.current) setLoading(false);
@@ -388,6 +395,7 @@ export function useMergedPptEditor({
         await updateJobOutput(jobId, updatedFile);
       }
       mergedSourceFileRef.current = updatedFile;
+      setSourceFile(updatedFile);
       const parsed = await parsePptxSlidesDetailed(updatedFile, { sourceFile: 'merged.pptx' });
       setSlidesSafe(parsed);
       setSavedSlidesSafe(parsed);
@@ -434,6 +442,7 @@ export function useMergedPptEditor({
     pptDragOverIndex,
     setPptDragOverIndex,
     currentSlide,
+    sourceFile,
     canUndo,
     canRedo,
     canSkip,
