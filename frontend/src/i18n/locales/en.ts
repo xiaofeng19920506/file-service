@@ -213,7 +213,7 @@ const en: MessageTree = {
     previewSectionHiddenHint:
       'This section is hidden, so it has no slides in the preview. Check “Show” on the left — Communion is template slides 10–13; Welcome is slide 14. They are never mixed.',
     sectionVisibleNavHint:
-      'Toggle visibility next to each section, or open “Edit slides” to edit that section’s PowerPoint pages.',
+      'Toggle visibility next to each section, or open “Edit slides” to edit that section in PowerPoint.',
     skipTestimony: 'Skip testimony week slide (16)',
     skipDepartment: 'Skip department reports slide (36)',
     meetingVariant: 'Weekly meeting layout',
@@ -253,11 +253,24 @@ const en: MessageTree = {
     previewStaticPreService: 'PPT page {page} · Chair pre-service prayer',
     sectionReadonlyTitle: 'Fixed template section',
     sectionReadonlyHint:
-      'This section uses fixed template slides. Use “Edit slides” to change pages (including backgrounds); preview is on the right.',
+      'This section uses fixed template slides. Download via “Edit slides”, edit in PowerPoint/Keynote, then upload again.',
     editSlides: 'Edit slides',
     editSlidesShort: 'Edit slides',
     editSlidesSectionTitle: 'Edit section: {section}',
     editSlidesSaved: 'Section slides saved',
+    editSlidesNativeIntro:
+      'A full PowerPoint editor isn’t available in the browser. Download this section, edit it in PowerPoint or Keynote (text, images, backgrounds, layout), save as .pptx, then upload.',
+    editSlidesNativeStep1: 'Click “Download section PPTX” and open it in PowerPoint / Keynote.',
+    editSlidesNativeStep2: 'Edit normally in that app and save (keep .pptx).',
+    editSlidesNativeStep3: 'Come back and click “Upload edited PPTX” — preview and export update immediately.',
+    editSlidesDownload: 'Download section PPTX',
+    editSlidesUpload: 'Upload edited PPTX',
+    editSlidesUploading: 'Uploading…',
+    editSlidesNeedPptx: 'Please upload a .pptx file',
+    editSlidesNativeMeta: '{count} slide(s) in this section (preview below)',
+    editSlidesQuickOpen: 'Quick web adjust (background/images)',
+    editSlidesQuickHint: 'Only for background/image tweaks; use desktop PowerPoint for full edits.',
+    editSlidesQuickTitle: 'Quick adjust: {section}',
     editSlidesTitle: 'Edit section slide text',
     editSlidesHint:
       'Text only — backgrounds and images stay unchanged. Unchanged lines keep the template wording.',
