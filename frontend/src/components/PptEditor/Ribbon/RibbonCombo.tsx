@@ -21,7 +21,7 @@ export default function RibbonCombo({
   renderOption?: (option: string) => React.ReactNode;
   numeric?: boolean;
 }) {
-  const { open, setOpen, wrapRef } = useRibbonPopover();
+  const { open, setOpen, wrapRef, panelRef } = useRibbonPopover();
   const [draft, setDraft] = useState(value);
 
   useEffect(() => {
@@ -76,7 +76,11 @@ export default function RibbonCombo({
         </svg>
       </button>
       {open && (
-        <RibbonPopoverPanel className="ppt-rb-combo-list">
+        <RibbonPopoverPanel
+          className="ppt-rb-combo-list"
+          anchorRef={wrapRef}
+          panelRef={panelRef}
+        >
           {options.map((opt) => (
             <button
               key={opt}

@@ -29,7 +29,7 @@ export default function RibbonSplitButton({
   /** 颜色条（字体颜色/填充色按钮下方色块） */
   swatch?: string | null;
 }) {
-  const { open, setOpen, wrapRef } = useRibbonPopover();
+  const { open, setOpen, wrapRef, panelRef } = useRibbonPopover();
   const close = () => setOpen(false);
 
   return (
@@ -83,7 +83,9 @@ export default function RibbonSplitButton({
         </svg>
       </button>
       {open && (
-        <RibbonPopoverPanel title={menuTitle}>{children(close)}</RibbonPopoverPanel>
+        <RibbonPopoverPanel title={menuTitle} anchorRef={wrapRef} panelRef={panelRef}>
+          {children(close)}
+        </RibbonPopoverPanel>
       )}
     </div>
   );
