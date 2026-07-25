@@ -213,7 +213,10 @@ const en: MessageTree = {
     previewSectionHiddenHint:
       'This section is hidden, so it has no slides in the preview. Check “Show” on the left — Communion is template slides 10–13; Welcome is slide 14. They are never mixed.',
     sectionVisibleNavHint:
-      'Toggle visibility next to each section, or open “Edit slides” to edit that section in PowerPoint.',
+      'Each section has “Edit slides”; you can also open the slide editor above the form to change text, backgrounds, and images in the browser.',
+    editSlidesOpenEditor: 'Open slide editor',
+    editSlidesOpenHint:
+      'Edit this section’s text, backgrounds, and images in the browser like PowerPoint — or download, edit on desktop, and upload again.',
     skipTestimony: 'Skip testimony week slide (16)',
     skipDepartment: 'Skip department reports slide (36)',
     meetingVariant: 'Weekly meeting layout',

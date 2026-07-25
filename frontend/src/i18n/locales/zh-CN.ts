@@ -204,7 +204,9 @@ export default {
     previewSectionHiddenHint:
       '此分区当前已隐藏，因此预览里没有对应页。请在左侧勾选「显示」——例如圣餐是模板第 10–13 页，欢迎新朋友是第 14 页，两者不会混用。',
     sectionVisibleNavHint:
-      '左侧导航每个分区旁可勾选是否显示，也可点「修改幻灯片」用 PowerPoint 编辑该区。',
+      '左侧每个分区旁有「改幻灯片」；当前分区表单上方也可点「打开幻灯片编辑器」在网页内改文字、背景与图片。',
+    editSlidesOpenEditor: '打开幻灯片编辑器',
+    editSlidesOpenHint: '在网页里像 PPT 一样改本区文字、背景与图片；也可下载到本机 PowerPoint 再上传。',
     skipTestimony: '跳过见证周页（第 16 页）',
     skipDepartment: '跳过部门报告页（第 36 页）',
     meetingVariant: '本週聚会版式',
@@ -245,7 +247,7 @@ export default {
     sectionReadonlyHint:
       '此段为 PPT 模板固定内容；点「修改幻灯片」可在网页内编辑文字、背景与图片，也可下载到本机 PowerPoint。',
     editSlides: '修改幻灯片',
-    editSlidesShort: '修改幻灯片',
+    editSlidesShort: '改幻灯片',
     editSlidesSectionTitle: '编辑分区：{section}',
     editSlidesSaved: '分区幻灯片已保存',
     editSlidesNativeIntro:

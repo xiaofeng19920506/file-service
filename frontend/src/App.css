@@ -7757,24 +7757,57 @@ body.bulletin-slideshow-window {
 
 .progress-stepper-edit-slides {
   flex-shrink: 0;
-  padding: 0.2rem 0.4rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
-  color: var(--text);
-  font-size: 0.68rem;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--blue) 35%, var(--border));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--blue) 8%, var(--surface));
+  color: var(--blue, #2563eb);
+  font-size: 0.75rem;
+  font-weight: 600;
   line-height: 1.2;
   cursor: pointer;
   white-space: nowrap;
 }
 
 .progress-stepper-edit-slides:hover:not(:disabled) {
-  background: var(--border-light);
+  background: color-mix(in srgb, var(--blue) 16%, var(--surface));
 }
 
 .progress-stepper-edit-slides:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.bulletin-edit-slides-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.85rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--blue) 28%, var(--border-light));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--blue) 6%, var(--surface));
+}
+
+.bulletin-edit-slides-banner-btn {
+  width: 100%;
+  justify-content: center;
+}
+
+.bulletin-edit-slides-banner-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.bulletin-section-readonly {
+  padding: 0.25rem 0.15rem 0.5rem;
+}
+
+.bulletin-section-readonly h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
 }
 
 .progress-stepper-item.is-readonly .progress-stepper-btn {
@@ -7785,15 +7818,6 @@ body.bulletin-slideshow-window {
   background: transparent;
   border: 1px dashed var(--border-light);
   font-size: 0.7rem;
-}
-
-.bulletin-section-readonly {
-  padding: 0.25rem 0.15rem 0.5rem;
-}
-
-.bulletin-section-readonly h3 {
-  margin: 0 0 0.5rem;
-  font-size: 1.05rem;
 }
 
 .progress-stepper-item {

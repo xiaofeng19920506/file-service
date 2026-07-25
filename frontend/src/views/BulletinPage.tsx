@@ -32,6 +32,7 @@ import {
   isBulletinSectionVisible,
   resolveHiddenSections,
   setBulletinSectionVisible,
+  BULLETIN_SECTION_TEMPLATE_SLIDES,
 } from '../lib/bulletin-section-visibility';
 import { withTemplateFieldDefaults } from '../lib/bulletin-template-field-defaults';
 import {
@@ -738,7 +739,24 @@ export default function BulletinPage() {
                   selectNavSection(section.id);
                 }}
               />
-              <div className="bulletin-step-panel">{renderStepPanel()}</div>
+              <div className="bulletin-step-panel">
+                {canManage &&
+                (BULLETIN_SECTION_TEMPLATE_SLIDES[activeSectionId]?.length ?? 0) > 0 ? (
+                  <div className="bulletin-edit-slides-banner">
+                    <button
+                      type="button"
+                      className="btn-primary bulletin-edit-slides-banner-btn"
+                      onClick={() => setEditSlidesSectionId(activeSectionId)}
+                    >
+                      {t('bulletin.editSlidesOpenEditor')}
+                    </button>
+                    <p className="bulletin-edit-slides-banner-hint">
+                      {t('bulletin.editSlidesOpenHint')}
+                    </p>
+                  </div>
+                ) : null}
+                {renderStepPanel()}
+              </div>
             </div>
 
             {editSlidesSectionId ? (
