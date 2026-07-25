@@ -1,4 +1,4 @@
-import JSZip from 'jszip';
+import JSZip, { type JSZipInstance } from './jszip';
 
 const PPTX_MIME =
   'application/vnd.openxmlformats-officedocument.presentationml.presentation';
@@ -29,7 +29,7 @@ function mimeExt(blob: Blob): string {
   return 'png';
 }
 
-function nextMediaPath(zip: JSZip, ext: string): string {
+function nextMediaPath(zip: JSZipInstance, ext: string): string {
   const existing = Object.keys(zip.files)
     .filter((n) => n.startsWith('ppt/media/'))
     .map((n) => n.replace(/^ppt\/media\//, ''));
@@ -54,7 +54,7 @@ function nextShapeId(slideXml: string): number {
   return max + 1;
 }
 
-async function loadSlideSize(zip: JSZip): Promise<{ cx: number; cy: number }> {
+async function loadSlideSize(zip: JSZipInstance): Promise<{ cx: number; cy: number }> {
   const entry = zip.file('ppt/presentation.xml');
   if (!entry) return { ...DEFAULT_SLIDE_EMU };
   const xml = await entry.async('string');
@@ -169,7 +169,7 @@ async function withSlideMutation(
   file: Blob,
   slidePath: string,
   mutate: (args: {
-    zip: JSZip;
+    zip: JSZipInstance;
     slideXml: string;
     relsXml: string;
     slideSize: { cx: number; cy: number };

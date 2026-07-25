@@ -10,7 +10,7 @@ import {
   parsePptxSlidesDetailed,
 } from './pptx-preview';
 import { expandScriptureSlidesInPptx } from './bulletin-scripture-pptx-expand';
-import JSZip from 'jszip';
+import JSZip from './jszip';
 
 /** 原版模板文件名（`06_14_2026.pptx`，背景与图片均以此为准） */
 export const BULLETIN_TEMPLATE_FILENAME = '06_14_2026.pptx';

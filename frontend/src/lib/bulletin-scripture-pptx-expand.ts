@@ -1,4 +1,4 @@
-import JSZip from 'jszip';
+import JSZip from './jszip';
 import type { ScriptureSlideBodies } from '../api/bulletins';
 import {
   patchChineseScriptureBodyInSlideXml,

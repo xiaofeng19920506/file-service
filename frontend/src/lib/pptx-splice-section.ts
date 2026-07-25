@@ -1,4 +1,4 @@
-import JSZip from 'jszip';
+import JSZip, { type JSZipInstance } from './jszip';
 import { listPptxSlidesInPresentationOrder } from './pptx-preview';
 
 type PptxBytes = ArrayBuffer | Uint8Array | Blob;
@@ -7,7 +7,7 @@ function slideNumber(path: string): number {
   return Number.parseInt(path.match(/slide(\d+)\.xml$/)?.[1] ?? '0', 10);
 }
 
-function nextMediaName(zip: JSZip, ext: string): string {
+function nextMediaName(zip: JSZipInstance, ext: string): string {
   const existing = Object.keys(zip.files)
     .filter((n) => n.startsWith('ppt/media/'))
     .map((n) => n.replace(/^ppt\/media\//, ''));

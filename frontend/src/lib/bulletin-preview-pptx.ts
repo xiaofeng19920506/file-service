@@ -1,4 +1,4 @@
-import JSZip from 'jszip';
+import JSZip from './jszip';
 import type { ScriptureSlideBodies, WeeklyBulletin } from '../api/bulletins';
 import { applyScripturePagesToZip } from './bulletin-scripture-pptx-zip';
 import {

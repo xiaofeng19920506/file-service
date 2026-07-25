@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import JSZip from 'jszip';
+import JSZip from '../../lib/jszip';
 import {
   autoFitScale,
   DEFAULT_SLIDE_SIZE,

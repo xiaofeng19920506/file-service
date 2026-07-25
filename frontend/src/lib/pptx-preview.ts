@@ -1,4 +1,4 @@
-import JSZip from 'jszip';
+import JSZip, { type JSZipInstance, type JSZipObject } from './jszip';
 import { applyShapeTextToSlideXml, shapeTextOverrideEquals, type ShapeTextOverrideValue } from './pptx-shape-text';
 
 export type SlideBackgroundKind = 'image' | 'solid' | 'none';
@@ -179,7 +179,7 @@ function resolveRelativePath(baseDir: string, target: string): string {
 }
 
 async function blobFromMediaEntry(
-  entry: JSZip.JSZipObject,
+  entry: JSZipObject,
   mediaPath: string,
 ): Promise<Blob | null> {
   const raw = await entry.async('blob');
@@ -191,7 +191,7 @@ async function blobFromMediaEntry(
 }
 
 async function resolveMediaPath(
-  zip: JSZip,
+  zip: JSZipInstance,
   slidePath: string,
   rId: string,
 ): Promise<string | null> {
@@ -211,7 +211,7 @@ async function resolveMediaPath(
 }
 
 async function listImageRelTargets(
-  zip: JSZip,
+  zip: JSZipInstance,
   slidePath: string,
 ): Promise<string[]> {
   const relsPath = slidePath
@@ -232,7 +232,7 @@ async function listImageRelTargets(
 }
 
 async function mediaPathToUrl(
-  zip: JSZip,
+  zip: JSZipInstance,
   mediaPath: string,
   seen: Set<string>,
 ): Promise<string | null> {
@@ -247,7 +247,7 @@ async function mediaPathToUrl(
 
 /** Extract foreground images on a slide（不含 p:bg 背景图） */
 async function extractSlideImages(
-  zip: JSZip,
+  zip: JSZipInstance,
   slidePath: string,
   xml: string,
 ): Promise<{ url: string; mediaPath: string }[]> {
@@ -374,7 +374,7 @@ export async function resolvePreviewBlob(
 }
 
 async function extractSlideBackground(
-  zip: JSZip,
+  zip: JSZipInstance,
   slidePath: string,
   xml: string,
 ): Promise<{
@@ -698,7 +698,7 @@ function mimeExt(blob: Blob): string {
   return 'png';
 }
 
-function nextMediaPath(zip: JSZip, ext: string): string {
+function nextMediaPath(zip: JSZipInstance, ext: string): string {
   const existing = Object.keys(zip.files)
     .filter((n) => n.startsWith('ppt/media/'))
     .map((n) => n.replace(/^ppt\/media\//, ''));
@@ -850,13 +850,13 @@ export async function applyShapeTextEditsToPptx(
   return new File([out], filename, { type: PPTX_MIME });
 }
 
-function listSlidePaths(zip: JSZip): string[] {
+function listSlidePaths(zip: JSZipInstance): string[] {
   return Object.keys(zip.files)
     .filter((n) => /^ppt\/slides\/slide\d+\.xml$/.test(n))
     .sort((a, b) => slideNumber(a) - slideNumber(b));
 }
 
-function nextSlidePath(zip: JSZip): string {
+function nextSlidePath(zip: JSZipInstance): string {
   const nums = listSlidePaths(zip).map(slideNumber);
   const next = nums.length ? Math.max(...nums) + 1 : 1;
   return `ppt/slides/slide${next}.xml`;
@@ -874,7 +874,7 @@ function nextSldId(presentationXml: string): number {
   return (ids.length ? Math.max(...ids) : 255) + 1;
 }
 
-function readPresentationParts(zip: JSZip) {
+function readPresentationParts(zip: JSZipInstance) {
   const presPath = 'ppt/presentation.xml';
   const relsPath = 'ppt/_rels/presentation.xml.rels';
   const presEntry = zip.file(presPath);
@@ -898,7 +898,7 @@ function removeContentTypeEntry(xml: string, norm: string): string {
   );
 }
 
-async function removeContentTypeAsync(zip: JSZip, partPath: string) {
+async function removeContentTypeAsync(zip: JSZipInstance, partPath: string) {
   const ctPath = '[Content_Types].xml';
   const entry = zip.file(ctPath);
   if (!entry) return;
@@ -908,7 +908,7 @@ async function removeContentTypeAsync(zip: JSZip, partPath: string) {
   zip.file(ctPath, xml);
 }
 
-async function addContentTypeAsync(zip: JSZip, partPath: string) {
+async function addContentTypeAsync(zip: JSZipInstance, partPath: string) {
   const ctPath = '[Content_Types].xml';
   const entry = zip.file(ctPath);
   if (!entry) return;

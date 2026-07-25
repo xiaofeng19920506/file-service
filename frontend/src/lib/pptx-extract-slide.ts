@@ -1,4 +1,4 @@
-import JSZip from 'jszip';
+import JSZip from './jszip';
 import { removeSlidesFromPptxZip } from './pptx-duplicate-slide';
 import { listPptxSlidesInPresentationOrder } from './pptx-preview';
 
