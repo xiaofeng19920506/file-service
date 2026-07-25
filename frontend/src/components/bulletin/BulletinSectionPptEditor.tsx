@@ -37,7 +37,6 @@ export default function BulletinSectionPptEditor({
   onSaved,
 }: Props) {
   const { t } = useI18n();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const draftSnapRef = useRef(draft);
   draftSnapRef.current = draft;
 
@@ -45,8 +44,6 @@ export default function BulletinSectionPptEditor({
   const [sectionFile, setSectionFile] = useState<File | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const sectionMeta = navSectionById(sectionId);
   const sectionLabel = sectionMeta ? t(sectionMeta.labelKey) : sectionId;
@@ -76,7 +73,6 @@ export default function BulletinSectionPptEditor({
     void (async () => {
       setLoading(true);
       setLoadError(null);
-      setUploadError(null);
       try {
         const file = await loadSectionFile();
         if (cancelled) return;
@@ -101,50 +97,25 @@ export default function BulletinSectionPptEditor({
   }, [loadSectionFile, sectionId]);
 
   const persistSectionFile = async (file: File) => {
-    setUploading(true);
-    setUploadError(null);
-    try {
-      const named = new File([file], downloadName, { type: PPTX_MIME });
-      const uploaded = await uploadFile(named, {
-        title: `周报分区 ${sectionLabel} ${draft.serviceDate}`,
-        notes: `bulletin section pptx ${draft.id} ${sectionId}`,
-      });
-      const nextOverrides = {
-        ...(draft.sectionPptxOverrides ?? {}),
-        [sectionId]: uploaded.blobId,
-      };
-      const updated = await updateBulletin(draft.id, { sectionPptxOverrides: nextOverrides });
-      onSaved({
-        ...updated,
-        sectionPptxOverrides: updated.sectionPptxOverrides ?? nextOverrides,
-      });
-    } catch (e) {
-      setUploadError(e instanceof Error ? e.message : 'upload_failed');
-      throw e;
-    } finally {
-      setUploading(false);
-    }
+    const named = new File([file], downloadName, { type: PPTX_MIME });
+    const uploaded = await uploadFile(named, {
+      title: `周报分区 ${sectionLabel} ${draft.serviceDate}`,
+      notes: `bulletin section pptx ${draft.id} ${sectionId}`,
+    });
+    const nextOverrides = {
+      ...(draft.sectionPptxOverrides ?? {}),
+      [sectionId]: uploaded.blobId,
+    };
+    const updated = await updateBulletin(draft.id, { sectionPptxOverrides: nextOverrides });
+    onSaved({
+      ...updated,
+      sectionPptxOverrides: updated.sectionPptxOverrides ?? nextOverrides,
+    });
   };
 
   const handleDownload = () => {
     if (!sectionFile) return;
     triggerDownload(new File([sectionFile], downloadName, { type: PPTX_MIME }));
-  };
-
-  const handleUploadPick = async (list: FileList | null) => {
-    const picked = list?.[0];
-    if (!picked) return;
-    const name = picked.name.toLowerCase();
-    if (!name.endsWith('.pptx')) {
-      setUploadError(t('bulletin.editSlidesNeedPptx'));
-      return;
-    }
-    try {
-      await persistSectionFile(picked);
-      onClose();
-    } catch {
-      /* uploadError already set */
-    }
   };
 
   if (loading) {
@@ -184,29 +155,6 @@ export default function BulletinSectionPptEditor({
         onDownload={handleDownload}
         canDownload={!!sectionFile}
       />
-      <div className="bulletin-section-ppt-native-secondary bulletin-section-ppt-editor-extra">
-        <p className="bulletin-section-ppt-native-secondary-hint">{t('bulletin.editSlidesWebHint')}</p>
-        <button
-          type="button"
-          className="btn-secondary btn-sm"
-          disabled={uploading}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          {uploading ? t('bulletin.editSlidesUploading') : t('bulletin.editSlidesUploadNative')}
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation"
-          hidden
-          onChange={(e) => {
-            const files = e.target.files;
-            e.target.value = '';
-            void handleUploadPick(files);
-          }}
-        />
-        {uploadError && <p className="form-error">{uploadError}</p>}
-      </div>
     </div>
   );
 }

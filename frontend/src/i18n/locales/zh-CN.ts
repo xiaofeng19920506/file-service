@@ -824,6 +824,8 @@ export default {
     saved: '已保存',
     moveUp: '上移',
     moveDown: '下移',
+    insertText: '插入文字',
+    insertImage: '插入图片',
     replaceImage: '替换图片',
     cropImage: '裁剪图片',
     replaceBackground: '更换背景图',
@@ -834,6 +836,7 @@ export default {
     shortcutUndo: '撤销 (⌘Z)',
     shortcutRedo: '重做 (⇧⌘Z)',
     keyboardHint: '点击文字框编辑 · ↑↓ 切换页面 · Delete 跳过 · 拖拽左侧缩略图排序',
+    canvasHint: '点击文字框改字 · 工具栏可插入文字/图片 · 保存后写回周报',
   },
   status: {
     queued: '正在准备…',

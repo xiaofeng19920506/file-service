@@ -851,6 +851,9 @@ const en: MessageTree = {
     shortcutUndo: 'Undo (⌘Z)',
     shortcutRedo: 'Redo (⇧⌘Z)',
     keyboardHint: 'Click text boxes to edit · ↑↓ switch slides · Delete skip · drag thumbnails to reorder',
+    canvasHint: 'Click a text box to edit · use the toolbar to insert text/images · Save writes back to the bulletin',
+    insertText: 'Insert text',
+    insertImage: 'Insert image',
   },
   status: {
     queued: 'Preparing…',

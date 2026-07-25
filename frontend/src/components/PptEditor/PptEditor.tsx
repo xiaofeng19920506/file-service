@@ -31,6 +31,7 @@ export default function PptEditor({
   const { t } = useI18n();
   const [zoom, setZoom] = useState(100);
   const imageReplaceInputRef = useRef<HTMLInputElement>(null);
+  const imageInsertInputRef = useRef<HTMLInputElement>(null);
   const backgroundReplaceInputRef = useRef<HTMLInputElement>(null);
   const editor = useMergedPptEditor({ mergedUrl, jobId, onSaveFile, onSaved });
   const {
@@ -42,7 +43,6 @@ export default function PptEditor({
     focusIndex,
     setFocusIndex,
     batchMode,
-    setBatchMode,
     selectedSlideIds,
     cropTarget,
     setCropTarget,
@@ -58,10 +58,10 @@ export default function PptEditor({
     canDuplicate,
     canMoveUp,
     canMoveDown,
+    canEditCanvas,
     canEditImages,
     canEditBackground,
     firstImageUrl,
-    backgroundPreviewUrl,
     undo,
     redo,
     reorderSlideAt,
@@ -71,14 +71,13 @@ export default function PptEditor({
     requestBatchSkip,
     performBatchSkip,
     toggleSlideSelect,
-    selectAllSlides,
-    clearSlideSelection,
     setSlideImageReplacement,
     setSlideBackgroundImage,
     setSlideBackgroundColor,
     setShapeTextOverride,
+    insertTextBox,
+    insertPicture,
     openCrop,
-    openBackgroundCrop,
     discardChanges,
     saveChanges,
     currentSlide,
@@ -180,78 +179,23 @@ export default function PptEditor({
             </button>
           </div>
           <div className="ppt-ribbon-sep" aria-hidden />
-          <div className="ppt-ribbon-group">
+          <div className="ppt-ribbon-group ppt-ribbon-group--insert">
             <button
               type="button"
-              className="ppt-ribbon-btn"
-              disabled={!canMoveUp}
-              onClick={() => reorderSlideAt(focusIndex, focusIndex - 1)}
+              className="ppt-ribbon-btn ppt-ribbon-btn-accent"
+              disabled={!canEditCanvas}
+              onClick={() => void insertTextBox()}
             >
-              {t('ppt.moveUp')}
+              {t('ppt.insertText')}
             </button>
             <button
               type="button"
-              className="ppt-ribbon-btn"
-              disabled={!canMoveDown}
-              onClick={() => reorderSlideAt(focusIndex, focusIndex + 1)}
+              className="ppt-ribbon-btn ppt-ribbon-btn-accent"
+              disabled={!canEditCanvas}
+              onClick={() => imageInsertInputRef.current?.click()}
             >
-              {t('ppt.moveDown')}
+              {t('ppt.insertImage')}
             </button>
-          </div>
-          <div className="ppt-ribbon-sep" aria-hidden />
-          <div className="ppt-ribbon-group">
-            <button
-              type="button"
-              className="ppt-ribbon-btn"
-              disabled={!canSkip}
-              onClick={() => requestSkipSlide(focusIndex)}
-            >
-              {t('ppt.skipSlide')}
-            </button>
-            <button
-              type="button"
-              className="ppt-ribbon-btn"
-              disabled={!canDuplicate}
-              onClick={() => addSlideAfter(focusIndex, false)}
-            >
-              {t('ppt.duplicateSlide')}
-            </button>
-            <button
-              type="button"
-              className="ppt-ribbon-btn"
-              disabled={!canDuplicate}
-              onClick={() => addSlideAfter(focusIndex, true)}
-            >
-              {t('ppt.blankSlide')}
-            </button>
-          </div>
-          <div className="ppt-ribbon-sep" aria-hidden />
-          <div className="ppt-ribbon-group">
-            <button
-              type="button"
-              className={`ppt-ribbon-btn${batchMode ? ' active' : ''}`}
-              onClick={() => {
-                setBatchMode((v) => !v);
-                clearSlideSelection();
-              }}
-            >
-              {batchMode ? t('preview.batchExit') : t('preview.batch')}
-            </button>
-            {batchMode && (
-              <>
-                <button type="button" className="ppt-ribbon-btn" onClick={selectAllSlides}>
-                  {t('preview.selectAll')}
-                </button>
-                <button
-                  type="button"
-                  className="ppt-ribbon-btn ppt-ribbon-btn-danger"
-                  disabled={selectedSlideIds.size === 0}
-                  onClick={requestBatchSkip}
-                >
-                  {t('preview.skipSelected', { count: selectedSlideIds.size })}
-                </button>
-              </>
-            )}
           </div>
           <div className="ppt-ribbon-sep" aria-hidden />
           <div className="ppt-ribbon-group">
@@ -282,16 +226,6 @@ export default function PptEditor({
             >
               {t('ppt.replaceBackground')}
             </button>
-            <button
-              type="button"
-              className="ppt-ribbon-btn"
-              disabled={!backgroundPreviewUrl}
-              onClick={() =>
-                backgroundPreviewUrl && openBackgroundCrop(focusIndex, backgroundPreviewUrl)
-              }
-            >
-              {t('ppt.cropBackground')}
-            </button>
             <label
               className={`ppt-ribbon-btn ppt-bg-color-btn${!canEditBackground ? ' is-disabled' : ''}`}
               title={t('ppt.backgroundColor')}
@@ -304,6 +238,41 @@ export default function PptEditor({
                 onChange={(e) => setSlideBackgroundColor(focusIndex, e.target.value)}
               />
             </label>
+          </div>
+          <div className="ppt-ribbon-sep" aria-hidden />
+          <div className="ppt-ribbon-group">
+            <button
+              type="button"
+              className="ppt-ribbon-btn"
+              disabled={!canDuplicate}
+              onClick={() => addSlideAfter(focusIndex, false)}
+            >
+              {t('ppt.duplicateSlide')}
+            </button>
+            <button
+              type="button"
+              className="ppt-ribbon-btn"
+              disabled={!canSkip}
+              onClick={() => requestSkipSlide(focusIndex)}
+            >
+              {t('ppt.skipSlide')}
+            </button>
+            <button
+              type="button"
+              className="ppt-ribbon-btn"
+              disabled={!canMoveUp}
+              onClick={() => reorderSlideAt(focusIndex, focusIndex - 1)}
+            >
+              {t('ppt.moveUp')}
+            </button>
+            <button
+              type="button"
+              className="ppt-ribbon-btn"
+              disabled={!canMoveDown}
+              onClick={() => reorderSlideAt(focusIndex, focusIndex + 1)}
+            >
+              {t('ppt.moveDown')}
+            </button>
           </div>
           <div className="ppt-ribbon-spacer" />
           <div className="ppt-ribbon-group">
@@ -341,6 +310,18 @@ export default function PptEditor({
           </div>
         </div>
 
+        <input
+          ref={imageInsertInputRef}
+          type="file"
+          accept="image/*"
+          hidden
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (!file) return;
+            void insertPicture(file);
+          }}
+        />
         <input
           ref={imageReplaceInputRef}
           type="file"
@@ -418,7 +399,7 @@ export default function PptEditor({
               ? t('preview.slideCounter', { current: focusIndex + 1, total: slides.length })
               : '—'}
           </span>
-          <span className="ppt-status-hint">{t('ppt.keyboardHint')}</span>
+          <span className="ppt-status-hint">{t('ppt.canvasHint')}</span>
           <span className={dirty ? 'ppt-status-unsaved' : undefined}>
             {dirty ? t('files.unsaved') : t('ppt.saved')}
           </span>

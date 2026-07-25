@@ -3385,6 +3385,21 @@
   background: color-mix(in srgb, var(--blue) 10%, transparent);
 }
 
+.ppt-ribbon-btn-accent {
+  background: color-mix(in srgb, var(--blue) 12%, var(--surface));
+  border-color: color-mix(in srgb, var(--blue) 40%, var(--border));
+  color: var(--blue, #2563eb);
+  font-weight: 600;
+}
+
+.ppt-ribbon-btn-accent:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--blue) 20%, var(--surface));
+}
+
+.ppt-ribbon-group--insert {
+  gap: 0.35rem;
+}
+
 .ppt-ribbon-btn.active {
   background: color-mix(in srgb, var(--blue) 12%, transparent);
   color: var(--blue);
