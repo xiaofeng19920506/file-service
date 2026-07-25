@@ -5,6 +5,7 @@ import {
   type WeeklyBulletin,
 } from '../api/bulletins';
 import { generateBulletinPptx } from './bulletin-pptx';
+import { pptxSlidesAreWellFormed } from './pptx-integrity';
 
 export function bulletinPptxTitle(serviceDate: string): string {
   return `周报 ${serviceDate}`;
@@ -16,7 +17,13 @@ async function loadSectionPptxBlobs(
   const out: Record<string, Blob> = {};
   for (const [sectionId, blobId] of Object.entries(overrides ?? {})) {
     if (!sectionId || !blobId) continue;
-    out[sectionId] = await fetchBlobContent(blobId);
+    const blob = await fetchBlobContent(blobId);
+    // 结构损坏的分区文件会让整份周报出现空白页，宁可退回模板生成的原始分区
+    if (!(await pptxSlidesAreWellFormed(blob))) {
+      console.warn(`bulletin section pptx ${sectionId} (${blobId}) is malformed, using template`);
+      continue;
+    }
+    out[sectionId] = blob;
   }
   return out;
 }

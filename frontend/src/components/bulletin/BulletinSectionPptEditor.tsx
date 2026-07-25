@@ -7,6 +7,7 @@ import { buildPatchedBulletinForSectionExtract } from '../../lib/bulletin-pptx';
 import { BULLETIN_SECTION_TEMPLATE_SLIDES } from '../../lib/bulletin-section-visibility';
 import { extractSlidesByFileNumbersAsPptx } from '../../lib/pptx-extract-slide';
 import { navSectionById } from '../../lib/bulletin-sections';
+import { pptxSlidesAreWellFormed } from '../../lib/pptx-integrity';
 
 const PPTX_MIME =
   'application/vnd.openxmlformats-officedocument.presentationml.presentation';
@@ -54,7 +55,12 @@ export default function BulletinSectionPptEditor({
     const existingBlobId = snap.sectionPptxOverrides?.[sectionId];
     if (existingBlobId) {
       const blob = await fetchBlobContent(existingBlobId);
-      return new File([blob], downloadName, { type: PPTX_MIME });
+      // 早期版本的文本回写会写出坏 XML（整页空白、文字残缺）。这种存档没有价值，
+      // 直接按当前 draft 重新生成，用户下次保存即覆盖。
+      if (await pptxSlidesAreWellFormed(blob)) {
+        return new File([blob], downloadName, { type: PPTX_MIME });
+      }
+      console.warn(`section pptx override ${existingBlobId} is malformed, rebuilding from draft`);
     }
     const slideNums = BULLETIN_SECTION_TEMPLATE_SLIDES[sectionId];
     if (!slideNums?.length) throw new Error('section_has_no_slides');

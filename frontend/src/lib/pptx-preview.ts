@@ -162,6 +162,15 @@ function mimeFromPath(path: string): string {
   return 'image/jpeg';
 }
 
+/**
+ * 匹配文本节点 `<a:t>`。标签名后必须是空白或 `>`，否则 `<p:txBody>` 会被当成
+ * 前缀 `p:t` + 属性 `xBody`，替换时整段 txBody 结构会被吃掉。闭合标签用反向
+ * 引用，保证前缀一致。
+ */
+function textNodeRegex(): RegExp {
+  return /<((?:[\w-]+:)?t)((?:\s[^>]*)?)>([\s\S]*?)<\/\1>/g;
+}
+
 /** Extract all visible text runs from slide XML. */
 export function extractTexts(xml: string): string[] {
   const texts: string[] = [];
@@ -293,15 +302,15 @@ async function extractSlideImages(
   return results;
 }
 
-function applyTextsToSlideXml(xml: string, title: string, snippet: string): string {
+export function applyTextsToSlideXml(xml: string, title: string, snippet: string): string {
   const snippetParts = snippet
     ? snippet.split(/\n| · /).map((s) => s.trim()).filter(Boolean)
     : [];
   const replacements = [title, ...snippetParts];
   let idx = 0;
   return xml.replace(
-    /<((?:[\w-]+:)?t)([^>]*)>([\s\S]*?)<\/(?:[\w-]+:)?t>/g,
-    (full, tag, attrs, content) => {
+    textNodeRegex(),
+    (full: string, tag: string, attrs: string, content: string) => {
       if (!content.trim()) return full;
       const next = replacements[idx] ?? content;
       idx++;
@@ -948,10 +957,10 @@ async function addContentTypeAsync(zip: JSZipInstance, partPath: string) {
   zip.file(ctPath, xml);
 }
 
-function clearSlideTexts(xml: string): string {
+export function clearSlideTexts(xml: string): string {
   return xml.replace(
-    /<((?:[\w-]+:)?t)([^>]*)>([\s\S]*?)<\/(?:[\w-]+:)?t>/g,
-    (full, tag, attrs, content) => {
+    textNodeRegex(),
+    (full: string, tag: string, attrs: string, content: string) => {
       if (!content.trim()) return full;
       return `<${tag}${attrs}></${tag}>`;
     },
@@ -1164,13 +1173,22 @@ export async function applySlideEditsToPptx(
   working = await deleteSlidesFromPptx(working, deletePaths);
   working = await reorderSlidesInPptx(working, orderedPaths);
 
-  const textSlides = target.map((s) => ({
-    slidePath: resolvePath(s),
-    title: s.title,
-    snippet: s.snippet,
-    editable: s.editable || s.blank,
-    blank: s.blank,
-  })).filter((s) => s.slidePath && (s.editable || s.blank));
+  // 只有标题/正文真的被改过才走「按文本节点顺序重写」的旧覆盖模型：它会丢弃
+  // 超出 title+snippet 数量的文本节点与逐 run 样式，未改动的页面必须原样保留。
+  const baselineByIdentity = new Map(baseline.map((s) => [slideIdentity(s), s]));
+  const textSlides = target
+    .filter((s) => {
+      if (s.blank) return true;
+      if (!s.editable) return false;
+      const base = baselineByIdentity.get(slideIdentity(s));
+      return !base || base.title !== s.title || base.snippet !== s.snippet;
+    })
+    .map((s) => ({
+      slidePath: resolvePath(s),
+      title: s.title,
+      snippet: s.snippet,
+    }))
+    .filter((s) => !!s.slidePath);
 
   if (textSlides.length) {
     working = await applySlidesToPptx(working, textSlides, file.name);

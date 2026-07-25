@@ -316,6 +316,7 @@ export default function PptEditor({
             selectedIds={selectedSlideIds}
             dragIndex={pptDragIndex}
             dragOverIndex={pptDragOverIndex}
+            pptxBlob={sourceFile}
             onSelect={setFocusIndex}
             onToggleSelect={toggleSlideSelect}
             onDragStart={setPptDragIndex}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import JSZip from '../../lib/jszip';
+import { loadPptxZipCached } from '../../lib/pptx-zip-cache';
 import {
   autoFitScale,
   DEFAULT_SLIDE_SIZE,
@@ -146,9 +146,17 @@ function footerShiftDown(layers: SlideVisualLayer[]): number {
   return bottom >= 99 ? 0 : 100 - bottom;
 }
 
-function layerZIndex(kind: SlideVisualLayer['kind'], role: ShapeRole): number {
+/**
+ * 同一层级内按 spTree 文档顺序叠放（PPT 语义：后写的盖前面的）。页脚色块与页脚
+ * 图标同属一层，只有加上文档序号才不会把图标压在色块下面。
+ */
+function layerZIndex(kind: SlideVisualLayer['kind'], role: ShapeRole, docIndex: number): number {
+  return layerZIndexBase(kind, role) * 100 + docIndex;
+}
+
+function layerZIndexBase(kind: SlideVisualLayer['kind'], role: ShapeRole): number {
   if (kind === 'background') return 0;
-  if (kind === 'image') return 14;
+  if (kind === 'image') return 16;
   switch (role) {
     case 'header':
       return 10;
@@ -167,11 +175,12 @@ function shapePaddingStyle(
   padding: Extract<SlideVisualLayer, { kind: 'shape' }>['paddingPct'],
 ): CSSProperties | undefined {
   if (!padding) return undefined;
+  // 百分比按包含块（幻灯片）宽度解析，四边都用同一基准
   return {
-    paddingTop: `${padding.top.toFixed(2)}cqh`,
-    paddingRight: `${padding.right.toFixed(2)}cqw`,
-    paddingBottom: `${padding.bottom.toFixed(2)}cqh`,
-    paddingLeft: `${padding.left.toFixed(2)}cqw`,
+    paddingTop: `${padding.top.toFixed(3)}%`,
+    paddingRight: `${padding.right.toFixed(3)}%`,
+    paddingBottom: `${padding.bottom.toFixed(3)}%`,
+    paddingLeft: `${padding.left.toFixed(3)}%`,
   };
 }
 
@@ -367,7 +376,7 @@ export default function BulletinCompositeSlide({
     setEditingShape(null);
     void (async () => {
       try {
-        const zip = await JSZip.loadAsync(pptxBlob);
+        const zip = await loadPptxZipCached(pptxBlob);
         let xml = slideXml;
         if (!xml) {
           const entry = zip.file(slide.slidePath);
@@ -529,7 +538,7 @@ export default function BulletinCompositeSlide({
       >
         {layers.map((layer, i) => {
           const role = layer.kind === 'shape' ? shapeRole(layer) : 'default';
-          const stackStyle = { zIndex: layerZIndex(layer.kind, role) };
+          const stackStyle = { zIndex: layerZIndex(layer.kind, role, i) };
           const box = boxFor(i);
 
           if (layer.kind === 'background') {
@@ -648,7 +657,7 @@ export default function BulletinCompositeSlide({
                 backgroundColor: layer.fill,
                 border: layer.line ? `1px solid ${layer.line}` : undefined,
                 ...shapePaddingStyle(layer.paddingPct),
-                zIndex: isEditing || isSelected ? 40 : stackStyle.zIndex,
+                zIndex: isEditing || isSelected ? 4000 : stackStyle.zIndex,
               }}
               onPointerDown={
                 canPickElements && !isEditing

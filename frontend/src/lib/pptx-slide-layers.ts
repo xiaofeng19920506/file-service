@@ -123,14 +123,22 @@ function extractShapeBoxEmu(chunk: string): {
   heightEmu: number;
 } | null {
   const spPr = chunk.match(/<p:spPr>([\s\S]*?)<\/p:spPr>/)?.[1] ?? chunk;
-  const off = spPr.match(/<a:off x="(\d+)" y="(\d+)"/);
-  const ext = spPr.match(/<a:ext cx="(\d+)" cy="(\d+)"/);
+  // 属性顺序不固定，且拖到画布外时 x/y 可以是负数
+  const off = spPr.match(/<a:off\s[^>]*\/>/)?.[0];
+  const ext = spPr.match(/<a:ext\s[^>]*\/>/)?.[0];
   if (!off || !ext) return null;
-  const widthEmu = Number(ext[1]);
-  const heightEmu = Number(ext[2]);
+  const attr = (xml: string, name: string) => {
+    const raw = xml.match(new RegExp(`\\s${name}="(-?\\d+)"`))?.[1];
+    return raw == null ? null : Number(raw);
+  };
+  const left = attr(off, 'x');
+  const top = attr(off, 'y');
+  const widthEmu = attr(ext, 'cx');
+  const heightEmu = attr(ext, 'cy');
+  if (left == null || top == null || widthEmu == null || heightEmu == null) return null;
   return {
-    left: Number(off[1]),
-    top: Number(off[2]),
+    left,
+    top,
     width: widthEmu,
     height: heightEmu,
     widthEmu,
@@ -154,21 +162,25 @@ function extractShapeBox(
   };
 }
 
+/**
+ * 文本框内边距（EMU）折算成「幻灯片宽度的百分比」。CSS 里 padding 的百分比一律按
+ * 包含块的宽度解析，所以四边都用 slideCx 换算才能得到与 EMU 等比的实际间距；
+ * 换成形状自身尺寸或容器查询单位都会算错（形状本身就是 size container，自引用）。
+ */
 function extractTextBoxPadding(
   txBody: string,
-  widthEmu: number,
-  heightEmu: number,
+  slideCx: number,
 ): { top: number; right: number; bottom: number; left: number } {
   const bodyPr = txBody.match(/<a:bodyPr([^/]*)\/>/)?.[1] ?? txBody.match(/<a:bodyPr([^>]*)>/)?.[1] ?? '';
-  const read = (attr: string, base: number) => {
+  const read = (attr: string) => {
     const m = bodyPr.match(new RegExp(`${attr}="(\\d+)"`));
-    return m && base > 0 ? (Number(m[1]) / base) * 100 : 0;
+    return m && slideCx > 0 ? (Number(m[1]) / slideCx) * 100 : 0;
   };
   return {
-    top: read('tIns', heightEmu),
-    right: read('rIns', widthEmu),
-    bottom: read('bIns', heightEmu),
-    left: read('lIns', widthEmu),
+    top: read('tIns'),
+    right: read('rIns'),
+    bottom: read('bIns'),
+    left: read('lIns'),
   };
 }
 
@@ -414,7 +426,7 @@ export async function parseSlideVisualLayers(
     if (hasText) {
       const txBody = chunk.match(/<p:txBody>([\s\S]*?)<\/p:txBody>/)?.[1] ?? '';
       const text = extractTextContent(chunk, schemeColors);
-      const paddingPct = extractTextBoxPadding(txBody, box.widthEmu, box.heightEmu);
+      const paddingPct = extractTextBoxPadding(txBody, slideSize.cx);
       const shapeIndex = textShapeIndex;
       textShapeIndex += 1;
       if (text.paragraphs.length) {

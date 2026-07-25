@@ -3544,6 +3544,27 @@
   display: block;
 }
 
+/* 缩略图内嵌整页 composite 预览：去掉预览组件自带的圆角边框，点击交给外层按钮 */
+.ppt-slide-thumb-composite {
+  display: block;
+  width: 100%;
+  pointer-events: none;
+}
+
+.ppt-slide-thumb-composite .bulletin-slide-preview-frame {
+  border: 0;
+  border-radius: 0;
+}
+
+.ppt-slide-thumb-composite .bulletin-slide-preview--loading,
+.ppt-slide-thumb-composite .bulletin-slide-preview--empty {
+  min-height: 0;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  border-radius: 0;
+  font-size: 0.75rem;
+}
+
 .ppt-slide-thumb-placeholder {
   display: grid;
   place-items: center;

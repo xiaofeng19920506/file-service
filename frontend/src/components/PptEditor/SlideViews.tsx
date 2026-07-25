@@ -140,6 +140,7 @@ export function PptSlidesPane({
   selectedIds,
   dragIndex,
   dragOverIndex,
+  pptxBlob = null,
   onSelect,
   onToggleSelect,
   onDragStart,
@@ -153,6 +154,7 @@ export function PptSlidesPane({
   selectedIds: Set<string>;
   dragIndex: number | null;
   dragOverIndex: number | null;
+  pptxBlob?: Blob | null;
   onSelect: (index: number) => void;
   onToggleSelect: (index: number) => void;
   onDragStart: (index: number) => void;
@@ -164,7 +166,10 @@ export function PptSlidesPane({
   return (
     <aside className="ppt-slides-pane" aria-label={t('ppt.slidesPane')}>
       {slides.map((slide, i) => {
-        const thumb = slide.imageMediaPaths.length > 0 ? slideDisplayImageUrl(slide, 0) : null;
+        // 缩略图必须是整页预览：只贴第一张内嵌图片会显示成页脚小图标之类的碎片
+        const composite = Boolean(pptxBlob && slide.slidePath && !slide.isNew && !slide.pending);
+        const thumb =
+          !composite && slide.imageMediaPaths.length > 0 ? slideDisplayImageUrl(slide, 0) : null;
         const id = slideIdentity(slide);
         const batchSelected = selectedIds.has(id);
         const isDragging = dragIndex === i;
@@ -213,7 +218,17 @@ export function PptSlidesPane({
               onClick={() => (batchMode ? onToggleSelect(i) : onSelect(i))}
               title={t('preview.slideNumber', { n: slide.index })}
             >
-              {thumb ? (
+              {composite ? (
+                <span className="ppt-slide-thumb-composite">
+                  <BulletinCompositeSlide
+                    slide={slide}
+                    pptxBlob={pptxBlob}
+                    slideXml={slide.slideXmlOverride ?? null}
+                    shapeTextOverrides={slide.shapeTextOverrides}
+                    emptyLabel={String(slide.index)}
+                  />
+                </span>
+              ) : thumb ? (
                 <img className="ppt-slide-thumb-img" src={thumb} alt="" draggable={false} />
               ) : (
                 <span className="ppt-slide-thumb-placeholder">{slide.index}</span>

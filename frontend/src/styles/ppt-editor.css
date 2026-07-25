@@ -259,7 +259,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  z-index: 45;
+  z-index: 4500;
   pointer-events: none;
   background-image:
     linear-gradient(to right, rgba(0, 0, 0, 0.12) 1px, transparent 1px),
@@ -271,7 +271,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  z-index: 46;
+  z-index: 4600;
   pointer-events: none;
   background-image:
     linear-gradient(to right, transparent calc(50% - 0.5px), rgba(183, 71, 42, 0.55) calc(50% - 0.5px), rgba(183, 71, 42, 0.55) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
@@ -280,7 +280,8 @@
 
 .ppt-el-frame {
   position: absolute;
-  z-index: 60;
+  /* 必须高于图层 z-index（按角色 × 100 + 文档序号）与编辑中的形状 4000 */
+  z-index: 5000;
   pointer-events: none;
   outline: 1px solid #b7472a;
   outline-offset: 0;

@@ -121,7 +121,12 @@ describe('patchScriptureSlideInSlideXml', () => {
     const zip = await JSZip.loadAsync(patched);
     const pres = await zip.file('ppt/presentation.xml')!.async('string');
     const sldCount = (pres.match(/<p:sldId /g) ?? []).length;
-    expect(sldCount).toBeGreaterThan(38);
+
+    // 与「不填经文」的页数比较：模板本身会按分区可见性裁剪，硬编码页数会过时
+    const baseZip = await JSZip.loadAsync(await patchBulletinPreviewInPptx(tpl, {}));
+    const basePres = await baseZip.file('ppt/presentation.xml')!.async('string');
+    const baseCount = (basePres.match(/<p:sldId /g) ?? []).length;
+    expect(sldCount).toBeGreaterThan(baseCount);
 
     const slidePaths = Object.keys(zip.files).filter((n) => /^ppt\/slides\/slide\d+\.xml$/.test(n));
     let zhHits = 0;
