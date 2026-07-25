@@ -10,7 +10,12 @@ import {
   type SlideTextRun,
   type SlideVisualLayer,
 } from '../../lib/pptx-slide-layers';
-import { shapeParagraphsToPlainText } from '../../lib/pptx-shape-text';
+import {
+  shapeParagraphsToStyle,
+  normalizeShapeTextOverride,
+  type ShapeTextOverrideValue,
+  type ShapeTextStyle,
+} from '../../lib/pptx-shape-text';
 import type { EditableSlide } from '../../lib/pptx-preview';
 
 type BulletinCompositeSlideProps = {
@@ -22,8 +27,10 @@ type BulletinCompositeSlideProps = {
   large?: boolean;
   /** 允许点选文本框编辑 */
   editable?: boolean;
-  shapeTextOverrides?: Record<number, string>;
-  onShapeTextChange?: (shapeIndex: number, text: string) => void;
+  shapeTextOverrides?: Record<number, ShapeTextOverrideValue>;
+  selectedShapeIndex?: number | null;
+  onSelectShape?: (shapeIndex: number | null, seed?: ShapeTextStyle) => void;
+  onShapeTextChange?: (shapeIndex: number, style: ShapeTextStyle) => void;
 };
 
 const SLIDE_WIDTH_PT = 720;
@@ -46,6 +53,7 @@ function runStyle(
   return {
     color: run.color,
     fontWeight: run.bold ? 700 : undefined,
+    fontStyle: run.italic ? 'italic' : undefined,
     fontFamily: run.fontFamily ? `"${run.fontFamily}", sans-serif` : undefined,
     fontSize: runFontSizeCqw(run.fontSizePt, useAutoFit, fitScale),
   };
@@ -174,16 +182,26 @@ function renderParagraph(
 }
 
 function paragraphsFromOverride(
-  plain: string,
+  override: ShapeTextOverrideValue,
   template: SlideTextParagraph[],
 ): SlideTextParagraph[] {
+  const style = normalizeShapeTextOverride(override);
   const sample =
     template.find((p) => !p.spacer && p.runs.length)?.runs[0] ??
     ({ text: '', color: '#1e2d31', fontSizePt: 14 } satisfies SlideTextRun);
   const align = template.find((p) => !p.spacer)?.align ?? 'left';
   const lineSpacing = template.find((p) => !p.spacer)?.lineSpacing ?? 1;
-  return plain.split('\n').map((line) => ({
-    runs: [{ ...sample, text: line }],
+  return style.text.split('\n').map((line) => ({
+    runs: [
+      {
+        ...sample,
+        text: line,
+        bold: style.bold ?? sample.bold,
+        italic: style.italic ?? sample.italic,
+        fontSizePt: style.fontSizePt ?? sample.fontSizePt,
+        fontFamily: style.fontFamily ?? sample.fontFamily,
+      },
+    ],
     align,
     lineSpacing,
   }));
@@ -198,6 +216,8 @@ export default function BulletinCompositeSlide({
   large,
   editable = false,
   shapeTextOverrides,
+  selectedShapeIndex = null,
+  onSelectShape,
   onShapeTextChange,
 }: BulletinCompositeSlideProps) {
   const [layers, setLayers] = useState<SlideVisualLayer[]>([]);
@@ -260,17 +280,27 @@ export default function BulletinCompositeSlide({
       setEditingShape(null);
       return;
     }
-    onShapeTextChange(editingShape, draftText);
+    const existing = normalizeShapeTextOverride(shapeTextOverrides?.[editingShape]);
+    onShapeTextChange(editingShape, { ...existing, text: draftText });
     setEditingShape(null);
   };
 
   const beginEdit = (shapeIndex: number, paragraphs: SlideTextParagraph[]) => {
     if (!editable || !onShapeTextChange) return;
+    const seed = shapeParagraphsToStyle(paragraphs);
+    onSelectShape?.(shapeIndex, seed);
     const override = shapeTextOverrides?.[shapeIndex];
     const initial =
-      override !== undefined ? override : shapeParagraphsToPlainText(paragraphs);
+      override !== undefined
+        ? normalizeShapeTextOverride(override).text
+        : seed.text;
     setDraftText(initial);
     setEditingShape(shapeIndex);
+  };
+
+  const selectShape = (shapeIndex: number, paragraphs: SlideTextParagraph[]) => {
+    if (!editable) return;
+    onSelectShape?.(shapeIndex, shapeParagraphsToStyle(paragraphs));
   };
 
   const rootClass = `bulletin-slide-preview${large ? ' bulletin-slide-preview--large' : ''}`;
@@ -305,6 +335,7 @@ export default function BulletinCompositeSlide({
           if (!editable) return;
           if ((e.target as HTMLElement).closest('.bulletin-composite-shape--editable')) return;
           if (editingShape != null) commitEdit();
+          onSelectShape?.(null);
         }}
       >
         {layers.map((layer, i) => {
@@ -351,13 +382,17 @@ export default function BulletinCompositeSlide({
           const shapeIndex = layer.shapeIndex;
           const canEditShape = editable && shapeIndex != null && !!onShapeTextChange;
           const isEditing = canEditShape && editingShape === shapeIndex;
-          const overrideText =
+          const isSelected = canEditShape && selectedShapeIndex === shapeIndex;
+          const overrideValue =
             shapeIndex != null ? shapeTextOverrides?.[shapeIndex] : undefined;
+          const overrideStyle =
+            overrideValue !== undefined ? normalizeShapeTextOverride(overrideValue) : undefined;
           const displayParagraphs =
-            overrideText !== undefined
-              ? paragraphsFromOverride(overrideText, layer.paragraphs)
+            overrideValue !== undefined
+              ? paragraphsFromOverride(overrideValue, layer.paragraphs)
               : layer.paragraphs;
-          const sampleRun = layer.paragraphs.find((p) => !p.spacer)?.runs[0];
+          const sampleRun = displayParagraphs.find((p) => !p.spacer)?.runs[0]
+            ?? layer.paragraphs.find((p) => !p.spacer)?.runs[0];
 
           return (
             <div
@@ -369,8 +404,8 @@ export default function BulletinCompositeSlide({
               }${role === 'prayer' ? ' bulletin-composite-shape--prayer' : ''}${
                 canEditShape ? ' bulletin-composite-shape--editable' : ''
               }${isEditing ? ' bulletin-composite-shape--editing' : ''}${
-                overrideText !== undefined ? ' bulletin-composite-shape--overridden' : ''
-              }`}
+                isSelected && !isEditing ? ' bulletin-composite-shape--selected' : ''
+              }${overrideValue !== undefined ? ' bulletin-composite-shape--overridden' : ''}`}
               style={{
                 ...stackStyle,
                 left: `${layer.left}%`,
@@ -379,9 +414,17 @@ export default function BulletinCompositeSlide({
                 height: `${layer.height}%`,
                 backgroundColor: layer.fill,
                 ...shapePaddingStyle(layer.paddingPct),
-                zIndex: isEditing ? 40 : stackStyle.zIndex,
+                zIndex: isEditing || isSelected ? 40 : stackStyle.zIndex,
               }}
               onClick={
+                canEditShape && !isEditing
+                  ? (e) => {
+                      e.stopPropagation();
+                      selectShape(shapeIndex, layer.paragraphs);
+                    }
+                  : undefined
+              }
+              onDoubleClick={
                 canEditShape && !isEditing
                   ? (e) => {
                       e.stopPropagation();
@@ -394,7 +437,7 @@ export default function BulletinCompositeSlide({
               onKeyDown={
                 canEditShape && !isEditing
                   ? (e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
+                      if (e.key === 'Enter') {
                         e.preventDefault();
                         beginEdit(shapeIndex, layer.paragraphs);
                       }
@@ -423,11 +466,16 @@ export default function BulletinCompositeSlide({
                   }}
                   style={{
                     color: sampleRun?.color,
-                    fontWeight: sampleRun?.bold ? 700 : undefined,
-                    fontFamily: sampleRun?.fontFamily
-                      ? `"${sampleRun.fontFamily}", sans-serif`
+                    fontWeight: (overrideStyle?.bold ?? sampleRun?.bold) ? 700 : undefined,
+                    fontStyle: (overrideStyle?.italic ?? sampleRun?.italic) ? 'italic' : undefined,
+                    fontFamily: (overrideStyle?.fontFamily ?? sampleRun?.fontFamily)
+                      ? `"${overrideStyle?.fontFamily ?? sampleRun?.fontFamily}", sans-serif`
                       : undefined,
-                    fontSize: runFontSizeCqw(sampleRun?.fontSizePt, useAutoFit, fitScale),
+                    fontSize: runFontSizeCqw(
+                      overrideStyle?.fontSizePt ?? sampleRun?.fontSizePt,
+                      useAutoFit,
+                      fitScale,
+                    ),
                     textAlign: layer.paragraphs.find((p) => !p.spacer)?.align ?? 'left',
                     lineHeight: layer.paragraphs.find((p) => !p.spacer)?.lineSpacing || 1.15,
                   }}

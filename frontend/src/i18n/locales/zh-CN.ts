@@ -837,6 +837,15 @@ export default {
     shortcutRedo: '重做 (⇧⌘Z)',
     keyboardHint: '点击文字框编辑 · ↑↓ 切换页面 · Delete 跳过 · 拖拽左侧缩略图排序',
     canvasHint: '点击文字框改字 · 工具栏可插入文字/图片 · 保存后写回周报',
+    canvasHintFormat:
+      '单击选中文字框改字体/加粗 · 双击改字 · 可添加/上下移页面 · 拖拽左侧缩略图排序',
+    fontFamily: '字体',
+    fontSize: '字号',
+    bold: '加粗',
+    italic: '斜体',
+    addSlide: '添加空白页',
+    pageIndex: '页码',
+    gotoPage: '跳转',
   },
   status: {
     queued: '正在准备…',

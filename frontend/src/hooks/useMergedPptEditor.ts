@@ -19,6 +19,10 @@ import {
   type EditableSlide,
 } from '../lib/pptx-preview';
 import { insertPictureIntoPptx, insertTextBoxIntoPptx } from '../lib/pptx-insert-elements';
+import {
+  normalizeShapeTextOverride,
+  type ShapeTextStyle,
+} from '../lib/pptx-shape-text';
 
 type UseMergedPptEditorProps = {
   mergedUrl: string | null;
@@ -365,7 +369,7 @@ export function useMergedPptEditor({
   );
 
   const setShapeTextOverride = useCallback(
-    (arrayIndex: number, shapeIndex: number, text: string) => {
+    (arrayIndex: number, shapeIndex: number, value: ShapeTextStyle) => {
       updateSlides((prev) =>
         prev.map((s, i) => {
           if (i !== arrayIndex) return s;
@@ -373,7 +377,34 @@ export function useMergedPptEditor({
             ...s,
             shapeTextOverrides: {
               ...(s.shapeTextOverrides ?? {}),
-              [shapeIndex]: text,
+              [shapeIndex]: value,
+            },
+          };
+        }),
+      );
+    },
+    [updateSlides],
+  );
+
+  const patchShapeTextStyle = useCallback(
+    (
+      arrayIndex: number,
+      shapeIndex: number,
+      patch: Partial<ShapeTextStyle>,
+      fallbackText = '',
+    ) => {
+      updateSlides((prev) =>
+        prev.map((s, i) => {
+          if (i !== arrayIndex) return s;
+          const current = normalizeShapeTextOverride(
+            s.shapeTextOverrides?.[shapeIndex],
+            fallbackText,
+          );
+          return {
+            ...s,
+            shapeTextOverrides: {
+              ...(s.shapeTextOverrides ?? {}),
+              [shapeIndex]: { ...current, ...patch, text: patch.text ?? current.text },
             },
           };
         }),
@@ -557,6 +588,7 @@ export function useMergedPptEditor({
     setSlideBackgroundImage,
     setSlideBackgroundColor,
     setShapeTextOverride,
+    patchShapeTextStyle,
     insertTextBox,
     insertPicture,
     openCrop,

@@ -1,5 +1,5 @@
 import JSZip from 'jszip';
-import { applyShapePlainTextToSlideXml } from './pptx-shape-text';
+import { applyShapeTextToSlideXml, shapeTextOverrideEquals, type ShapeTextOverrideValue } from './pptx-shape-text';
 
 export type SlideBackgroundKind = 'image' | 'solid' | 'none';
 
@@ -29,8 +29,8 @@ export type EditableSlide = {
   backgroundPreviewUrl?: string;
   /** 待写入的背景图替换 */
   backgroundReplacement?: Blob;
-  /** 形状文字覆盖（shapeIndex → 纯文本，换行=段落） */
-  shapeTextOverrides?: Record<number, string>;
+  /** 形状文字覆盖（shapeIndex → 文本+样式） */
+  shapeTextOverrides?: Record<number, ShapeTextOverrideValue>;
   pending?: boolean;
   editable: boolean;
   /** 尚未写入 PPTX，确认保存时再复制 */
@@ -620,7 +620,9 @@ export function slidesContentEqual(a: EditableSlide[], b: EditableSlide[]): bool
     const textKeysA = Object.keys(textA).sort();
     const textKeysB = Object.keys(textB).sort();
     if (textKeysA.length !== textKeysB.length) return false;
-    return textKeysA.every((k, j) => textKeysB[j] === k && textA[Number(k)] === textB[Number(k)]);
+    return textKeysA.every(
+      (k, j) => textKeysB[j] === k && shapeTextOverrideEquals(textA[Number(k)], textB[Number(k)]),
+    );
   });
 }
 
@@ -838,7 +840,7 @@ export async function applyShapeTextEditsToPptx(
     for (const [idxStr, text] of Object.entries(slide.shapeTextOverrides!)) {
       const idx = Number(idxStr);
       if (!Number.isFinite(idx)) continue;
-      xml = applyShapePlainTextToSlideXml(xml, idx, text);
+      xml = applyShapeTextToSlideXml(xml, idx, text);
     }
     zip.file(slide.slidePath, xml);
   }

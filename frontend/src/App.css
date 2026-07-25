@@ -3400,6 +3400,59 @@
   gap: 0.35rem;
 }
 
+.ppt-ribbon-group--format,
+.ppt-ribbon-group--pages {
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.ppt-format-select {
+  height: 1.85rem;
+  min-width: 6.5rem;
+  padding: 0 0.4rem;
+  border: 1px solid var(--border, #ccc);
+  border-radius: 4px;
+  background: var(--surface, #fff);
+  color: var(--text);
+  font-size: 0.8rem;
+}
+
+.ppt-format-select:disabled {
+  opacity: 0.45;
+}
+
+.ppt-format-select--size {
+  min-width: 3.5rem;
+}
+
+.ppt-format-toggle {
+  min-width: 1.85rem;
+  font-style: normal;
+}
+
+.ppt-format-toggle em {
+  font-style: italic;
+}
+
+.ppt-page-jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary, #666);
+}
+
+.ppt-page-jump input[type='number'] {
+  width: 3.25rem;
+  height: 1.85rem;
+  padding: 0 0.35rem;
+  border: 1px solid var(--border, #ccc);
+  border-radius: 4px;
+  background: var(--surface, #fff);
+  color: var(--text);
+  font-size: 0.8rem;
+}
+
 .ppt-ribbon-btn.active {
   background: color-mix(in srgb, var(--blue) 12%, transparent);
   color: var(--blue);
@@ -8186,6 +8239,11 @@ body.bulletin-slideshow-window {
   outline: 2px solid #2563eb;
   outline-offset: 1px;
   overflow: visible;
+}
+
+.bulletin-composite-shape--selected {
+  outline: 2px solid #2563eb;
+  outline-offset: 1px;
 }
 
 .bulletin-composite-shape-editor {

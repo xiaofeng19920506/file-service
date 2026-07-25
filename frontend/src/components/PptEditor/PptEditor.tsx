@@ -1,9 +1,26 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useI18n } from '../../i18n';
 import { useMergedPptEditor } from '../../hooks/useMergedPptEditor';
 import ConfirmModal from '../ConfirmModal';
 import ImageCropModal from '../ImageCropModal';
 import { PptCanvasSlide, PptSlidesPane } from './SlideViews';
+import {
+  normalizeShapeTextOverride,
+  type ShapeTextStyle,
+} from '../../lib/pptx-shape-text';
+
+const FONT_OPTIONS = [
+  '微软雅黑',
+  '黑体',
+  '宋体',
+  '楷体',
+  'Arial',
+  'Calibri',
+  'Times New Roman',
+  'Georgia',
+];
+
+const FONT_SIZES = [12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 44, 48, 54, 60, 72];
 
 type PptEditorProps = {
   mergedUrl: string | null;
@@ -30,6 +47,9 @@ export default function PptEditor({
 }: PptEditorProps) {
   const { t } = useI18n();
   const [zoom, setZoom] = useState(100);
+  const [selectedShapeIndex, setSelectedShapeIndex] = useState<number | null>(null);
+  const [selectedSeed, setSelectedSeed] = useState<ShapeTextStyle | null>(null);
+  const [pageJump, setPageJump] = useState('');
   const imageReplaceInputRef = useRef<HTMLInputElement>(null);
   const imageInsertInputRef = useRef<HTMLInputElement>(null);
   const backgroundReplaceInputRef = useRef<HTMLInputElement>(null);
@@ -75,6 +95,7 @@ export default function PptEditor({
     setSlideBackgroundImage,
     setSlideBackgroundColor,
     setShapeTextOverride,
+    patchShapeTextStyle,
     insertTextBox,
     insertPicture,
     openCrop,
@@ -83,6 +104,59 @@ export default function PptEditor({
     currentSlide,
     sourceFile,
   } = editor;
+
+  useEffect(() => {
+    setSelectedShapeIndex(null);
+    setSelectedSeed(null);
+    setPageJump(String(focusIndex + 1));
+  }, [focusIndex]);
+
+  const selectedTextStyle: ShapeTextStyle | null = useMemo(() => {
+    if (selectedShapeIndex == null || !currentSlide) return null;
+    const override = currentSlide.shapeTextOverrides?.[selectedShapeIndex];
+    const fromSeed =
+      selectedSeed ??
+      ({
+        text: '',
+        fontFamily: '微软雅黑',
+        fontSizePt: 18,
+        bold: false,
+        italic: false,
+      } satisfies ShapeTextStyle);
+    if (override == null) return fromSeed;
+    const n = normalizeShapeTextOverride(override, fromSeed.text);
+    return {
+      text: n.text,
+      fontFamily: n.fontFamily ?? fromSeed.fontFamily,
+      fontSizePt: n.fontSizePt ?? fromSeed.fontSizePt,
+      bold: n.bold ?? fromSeed.bold,
+      italic: n.italic ?? fromSeed.italic,
+    };
+  }, [currentSlide, selectedSeed, selectedShapeIndex]);
+
+  const fontOptions = useMemo(() => {
+    const face = selectedTextStyle?.fontFamily?.trim();
+    if (face && !FONT_OPTIONS.includes(face)) return [face, ...FONT_OPTIONS];
+    return FONT_OPTIONS;
+  }, [selectedTextStyle?.fontFamily]);
+
+  const fontSizeOptions = useMemo(() => {
+    const n = selectedTextStyle?.fontSizePt;
+    if (n != null && Number.isFinite(n) && !FONT_SIZES.includes(n)) {
+      return [...FONT_SIZES, Math.round(n * 10) / 10].sort((a, b) => a - b);
+    }
+    return FONT_SIZES;
+  }, [selectedTextStyle?.fontSizePt]);
+
+  const applySelectedStyle = (patch: Partial<ShapeTextStyle>) => {
+    if (selectedShapeIndex == null) return;
+    patchShapeTextStyle(
+      focusIndex,
+      selectedShapeIndex,
+      patch,
+      selectedTextStyle?.text || selectedSeed?.text || '',
+    );
+  };
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -198,6 +272,53 @@ export default function PptEditor({
             </button>
           </div>
           <div className="ppt-ribbon-sep" aria-hidden />
+          <div className="ppt-ribbon-group ppt-ribbon-group--format">
+            <select
+              className="ppt-format-select"
+              disabled={selectedShapeIndex == null}
+              value={selectedTextStyle?.fontFamily ?? '微软雅黑'}
+              onChange={(e) => applySelectedStyle({ fontFamily: e.target.value })}
+              aria-label={t('ppt.fontFamily')}
+            >
+              {fontOptions.map((f) => (
+                <option key={f} value={f}>
+                  {f}
+                </option>
+              ))}
+            </select>
+            <select
+              className="ppt-format-select ppt-format-select--size"
+              disabled={selectedShapeIndex == null}
+              value={String(selectedTextStyle?.fontSizePt ?? 18)}
+              onChange={(e) => applySelectedStyle({ fontSizePt: Number(e.target.value) })}
+              aria-label={t('ppt.fontSize')}
+            >
+              {fontSizeOptions.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className={`ppt-ribbon-btn ppt-format-toggle${selectedTextStyle?.bold ? ' active' : ''}`}
+              disabled={selectedShapeIndex == null}
+              onClick={() => applySelectedStyle({ bold: !selectedTextStyle?.bold })}
+              title={t('ppt.bold')}
+            >
+              <strong>B</strong>
+            </button>
+            <button
+              type="button"
+              className={`ppt-ribbon-btn ppt-format-toggle${selectedTextStyle?.italic ? ' active' : ''}`}
+              disabled={selectedShapeIndex == null}
+              onClick={() => applySelectedStyle({ italic: !selectedTextStyle?.italic })}
+              title={t('ppt.italic')}
+            >
+              <em>I</em>
+            </button>
+          </div>
+          <div className="ppt-ribbon-sep" aria-hidden />
           <div className="ppt-ribbon-group">
             <button
               type="button"
@@ -240,7 +361,15 @@ export default function PptEditor({
             </label>
           </div>
           <div className="ppt-ribbon-sep" aria-hidden />
-          <div className="ppt-ribbon-group">
+          <div className="ppt-ribbon-group ppt-ribbon-group--pages">
+            <button
+              type="button"
+              className="ppt-ribbon-btn ppt-ribbon-btn-accent"
+              disabled={!canDuplicate}
+              onClick={() => addSlideAfter(focusIndex, true)}
+            >
+              {t('ppt.addSlide')}
+            </button>
             <button
               type="button"
               className="ppt-ribbon-btn"
@@ -273,6 +402,35 @@ export default function PptEditor({
             >
               {t('ppt.moveDown')}
             </button>
+            <label className="ppt-page-jump" title={t('ppt.gotoPage')}>
+              <span>{t('ppt.pageIndex')}</span>
+              <input
+                type="number"
+                min={1}
+                max={Math.max(1, slides.length)}
+                value={pageJump}
+                onChange={(e) => setPageJump(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key !== 'Enter') return;
+                  const n = Number(pageJump);
+                  if (!Number.isFinite(n)) return;
+                  const idx = Math.min(slides.length, Math.max(1, Math.round(n))) - 1;
+                  setFocusIndex(idx);
+                }}
+              />
+              <button
+                type="button"
+                className="ppt-ribbon-btn"
+                onClick={() => {
+                  const n = Number(pageJump);
+                  if (!Number.isFinite(n)) return;
+                  const idx = Math.min(slides.length, Math.max(1, Math.round(n))) - 1;
+                  setFocusIndex(idx);
+                }}
+              >
+                {t('ppt.gotoPage')}
+              </button>
+            </label>
           </div>
           <div className="ppt-ribbon-spacer" />
           <div className="ppt-ribbon-group">
@@ -385,8 +543,13 @@ export default function PptEditor({
                 zoom={zoom}
                 pptxBlob={sourceFile}
                 editable
-                onShapeTextChange={(shapeIndex, text) =>
-                  setShapeTextOverride(focusIndex, shapeIndex, text)
+                selectedShapeIndex={selectedShapeIndex}
+                onSelectShape={(idx, seed) => {
+                  setSelectedShapeIndex(idx);
+                  setSelectedSeed(seed ?? null);
+                }}
+                onShapeTextChange={(shapeIndex, style) =>
+                  setShapeTextOverride(focusIndex, shapeIndex, style)
                 }
               />
             )}
@@ -399,7 +562,7 @@ export default function PptEditor({
               ? t('preview.slideCounter', { current: focusIndex + 1, total: slides.length })
               : '—'}
           </span>
-          <span className="ppt-status-hint">{t('ppt.canvasHint')}</span>
+          <span className="ppt-status-hint">{t('ppt.canvasHintFormat')}</span>
           <span className={dirty ? 'ppt-status-unsaved' : undefined}>
             {dirty ? t('files.unsaved') : t('ppt.saved')}
           </span>

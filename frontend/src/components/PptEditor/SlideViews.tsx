@@ -5,6 +5,7 @@ import {
   slideIdentity,
   type EditableSlide,
 } from '../../lib/pptx-preview';
+import type { ShapeTextStyle } from '../../lib/pptx-shape-text';
 import BulletinCompositeSlide from '../bulletin/BulletinCompositeSlide';
 
 export function SlideContent({
@@ -237,13 +238,17 @@ export function PptCanvasSlide({
   zoom = 100,
   pptxBlob = null,
   editable = false,
+  selectedShapeIndex = null,
+  onSelectShape,
   onShapeTextChange,
 }: {
   slide: EditableSlide;
   zoom?: number;
   pptxBlob?: Blob | null;
   editable?: boolean;
-  onShapeTextChange?: (shapeIndex: number, text: string) => void;
+  selectedShapeIndex?: number | null;
+  onSelectShape?: (shapeIndex: number | null, seed?: ShapeTextStyle) => void;
+  onShapeTextChange?: (shapeIndex: number, style: ShapeTextStyle) => void;
 }) {
   const { t } = useI18n();
   const scale = Math.max(0.5, Math.min(1.5, zoom / 100));
@@ -292,6 +297,8 @@ export function PptCanvasSlide({
             large
             editable={editable}
             shapeTextOverrides={slide.shapeTextOverrides}
+            selectedShapeIndex={selectedShapeIndex}
+            onSelectShape={onSelectShape}
             onShapeTextChange={onShapeTextChange}
           />
           {bgOverrideStyle ? (

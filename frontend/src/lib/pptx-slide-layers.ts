@@ -18,6 +18,7 @@ export type SlideTextRun = {
   text: string;
   color: string;
   bold?: boolean;
+  italic?: boolean;
   fontSizePt?: number;
   fontFamily?: string;
 };
@@ -199,12 +200,14 @@ function extractRunStyle(
   const sz = rPrXml.match(/sz="(\d+)"/);
   const fontSizePt = sz ? Number(sz[1]) / 100 : undefined;
   const bold = /\sb="1"/.test(rPrXml);
+  const italic = /\si="1"/.test(rPrXml);
   const ea = rPrXml.match(/<a:ea typeface="([^"]+)"/)?.[1];
   const latin = rPrXml.match(/<a:latin typeface="([^"]+)"/)?.[1];
   const fontFamily = ea || latin;
   return {
     color: color ?? schemeColors.tx1 ?? schemeColors.dk2 ?? '#1E2D31',
     bold,
+    italic,
     fontSizePt,
     fontFamily,
   };
