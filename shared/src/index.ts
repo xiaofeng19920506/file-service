@@ -37,6 +37,7 @@ export * from './youtube-video-status.js';
 export * from './ytdlp-common.js';
 export { parseByteRangeHeader } from './http-byte-range.js';
 export * from './media-stream.js';
+export * from './content-disposition.js';
 export * from './youtube-oauth-state.js';
 export * from './youtube-oauth.js';
 export * from './persist-raw-blob.js';

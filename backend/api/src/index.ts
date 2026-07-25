@@ -29,6 +29,7 @@ import {
   blobs,
   mergeJobs,
   mergeJobInputs,
+  contentDisposition,
 } from '@file-service/shared';
 import {
   ContentAlreadyExistsError,
@@ -361,7 +362,7 @@ async function buildApp() {
         )
         .header(
           'Content-Disposition',
-          `inline; filename="${blob.originalFilename ?? 'file.pptx'}"`,
+          contentDisposition('inline', blob.originalFilename, 'file.pptx'),
         )
         .send(stream);
     },

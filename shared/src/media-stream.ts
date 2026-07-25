@@ -1,4 +1,5 @@
 import type { FastifyReply } from 'fastify';
+import { contentDisposition } from './content-disposition.js';
 import { parseByteRangeHeader } from './http-byte-range.js';
 import type { ObjectStorage } from './storage/types.js';
 
@@ -18,14 +19,14 @@ export async function sendRangedObjectStream(
   const total = blob.sizeBytes;
   const parsed = parseByteRangeHeader(rangeHeader, total);
   const mime = blob.mimeType ?? 'application/octet-stream';
-  const filename = blob.filename ?? 'file';
+  const disposition = contentDisposition('inline', blob.filename, 'file');
 
   if (!parsed) {
     const stream = await storage.createReadStream(blob.storageKey);
     return reply
       .header('Content-Type', mime)
       .header('Content-Length', String(total))
-      .header('Content-Disposition', `inline; filename="${filename}"`)
+      .header('Content-Disposition', disposition)
       .header('Accept-Ranges', 'bytes')
       .header('Cache-Control', 'private, max-age=3600')
       .send(stream);
@@ -40,7 +41,7 @@ export async function sendRangedObjectStream(
     .header('Content-Type', mime)
     .header('Content-Length', String(chunkSize))
     .header('Content-Range', `bytes ${start}-${end}/${total}`)
-    .header('Content-Disposition', `inline; filename="${filename}"`)
+    .header('Content-Disposition', disposition)
     .header('Accept-Ranges', 'bytes')
     .header('Cache-Control', 'private, max-age=3600')
     .send(stream);

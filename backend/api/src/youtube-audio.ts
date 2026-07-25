@@ -12,6 +12,7 @@ import {
   verifyAudioStreamToken,
   youtubeAudioCache,
   fetchYoutubeVideoDurationSeconds,
+  contentDisposition,
   type ApiEnv,
   type Db,
 } from '@file-service/shared';
@@ -290,7 +291,10 @@ export function registerYoutubeAudioRoutes(
       return reply
         .header('Content-Type', blob.mimeType ?? 'audio/mpeg')
         .header('Content-Length', String(blob.sizeBytes))
-        .header('Content-Disposition', `inline; filename="${blob.originalFilename ?? `${videoId}.mp3`}"`)
+        .header(
+          'Content-Disposition',
+          contentDisposition('inline', blob.originalFilename, `${videoId}.mp3`),
+        )
         .header('Accept-Ranges', 'bytes')
         .header('Cache-Control', 'private, max-age=3600')
         .send(stream);

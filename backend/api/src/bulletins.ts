@@ -36,6 +36,7 @@ import {
   normalizeSectionPptxOverrides,
   BULLETIN_SECTION_TEMPLATE_SLIDES,
   spliceAllSectionOverridesIntoPptx,
+  contentDisposition,
   type ApiEnv,
   type Db,
   type SlideTextOverride,
@@ -489,7 +490,7 @@ export function registerBulletinRoutes(
         'Content-Type',
         'application/vnd.openxmlformats-officedocument.presentationml.presentation',
       )
-      .header('Content-Disposition', `attachment; filename="${BULLETIN_TEMPLATE_FILE}"`)
+      .header('Content-Disposition', contentDisposition('attachment', BULLETIN_TEMPLATE_FILE))
       .send(buf);
   });
 
