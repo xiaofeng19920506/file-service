@@ -310,49 +310,55 @@ export default function BulletinCompositeSlide({
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
+  /**
+   * 与 drag 同步的 ref。松手时要通知父组件写回 XML（父组件 setState），
+   * 这类副作用不能放进 setDrag 的 updater：updater 必须纯，React 可能在
+   * 渲染其它组件时执行它，会报 setState-in-render。
+   */
+  const dragRef = useRef<DragState | null>(null);
+  const dragging = drag !== null;
 
   useEffect(() => {
-    if (!drag) return;
+    if (!dragging) return;
     const onMove = (e: PointerEvent) => {
-      const dx = ((e.clientX - drag.startX) / drag.frameW) * 100;
-      const dy = ((e.clientY - drag.startY) / drag.frameH) * 100;
-      setDrag((prev) =>
-        prev
-          ? {
-              ...prev,
-              cur:
-                prev.handle === 'move'
-                  ? {
-                      ...prev.box,
-                      leftPct: prev.box.leftPct + dx,
-                      topPct: prev.box.topPct + dy,
-                    }
-                  : resizeBox(prev.box, prev.handle, dx, dy),
-            }
-          : prev,
-      );
+      const cur = dragRef.current;
+      if (!cur) return;
+      const dx = ((e.clientX - cur.startX) / cur.frameW) * 100;
+      const dy = ((e.clientY - cur.startY) / cur.frameH) * 100;
+      const next: DragState = {
+        ...cur,
+        cur:
+          cur.handle === 'move'
+            ? {
+                ...cur.box,
+                leftPct: cur.box.leftPct + dx,
+                topPct: cur.box.topPct + dy,
+              }
+            : resizeBox(cur.box, cur.handle, dx, dy),
+      };
+      dragRef.current = next;
+      setDrag(next);
     };
     const onUp = () => {
-      setDrag((prev) => {
-        if (!prev) return null;
-        const moved =
-          Math.abs(prev.cur.leftPct - prev.box.leftPct) > 0.05 ||
-          Math.abs(prev.cur.topPct - prev.box.topPct) > 0.05 ||
-          Math.abs(prev.cur.widthPct - prev.box.widthPct) > 0.05 ||
-          Math.abs(prev.cur.heightPct - prev.box.heightPct) > 0.05;
-        if (moved) {
-          if (prev.handle === 'move') {
-            onMoveElement?.(
-              prev.elementId,
-              prev.cur.leftPct - prev.box.leftPct,
-              prev.cur.topPct - prev.box.topPct,
-            );
-          } else {
-            onResizeElement?.(prev.elementId, prev.cur);
-          }
-        }
-        return null;
-      });
+      const cur = dragRef.current;
+      dragRef.current = null;
+      setDrag(null);
+      if (!cur) return;
+      const moved =
+        Math.abs(cur.cur.leftPct - cur.box.leftPct) > 0.05 ||
+        Math.abs(cur.cur.topPct - cur.box.topPct) > 0.05 ||
+        Math.abs(cur.cur.widthPct - cur.box.widthPct) > 0.05 ||
+        Math.abs(cur.cur.heightPct - cur.box.heightPct) > 0.05;
+      if (!moved) return;
+      if (cur.handle === 'move') {
+        onMoveElement?.(
+          cur.elementId,
+          cur.cur.leftPct - cur.box.leftPct,
+          cur.cur.topPct - cur.box.topPct,
+        );
+      } else {
+        onResizeElement?.(cur.elementId, cur.cur);
+      }
     };
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
@@ -360,7 +366,7 @@ export default function BulletinCompositeSlide({
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
     };
-  }, [drag, onMoveElement, onResizeElement]);
+  }, [dragging, onMoveElement, onResizeElement]);
 
   useEffect(() => {
     if (!slide?.slidePath || !pptxBlob) {
@@ -459,7 +465,7 @@ export default function BulletinCompositeSlide({
     e.stopPropagation();
     e.preventDefault();
     onSelectElement?.(elementId);
-    setDrag({
+    const state: DragState = {
       handle,
       elementId,
       startX: e.clientX,
@@ -468,7 +474,9 @@ export default function BulletinCompositeSlide({
       frameH: rect.height,
       box,
       cur: box,
-    });
+    };
+    dragRef.current = state;
+    setDrag(state);
   };
 
   const rootClass = `bulletin-slide-preview${large ? ' bulletin-slide-preview--large' : ''}`;

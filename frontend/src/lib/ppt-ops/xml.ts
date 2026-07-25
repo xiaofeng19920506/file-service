@@ -205,9 +205,19 @@ export function emuToPct(emu: number, total: number): number {
   return (emu / total) * 100;
 }
 
-/** 读取 presentation 幻灯片尺寸失败时的兜底 */
-export function slideSizeFromXml(presentationXml: string | null | undefined): SlideSize {
-  const m = presentationXml?.match(/<p:sldSz[^>]*cx="(\d+)"[^>]*cy="(\d+)"/);
-  if (!m) return { ...DEFAULT_SLIDE_SIZE };
-  return { cx: Number(m[1]), cy: Number(m[2]) };
+/**
+ * 读取 presentation 幻灯片尺寸；读不到时兜底 16:9。
+ * sldSz 的属性顺序不固定（Google Slides 导出会写成 cy 在前），
+ * 必须逐属性抠，否则会静默回退到默认尺寸，导致画布百分比与写回 EMU 不同基准。
+ */
+export function slideSizeFromXml(
+  presentationXml: string | null | undefined,
+  fallback: SlideSize = DEFAULT_SLIDE_SIZE,
+): SlideSize {
+  const tag = presentationXml?.match(/<p:sldSz\b[^>]*>/)?.[0];
+  if (!tag) return { ...fallback };
+  const cx = attrNum(tag, 'cx');
+  const cy = attrNum(tag, 'cy');
+  if (!cx || cx <= 0 || !cy || cy <= 0) return { ...fallback };
+  return { cx, cy };
 }

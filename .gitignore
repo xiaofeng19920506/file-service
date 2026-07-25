@@ -40,5 +40,8 @@ yarn-error.log*
 # local file store
 /data
 
+# 本地调试脚本与 UI 截图
+/scripts/tmp
+
 # typescript
 *.tsbuildinfo

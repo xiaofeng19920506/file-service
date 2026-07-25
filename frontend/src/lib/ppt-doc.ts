@@ -6,6 +6,7 @@
  * 画布只重渲当前页，保存时整份写回。
  */
 import JSZip from './jszip';
+import { DEFAULT_SLIDE_SIZE, slideSizeFromXml, type SlideSize } from './ppt-ops/xml';
 import type { EditableSlide } from './pptx-preview';
 
 export type SlideXmlMap = Map<string, string>;
@@ -47,16 +48,14 @@ export async function loadSlideXmlMap(file: Blob): Promise<SlideXmlMap> {
 }
 
 /** 读取幻灯片尺寸（EMU） */
-export async function loadSlideSize(file: Blob): Promise<{ cx: number; cy: number }> {
+export async function loadSlideSize(file: Blob): Promise<SlideSize> {
   try {
     const zip = await JSZip.loadAsync(file);
     const xml = await zip.file('ppt/presentation.xml')?.async('string');
-    const m = xml?.match(/<p:sldSz[^>]*cx="(\d+)"[^>]*cy="(\d+)"/);
-    if (m) return { cx: Number(m[1]), cy: Number(m[2]) };
+    return slideSizeFromXml(xml);
   } catch {
-    /* 用默认 16:9 */
+    return { ...DEFAULT_SLIDE_SIZE };
   }
-  return { cx: 12192000, cy: 6858000 };
 }
 
 /** 读取版式列表，用于「新建幻灯片 / 版式」图库 */

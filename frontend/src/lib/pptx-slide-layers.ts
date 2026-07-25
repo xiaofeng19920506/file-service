@@ -1,4 +1,5 @@
 import type JSZip from 'jszip';
+import { slideSizeFromXml } from './ppt-ops/xml';
 
 export type SlideSizeEmu = { cx: number; cy: number };
 
@@ -188,13 +189,7 @@ function extractTextBoxPadding(
 export async function loadSlideSizeEmu(zip: JSZip): Promise<SlideSizeEmu> {
   const entry = zip.file('ppt/presentation.xml');
   if (!entry) return { ...DEFAULT_SLIDE_SIZE };
-  const xml = await entry.async('string');
-  const block = xml.match(/<p:sldSz[^/>]*\/>/)?.[0];
-  if (!block) return { ...DEFAULT_SLIDE_SIZE };
-  const cx = Number(block.match(/cx="(\d+)"/)?.[1]);
-  const cy = Number(block.match(/cy="(\d+)"/)?.[1]);
-  if (!cx || !cy) return { ...DEFAULT_SLIDE_SIZE };
-  return { cx, cy };
+  return slideSizeFromXml(await entry.async('string'), DEFAULT_SLIDE_SIZE);
 }
 
 function resolveSchemeColor(schemeColors: Record<string, string>, schemeName: string): string | null {
