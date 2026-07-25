@@ -241,6 +241,13 @@ export function PptCanvasSlide({
   selectedShapeIndex = null,
   onSelectShape,
   onShapeTextChange,
+  slideXml = null,
+  selectedElementId = null,
+  onSelectElement,
+  onMoveElement,
+  onResizeElement,
+  showGrid = false,
+  showGuides = false,
 }: {
   slide: EditableSlide;
   zoom?: number;
@@ -249,6 +256,16 @@ export function PptCanvasSlide({
   selectedShapeIndex?: number | null;
   onSelectShape?: (shapeIndex: number | null, seed?: ShapeTextStyle) => void;
   onShapeTextChange?: (shapeIndex: number, style: ShapeTextStyle) => void;
+  slideXml?: string | null;
+  selectedElementId?: number | null;
+  onSelectElement?: (elementId: number | null) => void;
+  onMoveElement?: (elementId: number, dxPct: number, dyPct: number) => void;
+  onResizeElement?: (
+    elementId: number,
+    box: { leftPct: number; topPct: number; widthPct: number; heightPct: number },
+  ) => void;
+  showGrid?: boolean;
+  showGuides?: boolean;
 }) {
   const { t } = useI18n();
   const scale = Math.max(0.5, Math.min(1.5, zoom / 100));
@@ -300,6 +317,13 @@ export function PptCanvasSlide({
             selectedShapeIndex={selectedShapeIndex}
             onSelectShape={onSelectShape}
             onShapeTextChange={onShapeTextChange}
+            slideXml={slideXml}
+            selectedElementId={selectedElementId}
+            onSelectElement={onSelectElement}
+            onMoveElement={onMoveElement}
+            onResizeElement={onResizeElement}
+            showGrid={showGrid}
+            showGuides={showGuides}
           />
           {bgOverrideStyle ? (
             <div className="ppt-slide-bg-override" style={bgOverrideStyle} aria-hidden />

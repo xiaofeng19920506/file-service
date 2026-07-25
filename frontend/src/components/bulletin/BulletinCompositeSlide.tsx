@@ -31,9 +31,75 @@ type BulletinCompositeSlideProps = {
   selectedShapeIndex?: number | null;
   onSelectShape?: (shapeIndex: number | null, seed?: ShapeTextStyle) => void;
   onShapeTextChange?: (shapeIndex: number, style: ShapeTextStyle) => void;
+  /** Ribbon 改写后的页面 XML；提供时优先于 zip 内容渲染 */
+  slideXml?: string | null;
+  /** 画布选中/几何编辑（元素级） */
+  selectedElementId?: number | null;
+  onSelectElement?: (elementId: number | null) => void;
+  onMoveElement?: (elementId: number, dxPct: number, dyPct: number) => void;
+  onResizeElement?: (
+    elementId: number,
+    box: { leftPct: number; topPct: number; widthPct: number; heightPct: number },
+  ) => void;
+  showGrid?: boolean;
+  showGuides?: boolean;
 };
 
 const SLIDE_WIDTH_PT = 720;
+
+export type PlacedBox = {
+  leftPct: number;
+  topPct: number;
+  widthPct: number;
+  heightPct: number;
+};
+
+type DragHandle = 'move' | 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
+
+type DragState = {
+  handle: DragHandle;
+  elementId: number;
+  startX: number;
+  startY: number;
+  frameW: number;
+  frameH: number;
+  box: PlacedBox;
+  cur: PlacedBox;
+};
+
+const RESIZE_HANDLES: { id: Exclude<DragHandle, 'move'>; cursor: string }[] = [
+  { id: 'nw', cursor: 'nwse-resize' },
+  { id: 'n', cursor: 'ns-resize' },
+  { id: 'ne', cursor: 'nesw-resize' },
+  { id: 'e', cursor: 'ew-resize' },
+  { id: 'se', cursor: 'nwse-resize' },
+  { id: 's', cursor: 'ns-resize' },
+  { id: 'sw', cursor: 'nesw-resize' },
+  { id: 'w', cursor: 'ew-resize' },
+];
+
+const MIN_SIZE_PCT = 1.5;
+
+function resizeBox(box: PlacedBox, handle: DragHandle, dx: number, dy: number): PlacedBox {
+  let { leftPct, topPct, widthPct, heightPct } = box;
+  if (handle.includes('w')) {
+    const next = Math.min(leftPct + dx, leftPct + widthPct - MIN_SIZE_PCT);
+    widthPct += leftPct - next;
+    leftPct = next;
+  }
+  if (handle.includes('e')) {
+    widthPct = Math.max(MIN_SIZE_PCT, widthPct + dx);
+  }
+  if (handle.includes('n')) {
+    const next = Math.min(topPct + dy, topPct + heightPct - MIN_SIZE_PCT);
+    heightPct += topPct - next;
+    topPct = next;
+  }
+  if (handle.includes('s')) {
+    heightPct = Math.max(MIN_SIZE_PCT, heightPct + dy);
+  }
+  return { leftPct, topPct, widthPct, heightPct };
+}
 
 /** 按幻灯片宽度等比缩放字号（与 PPT pt 一致） */
 function runFontSizeCqw(
@@ -219,6 +285,13 @@ export default function BulletinCompositeSlide({
   selectedShapeIndex = null,
   onSelectShape,
   onShapeTextChange,
+  slideXml = null,
+  selectedElementId = null,
+  onSelectElement,
+  onMoveElement,
+  onResizeElement,
+  showGrid = false,
+  showGuides = false,
 }: BulletinCompositeSlideProps) {
   const [layers, setLayers] = useState<SlideVisualLayer[]>([]);
   const [slideSize, setSlideSize] = useState<SlideSizeEmu>({ ...DEFAULT_SLIDE_SIZE });
@@ -226,6 +299,59 @@ export default function BulletinCompositeSlide({
   const [editingShape, setEditingShape] = useState<number | null>(null);
   const [draftText, setDraftText] = useState('');
   const editorRef = useRef<HTMLTextAreaElement>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
+  const [drag, setDrag] = useState<DragState | null>(null);
+
+  useEffect(() => {
+    if (!drag) return;
+    const onMove = (e: PointerEvent) => {
+      const dx = ((e.clientX - drag.startX) / drag.frameW) * 100;
+      const dy = ((e.clientY - drag.startY) / drag.frameH) * 100;
+      setDrag((prev) =>
+        prev
+          ? {
+              ...prev,
+              cur:
+                prev.handle === 'move'
+                  ? {
+                      ...prev.box,
+                      leftPct: prev.box.leftPct + dx,
+                      topPct: prev.box.topPct + dy,
+                    }
+                  : resizeBox(prev.box, prev.handle, dx, dy),
+            }
+          : prev,
+      );
+    };
+    const onUp = () => {
+      setDrag((prev) => {
+        if (!prev) return null;
+        const moved =
+          Math.abs(prev.cur.leftPct - prev.box.leftPct) > 0.05 ||
+          Math.abs(prev.cur.topPct - prev.box.topPct) > 0.05 ||
+          Math.abs(prev.cur.widthPct - prev.box.widthPct) > 0.05 ||
+          Math.abs(prev.cur.heightPct - prev.box.heightPct) > 0.05;
+        if (moved) {
+          if (prev.handle === 'move') {
+            onMoveElement?.(
+              prev.elementId,
+              prev.cur.leftPct - prev.box.leftPct,
+              prev.cur.topPct - prev.box.topPct,
+            );
+          } else {
+            onResizeElement?.(prev.elementId, prev.cur);
+          }
+        }
+        return null;
+      });
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+  }, [drag, onMoveElement, onResizeElement]);
 
   useEffect(() => {
     if (!slide?.slidePath || !pptxBlob) {
@@ -242,9 +368,12 @@ export default function BulletinCompositeSlide({
     void (async () => {
       try {
         const zip = await JSZip.loadAsync(pptxBlob);
-        const entry = zip.file(slide.slidePath);
-        if (!entry) return;
-        const xml = await entry.async('string');
+        let xml = slideXml;
+        if (!xml) {
+          const entry = zip.file(slide.slidePath);
+          if (!entry) return;
+          xml = await entry.async('string');
+        }
         const parsed = await parseSlideVisualLayers(zip, slide.slidePath, xml);
         if (!cancelled) {
           activeLayers = parsed.layers;
@@ -267,7 +396,7 @@ export default function BulletinCompositeSlide({
       cancelled = true;
       revokeSlideVisualLayers(activeLayers);
     };
-  }, [slide?.slidePath, pptxBlob]);
+  }, [slide?.slidePath, pptxBlob, slideXml]);
 
   useEffect(() => {
     if (editingShape == null) return;
@@ -303,6 +432,36 @@ export default function BulletinCompositeSlide({
     onSelectShape?.(shapeIndex, shapeParagraphsToStyle(paragraphs));
   };
 
+  const selectElement = (elementId: number | undefined) => {
+    if (!editable || !onSelectElement) return;
+    onSelectElement(elementId ?? null);
+  };
+
+  const startDrag = (
+    e: React.PointerEvent,
+    elementId: number | undefined,
+    handle: DragHandle,
+    box: PlacedBox,
+  ) => {
+    if (!editable || elementId == null) return;
+    if (handle === 'move' ? !onMoveElement : !onResizeElement) return;
+    const rect = frameRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    e.stopPropagation();
+    e.preventDefault();
+    onSelectElement?.(elementId);
+    setDrag({
+      handle,
+      elementId,
+      startX: e.clientX,
+      startY: e.clientY,
+      frameW: rect.width,
+      frameH: rect.height,
+      box,
+      cur: box,
+    });
+  };
+
   const rootClass = `bulletin-slide-preview${large ? ' bulletin-slide-preview--large' : ''}`;
 
   if (loading || layersLoading) {
@@ -322,26 +481,56 @@ export default function BulletinCompositeSlide({
   }
 
   const yShift = footerShiftDown(layers);
+  const placed: (PlacedBox | null)[] = layers.map((layer) => {
+    if (layer.kind === 'background') return null;
+    const shifted = layer.top + yShift;
+    let topPct = shifted;
+    if (layer.kind === 'image') topPct = layer.top >= 85 ? shifted : layer.top;
+    else if (layer.kind === 'shape' && shapeRole(layer) === 'footer') topPct = 100 - layer.height;
+    return {
+      leftPct: layer.left,
+      topPct,
+      widthPct: layer.width,
+      heightPct: layer.height,
+    };
+  });
+  const boxFor = (i: number): PlacedBox => {
+    const base = placed[i] ?? { leftPct: 0, topPct: 0, widthPct: 0, heightPct: 0 };
+    const layer = layers[i];
+    const id = layer.kind === 'background' ? undefined : layer.elementId;
+    if (drag && id != null && drag.elementId === id) return drag.cur;
+    return base;
+  };
+  const selectedIndex =
+    selectedElementId == null
+      ? -1
+      : layers.findIndex((l) => l.kind !== 'background' && l.elementId === selectedElementId);
+  const canPickElements = editable && !!onSelectElement;
 
   return (
     <figure className={rootClass}>
       {slideLabel && <figcaption className="bulletin-slide-preview-caption">{slideLabel}</figcaption>}
       <div
+        ref={frameRef}
         className={`bulletin-slide-preview-frame bulletin-composite-slide${
           editable ? ' bulletin-composite-slide--editable' : ''
+        }${showGrid ? ' bulletin-composite-slide--grid' : ''}${
+          showGuides ? ' bulletin-composite-slide--guides' : ''
         }`}
         style={{ aspectRatio: `${slideSize.cx} / ${slideSize.cy}` }}
         onMouseDown={(e) => {
           if (!editable) return;
           if ((e.target as HTMLElement).closest('.bulletin-composite-shape--editable')) return;
+          if ((e.target as HTMLElement).closest('.ppt-el-frame')) return;
           if (editingShape != null) commitEdit();
           onSelectShape?.(null);
+          onSelectElement?.(null);
         }}
       >
         {layers.map((layer, i) => {
           const role = layer.kind === 'shape' ? shapeRole(layer) : 'default';
           const stackStyle = { zIndex: layerZIndex(layer.kind, role) };
-          const shiftedTop = layer.kind !== 'background' ? layer.top + yShift : 0;
+          const box = boxFor(i);
 
           if (layer.kind === 'background') {
             return (
@@ -357,28 +546,72 @@ export default function BulletinCompositeSlide({
           }
 
           if (layer.kind === 'image') {
-            const imgTop = layer.top >= 85 ? shiftedTop : layer.top;
             return (
               <img
                 key={`img-${i}`}
-                className="bulletin-composite-image"
+                className={`bulletin-composite-image${canPickElements ? ' is-pickable' : ''}`}
                 src={layer.url}
                 alt=""
                 draggable={false}
                 style={{
                   ...stackStyle,
-                  left: `${layer.left}%`,
-                  top: `${imgTop}%`,
-                  width: `${layer.width}%`,
-                  height: `${layer.height}%`,
+                  left: `${box.leftPct}%`,
+                  top: `${box.topPct}%`,
+                  width: `${box.widthPct}%`,
+                  height: `${box.heightPct}%`,
                 }}
+                onPointerDown={
+                  canPickElements
+                    ? (e) => {
+                        selectElement(layer.elementId);
+                        startDrag(e, layer.elementId, 'move', box);
+                      }
+                    : undefined
+                }
               />
+            );
+          }
+
+          if (layer.kind === 'table') {
+            return (
+              <div
+                key={`tbl-${i}`}
+                className={`bulletin-composite-table${canPickElements ? ' is-pickable' : ''}`}
+                style={{
+                  ...stackStyle,
+                  left: `${box.leftPct}%`,
+                  top: `${box.topPct}%`,
+                  width: `${box.widthPct}%`,
+                  height: `${box.heightPct}%`,
+                }}
+                onPointerDown={
+                  canPickElements
+                    ? (e) => {
+                        selectElement(layer.elementId);
+                        startDrag(e, layer.elementId, 'move', box);
+                      }
+                    : undefined
+                }
+              >
+                <table>
+                  <tbody>
+                    {layer.rows.map((row, ri) => (
+                      <tr key={ri}>
+                        {row.cells.map((cell, ci) => (
+                          <td key={ci} style={{ fontWeight: cell.bold ? 700 : undefined }}>
+                            {cell.text}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             );
           }
 
           const useAutoFit = Boolean(layer.autoFit) && role !== 'date';
           const fitScale = autoFitScale(layer, slideSize.cy);
-          const shapeTop = role === 'footer' ? 100 - layer.height : shiftedTop;
           const shapeIndex = layer.shapeIndex;
           const canEditShape = editable && shapeIndex != null && !!onShapeTextChange;
           const isEditing = canEditShape && editingShape === shapeIndex;
@@ -408,14 +641,23 @@ export default function BulletinCompositeSlide({
               }${overrideValue !== undefined ? ' bulletin-composite-shape--overridden' : ''}`}
               style={{
                 ...stackStyle,
-                left: `${layer.left}%`,
-                top: `${shapeTop}%`,
-                width: `${layer.width}%`,
-                height: `${layer.height}%`,
+                left: `${box.leftPct}%`,
+                top: `${box.topPct}%`,
+                width: `${box.widthPct}%`,
+                height: `${box.heightPct}%`,
                 backgroundColor: layer.fill,
+                border: layer.line ? `1px solid ${layer.line}` : undefined,
                 ...shapePaddingStyle(layer.paddingPct),
                 zIndex: isEditing || isSelected ? 40 : stackStyle.zIndex,
               }}
+              onPointerDown={
+                canPickElements && !isEditing
+                  ? (e) => {
+                      selectElement(layer.elementId);
+                      if (!canEditShape) startDrag(e, layer.elementId, 'move', box);
+                    }
+                  : undefined
+              }
               onClick={
                 canEditShape && !isEditing
                   ? (e) => {
@@ -489,6 +731,42 @@ export default function BulletinCompositeSlide({
             </div>
           );
         })}
+
+        {canPickElements && selectedIndex >= 0 && editingShape == null
+          ? (() => {
+              const layer = layers[selectedIndex];
+              if (layer.kind === 'background') return null;
+              const box = boxFor(selectedIndex);
+              const id = layer.elementId;
+              return (
+                <div
+                  className="ppt-el-frame"
+                  style={{
+                    left: `${box.leftPct}%`,
+                    top: `${box.topPct}%`,
+                    width: `${box.widthPct}%`,
+                    height: `${box.heightPct}%`,
+                  }}
+                >
+                  {(['top', 'right', 'bottom', 'left'] as const).map((edge) => (
+                    <span
+                      key={edge}
+                      className={`ppt-el-edge ppt-el-edge--${edge}`}
+                      onPointerDown={(e) => startDrag(e, id, 'move', box)}
+                    />
+                  ))}
+                  {RESIZE_HANDLES.map((h) => (
+                    <span
+                      key={h.id}
+                      className={`ppt-el-handle ppt-el-handle--${h.id}`}
+                      style={{ cursor: h.cursor }}
+                      onPointerDown={(e) => startDrag(e, id, h.id, box)}
+                    />
+                  ))}
+                </div>
+              );
+            })()
+          : null}
       </div>
     </figure>
   );

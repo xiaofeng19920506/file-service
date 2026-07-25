@@ -40,6 +40,8 @@ export type SlideVisualLayer =
   | {
       kind: 'image';
       url: string;
+      /** OOXML cNvPr id，用于选中与几何编辑 */
+      elementId?: number;
       left: number;
       top: number;
       width: number;
@@ -49,7 +51,10 @@ export type SlideVisualLayer =
       kind: 'shape';
       /** 带文字的形状序号（仅有 txBody 且计入编辑的形状）；纯色块无 undefined */
       shapeIndex?: number;
+      /** OOXML cNvPr id，用于选中与几何编辑 */
+      elementId?: number;
       fill?: string;
+      line?: string;
       paragraphs: SlideTextParagraph[];
       left: number;
       top: number;
@@ -58,6 +63,15 @@ export type SlideVisualLayer =
       valign?: 'top' | 'middle' | 'bottom';
       autoFit?: boolean;
       paddingPct?: { top: number; right: number; bottom: number; left: number };
+    }
+  | {
+      kind: 'table';
+      elementId?: number;
+      rows: { cells: { text: string; bold?: boolean }[] }[];
+      left: number;
+      top: number;
+      width: number;
+      height: number;
     };
 
 function emuPct(value: number, total: number): number {
@@ -183,6 +197,20 @@ function extractShapeFillColor(chunk: string, schemeColors: Record<string, strin
   if (rgb) return `#${rgb[1]}`;
 
   const scheme = spPr.match(/<a:solidFill>[\s\S]*?<a:schemeClr val="([^"]+)"/);
+  if (scheme) return resolveSchemeColor(schemeColors, scheme[1]);
+
+  return null;
+}
+
+function extractShapeLineColor(chunk: string, schemeColors: Record<string, string>): string | null {
+  const spPr = chunk.match(/<p:spPr>([\s\S]*?)<\/p:spPr>/)?.[1];
+  const ln = spPr?.match(/<a:ln[^>]*>([\s\S]*?)<\/a:ln>/)?.[1];
+  if (!ln || ln.includes('<a:noFill/>')) return null;
+
+  const rgb = ln.match(/<a:srgbClr val="([0-9A-Fa-f]{6})"/);
+  if (rgb) return `#${rgb[1]}`;
+
+  const scheme = ln.match(/<a:schemeClr val="([^"]+)"/);
   if (scheme) return resolveSchemeColor(schemeColors, scheme[1]);
 
   return null;
@@ -344,7 +372,7 @@ export async function parseSlideVisualLayers(
   }
 
   const spTree = xml.match(/<p:spTree>([\s\S]*)<\/p:spTree>/)?.[1] ?? xml;
-  const blocks = [...spTree.matchAll(/<p:(sp|pic)>[\s\S]*?<\/p:\1>/g)];
+  const blocks = [...spTree.matchAll(/<p:(sp|pic|graphicFrame)>[\s\S]*?<\/p:\1>/g)];
   let textShapeIndex = 0;
 
   for (const block of blocks) {
@@ -352,17 +380,35 @@ export async function parseSlideVisualLayers(
     const box = extractShapeBox(chunk, slideSize);
     if (!box) continue;
     const { widthEmu, heightEmu, ...boxPct } = box;
+    const rawId = chunk.match(/<p:cNvPr[^>]*\sid="(\d+)"/)?.[1];
+    const elementId = rawId ? Number(rawId) : undefined;
 
     if (chunk.startsWith('<p:pic>')) {
       const embed = chunk.match(/r:embed="([^"]+)"/)?.[1];
       if (!embed) continue;
       const url = await urlForEmbed(embed);
       if (!url) continue;
-      layers.push({ kind: 'image', url, ...boxPct });
+      layers.push({ kind: 'image', url, elementId, ...boxPct });
+      continue;
+    }
+
+    if (chunk.startsWith('<p:graphicFrame>')) {
+      const tbl = chunk.match(/<a:tbl>[\s\S]*?<\/a:tbl>/)?.[0];
+      if (!tbl) continue;
+      const rows = [...tbl.matchAll(/<a:tr[^>]*>[\s\S]*?<\/a:tr>/g)].map((tr) => ({
+        cells: [...tr[0].matchAll(/<a:tc[^>]*>[\s\S]*?<\/a:tc>/g)].map((tc) => ({
+          text: [...tc[0].matchAll(/<a:t>([\s\S]*?)<\/a:t>/g)]
+            .map((m) => decodeXmlEntities(m[1]))
+            .join(''),
+          bold: /\sb="1"/.test(tc[0]),
+        })),
+      }));
+      if (rows.length) layers.push({ kind: 'table', elementId, rows, ...boxPct });
       continue;
     }
 
     const fill = extractShapeFillColor(chunk, schemeColors) ?? undefined;
+    const line = extractShapeLineColor(chunk, schemeColors) ?? undefined;
     const hasText = chunk.includes('<p:txBody>');
 
     if (hasText) {
@@ -372,21 +418,23 @@ export async function parseSlideVisualLayers(
       const shapeIndex = textShapeIndex;
       textShapeIndex += 1;
       if (text.paragraphs.length) {
-        layers.push({ kind: 'shape', shapeIndex, fill, ...boxPct, ...text, paddingPct });
+        layers.push({ kind: 'shape', shapeIndex, elementId, fill, line, ...boxPct, ...text, paddingPct });
       } else {
         // 空文本框也计入序号，便于与 XML 顺序对齐
         layers.push({
           kind: 'shape',
           shapeIndex,
+          elementId,
           fill,
+          line,
           paragraphs: [],
           ...boxPct,
           valign: 'top',
           paddingPct,
         });
       }
-    } else if (fill) {
-      layers.push({ kind: 'shape', fill, paragraphs: [], ...boxPct, valign: 'top' });
+    } else if (fill || line) {
+      layers.push({ kind: 'shape', elementId, fill, line, paragraphs: [], ...boxPct, valign: 'top' });
     }
   }
 

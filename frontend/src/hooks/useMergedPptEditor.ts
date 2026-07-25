@@ -18,11 +18,21 @@ import {
   slidesContentEqual,
   type EditableSlide,
 } from '../lib/pptx-preview';
-import { insertPictureIntoPptx, insertTextBoxIntoPptx } from '../lib/pptx-insert-elements';
+import { insertPictureIntoPptx } from '../lib/pptx-insert-elements';
 import {
   normalizeShapeTextOverride,
   type ShapeTextStyle,
 } from '../lib/pptx-shape-text';
+import {
+  getSlideXml,
+  loadSlideLayouts,
+  loadSlideSize,
+  loadSlideXmlMap,
+  type PptLayout,
+  type SlideXmlMap,
+} from '../lib/ppt-doc';
+import { applySlideXmlOverridesToPptx } from '../lib/pptx-preview';
+import { DEFAULT_SLIDE_SIZE, type SlideSize } from '../lib/ppt-ops/xml';
 
 type UseMergedPptEditorProps = {
   mergedUrl: string | null;
@@ -80,6 +90,10 @@ export function useMergedPptEditor({
   const savedSourceFileRef = useRef<File | null>(null);
   const [sourceFile, setSourceFile] = useState<File | null>(null);
   const [binaryDirty, setBinaryDirty] = useState(false);
+  const [baseSlideXml, setBaseSlideXml] = useState<SlideXmlMap>(() => new Map());
+  const [slideSize, setSlideSize] = useState<SlideSize>({ ...DEFAULT_SLIDE_SIZE });
+  const [layouts, setLayouts] = useState<PptLayout[]>([]);
+  const [selectedElementId, setSelectedElementId] = useState<number | null>(null);
 
   const dirty = useMemo(
     () => binaryDirty || !slidesContentEqual(slides, savedSlides),
@@ -142,6 +156,9 @@ export function useMergedPptEditor({
       savedSourceFileRef.current = null;
       setSourceFile(null);
       setBinaryDirty(false);
+      setBaseSlideXml(new Map());
+      setLayouts([]);
+      setSelectedElementId(null);
       setLoading(false);
       return;
     }
@@ -162,6 +179,15 @@ export function useMergedPptEditor({
         setBinaryDirty(false);
         setSlidesSafe(parsed);
         setSavedSlidesSafe(parsed);
+        const [xmlMap, size, layoutList] = await Promise.all([
+          loadSlideXmlMap(blob),
+          loadSlideSize(blob),
+          loadSlideLayouts(blob),
+        ]);
+        if (token !== loadToken.current) return;
+        setBaseSlideXml(xmlMap);
+        setSlideSize(size);
+        setLayouts(layoutList);
       } catch (e) {
         if (token !== loadToken.current) return;
         setSlidesSafe([]);
@@ -452,6 +478,7 @@ export function useMergedPptEditor({
       setSourceFile(file);
       setBinaryDirty(true);
       setSlidesSafe(parsed);
+      setBaseSlideXml(await loadSlideXmlMap(file));
       if (focusPath) {
         const idx = parsed.findIndex((s) => s.slidePath === focusPath);
         if (idx >= 0) setFocusIndex(idx);
@@ -460,35 +487,71 @@ export function useMergedPptEditor({
     [setSlidesSafe],
   );
 
-  const insertTextBox = useCallback(async () => {
+  /** 把页内 XML 编辑落进工作文件，供需要重打包的操作（插图、超链接）作为起点 */
+  const flushToWorkingFile = useCallback(async (): Promise<File | null> => {
     const file = mergedSourceFileRef.current;
-    const slide = slides[Math.min(focusIndex, Math.max(0, slides.length - 1))];
-    if (!file || !slide?.slidePath || slide.isNew || slide.pending) return;
-    setSaveError(null);
-    try {
-      const next = await insertTextBoxIntoPptx(file, slide.slidePath, {
-        text: '双击编辑文字',
-      });
-      await reloadFromWorkingFile(next, slide.slidePath);
-    } catch (e) {
-      setSaveError(e instanceof Error ? e.message : 'insert_text_failed');
-    }
-  }, [focusIndex, reloadFromWorkingFile, slides]);
+    if (!file) return null;
+    const targets = slidesRef.current
+      .filter((s) => s.slidePath && s.slideXmlOverride)
+      .map((s) => ({ slidePath: s.slidePath, xml: s.slideXmlOverride! }));
+    if (!targets.length) return file;
+    return applySlideXmlOverridesToPptx(file, targets);
+  }, []);
+
+  /** 改写指定页的 slideN.xml（进 undo/redo，不重打包） */
+  const mutateSlideXml = useCallback(
+    (arrayIndex: number, mutator: (xml: string) => string) => {
+      updateSlides((prev) =>
+        prev.map((s, i) => {
+          if (i !== arrayIndex) return s;
+          const current = getSlideXml(s, baseSlideXml);
+          if (!current) return s;
+          let next: string;
+          try {
+            next = mutator(current);
+          } catch {
+            return s;
+          }
+          if (!next || next === current) return s;
+          return { ...s, slideXmlOverride: next };
+        }),
+      );
+    },
+    [baseSlideXml, updateSlides],
+  );
+
+  /** 重设本页：撤销页内所有 XML 与文字覆盖，回到文件里的原样 */
+  const resetSlideEdits = useCallback(
+    (arrayIndex: number) => {
+      updateSlides((prev) =>
+        prev.map((s, i) => {
+          if (i !== arrayIndex) return s;
+          if (!s.slideXmlOverride && !s.shapeTextOverrides) return s;
+          const next = { ...s };
+          delete next.slideXmlOverride;
+          delete next.shapeTextOverrides;
+          return next;
+        }),
+      );
+    },
+    [updateSlides],
+  );
 
   const insertPicture = useCallback(
     async (blob: Blob) => {
-      const file = mergedSourceFileRef.current;
-      const slide = slides[Math.min(focusIndex, Math.max(0, slides.length - 1))];
-      if (!file || !slide?.slidePath || slide.isNew || slide.pending) return;
+      const slide = slidesRef.current[Math.min(focusIndex, Math.max(0, slidesRef.current.length - 1))];
+      if (!slide?.slidePath || slide.isNew || slide.pending) return;
       setSaveError(null);
       try {
-        const next = await insertPictureIntoPptx(file, slide.slidePath, blob);
+        const base = await flushToWorkingFile();
+        if (!base) return;
+        const next = await insertPictureIntoPptx(base, slide.slidePath, blob);
         await reloadFromWorkingFile(next, slide.slidePath);
       } catch (e) {
         setSaveError(e instanceof Error ? e.message : 'insert_image_failed');
       }
     },
-    [focusIndex, reloadFromWorkingFile, slides],
+    [flushToWorkingFile, focusIndex, reloadFromWorkingFile],
   );
 
   const saveChanges = useCallback(async () => {
@@ -515,6 +578,7 @@ export function useMergedPptEditor({
       const parsed = await parsePptxSlidesDetailed(updatedFile, { sourceFile: 'merged.pptx' });
       setSlidesSafe(parsed);
       setSavedSlidesSafe(parsed);
+      setBaseSlideXml(await loadSlideXmlMap(updatedFile));
       onSaved?.();
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : 'save_failed');
@@ -525,6 +589,14 @@ export function useMergedPptEditor({
 
   const pptFocusIndex = Math.min(focusIndex, Math.max(0, slides.length - 1));
   const currentSlide = slides[pptFocusIndex];
+  const currentSlideXml = useMemo(
+    () => getSlideXml(currentSlide, baseSlideXml),
+    [baseSlideXml, currentSlide],
+  );
+
+  useEffect(() => {
+    setSelectedElementId(null);
+  }, [pptFocusIndex]);
 
   const canSkip = !!currentSlide && canRemoveSlide(currentSlide, slides);
   const canDuplicate = !!currentSlide && !!(currentSlide.slidePath || currentSlide.duplicateFromPath);
@@ -589,8 +661,17 @@ export function useMergedPptEditor({
     setSlideBackgroundColor,
     setShapeTextOverride,
     patchShapeTextStyle,
-    insertTextBox,
     insertPicture,
+    // 文档模型
+    currentSlideXml,
+    slideSize,
+    layouts,
+    selectedElementId,
+    setSelectedElementId,
+    mutateSlideXml,
+    resetSlideEdits,
+    flushToWorkingFile,
+    reloadFromWorkingFile,
     openCrop,
     openBackgroundCrop,
     discardChanges,

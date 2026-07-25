@@ -31,6 +31,11 @@ export type EditableSlide = {
   backgroundReplacement?: Blob;
   /** 形状文字覆盖（shapeIndex → 文本+样式） */
   shapeTextOverrides?: Record<number, ShapeTextOverrideValue>;
+  /**
+   * 该页 slideN.xml 的编辑结果。Ribbon 命令直接改这份字符串，
+   * 画布按它渲染，保存时整份写回 zip。
+   */
+  slideXmlOverride?: string;
   pending?: boolean;
   editable: boolean;
   /** 尚未写入 PPTX，确认保存时再复制 */
@@ -615,6 +620,7 @@ export function slidesContentEqual(a: EditableSlide[], b: EditableSlide[]): bool
     ) {
       return false;
     }
+    if ((s.slideXmlOverride ?? '') !== (t.slideXmlOverride ?? '')) return false;
     const textA = s.shapeTextOverrides ?? {};
     const textB = t.shapeTextOverrides ?? {};
     const textKeysA = Object.keys(textA).sort();
@@ -811,6 +817,28 @@ export async function applyBackgroundEditsToPptx(
       xml = replaceOrInsertBg(xml, buildBlipBgXml(rId));
       zip.file(slide.slidePath, xml);
     }
+  }
+
+  const filename = file instanceof File ? file.name : 'presentation.pptx';
+  const out = await zip.generateAsync({ type: 'arraybuffer' });
+  return new File([out], filename, { type: PPTX_MIME });
+}
+
+/** 将 Ribbon 命令改写后的整份 slideN.xml 写回 PPTX */
+export async function applySlideXmlOverridesToPptx(
+  file: Blob,
+  targets: { slidePath: string; xml: string }[],
+): Promise<File> {
+  if (!targets.length) {
+    return file instanceof File
+      ? file
+      : new File([file], 'presentation.pptx', { type: PPTX_MIME });
+  }
+
+  const zip = await JSZip.loadAsync(file);
+  for (const { slidePath, xml } of targets) {
+    if (!zip.file(slidePath)) continue;
+    zip.file(slidePath, xml);
   }
 
   const filename = file instanceof File ? file.name : 'presentation.pptx';
@@ -1146,6 +1174,13 @@ export async function applySlideEditsToPptx(
 
   if (textSlides.length) {
     working = await applySlidesToPptx(working, textSlides, file.name);
+  }
+
+  const xmlTargets = target
+    .map((s) => ({ slidePath: resolvePath(s), xml: s.slideXmlOverride }))
+    .filter((s): s is { slidePath: string; xml: string } => !!s.slidePath && !!s.xml);
+  if (xmlTargets.length) {
+    working = await applySlideXmlOverridesToPptx(working, xmlTargets);
   }
 
   const shapeTextTargets = target

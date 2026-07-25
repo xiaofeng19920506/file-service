@@ -223,3 +223,298 @@
   font-size: 0.75rem;
   color: var(--text-secondary);
 }
+
+/* ────────────────────────────────────────────────
+   画布元素选中：选中框 + 8 点手柄 + 网格/参考线
+   ──────────────────────────────────────────────── */
+
+.bulletin-composite-image.is-pickable,
+.bulletin-composite-table.is-pickable {
+  cursor: move;
+}
+
+.bulletin-composite-table {
+  position: absolute;
+  overflow: hidden;
+}
+
+.bulletin-composite-table table {
+  width: 100%;
+  height: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  background: #fff;
+}
+
+.bulletin-composite-table td {
+  border: 1px solid #7f7f7f;
+  padding: 0.15em 0.3em;
+  font-size: 2.2cqw;
+  line-height: 1.25;
+  color: #1e2d31;
+  overflow: hidden;
+}
+
+.bulletin-composite-slide--grid::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 45;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgba(0, 0, 0, 0.12) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.12) 1px, transparent 1px);
+  background-size: 8.333% 12.5%;
+}
+
+.bulletin-composite-slide--guides::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 46;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, transparent calc(50% - 0.5px), rgba(183, 71, 42, 0.55) calc(50% - 0.5px), rgba(183, 71, 42, 0.55) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+    linear-gradient(to bottom, transparent calc(50% - 0.5px), rgba(183, 71, 42, 0.55) calc(50% - 0.5px), rgba(183, 71, 42, 0.55) calc(50% + 0.5px), transparent calc(50% + 0.5px));
+}
+
+.ppt-el-frame {
+  position: absolute;
+  z-index: 60;
+  pointer-events: none;
+  outline: 1px solid #b7472a;
+  outline-offset: 0;
+}
+
+.ppt-el-edge {
+  position: absolute;
+  pointer-events: auto;
+  cursor: move;
+}
+
+.ppt-el-edge--top,
+.ppt-el-edge--bottom {
+  left: 0;
+  right: 0;
+  height: 7px;
+}
+
+.ppt-el-edge--top {
+  top: -3.5px;
+}
+
+.ppt-el-edge--bottom {
+  bottom: -3.5px;
+}
+
+.ppt-el-edge--left,
+.ppt-el-edge--right {
+  top: 0;
+  bottom: 0;
+  width: 7px;
+}
+
+.ppt-el-edge--left {
+  left: -3.5px;
+}
+
+.ppt-el-edge--right {
+  right: -3.5px;
+}
+
+.ppt-el-handle {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px 0 0 -4.5px;
+  background: #fff;
+  border: 1.5px solid #b7472a;
+  border-radius: 50%;
+  pointer-events: auto;
+}
+
+.ppt-el-handle--nw { left: 0; top: 0; }
+.ppt-el-handle--n { left: 50%; top: 0; }
+.ppt-el-handle--ne { left: 100%; top: 0; }
+.ppt-el-handle--e { left: 100%; top: 50%; }
+.ppt-el-handle--se { left: 100%; top: 100%; }
+.ppt-el-handle--s { left: 50%; top: 100%; }
+.ppt-el-handle--sw { left: 0; top: 100%; }
+.ppt-el-handle--w { left: 0; top: 50%; }
+
+/* ────────────────────────────────────────────────
+   查找替换浮层 / 选择窗格 / 状态栏
+   ──────────────────────────────────────────────── */
+
+.ppt-find-panel {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 70;
+  width: 250px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.6rem;
+  background: #fff;
+  border: 1px solid #c8c6c4;
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  font-size: 12px;
+  color: #201f1e;
+}
+
+.ppt-find-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12.5px;
+}
+
+.ppt-find-close {
+  appearance: none;
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  line-height: 1;
+  color: #605e5c;
+  cursor: pointer;
+  padding: 0 0.2rem;
+}
+
+.ppt-find-close:hover {
+  color: #b7472a;
+}
+
+.ppt-find-case {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #605e5c;
+}
+
+.ppt-find-status {
+  margin: 0;
+  min-height: 1.1em;
+  color: #605e5c;
+}
+
+.ppt-selection-pane {
+  flex: 0 0 190px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.6rem 0.5rem;
+  background: #fff;
+  border-left: 1px solid #e1dfdd;
+  overflow-y: auto;
+  font-size: 12px;
+  color: #201f1e;
+}
+
+.ppt-selection-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ppt-selection-order {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.ppt-selection-order .ppt-rb-menu-item {
+  justify-content: center;
+  border: 1px solid #e1dfdd;
+  font-size: 11.5px;
+}
+
+.ppt-selection-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.ppt-selection-item {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: transparent;
+  padding: 0.3rem 0.35rem;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+
+.ppt-selection-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ppt-selection-item .ppt-rb-icon {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  color: #605e5c;
+}
+
+.ppt-selection-item:hover {
+  background: #f3f2f1;
+}
+
+.ppt-selection-item.is-active {
+  background: #f7e9e5;
+  border-color: #b7472a;
+}
+
+.ppt-statusbar-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  justify-content: flex-end;
+}
+
+.ppt-status-link {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.ppt-status-link:hover:not(:disabled) {
+  color: #b7472a;
+}
+
+.ppt-status-link:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.ppt-canvas-area {
+  position: relative;
+}
+
+.ppt-canvas-area--ruler {
+  padding-top: 1.4rem;
+  background-image: repeating-linear-gradient(
+    to right,
+    #c8c6c4 0 1px,
+    transparent 1px 40px
+  );
+  background-repeat: no-repeat;
+  background-size: 100% 14px;
+  background-position: 0 0;
+}

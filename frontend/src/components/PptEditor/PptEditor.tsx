@@ -1,26 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useI18n } from '../../i18n';
 import { useMergedPptEditor } from '../../hooks/useMergedPptEditor';
+import { NUDGE_STEP_PCT, useRibbonCommands } from '../../hooks/useRibbonCommands';
 import ConfirmModal from '../ConfirmModal';
 import ImageCropModal from '../ImageCropModal';
+import FindReplacePanel from './FindReplacePanel';
+import Ribbon from './Ribbon/Ribbon';
+import SelectionPane from './SelectionPane';
 import { PptCanvasSlide, PptSlidesPane } from './SlideViews';
-import {
-  normalizeShapeTextOverride,
-  type ShapeTextStyle,
-} from '../../lib/pptx-shape-text';
-
-const FONT_OPTIONS = [
-  '微软雅黑',
-  '黑体',
-  '宋体',
-  '楷体',
-  'Arial',
-  'Calibri',
-  'Times New Roman',
-  'Georgia',
-];
-
-const FONT_SIZES = [12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 44, 48, 54, 60, 72];
+import { replaceAllText } from '../../lib/ppt-ops/text';
 
 type PptEditorProps = {
   mergedUrl: string | null;
@@ -48,11 +36,14 @@ export default function PptEditor({
   const { t } = useI18n();
   const [zoom, setZoom] = useState(100);
   const [selectedShapeIndex, setSelectedShapeIndex] = useState<number | null>(null);
-  const [selectedSeed, setSelectedSeed] = useState<ShapeTextStyle | null>(null);
-  const [pageJump, setPageJump] = useState('');
+  const [showGrid, setShowGrid] = useState(false);
+  const [showGuides, setShowGuides] = useState(false);
+  const [showRuler, setShowRuler] = useState(false);
+  const [findMode, setFindMode] = useState<'find' | 'replace' | null>(null);
+  const [selectionPaneOpen, setSelectionPaneOpen] = useState(false);
   const imageReplaceInputRef = useRef<HTMLInputElement>(null);
   const imageInsertInputRef = useRef<HTMLInputElement>(null);
-  const backgroundReplaceInputRef = useRef<HTMLInputElement>(null);
+
   const editor = useMergedPptEditor({ mergedUrl, jobId, onSaveFile, onSaved });
   const {
     slides,
@@ -72,20 +63,11 @@ export default function PptEditor({
     setPptDragIndex,
     pptDragOverIndex,
     setPptDragOverIndex,
-    canUndo,
-    canRedo,
-    canSkip,
-    canDuplicate,
-    canMoveUp,
-    canMoveDown,
-    canEditCanvas,
     canEditImages,
-    canEditBackground,
     firstImageUrl,
     undo,
     redo,
     reorderSlideAt,
-    addSlideAfter,
     requestSkipSlide,
     performSkipSlide,
     requestBatchSkip,
@@ -93,85 +75,143 @@ export default function PptEditor({
     toggleSlideSelect,
     setSlideImageReplacement,
     setSlideBackgroundImage,
-    setSlideBackgroundColor,
     setShapeTextOverride,
-    patchShapeTextStyle,
-    insertTextBox,
     insertPicture,
     openCrop,
-    discardChanges,
-    saveChanges,
     currentSlide,
+    currentSlideXml,
+    selectedElementId,
+    setSelectedElementId,
+    mutateSlideXml,
     sourceFile,
   } = editor;
 
+  const ribbon = useRibbonCommands(editor, {
+    zoom,
+    setZoom,
+    fitToWindow: () => setZoom(100),
+    showGrid,
+    toggleGrid: () => setShowGrid((v) => !v),
+    showGuides,
+    toggleGuides: () => setShowGuides((v) => !v),
+    showRuler,
+    toggleRuler: () => setShowRuler((v) => !v),
+    pickImage: () => imageInsertInputRef.current?.click(),
+    openFind: () => setFindMode('find'),
+    openReplace: () => setFindMode('replace'),
+    toggleSelectionPane: () => setSelectionPaneOpen((v) => !v),
+  });
+
   useEffect(() => {
     setSelectedShapeIndex(null);
-    setSelectedSeed(null);
-    setPageJump(String(focusIndex + 1));
   }, [focusIndex]);
 
-  const selectedTextStyle: ShapeTextStyle | null = useMemo(() => {
-    if (selectedShapeIndex == null || !currentSlide) return null;
-    const override = currentSlide.shapeTextOverrides?.[selectedShapeIndex];
-    const fromSeed =
-      selectedSeed ??
-      ({
-        text: '',
-        fontFamily: '微软雅黑',
-        fontSizePt: 18,
-        bold: false,
-        italic: false,
-      } satisfies ShapeTextStyle);
-    if (override == null) return fromSeed;
-    const n = normalizeShapeTextOverride(override, fromSeed.text);
-    return {
-      text: n.text,
-      fontFamily: n.fontFamily ?? fromSeed.fontFamily,
-      fontSizePt: n.fontSizePt ?? fromSeed.fontSizePt,
-      bold: n.bold ?? fromSeed.bold,
-      italic: n.italic ?? fromSeed.italic,
-    };
-  }, [currentSlide, selectedSeed, selectedShapeIndex]);
-
-  const fontOptions = useMemo(() => {
-    const face = selectedTextStyle?.fontFamily?.trim();
-    if (face && !FONT_OPTIONS.includes(face)) return [face, ...FONT_OPTIONS];
-    return FONT_OPTIONS;
-  }, [selectedTextStyle?.fontFamily]);
-
-  const fontSizeOptions = useMemo(() => {
-    const n = selectedTextStyle?.fontSizePt;
-    if (n != null && Number.isFinite(n) && !FONT_SIZES.includes(n)) {
-      return [...FONT_SIZES, Math.round(n * 10) / 10].sort((a, b) => a - b);
-    }
-    return FONT_SIZES;
-  }, [selectedTextStyle?.fontSizePt]);
-
-  const applySelectedStyle = (patch: Partial<ShapeTextStyle>) => {
-    if (selectedShapeIndex == null) return;
-    patchShapeTextStyle(
-      focusIndex,
-      selectedShapeIndex,
-      patch,
-      selectedTextStyle?.text || selectedSeed?.text || '',
-    );
-  };
+  const replaceOnSlide = useCallback(
+    (search: string, replacement: string, matchCase: boolean) => {
+      if (!currentSlideXml) return 0;
+      const { count } = replaceAllText(currentSlideXml, search, replacement, matchCase);
+      if (count > 0) {
+        mutateSlideXml(focusIndex, (xml) => replaceAllText(xml, search, replacement, matchCase).xml);
+      }
+      return count;
+    },
+    [currentSlideXml, focusIndex, mutateSlideXml],
+  );
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      const typing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+      const mod = e.metaKey || e.ctrlKey;
 
-      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+      if (mod && e.key.toLowerCase() === 'z') {
         e.preventDefault();
-        undo();
+        if (e.shiftKey) redo();
+        else undo();
         return;
       }
-      if ((e.metaKey || e.ctrlKey) && (e.key === 'Z' || (e.key === 'z' && e.shiftKey))) {
-        e.preventDefault();
-        redo();
+      if (typing) return;
+
+      if (mod) {
+        switch (e.key.toLowerCase()) {
+          case 'b':
+            e.preventDefault();
+            ribbon.cmd.toggleBold?.();
+            return;
+          case 'i':
+            e.preventDefault();
+            ribbon.cmd.toggleItalic?.();
+            return;
+          case 'u':
+            e.preventDefault();
+            ribbon.cmd.toggleUnderline?.();
+            return;
+          case 'c':
+            if (ribbon.hasSelection) {
+              e.preventDefault();
+              ribbon.cmd.copy?.();
+            }
+            return;
+          case 'x':
+            if (ribbon.hasSelection) {
+              e.preventDefault();
+              ribbon.cmd.cut?.();
+            }
+            return;
+          case 'v':
+            if (ribbon.cmd.paste) {
+              e.preventDefault();
+              ribbon.cmd.paste();
+            }
+            return;
+          case 'd':
+            if (ribbon.hasSelection) {
+              e.preventDefault();
+              ribbon.cmd.duplicateSelection?.();
+            }
+            return;
+          case 'f':
+            e.preventDefault();
+            setFindMode('find');
+            return;
+          case 'h':
+            e.preventDefault();
+            setFindMode('replace');
+            return;
+          case 's':
+            e.preventDefault();
+            ribbon.cmd.save?.();
+            return;
+          default:
+            return;
+        }
+      }
+
+      if (e.key === 'Escape' && selectedElementId != null) {
+        setSelectedElementId(null);
         return;
+      }
+
+      // 有选中元素时方向键微调，否则翻页
+      if (selectedElementId != null) {
+        const step = e.shiftKey ? NUDGE_STEP_PCT * 4 : NUDGE_STEP_PCT;
+        const nudges: Record<string, [number, number]> = {
+          ArrowLeft: [-step, 0],
+          ArrowRight: [step, 0],
+          ArrowUp: [0, -step],
+          ArrowDown: [0, step],
+        };
+        const delta = nudges[e.key];
+        if (delta) {
+          e.preventDefault();
+          ribbon.nudgeSelection(delta[0], delta[1]);
+          return;
+        }
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+          e.preventDefault();
+          ribbon.cmd.deleteSelection?.();
+          return;
+        }
       }
 
       if (e.key === 'ArrowUp' || e.key === 'PageUp') {
@@ -203,8 +243,11 @@ export default function PptEditor({
     redo,
     requestBatchSkip,
     requestSkipSlide,
+    ribbon,
+    selectedElementId,
     selectedSlideIds.size,
     setFocusIndex,
+    setSelectedElementId,
     slides.length,
     undo,
   ]);
@@ -213,11 +256,6 @@ export default function PptEditor({
     setPptDragIndex(null);
     setPptDragOverIndex(null);
   };
-
-  const bgColorValue =
-    currentSlide?.backgroundKind === 'solid' && currentSlide.backgroundColor
-      ? `#${currentSlide.backgroundColor}`
-      : '#ffffff';
 
   return (
     <>
@@ -243,230 +281,7 @@ export default function PptEditor({
           </div>
         </header>
 
-        <div className="ppt-ribbon" role="toolbar" aria-label={t('ppt.toolbar')}>
-          <div className="ppt-ribbon-group">
-            <button type="button" className="ppt-ribbon-btn" disabled={!canUndo} onClick={undo}>
-              {t('preview.undo')}
-            </button>
-            <button type="button" className="ppt-ribbon-btn" disabled={!canRedo} onClick={redo}>
-              {t('preview.redo')}
-            </button>
-          </div>
-          <div className="ppt-ribbon-sep" aria-hidden />
-          <div className="ppt-ribbon-group ppt-ribbon-group--insert">
-            <button
-              type="button"
-              className="ppt-ribbon-btn ppt-ribbon-btn-accent"
-              disabled={!canEditCanvas}
-              onClick={() => void insertTextBox()}
-            >
-              {t('ppt.insertText')}
-            </button>
-            <button
-              type="button"
-              className="ppt-ribbon-btn ppt-ribbon-btn-accent"
-              disabled={!canEditCanvas}
-              onClick={() => imageInsertInputRef.current?.click()}
-            >
-              {t('ppt.insertImage')}
-            </button>
-          </div>
-          <div className="ppt-ribbon-sep" aria-hidden />
-          <div className="ppt-ribbon-group ppt-ribbon-group--format">
-            <select
-              className="ppt-format-select"
-              disabled={selectedShapeIndex == null}
-              value={selectedTextStyle?.fontFamily ?? '微软雅黑'}
-              onChange={(e) => applySelectedStyle({ fontFamily: e.target.value })}
-              aria-label={t('ppt.fontFamily')}
-            >
-              {fontOptions.map((f) => (
-                <option key={f} value={f}>
-                  {f}
-                </option>
-              ))}
-            </select>
-            <select
-              className="ppt-format-select ppt-format-select--size"
-              disabled={selectedShapeIndex == null}
-              value={String(selectedTextStyle?.fontSizePt ?? 18)}
-              onChange={(e) => applySelectedStyle({ fontSizePt: Number(e.target.value) })}
-              aria-label={t('ppt.fontSize')}
-            >
-              {fontSizeOptions.map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              className={`ppt-ribbon-btn ppt-format-toggle${selectedTextStyle?.bold ? ' active' : ''}`}
-              disabled={selectedShapeIndex == null}
-              onClick={() => applySelectedStyle({ bold: !selectedTextStyle?.bold })}
-              title={t('ppt.bold')}
-            >
-              <strong>B</strong>
-            </button>
-            <button
-              type="button"
-              className={`ppt-ribbon-btn ppt-format-toggle${selectedTextStyle?.italic ? ' active' : ''}`}
-              disabled={selectedShapeIndex == null}
-              onClick={() => applySelectedStyle({ italic: !selectedTextStyle?.italic })}
-              title={t('ppt.italic')}
-            >
-              <em>I</em>
-            </button>
-          </div>
-          <div className="ppt-ribbon-sep" aria-hidden />
-          <div className="ppt-ribbon-group">
-            <button
-              type="button"
-              className="ppt-ribbon-btn"
-              disabled={!canEditImages}
-              onClick={() => imageReplaceInputRef.current?.click()}
-            >
-              {t('ppt.replaceImage')}
-            </button>
-            <button
-              type="button"
-              className="ppt-ribbon-btn"
-              disabled={!firstImageUrl}
-              onClick={() => firstImageUrl && openCrop(focusIndex, 0, firstImageUrl)}
-            >
-              {t('ppt.cropImage')}
-            </button>
-          </div>
-          <div className="ppt-ribbon-sep" aria-hidden />
-          <div className="ppt-ribbon-group">
-            <button
-              type="button"
-              className="ppt-ribbon-btn"
-              disabled={!canEditBackground}
-              onClick={() => backgroundReplaceInputRef.current?.click()}
-            >
-              {t('ppt.replaceBackground')}
-            </button>
-            <label
-              className={`ppt-ribbon-btn ppt-bg-color-btn${!canEditBackground ? ' is-disabled' : ''}`}
-              title={t('ppt.backgroundColor')}
-            >
-              <span>{t('ppt.backgroundColor')}</span>
-              <input
-                type="color"
-                value={bgColorValue}
-                disabled={!canEditBackground}
-                onChange={(e) => setSlideBackgroundColor(focusIndex, e.target.value)}
-              />
-            </label>
-          </div>
-          <div className="ppt-ribbon-sep" aria-hidden />
-          <div className="ppt-ribbon-group ppt-ribbon-group--pages">
-            <button
-              type="button"
-              className="ppt-ribbon-btn ppt-ribbon-btn-accent"
-              disabled={!canDuplicate}
-              onClick={() => addSlideAfter(focusIndex, true)}
-            >
-              {t('ppt.addSlide')}
-            </button>
-            <button
-              type="button"
-              className="ppt-ribbon-btn"
-              disabled={!canDuplicate}
-              onClick={() => addSlideAfter(focusIndex, false)}
-            >
-              {t('ppt.duplicateSlide')}
-            </button>
-            <button
-              type="button"
-              className="ppt-ribbon-btn"
-              disabled={!canSkip}
-              onClick={() => requestSkipSlide(focusIndex)}
-            >
-              {t('ppt.skipSlide')}
-            </button>
-            <button
-              type="button"
-              className="ppt-ribbon-btn"
-              disabled={!canMoveUp}
-              onClick={() => reorderSlideAt(focusIndex, focusIndex - 1)}
-            >
-              {t('ppt.moveUp')}
-            </button>
-            <button
-              type="button"
-              className="ppt-ribbon-btn"
-              disabled={!canMoveDown}
-              onClick={() => reorderSlideAt(focusIndex, focusIndex + 1)}
-            >
-              {t('ppt.moveDown')}
-            </button>
-            <label className="ppt-page-jump" title={t('ppt.gotoPage')}>
-              <span>{t('ppt.pageIndex')}</span>
-              <input
-                type="number"
-                min={1}
-                max={Math.max(1, slides.length)}
-                value={pageJump}
-                onChange={(e) => setPageJump(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key !== 'Enter') return;
-                  const n = Number(pageJump);
-                  if (!Number.isFinite(n)) return;
-                  const idx = Math.min(slides.length, Math.max(1, Math.round(n))) - 1;
-                  setFocusIndex(idx);
-                }}
-              />
-              <button
-                type="button"
-                className="ppt-ribbon-btn"
-                onClick={() => {
-                  const n = Number(pageJump);
-                  if (!Number.isFinite(n)) return;
-                  const idx = Math.min(slides.length, Math.max(1, Math.round(n))) - 1;
-                  setFocusIndex(idx);
-                }}
-              >
-                {t('ppt.gotoPage')}
-              </button>
-            </label>
-          </div>
-          <div className="ppt-ribbon-spacer" />
-          <div className="ppt-ribbon-group">
-            <label className="ppt-zoom-control">
-              {t('slides.zoom')}
-              <input
-                type="range"
-                min={50}
-                max={150}
-                step={10}
-                value={zoom}
-                onChange={(e) => setZoom(Number(e.target.value))}
-              />
-              <span>{zoom}%</span>
-            </label>
-          </div>
-          <div className="ppt-ribbon-sep" aria-hidden />
-          <div className="ppt-ribbon-group">
-            <button
-              type="button"
-              className="ppt-ribbon-btn"
-              disabled={!dirty || saving}
-              onClick={discardChanges}
-            >
-              {t('preview.discard')}
-            </button>
-            <button
-              type="button"
-              className={`ppt-ribbon-btn ppt-ribbon-btn-primary${dirty ? ' dirty' : ''}`}
-              disabled={!dirty || saving}
-              onClick={() => void saveChanges()}
-            >
-              {t('slides.save')}
-            </button>
-          </div>
-        </div>
+        <Ribbon ctx={ribbon} />
 
         <input
           ref={imageInsertInputRef}
@@ -492,18 +307,6 @@ export default function PptEditor({
             void setSlideImageReplacement(focusIndex, 0, file);
           }}
         />
-        <input
-          ref={backgroundReplaceInputRef}
-          type="file"
-          accept="image/*"
-          hidden
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            e.target.value = '';
-            if (!file) return;
-            void setSlideBackgroundImage(focusIndex, file);
-          }}
-        />
 
         <div className="ppt-workspace">
           <PptSlidesPane
@@ -525,7 +328,7 @@ export default function PptEditor({
             }}
             onDragEnd={endDrag}
           />
-          <main className="ppt-canvas-area">
+          <main className={`ppt-canvas-area${showRuler ? ' ppt-canvas-area--ruler' : ''}`}>
             {loading && slides.length === 0 && (
               <div className="preview-empty">
                 <div className="preview-spinner" />
@@ -543,17 +346,40 @@ export default function PptEditor({
                 zoom={zoom}
                 pptxBlob={sourceFile}
                 editable
+                slideXml={currentSlideXml}
                 selectedShapeIndex={selectedShapeIndex}
-                onSelectShape={(idx, seed) => {
-                  setSelectedShapeIndex(idx);
-                  setSelectedSeed(seed ?? null);
-                }}
+                onSelectShape={(idx) => setSelectedShapeIndex(idx)}
                 onShapeTextChange={(shapeIndex, style) =>
                   setShapeTextOverride(focusIndex, shapeIndex, style)
                 }
+                selectedElementId={selectedElementId}
+                onSelectElement={setSelectedElementId}
+                onMoveElement={ribbon.moveElementByPct}
+                onResizeElement={ribbon.resizeElementByPct}
+                showGrid={showGrid}
+                showGuides={showGuides}
+              />
+            )}
+
+            {findMode && (
+              <FindReplacePanel
+                mode={findMode}
+                slideXml={currentSlideXml}
+                onReplaceAll={replaceOnSlide}
+                onClose={() => setFindMode(null)}
               />
             )}
           </main>
+
+          {selectionPaneOpen && (
+            <SelectionPane
+              slideXml={currentSlideXml}
+              selectedElementId={selectedElementId}
+              onSelect={setSelectedElementId}
+              onOrder={(action) => ribbon.cmd.orderShape?.(action)}
+              onClose={() => setSelectionPaneOpen(false)}
+            />
+          )}
         </div>
 
         <footer className="ppt-statusbar">
@@ -563,8 +389,29 @@ export default function PptEditor({
               : '—'}
           </span>
           <span className="ppt-status-hint">{t('ppt.canvasHintFormat')}</span>
-          <span className={dirty ? 'ppt-status-unsaved' : undefined}>
-            {dirty ? t('files.unsaved') : t('ppt.saved')}
+          <span className="ppt-statusbar-right">
+            {canEditImages && (
+              <>
+                <button
+                  type="button"
+                  className="ppt-status-link"
+                  onClick={() => imageReplaceInputRef.current?.click()}
+                >
+                  {t('ppt.replaceImage')}
+                </button>
+                <button
+                  type="button"
+                  className="ppt-status-link"
+                  disabled={!firstImageUrl}
+                  onClick={() => firstImageUrl && openCrop(focusIndex, 0, firstImageUrl)}
+                >
+                  {t('ppt.cropImage')}
+                </button>
+              </>
+            )}
+            <span className={dirty ? 'ppt-status-unsaved' : undefined}>
+              {saving ? t('preview.saving') : dirty ? t('files.unsaved') : t('ppt.saved')}
+            </span>
           </span>
         </footer>
 

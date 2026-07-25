@@ -3,6 +3,7 @@ import '../index.css';
 import '../App.css';
 import '../styles/apple-design.css';
 import '../styles/ppt-editor.css';
+import '../styles/ppt-ribbon.css';
 import '../styles/mobile.css';
 import '../styles/playlist-audio.css';
 import '../styles/playlist-now-playing.css';
