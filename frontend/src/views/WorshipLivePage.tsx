@@ -7,10 +7,15 @@ import { useBulletinRealtime } from '../hooks/useBulletinRealtime';
 import { usePlaylistPlaybackTransport } from '../hooks/usePlaylistPlaybackTransport';
 import { useI18n } from '../i18n';
 import { rebuildBulletinSlides, preserveSlideIndex } from '../lib/bulletin-slides';
+import { BULLETIN_SECTION_TEMPLATE_SLIDES } from '../lib/bulletin-section-visibility';
 import type { EditableSlide } from '../lib/pptx-preview';
 import type { WorshipLiveMode } from '../lib/worship-live-config';
 
-const WORSHIP_SLIDE_FIRST = 7;
+/**
+ * 敬拜赞美分区对应的模板文件页码（当前只有 P8；P7/P9 已恒删）。
+ * 注意用 slideInFile 而非 index：index 是删页后的顺序号，会随隐藏分区漂移。
+ */
+const WORSHIP_SLIDE_FILES = new Set(BULLETIN_SECTION_TEMPLATE_SLIDES.worship ?? []);
 
 type WorshipLivePageProps = {
   playlistId: string;
@@ -196,11 +201,10 @@ export default function WorshipLivePage({ playlistId, bulletinId, mode }: Worshi
   }, [exitLive, mode, slides.length, toggleStageFullscreen]);
 
   const currentSlide = slides[slideIndex];
-  const onWorshipSlide =
-    currentSlide && currentSlide.index >= WORSHIP_SLIDE_FIRST && currentSlide.index <= 9;
+  const onWorshipSlide = Boolean(currentSlide && WORSHIP_SLIDE_FILES.has(currentSlide.slideInFile));
 
   const jumpToWorshipSlides = () => {
-    const idx = slides.findIndex((s) => s.index === WORSHIP_SLIDE_FIRST);
+    const idx = slides.findIndex((s) => WORSHIP_SLIDE_FILES.has(s.slideInFile));
     if (idx >= 0) setSlideIndex(idx);
   };
 
