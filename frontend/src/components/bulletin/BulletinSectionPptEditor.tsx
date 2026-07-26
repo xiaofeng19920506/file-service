@@ -32,7 +32,6 @@ export default function BulletinSectionPptEditor({
   const forceTemplateRef = useRef(false);
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [sectionFile, setSectionFile] = useState<File | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [resetting, setResetting] = useState(false);
@@ -78,12 +77,10 @@ export default function BulletinSectionPptEditor({
         const file = await loadSectionFile();
         if (cancelled) return;
         objectUrl = URL.createObjectURL(file);
-        setSectionFile(file);
         setPreviewUrl(objectUrl);
       } catch (e) {
         if (!cancelled) {
           setLoadError(e instanceof Error ? e.message : 'load_failed');
-          setSectionFile(null);
           setPreviewUrl(null);
         }
       } finally {
@@ -116,8 +113,7 @@ export default function BulletinSectionPptEditor({
       [sectionId]: uploaded.blobId,
     };
     const updated = await updateBulletin(draft.id, { sectionPptxOverrides: nextOverrides });
-    // 本会话下载要用最新文件；编辑器内存态已由 saveChanges 更新，勿改 previewUrl 以免整页重载
-    setSectionFile(named);
+    // 编辑器内存态已由 saveChanges 更新，勿改 previewUrl 以免整页重载
     onSaved({
       ...updated,
       sectionPptxOverrides: updated.sectionPptxOverrides ?? nextOverrides,
