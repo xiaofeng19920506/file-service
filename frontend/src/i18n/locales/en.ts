@@ -261,6 +261,10 @@ const en: MessageTree = {
     editSlidesShort: 'Edit slides',
     editSlidesSectionTitle: 'Edit section: {section}',
     editSlidesSaved: 'Section slides saved',
+    editSlidesReset: 'Restore template',
+    editSlidesResetHint:
+      'Discard saved edits for this section and reload the original template slides (with current form fields like date)',
+    editSlidesResetting: 'Restoring template…',
     editSlidesNativeIntro:
       'A full PowerPoint editor isn’t available in the browser. Download this section, edit it in PowerPoint or Keynote (text, images, backgrounds, layout), save as .pptx, then upload.',
     editSlidesNativeStep1: 'Click “Download section PPTX” and open it in PowerPoint / Keynote.',

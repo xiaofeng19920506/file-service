@@ -40,19 +40,26 @@ export default function BulletinSectionPptEditor({
   const { t } = useI18n();
   const draftSnapRef = useRef(draft);
   draftSnapRef.current = draft;
+  /** 为 true 时跳过已存 override，强制从模板重抽（「恢复原版」） */
+  const forceTemplateRef = useRef(false);
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [sectionFile, setSectionFile] = useState<File | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [resetting, setResetting] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
 
   const sectionMeta = navSectionById(sectionId);
   const sectionLabel = sectionMeta ? t(sectionMeta.labelKey) : sectionId;
   const downloadName = `周报-${draft.serviceDate}-${sectionLabel}.pptx`;
+  const hasOverride = Boolean(draft.sectionPptxOverrides?.[sectionId]);
 
   const loadSectionFile = useCallback(async () => {
     const snap = draftSnapRef.current;
-    const existingBlobId = snap.sectionPptxOverrides?.[sectionId];
+    const forceTemplate = forceTemplateRef.current;
+    forceTemplateRef.current = false;
+    const existingBlobId = forceTemplate ? undefined : snap.sectionPptxOverrides?.[sectionId];
     if (existingBlobId) {
       const blob = await fetchBlobContent(existingBlobId);
       // 早期版本的文本回写会写出坏 XML（整页空白、文字残缺）。这种存档没有价值，
@@ -100,7 +107,7 @@ export default function BulletinSectionPptEditor({
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [loadSectionFile, sectionId]);
+  }, [loadSectionFile, sectionId, reloadToken]);
 
   const persistSectionFile = async (file: File) => {
     const named = new File([file], downloadName, { type: PPTX_MIME });
@@ -126,12 +133,33 @@ export default function BulletinSectionPptEditor({
     triggerDownload(new File([sectionFile], downloadName, { type: PPTX_MIME }));
   };
 
-  if (loading) {
+  const handleResetToTemplate = async () => {
+    if (resetting) return;
+    setResetting(true);
+    setLoadError(null);
+    try {
+      const nextOverrides = { ...(draft.sectionPptxOverrides ?? {}) };
+      delete nextOverrides[sectionId];
+      const updated = await updateBulletin(draft.id, { sectionPptxOverrides: nextOverrides });
+      onSaved({
+        ...updated,
+        sectionPptxOverrides: updated.sectionPptxOverrides ?? nextOverrides,
+      });
+      forceTemplateRef.current = true;
+      setReloadToken((n) => n + 1);
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : 'reset_failed');
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  if (loading || resetting) {
     return (
       <div className="bulletin-section-ppt-overlay" role="dialog" aria-modal="true">
         <div className="preview-empty">
           <div className="preview-spinner" />
-          <p>{t('preview.converting')}</p>
+          <p>{resetting ? t('bulletin.editSlidesResetting') : t('preview.converting')}</p>
         </div>
       </div>
     );
@@ -162,6 +190,7 @@ export default function BulletinSectionPptEditor({
         onClose={onClose}
         onDownload={handleDownload}
         canDownload={!!sectionFile}
+        onResetToTemplate={hasOverride ? handleResetToTemplate : undefined}
       />
     </div>
   );

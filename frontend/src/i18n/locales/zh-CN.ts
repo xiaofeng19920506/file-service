@@ -250,6 +250,9 @@ export default {
     editSlidesShort: '改幻灯片',
     editSlidesSectionTitle: '编辑分区：{section}',
     editSlidesSaved: '分区幻灯片已保存',
+    editSlidesReset: '恢复原版',
+    editSlidesResetHint: '丢弃本区已保存的修改，重新加载模板原版幻灯片（会带上当前日期等表单字段）',
+    editSlidesResetting: '正在恢复模板原版…',
     editSlidesNativeIntro:
       '网页里无法提供完整 PowerPoint。请下载本区幻灯片，用电脑上的 PowerPoint 或 Keynote 自由修改文字、图片、背景与版式，保存后再上传。',
     editSlidesNativeStep1: '点击「下载本区 PPTX」，用 PowerPoint / Keynote 打开。',

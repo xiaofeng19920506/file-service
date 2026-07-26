@@ -19,6 +19,8 @@ type PptEditorProps = {
   onDownload?: () => void;
   canDownload?: boolean;
   downloading?: boolean;
+  /** 丢弃本区已保存覆盖，重新加载模板原版 */
+  onResetToTemplate?: () => void;
   onClose?: () => void;
 };
 
@@ -31,6 +33,7 @@ export default function PptEditor({
   onDownload,
   canDownload = false,
   downloading = false,
+  onResetToTemplate,
   onClose,
 }: PptEditorProps) {
   const { t } = useI18n();
@@ -271,6 +274,16 @@ export default function PptEditor({
                 onClick={() => onDownload()}
               >
                 {downloading ? t('library.downloading') : t('slides.download')}
+              </button>
+            )}
+            {onResetToTemplate && (
+              <button
+                type="button"
+                className="btn-secondary btn-sm"
+                onClick={() => onResetToTemplate()}
+                title={t('bulletin.editSlidesResetHint')}
+              >
+                {t('bulletin.editSlidesReset')}
               </button>
             )}
             {onClose && (
