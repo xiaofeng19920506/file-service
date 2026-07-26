@@ -68,12 +68,27 @@ describe('applyRunPatchToCharRange', () => {
 
   it('can change font size on a range spanning multiple runs', () => {
     const slide = `<p:sld><p:spTree>${MULTI_COLOR_SHAPE}</p:spTree></p:sld>`;
-    // "保持安靜並認罪禱告" starts after "主耶和華\n" => offset 4
+    // MULTI_COLOR has no spacer; "保持安靜" starts after "主耶和華\n"
     const start = '主耶和華\n'.length;
     const end = start + '保持安靜'.length;
     const out = applyRunPatchToCharRange(slide, 10, start, end, { fontSizePt: 60 });
     expect(out).toContain('sz="6000"');
     expect(out).toContain('val="3333CC"');
     expect(out).toContain('val="800000"');
+  });
+
+  it('skips empty spacer paragraphs when computing char offsets', () => {
+    const slide =
+      '<p:sld><p:spTree><p:sp><p:nvSpPr><p:cNvPr id="10" name="T"/></p:nvSpPr><p:spPr/>' +
+      '<p:txBody><a:bodyPr/><a:lstStyle/>' +
+      '<a:p><a:r><a:rPr sz="2000"/><a:t>AAA</a:t></a:r></a:p>' +
+      '<a:p><a:r><a:rPr sz="2000"/><a:t></a:t></a:r></a:p>' +
+      '<a:p><a:r><a:rPr sz="2000"><a:solidFill><a:srgbClr val="3333CC"/></a:solidFill></a:rPr>' +
+      '<a:t>BBBB</a:t></a:r></a:p>' +
+      '</p:txBody></p:sp></p:spTree></p:sld>';
+    // textarea plain text is "AAA\nBBBB" — B starts at 4
+    const out = applyRunPatchToCharRange(slide, 10, 4, 8, { color: '#FF0000' });
+    expect(out).toMatch(/val="FF0000"/);
+    expect(out).toContain('BBBB');
   });
 });

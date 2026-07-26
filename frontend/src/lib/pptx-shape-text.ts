@@ -139,6 +139,7 @@ function shapePlainText(spXml: string): string {
         .map((m) => decodeXmlText(m[1]))
         .join(''),
     )
+    .filter((line) => line.length > 0)
     .join('\n');
 }
 
@@ -219,6 +220,7 @@ function serializePara(pPr: string, runs: ParsedRun[], endPr: string): string {
 /**
  * 只改文字，尽量保留原段落/run 的颜色、字号、字体。
  * 未改动的段落 XML 原样保留；改动的段落按旧 run 比例重铺。
+ * 空 spacer 段落保留在原位，不进入纯文本对照（与编辑器 textarea 一致）。
  */
 export function rewriteShapeTextPreservingRuns(spXml: string, newText: string): string {
   const normalized = newText.replace(/\r\n/g, '\n');
@@ -241,16 +243,30 @@ export function rewriteShapeTextPreservingRuns(spXml: string, newText: string): 
   const fallbackRPr = firstRunPr(spXml);
   const fallbackPPr = firstParaPr(spXml);
 
-  const nextParas = newLines.map((line, i) => {
-    const old = oldParas[Math.min(i, Math.max(0, oldParas.length - 1))];
-    if (old) {
-      const oldLine = old.runs.map((r) => r.text).join('');
-      if (oldLine === line && i < oldParas.length) return old.full;
-      const runs = remapRuns(old.runs, line, fallbackRPr);
-      return serializePara(old.pPr, runs, old.endPr);
+  let contentIdx = 0;
+  const nextParas: string[] = [];
+  for (const old of oldParas) {
+    const oldLine = old.runs.map((r) => r.text).join('');
+    if (oldLine.length === 0) {
+      // spacer：原样保留
+      nextParas.push(old.full);
+      continue;
     }
-    return serializePara(fallbackPPr, [{ rPr: fallbackRPr, text: line }], '<a:endParaRPr/>');
-  });
+    const line = newLines[contentIdx] ?? '';
+    contentIdx += 1;
+    if (oldLine === line) {
+      nextParas.push(old.full);
+      continue;
+    }
+    const runs = remapRuns(old.runs, line, fallbackRPr);
+    nextParas.push(serializePara(old.pPr, runs, old.endPr));
+  }
+  while (contentIdx < newLines.length) {
+    nextParas.push(
+      serializePara(fallbackPPr, [{ rPr: fallbackRPr, text: newLines[contentIdx] }], '<a:endParaRPr/>'),
+    );
+    contentIdx += 1;
+  }
 
   const newTxBody = `<p:txBody>${bodyPr}${lstStyle}${nextParas.join('') || `<a:p>${fallbackPPr}<a:endParaRPr/></a:p>`}</p:txBody>`;
   return spXml.replace(/<p:txBody>[\s\S]*?<\/p:txBody>/, newTxBody);

@@ -191,15 +191,14 @@ function listCharRuns(elementXml: string): CharRunSpan[] {
   const body = elementXml.slice(bodyAt, bodyTo);
   const runs: CharRunSpan[] = [];
   let absOffset = 0;
-  let searchFrom = 0;
+  let emittedParas = 0;
 
   const paraRe = /<a:p>([\s\S]*?)<\/a:p>/g;
   let para: RegExpExecArray | null;
-  let paraIndex = 0;
   while ((para = paraRe.exec(body)) !== null) {
-    if (paraIndex > 0) absOffset += 1; // 段落之间的 \n
     const paraInner = para[1];
     const paraAbsStart = bodyAt + para.index + '<a:p>'.length;
+    const paraRuns: Omit<CharRunSpan, 'textStart' | 'textEnd'> & { text: string }[] = [];
     const runRe = /<a:r>([\s\S]*?)<\/a:r>/g;
     let run: RegExpExecArray | null;
     while ((run = runRe.exec(paraInner)) !== null) {
@@ -212,21 +211,33 @@ function listCharRuns(elementXml: string): CharRunSpan[] {
       const text = tMatch ? unescapeXml(tMatch[1]) : '';
       const runStart = paraAbsStart + run.index;
       const runEnd = runStart + run[0].length;
-      runs.push({
+      paraRuns.push({
         start: runStart,
         end: runEnd,
-        textStart: absOffset,
-        textEnd: absOffset + text.length,
         rPr,
         text,
         runInnerStart: runStart + '<a:r>'.length,
       });
-      absOffset += text.length;
     }
-    paraIndex += 1;
-    searchFrom = paraRe.lastIndex;
+    const paraTextLen = paraRuns.reduce((sum, r) => sum + r.text.length, 0);
+    // 与 shapeParagraphsToPlainText 一致：空段落（spacer）不进入纯文本，也不占 \\n
+    if (paraTextLen === 0) continue;
+    if (emittedParas > 0) absOffset += 1;
+    for (const r of paraRuns) {
+      if (!r.text && paraRuns.length > 1) continue;
+      runs.push({
+        start: r.start,
+        end: r.end,
+        textStart: absOffset,
+        textEnd: absOffset + r.text.length,
+        rPr: r.rPr,
+        text: r.text,
+        runInnerStart: r.runInnerStart,
+      });
+      absOffset += r.text.length;
+    }
+    emittedParas += 1;
   }
-  void searchFrom;
   return runs;
 }
 
