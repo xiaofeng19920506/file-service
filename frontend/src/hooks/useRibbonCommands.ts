@@ -61,6 +61,11 @@ export type RibbonUiState = {
   toggleSelectionPane: () => void;
   /** 画布文本框内高亮选区；有区间时字体命令只改选中字符 */
   textCharRange?: { elementId: number; start: number; end: number } | null;
+  /**
+   * 锁定幻灯片结构：禁用新建/复制/删除幻灯片。
+   * 周报分区编辑器需要它——增删页目前不会进入预览/导出，放开会造成错页。
+   */
+  lockSlideStructure?: boolean;
 };
 
 const FONT_STEP_PT = 2;
@@ -327,11 +332,18 @@ export function useRibbonCommands(editor: Editor, ui: RibbonUiState): RibbonComm
       toggleFormatPainter,
 
       // 幻灯片
-      newSlide: editor.canDuplicate ? () => editor.addSlideAfter(focusIndex, true) : undefined,
-      duplicateSlide: editor.canDuplicate
-        ? () => editor.addSlideAfter(focusIndex, false)
-        : undefined,
-      deleteSlide: editor.canSkip ? () => editor.requestSkipSlide(focusIndex) : undefined,
+      newSlide:
+        !ui.lockSlideStructure && editor.canDuplicate
+          ? () => editor.addSlideAfter(focusIndex, true)
+          : undefined,
+      duplicateSlide:
+        !ui.lockSlideStructure && editor.canDuplicate
+          ? () => editor.addSlideAfter(focusIndex, false)
+          : undefined,
+      deleteSlide:
+        !ui.lockSlideStructure && editor.canSkip
+          ? () => editor.requestSkipSlide(focusIndex)
+          : undefined,
       resetSlide: canEditCanvas ? resetSlide : undefined,
 
       // 字体

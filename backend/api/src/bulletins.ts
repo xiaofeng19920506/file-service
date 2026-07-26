@@ -18,6 +18,7 @@ import {
   mapYoutubeApiError,
   normalizeUserRole,
   patchBulletinPreviewInPptx,
+  applySlideTextOverridesToPptx,
   buildBulletinDeckPlanFromPptxBytes,
   extractPresentationSlideAsPptx,
   extractIndexedTextRunsFromPptx,
@@ -437,6 +438,11 @@ async function buildPatchedBulletinPptxBuf(opts: {
       }),
     );
     pptxBuf = await applySectionPptxOverridesToBuf(db, storage, pptxBuf, sectionOverrides);
+    // 分区 splice 会整页替换回旧文字：对有覆盖的分区，splice 后再盖一遍表单/文字覆盖，
+    // 保证封面日期/公告等动态文字以表单为准（手动样式保留）。
+    if (Object.keys(sectionOverrides).length && slideTextOverrides.length) {
+      pptxBuf = Buffer.from(await applySlideTextOverridesToPptx(pptxBuf, slideTextOverrides));
+    }
     rememberLru(patchedPptxCache, patchKey, pptxBuf, 12);
   }
   return { pptxBuf, sectionKey, overridesKey };

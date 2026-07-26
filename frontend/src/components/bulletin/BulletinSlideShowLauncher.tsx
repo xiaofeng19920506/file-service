@@ -6,12 +6,15 @@ import { startBulletinSlideShow } from '../../lib/bulletin-slideshow-launcher';
 type BulletinSlideShowLauncherProps = {
   patch: BulletinSlidePreviewParams;
   initialSlide?: number;
+  /** 当前 deck plan 实际页数；不传则回退模板页数 */
+  totalSlides?: number;
   className?: string;
 };
 
 export default function BulletinSlideShowLauncher({
   patch,
   initialSlide = 1,
+  totalSlides,
   className,
 }: BulletinSlideShowLauncherProps) {
   const { t } = useI18n();
@@ -21,7 +24,7 @@ export default function BulletinSlideShowLauncher({
   const onStart = () => {
     setStarting(true);
     setError(null);
-    void startBulletinSlideShow({ patch, initialSlide })
+    void startBulletinSlideShow({ patch, initialSlide, totalSlides })
       .then((result) => {
         if (!result.ok) setError(t('bulletin.slideShowPopupBlocked'));
       })

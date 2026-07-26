@@ -289,6 +289,46 @@ export function patchesForStep(stepId: string, bulletin: WeeklyBulletin): SlideT
   }
 }
 
+/** 幻灯片文字覆盖（原版文件号 + textIndex），与 shared SlideTextOverride 同形 */
+export type BulletinSlideTextOverride = { slide: number; textIndex: number; text: string };
+
+/**
+ * 表单里那些「只是替换某页某个文字 run」的动态字段，压成 slideTextOverride 形式。
+ * 用于右侧预览（走 slideTextOverrides query）与导出后 splice 覆盖，让这些字段
+ * 与最终 PPT 一致。封面/读经/生日/金句/会前主席另有专门补丁，这里不重复处理。
+ */
+export function bulletinDynamicTextOverrides(bulletin: WeeklyBulletin): BulletinSlideTextOverride[] {
+  const out: BulletinSlideTextOverride[] = [];
+  const offering = bulletin.lastWeekOfferingDate?.trim() ?? '';
+  if (offering) out.push({ slide: 19, textIndex: 6, text: offering });
+  // 公告：announcements[0]→P25，[1]→P26（P27 留给浸礼）
+  const announcementSlides = [25, 26];
+  (bulletin.announcements ?? []).forEach((item, index) => {
+    const slide = announcementSlides[index];
+    if (!slide) return;
+    if (item.title?.trim()) out.push({ slide, textIndex: 0, text: item.title.trim() });
+    if (item.body?.trim()) out.push({ slide, textIndex: 1, text: item.body.trim() });
+  });
+  const baptism = bulletin.baptismText?.trim() ?? '';
+  if (baptism) out.push({ slide: 27, textIndex: 3, text: baptism });
+  const testimony = bulletin.testimonyShareDate?.trim() ?? '';
+  if (testimony) out.push({ slide: 33, textIndex: 0, text: testimony });
+  const roster = bulletin.serviceRosterText?.trim() ?? '';
+  if (roster) out.push({ slide: 34, textIndex: 1, text: roster });
+  return out;
+}
+
+/** 合并字段派生覆盖与手动覆盖，同一 slide:textIndex 时手动覆盖优先（与导出一致） */
+export function mergeSlideTextOverrides(
+  base: readonly BulletinSlideTextOverride[],
+  manual: readonly BulletinSlideTextOverride[] | null | undefined,
+): BulletinSlideTextOverride[] {
+  const map = new Map<string, BulletinSlideTextOverride>();
+  for (const o of base) map.set(`${o.slide}:${o.textIndex}`, o);
+  for (const o of manual ?? []) map.set(`${o.slide}:${o.textIndex}`, o);
+  return [...map.values()];
+}
+
 function mergePatches(patches: SlideTextPatch[]): SlideTextPatch[] {
   const bySlide = new Map<number, Map<number, string>>();
   const extras = new Map<number, Omit<SlideTextPatch, 'slideNumber' | 'replacements'>>();

@@ -405,12 +405,25 @@ export default function BulletinPage() {
   useEffect(() => {
     if (!canManage || !draft) return;
     const timer = window.setTimeout(() => {
-      void updateBulletin(draft.id, {
+      const id = draft.id;
+      // 标记保存中并在成功后只回写 updatedAt：
+      // 否则这次自动保存触发的 SSE 会用远端整对象覆盖草稿，丢掉其它未保存字段。
+      savingRef.current = true;
+      void updateBulletin(id, {
         birthdayMonth: draft.birthdayMonth,
         birthdayNames: draft.birthdayNames,
-      }).catch(() => {
-        /* 预览已即时；保存失败不打断编辑 */
-      });
+      })
+        .then((updated) => {
+          setDraft((prev) =>
+            prev && prev.id === updated.id ? { ...prev, updatedAt: updated.updatedAt } : prev,
+          );
+        })
+        .catch(() => {
+          /* 预览已即时；保存失败不打断编辑 */
+        })
+        .finally(() => {
+          savingRef.current = false;
+        });
     }, 800);
     return () => window.clearTimeout(timer);
   }, [canManage, draft?.id, draft?.birthdayMonth, draft?.birthdayNames]);

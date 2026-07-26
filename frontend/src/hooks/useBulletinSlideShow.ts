@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   fetchBulletinSlidePreviewPng,
-  fetchBulletinTemplateMap,
   type BulletinSlidePreviewParams,
 } from '../api/bulletins';
 import { createSlideShowBus, type SlideShowRole } from '../lib/bulletin-slideshow-bus';
@@ -61,14 +60,6 @@ export function useBulletinSlideShow(opts: {
     },
     [patch],
   );
-
-  useEffect(() => {
-    void fetchBulletinTemplateMap()
-      .then((map) => {
-        if (map.totalSlides > 0) setTotalSlides(map.totalSlides);
-      })
-      .catch(() => undefined);
-  }, []);
 
   useEffect(() => {
     void loadSlide(currentSlide).catch(() => undefined);

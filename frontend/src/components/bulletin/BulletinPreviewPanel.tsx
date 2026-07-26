@@ -15,6 +15,10 @@ import {
 } from '../../lib/bulletin-deck-plan';
 import { nextSundayIso } from '../../lib/bulletin-date';
 import { sectionPptxOverridesKey } from '../../lib/bulletin-preview-patch';
+import {
+  bulletinDynamicTextOverrides,
+  mergeSlideTextOverrides,
+} from '../../lib/bulletin-pptx-patches';
 import BulletinFullDeckPreview, {
   type BulletinPreviewScrollRequest,
 } from './BulletinFullDeckPreview';
@@ -174,7 +178,10 @@ export default function BulletinPreviewPanel({
       verseOfWeek: bulletin.verseOfWeek,
       hiddenSections: bulletin.hiddenSections,
       weeklyMeetingVariant: bulletin.weeklyMeetingVariant,
-      slideTextOverrides: bulletin.slideTextOverrides,
+      slideTextOverrides: mergeSlideTextOverrides(
+        bulletinDynamicTextOverrides(bulletin),
+        bulletin.slideTextOverrides,
+      ),
       bulletinId: bulletin.id,
       sectionPptxKey: sectionPptxOverridesKey(bulletin.sectionPptxOverrides),
     }),
@@ -193,6 +200,11 @@ export default function BulletinPreviewPanel({
       bulletin.weeklyMeetingVariant,
       bulletin.slideTextOverrides,
       bulletin.sectionPptxOverrides,
+      bulletin.lastWeekOfferingDate,
+      bulletin.announcements,
+      bulletin.baptismText,
+      bulletin.testimonyShareDate,
+      bulletin.serviceRosterText,
     ],
   );
 
@@ -207,6 +219,7 @@ export default function BulletinPreviewPanel({
           <BulletinSlideShowLauncher
             patch={previewPatch}
             initialSlide={highlightSlides[0] ?? 1}
+            totalSlides={deckPlan?.totalSlides}
             className="btn-primary bulletin-slideshow-start"
           />
         </div>

@@ -22,6 +22,11 @@ type PptEditorProps = {
   /** 丢弃本区已保存覆盖，重新加载模板原版 */
   onResetToTemplate?: () => void;
   onClose?: () => void;
+  /**
+   * 锁定幻灯片结构：禁用新建/复制/删除/拖拽重排幻灯片。
+   * 周报分区编辑器用它，因为增删/重排页当前不会进入预览与导出。
+   */
+  lockSlideStructure?: boolean;
 };
 
 export default function PptEditor({
@@ -35,6 +40,7 @@ export default function PptEditor({
   downloading = false,
   onResetToTemplate,
   onClose,
+  lockSlideStructure = false,
 }: PptEditorProps) {
   const { t } = useI18n();
   const [zoom, setZoom] = useState(100);
@@ -109,6 +115,7 @@ export default function PptEditor({
     openReplace: () => setFindMode('replace'),
     toggleSelectionPane: () => setSelectionPaneOpen((v) => !v),
     textCharRange,
+    lockSlideStructure,
   });
 
   useEffect(() => {
@@ -254,12 +261,17 @@ export default function PptEditor({
         return;
       }
 
-      if (!batchMode && (e.key === 'Delete' || e.key === 'Backspace')) {
+      if (!lockSlideStructure && !batchMode && (e.key === 'Delete' || e.key === 'Backspace')) {
         e.preventDefault();
         requestSkipSlide(focusIndex);
         return;
       }
-      if (batchMode && selectedSlideIds.size > 0 && (e.key === 'Delete' || e.key === 'Backspace')) {
+      if (
+        !lockSlideStructure &&
+        batchMode &&
+        selectedSlideIds.size > 0 &&
+        (e.key === 'Delete' || e.key === 'Backspace')
+      ) {
         e.preventDefault();
         requestBatchSkip();
       }
@@ -269,6 +281,7 @@ export default function PptEditor({
   }, [
     batchMode,
     focusIndex,
+    lockSlideStructure,
     redo,
     requestBatchSkip,
     requestSkipSlide,
@@ -361,7 +374,7 @@ export default function PptEditor({
             onDragStart={setPptDragIndex}
             onDragOver={setPptDragOverIndex}
             onDrop={(to) => {
-              if (pptDragIndex !== null && pptDragIndex !== to) {
+              if (!lockSlideStructure && pptDragIndex !== null && pptDragIndex !== to) {
                 reorderSlideAt(pptDragIndex, to);
               }
               endDrag();

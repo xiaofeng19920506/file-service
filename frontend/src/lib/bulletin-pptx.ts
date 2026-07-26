@@ -1,6 +1,9 @@
 import type { WeeklyBulletin } from '../api/bulletins';
 import {
   applyBulletinPatches,
+  applySlidePatches,
+  bulletinDynamicTextOverrides,
+  mergeSlideTextOverrides,
   patchesFromBulletin,
 } from './bulletin-pptx-patches';
 import { bulletinSlidePathsToDelete } from './bulletin-section-visibility';
@@ -41,6 +44,23 @@ export async function generateBulletinPptx(
     const copy = new Uint8Array(buf.byteLength);
     copy.set(buf);
     file = new File([copy.buffer], filename, { type: PPTX_MIME });
+
+    // splice 会用分区快照整页替换，导致封面日期/公告等动态文字回退到编辑分区时的旧值。
+    // 在 splice 之后再用当前表单/覆盖文字做一次 indexed 替换：文字以表单为准，手动样式保留。
+    const overrides = mergeSlideTextOverrides(
+      bulletinDynamicTextOverrides(bulletin),
+      bulletin.slideTextOverrides,
+    );
+    if (overrides.length) {
+      file = await applySlidePatches(
+        file,
+        overrides.map((o) => ({
+          slideNumber: o.slide,
+          replacements: [{ textIndex: o.textIndex, text: o.text }],
+        })),
+        filename,
+      );
+    }
   }
 
   return file;

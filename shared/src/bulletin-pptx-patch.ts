@@ -325,6 +325,21 @@ async function applySlideTextOverridesToZip(
   }
 }
 
+/**
+ * 对整个 PPTX 再跑一遍文字覆盖（indexed run 替换）。
+ * 用于分区 splice 之后：分区快照整页替换会带回旧文字，这里让表单/覆盖文字重新盖上，
+ * 只替换 run 文本、保留手动样式。
+ */
+export async function applySlideTextOverridesToPptx(
+  template: PptxInputBytes,
+  overrides: readonly SlideTextOverride[],
+): Promise<Uint8Array> {
+  const norm = normalizeSlideTextOverrides(overrides);
+  const zip = await JSZip.loadAsync(template);
+  if (norm.length) await applySlideTextOverridesToZip(zip, norm);
+  return zip.generateAsync({ type: 'uint8array' });
+}
+
 function splitBirthdayNameLines(names: string, max = 3): string[] {
   return names
     .split(/[\n,，、]/)

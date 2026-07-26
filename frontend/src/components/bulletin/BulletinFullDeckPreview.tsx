@@ -15,6 +15,10 @@ import {
 } from '../../lib/bulletin-preview-patch';
 import { navSectionById } from '../../lib/bulletin-sections';
 import { nextSundayIso } from '../../lib/bulletin-date';
+import {
+  bulletinDynamicTextOverrides,
+  mergeSlideTextOverrides,
+} from '../../lib/bulletin-pptx-patches';
 import BulletinPptSlidePreview from './BulletinPptSlidePreview';
 import BulletinWorshipEmbeddedPlayer, {
   hasBulletinWorshipPlayItems,
@@ -204,7 +208,11 @@ export default function BulletinFullDeckPreview({
       skipTestimonyWeek: bulletin.skipTestimonyWeek,
       skipDepartmentReports: bulletin.skipDepartmentReports,
       weeklyMeetingVariant: bulletin.weeklyMeetingVariant,
-      slideTextOverrides: bulletin.slideTextOverrides,
+      // 奉献/公告/浸礼/见证/名单等字段也并入覆盖，右侧预览才与最终 PPT 一致
+      slideTextOverrides: mergeSlideTextOverrides(
+        bulletinDynamicTextOverrides(bulletin),
+        bulletin.slideTextOverrides,
+      ),
       bulletinId: bulletin.id,
       sectionPptxKey: sectionPptxOverridesKey(bulletin.sectionPptxOverrides),
     }),
@@ -225,6 +233,11 @@ export default function BulletinFullDeckPreview({
       bulletin.weeklyMeetingVariant,
       bulletin.slideTextOverrides,
       bulletin.sectionPptxOverrides,
+      bulletin.lastWeekOfferingDate,
+      bulletin.announcements,
+      bulletin.baptismText,
+      bulletin.testimonyShareDate,
+      bulletin.serviceRosterText,
     ],
   );
 
