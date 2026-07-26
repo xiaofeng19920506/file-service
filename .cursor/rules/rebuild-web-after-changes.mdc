@@ -1,0 +1,20 @@
+---
+description: 前端改动后必须重新 build 并重启 :4000，避免测到旧版本
+alwaysApply: true
+---
+
+# 改完后重建前端（默认执行）
+
+本机/隧道前端（`:4000`，含 `frontend.youtvs.com`）跑的是 **Next 生产构建**（`npm start`），不是 `next dev`。只改源码不 rebuild，用户测到的仍是旧包。
+
+完成会影响前端（或用户会立刻在浏览器验证）的改动后：
+
+1. **必须**执行生产重建并重启 Web，例如：
+   ```bash
+   FILE_SERVICE_WEB_REBUILD=1 bash scripts/autostart/web-stack.sh
+   ```
+   （该脚本会 `npm run build:web` 后 `npm start` 监听 `:4000`。）
+2. 等 `:4000` 重新就绪（`curl -sf http://127.0.0.1:4000/`）再告诉用户可以测。
+3. **不要**只跑 `next dev` 或只 `build` 不重启，当作“已经更新了”。
+4. 仅改后端且前端无变化时，可只重启 API；用户明确说不要 rebuild 时跳过。
+5. 与 commit/push 一起做：改完 → 验证/build → commit → push → **重建并重启 Web**。
