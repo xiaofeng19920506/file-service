@@ -7967,6 +7967,7 @@ body.bulletin-slideshow-window {
   outline: 2px solid #2563eb;
   outline-offset: 1px;
   overflow: visible;
+  isolation: isolate;
 }
 
 .bulletin-composite-shape--selected {
@@ -7991,6 +7992,24 @@ body.bulletin-slideshow-window {
   overflow: auto;
   white-space: pre-wrap;
   word-break: keep-all;
+}
+
+/* 未改字时：textarea 透明，底层继续画多色 run，避免整框被首 run 色刷成单色 */
+.bulletin-composite-shape-editor-preview {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: inherit;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.bulletin-composite-shape-editor.is-preserving-runs {
+  color: transparent !important;
+  caret-color: #2563eb;
+  -webkit-text-fill-color: transparent;
 }
 
 .bulletin-composite-shape--middle {

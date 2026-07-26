@@ -37,6 +37,7 @@ import {
   normalizeSectionPptxOverrides,
   BULLETIN_SECTION_TEMPLATE_SLIDES,
   spliceAllSectionOverridesIntoPptx,
+  pptxBufferSlidesAreWellFormed,
   contentDisposition,
   type ApiEnv,
   type Db,
@@ -69,8 +70,8 @@ const BULLETIN_TEMPLATE_DIR = resolveBulletinTemplateDir();
 const slidePreviewCache = new Map<string, Buffer>();
 /** 同一套补丁参数共享已补丁 PPTX，避免每页都重新 patch */
 const patchedPptxCache = new Map<string, Buffer>();
-/** 预览补丁版本；v32=splice 后重打封面/会前/生日/金句 + 统一 full patch */
-const SLIDE_PREVIEW_PATCH_REV = 'v32';
+/** 预览补丁版本；v33=跳过损坏的 sectionPptxOverrides（坏 XML 导致 LibreOffice 整页无字） */
+const SLIDE_PREVIEW_PATCH_REV = 'v33';
 
 async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   const chunks: Buffer[] = [];
@@ -95,24 +96,42 @@ async function loadBlobBuffer(
   return streamToBuffer(stream);
 }
 
+/**
+ * 把分区覆盖 PPT 拼进主模板。结构损坏的 mini-PPTX（缺闭合标签）LibreOffice
+ * 只能画出背景图、文字全无——必须跳过，退回模板页。
+ */
 async function applySectionPptxOverridesToBuf(
   db: Db,
   storage: ObjectStorage,
   base: Buffer,
   sectionOverrides: Record<string, string>,
-): Promise<Buffer> {
+): Promise<{ buf: Buffer; skippedSectionIds: string[] }> {
   const entries = Object.entries(sectionOverrides);
-  if (!entries.length) return base;
+  if (!entries.length) return { buf: base, skippedSectionIds: [] };
   const sections: { slideInFiles: readonly number[]; miniPptx: Buffer }[] = [];
+  const skippedSectionIds: string[] = [];
   for (const [sectionId, blobId] of entries) {
     const slides = BULLETIN_SECTION_TEMPLATE_SLIDES[sectionId];
     if (!slides?.length) continue;
     const mini = await loadBlobBuffer(db, storage, blobId);
-    if (!mini) continue;
+    if (!mini) {
+      skippedSectionIds.push(sectionId);
+      continue;
+    }
+    if (!(await pptxBufferSlidesAreWellFormed(mini))) {
+      console.warn(
+        `[bulletin] skip malformed sectionPptxOverride ${sectionId} blob=${blobId}`,
+      );
+      skippedSectionIds.push(sectionId);
+      continue;
+    }
     sections.push({ slideInFiles: slides, miniPptx: mini });
   }
-  if (!sections.length) return base;
-  return Buffer.from(await spliceAllSectionOverridesIntoPptx(base, sections));
+  if (!sections.length) return { buf: base, skippedSectionIds };
+  return {
+    buf: Buffer.from(await spliceAllSectionOverridesIntoPptx(base, sections)),
+    skippedSectionIds,
+  };
 }
 
 function slideOverridesCacheKey(overrides: readonly SlideTextOverride[]): string {
@@ -437,7 +456,21 @@ async function buildPatchedBulletinPptxBuf(opts: {
         slideTextOverrides,
       }),
     );
-    pptxBuf = await applySectionPptxOverridesToBuf(db, storage, pptxBuf, sectionOverrides);
+    pptxBuf = await applySectionPptxOverridesToBuf(db, storage, pptxBuf, sectionOverrides).then(
+      async ({ buf, skippedSectionIds }) => {
+        // 历史坏档会让 LibreOffice 整页无字：从 DB 清掉，避免前端一直带着无效 blobId
+        if (bulletinId && skippedSectionIds.length) {
+          const next = { ...sectionOverrides };
+          for (const id of skippedSectionIds) delete next[id];
+          await db
+            .update(weeklyBulletins)
+            .set({ sectionPptxOverrides: next, updatedAt: new Date() })
+            .where(eq(weeklyBulletins.id, bulletinId));
+          sectionOverrides = next;
+        }
+        return buf;
+      },
+    );
     // 分区 splice 会整页替换回旧文字：重打封面日期、会前主席、生日、金句与文字覆盖，
     // 保证表单字段在预览每一页上都正确（手动样式尽量保留）。
     if (Object.keys(sectionOverrides).length) {
