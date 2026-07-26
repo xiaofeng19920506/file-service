@@ -198,7 +198,7 @@ function listCharRuns(elementXml: string): CharRunSpan[] {
   while ((para = paraRe.exec(body)) !== null) {
     const paraInner = para[1];
     const paraAbsStart = bodyAt + para.index + '<a:p>'.length;
-    const paraRuns: Omit<CharRunSpan, 'textStart' | 'textEnd'> & { text: string }[] = [];
+    const paraRuns: Array<Omit<CharRunSpan, 'textStart' | 'textEnd'> & { text: string }> = [];
     const runRe = /<a:r>([\s\S]*?)<\/a:r>/g;
     let run: RegExpExecArray | null;
     while ((run = runRe.exec(paraInner)) !== null) {
