@@ -69,7 +69,7 @@ const slidePreviewCache = new Map<string, Buffer>();
 /** 同一套补丁参数共享已补丁 PPTX，避免每页都重新 patch */
 const patchedPptxCache = new Map<string, Buffer>();
 /** 预览补丁版本；v30=分区迷你 PPTX splice */
-const SLIDE_PREVIEW_PATCH_REV = 'v30';
+const SLIDE_PREVIEW_PATCH_REV = 'v31';
 
 async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   const chunks: Buffer[] = [];
@@ -391,8 +391,9 @@ async function buildPatchedBulletinPptxBuf(opts: {
   storage: ObjectStorage;
   q: PreviewQueryFields;
   slideTextOverrides: SlideTextOverride[];
+  slideTextOverridesProvided: boolean;
   bulletinId: string;
-}): Promise<{ pptxBuf: Buffer; sectionKey: string }> {
+}): Promise<{ pptxBuf: Buffer; sectionKey: string; overridesKey: string }> {
   const { db, storage, q, bulletinId } = opts;
   let slideTextOverrides = opts.slideTextOverrides;
   let sectionOverrides: Record<string, string> = {};
@@ -405,7 +406,7 @@ async function buildPatchedBulletinPptxBuf(opts: {
       .from(weeklyBulletins)
       .where(eq(weeklyBulletins.id, bulletinId))
       .limit(1);
-    if (!slideTextOverrides.length) {
+    if (!opts.slideTextOverridesProvided) {
       slideTextOverrides = normalizeSlideTextOverrides(row?.slideTextOverrides);
     }
     sectionOverrides = normalizeSectionPptxOverrides(row?.sectionPptxOverrides);
@@ -438,7 +439,7 @@ async function buildPatchedBulletinPptxBuf(opts: {
     pptxBuf = await applySectionPptxOverridesToBuf(db, storage, pptxBuf, sectionOverrides);
     rememberLru(patchedPptxCache, patchKey, pptxBuf, 12);
   }
-  return { pptxBuf, sectionKey };
+  return { pptxBuf, sectionKey, overridesKey };
 }
 
 export function registerBulletinRoutes(
@@ -648,6 +649,7 @@ export function registerBulletinRoutes(
     const bulletinId = request.query.bulletinId?.trim() || '';
     let slideTextOverrides: SlideTextOverride[] = [];
     const overridesRaw = request.query.slideTextOverrides?.trim();
+    const slideTextOverridesProvided = request.query.slideTextOverrides !== undefined;
     if (overridesRaw) {
       try {
         slideTextOverrides = normalizeSlideTextOverrides(JSON.parse(overridesRaw));
@@ -662,6 +664,7 @@ export function registerBulletinRoutes(
         storage,
         q,
         slideTextOverrides,
+        slideTextOverridesProvided,
         bulletinId,
       });
 
@@ -714,6 +717,7 @@ export function registerBulletinRoutes(
     const bulletinId = request.query.bulletinId?.trim() || '';
     let slideTextOverrides: SlideTextOverride[] = [];
     const overridesRaw = request.query.slideTextOverrides?.trim();
+    const slideTextOverridesProvided = request.query.slideTextOverrides !== undefined;
     if (overridesRaw) {
       try {
         slideTextOverrides = normalizeSlideTextOverrides(JSON.parse(overridesRaw));
@@ -724,14 +728,14 @@ export function registerBulletinRoutes(
 
     const workRoot = await mkdtemp(join(tmpdir(), 'fs-bulletin-preview-'));
     try {
-      const { pptxBuf, sectionKey } = await buildPatchedBulletinPptxBuf({
+      const { pptxBuf, sectionKey, overridesKey } = await buildPatchedBulletinPptxBuf({
         db,
         storage,
         q,
         slideTextOverrides,
+        slideTextOverridesProvided,
         bulletinId,
       });
-      const overridesKey = slideOverridesCacheKey(slideTextOverrides);
       const cacheKey = `${SLIDE_PREVIEW_PATCH_REV}:${slideNumber}:${previewPatchCacheSuffix(q, overridesKey)}:sec:${sectionKey}`;
       const cached = slidePreviewCache.get(cacheKey);
       if (cached) {

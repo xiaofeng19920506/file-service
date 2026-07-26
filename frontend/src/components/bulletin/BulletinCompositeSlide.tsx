@@ -315,6 +315,8 @@ export default function BulletinCompositeSlide({
   const [layersLoading, setLayersLoading] = useState(false);
   const [editingShape, setEditingShape] = useState<number | null>(null);
   const [draftText, setDraftText] = useState('');
+  const [editTextDirty, setEditTextDirty] = useState(false);
+  const editOriginalTextRef = useRef('');
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
@@ -432,20 +434,17 @@ export default function BulletinCompositeSlide({
       setEditingShape(null);
       return;
     }
-    const layer = layers.find((l) => l.kind === 'shape' && l.shapeIndex === editingShape);
-    const fromLayer =
-      layer && layer.kind === 'shape'
-        ? shapeParagraphsToStyle(layer.paragraphs)
-        : null;
-    const originalText = fromLayer?.text ?? '';
-    // 文字没变就不要写回：旧逻辑会把多色 run 压成第一段样式，双击即变色。
-    if (draftText === originalText) {
+    // 必须与“进入编辑时”的文本比较。Ribbon 改样式会令 layers 重新解析，
+    // 而已有 overlay 也可能与底层 XML 不同；拿当前 layers 比会把未改文字误判成修改。
+    if (draftText === editOriginalTextRef.current) {
       setEditingShape(null);
+      setEditTextDirty(false);
       return;
     }
     // 只提交纯文本；样式由 Ribbon / 原 XML run 保留（applyShapeTextToSlideXml 保 run）
     onShapeTextChange(editingShape, { text: draftText });
     setEditingShape(null);
+    setEditTextDirty(false);
   };
 
   const beginEdit = (shapeIndex: number, paragraphs: SlideTextParagraph[], elementId?: number) => {
@@ -458,7 +457,9 @@ export default function BulletinCompositeSlide({
       override !== undefined
         ? normalizeShapeTextOverride(override).text
         : seed.text;
+    editOriginalTextRef.current = initial;
     setDraftText(initial);
+    setEditTextDirty(false);
     setEditingShape(shapeIndex);
     onTextCharRangeChange?.(
       elementId != null ? { elementId, start: 0, end: 0 } : null,
@@ -734,54 +735,69 @@ export default function BulletinCompositeSlide({
               }
             >
               {isEditing ? (
-                <textarea
-                  ref={editorRef}
-                  className="bulletin-composite-shape-editor"
-                  value={draftText}
-                  onChange={(e) => setDraftText(e.target.value)}
-                  onSelect={(e) => {
-                    const el = e.currentTarget;
-                    reportTextRange(layer.elementId, el.selectionStart, el.selectionEnd);
-                  }}
-                  onKeyUp={(e) => {
-                    const el = e.currentTarget;
-                    reportTextRange(layer.elementId, el.selectionStart, el.selectionEnd);
-                  }}
-                  onMouseUp={(e) => {
-                    const el = e.currentTarget;
-                    reportTextRange(layer.elementId, el.selectionStart, el.selectionEnd);
-                  }}
-                  onBlur={commitEdit}
-                  onClick={(e) => e.stopPropagation()}
-                  onKeyDown={(e) => {
-                    e.stopPropagation();
-                    if (e.key === 'Escape') {
-                      e.preventDefault();
-                      setEditingShape(null);
-                      onTextCharRangeChange?.(null);
-                    }
-                    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-                      e.preventDefault();
-                      commitEdit();
-                    }
-                  }}
-                  style={{
-                    color: sampleRun?.color,
-                    fontWeight: (overrideStyle?.bold ?? sampleRun?.bold) ? 700 : undefined,
-                    fontStyle: (overrideStyle?.italic ?? sampleRun?.italic) ? 'italic' : undefined,
-                    fontFamily: (overrideStyle?.fontFamily ?? sampleRun?.fontFamily)
-                      ? `"${overrideStyle?.fontFamily ?? sampleRun?.fontFamily}", sans-serif`
-                      : undefined,
-                    fontSize: runFontSizeCqw(
-                      overrideStyle?.fontSizePt ?? sampleRun?.fontSizePt,
-                      useAutoFit,
-                      fitScale,
-                    ),
-                    textAlign: layer.paragraphs.find((p) => !p.spacer)?.align ?? 'left',
-                    lineHeight: layer.paragraphs.find((p) => !p.spacer)?.lineSpacing || 1.15,
-                  }}
-                  aria-label={`文本框 ${shapeIndex! + 1}`}
-                />
+                <>
+                  {!editTextDirty && (
+                    <div className="bulletin-composite-shape-editor-preview" aria-hidden="true">
+                      {displayParagraphs.map((para, pi) =>
+                        renderParagraph(para, role, useAutoFit, fitScale, pi),
+                      )}
+                    </div>
+                  )}
+                  <textarea
+                    ref={editorRef}
+                    className={`bulletin-composite-shape-editor${
+                      editTextDirty ? '' : ' is-preserving-runs'
+                    }`}
+                    value={draftText}
+                    onChange={(e) => {
+                      setDraftText(e.target.value);
+                      setEditTextDirty(true);
+                    }}
+                    onSelect={(e) => {
+                      const el = e.currentTarget;
+                      reportTextRange(layer.elementId, el.selectionStart, el.selectionEnd);
+                    }}
+                    onKeyUp={(e) => {
+                      const el = e.currentTarget;
+                      reportTextRange(layer.elementId, el.selectionStart, el.selectionEnd);
+                    }}
+                    onMouseUp={(e) => {
+                      const el = e.currentTarget;
+                      reportTextRange(layer.elementId, el.selectionStart, el.selectionEnd);
+                    }}
+                    onBlur={commitEdit}
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => {
+                      e.stopPropagation();
+                      if (e.key === 'Escape') {
+                        e.preventDefault();
+                        setEditingShape(null);
+                        setEditTextDirty(false);
+                        onTextCharRangeChange?.(null);
+                      }
+                      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                        e.preventDefault();
+                        commitEdit();
+                      }
+                    }}
+                    style={{
+                      color: sampleRun?.color,
+                      fontWeight: (overrideStyle?.bold ?? sampleRun?.bold) ? 700 : undefined,
+                      fontStyle: (overrideStyle?.italic ?? sampleRun?.italic) ? 'italic' : undefined,
+                      fontFamily: (overrideStyle?.fontFamily ?? sampleRun?.fontFamily)
+                        ? `"${overrideStyle?.fontFamily ?? sampleRun?.fontFamily}", sans-serif`
+                        : undefined,
+                      fontSize: runFontSizeCqw(
+                        overrideStyle?.fontSizePt ?? sampleRun?.fontSizePt,
+                        useAutoFit,
+                        fitScale,
+                      ),
+                      textAlign: layer.paragraphs.find((p) => !p.spacer)?.align ?? 'left',
+                      lineHeight: layer.paragraphs.find((p) => !p.spacer)?.lineSpacing || 1.15,
+                    }}
+                    aria-label={`文本框 ${shapeIndex! + 1}`}
+                  />
+                </>
               ) : (
                 displayParagraphs.map((para, pi) =>
                   renderParagraph(para, role, useAutoFit, fitScale, pi),

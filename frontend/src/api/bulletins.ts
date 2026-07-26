@@ -285,7 +285,9 @@ function bulletinPreviewQuery(params: BulletinSlidePreviewParams): string {
   if (params.weeklyMeetingVariant != null) {
     qs.set('weeklyMeetingVariant', String(params.weeklyMeetingVariant));
   }
-  if (params.slideTextOverrides?.length) {
+  // [] 也必须显式发送：省略会让服务端回退读取数据库里的旧覆盖，
+  // 导致用户刚清空覆盖时编辑数据与 PNG 预览不一致。
+  if (params.slideTextOverrides !== undefined) {
     qs.set('slideTextOverrides', JSON.stringify(params.slideTextOverrides));
   }
   if (params.bulletinId) qs.set('bulletinId', params.bulletinId);
