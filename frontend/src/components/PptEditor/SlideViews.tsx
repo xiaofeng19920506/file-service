@@ -256,6 +256,7 @@ export function PptCanvasSlide({
   selectedShapeIndex = null,
   onSelectShape,
   onShapeTextChange,
+  onTextCharRangeChange,
   slideXml = null,
   selectedElementId = null,
   onSelectElement,
@@ -271,6 +272,9 @@ export function PptCanvasSlide({
   selectedShapeIndex?: number | null;
   onSelectShape?: (shapeIndex: number | null, seed?: ShapeTextStyle) => void;
   onShapeTextChange?: (shapeIndex: number, style: ShapeTextStyle) => void;
+  onTextCharRangeChange?: (
+    range: { elementId: number; start: number; end: number } | null,
+  ) => void;
   slideXml?: string | null;
   selectedElementId?: number | null;
   onSelectElement?: (elementId: number | null) => void;
@@ -332,6 +336,7 @@ export function PptCanvasSlide({
             selectedShapeIndex={selectedShapeIndex}
             onSelectShape={onSelectShape}
             onShapeTextChange={onShapeTextChange}
+            onTextCharRangeChange={onTextCharRangeChange}
             slideXml={slideXml}
             selectedElementId={selectedElementId}
             onSelectElement={onSelectElement}

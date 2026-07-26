@@ -67,6 +67,9 @@ export default function RibbonCombo({
         type="button"
         className={`ppt-rb-combo-arrow${open ? ' is-open' : ''}`}
         disabled={disabled || !onCommit}
+        onMouseDown={(e) => {
+          if (!(disabled || !onCommit)) e.preventDefault();
+        }}
         onClick={() => setOpen((v) => !v)}
         aria-label={`${ariaLabel} 列表`}
         aria-expanded={open}
@@ -86,6 +89,7 @@ export default function RibbonCombo({
               key={opt}
               type="button"
               className={`ppt-rb-menu-item${opt === value ? ' is-active' : ''}`}
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
                 onCommit?.(opt);
                 setOpen(false);

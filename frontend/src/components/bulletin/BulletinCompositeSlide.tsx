@@ -31,6 +31,13 @@ type BulletinCompositeSlideProps = {
   selectedShapeIndex?: number | null;
   onSelectShape?: (shapeIndex: number | null, seed?: ShapeTextStyle) => void;
   onShapeTextChange?: (shapeIndex: number, style: ShapeTextStyle) => void;
+  /**
+   * 文本框内字符选区（段落间以 \\n 计）。用于 Ribbon 对「高亮文字」改色/字号。
+   * start===end 表示仅光标；null 表示退出编辑或无选区。
+   */
+  onTextCharRangeChange?: (
+    range: { elementId: number; start: number; end: number } | null,
+  ) => void;
   /** Ribbon 改写后的页面 XML；提供时优先于 zip 内容渲染 */
   slideXml?: string | null;
   /** 画布选中/几何编辑（元素级） */
@@ -294,6 +301,7 @@ export default function BulletinCompositeSlide({
   selectedShapeIndex = null,
   onSelectShape,
   onShapeTextChange,
+  onTextCharRangeChange,
   slideXml = null,
   selectedElementId = null,
   onSelectElement,
@@ -424,29 +432,27 @@ export default function BulletinCompositeSlide({
       setEditingShape(null);
       return;
     }
-    const existing = normalizeShapeTextOverride(shapeTextOverrides?.[editingShape]);
     const layer = layers.find((l) => l.kind === 'shape' && l.shapeIndex === editingShape);
     const fromLayer =
-      layer && layer.kind === 'shape' ? shapeParagraphsToStyle(layer.paragraphs) : null;
-    // 提交时把画布上当前可见样式一并写入 XML。只传「有值」的字段，
-    // 避免 bold:false 把 Ribbon/模板里已有的加粗清掉。
-    const next: ShapeTextStyle = { text: draftText };
-    const fontFamily = existing.fontFamily ?? fromLayer?.fontFamily;
-    const fontSizePt = existing.fontSizePt ?? fromLayer?.fontSizePt;
-    const bold = existing.bold ?? fromLayer?.bold;
-    const italic = existing.italic ?? fromLayer?.italic;
-    if (fontFamily) next.fontFamily = fontFamily;
-    if (fontSizePt != null) next.fontSizePt = fontSizePt;
-    if (bold) next.bold = true;
-    if (italic) next.italic = true;
-    onShapeTextChange(editingShape, next);
+      layer && layer.kind === 'shape'
+        ? shapeParagraphsToStyle(layer.paragraphs)
+        : null;
+    const originalText = fromLayer?.text ?? '';
+    // 文字没变就不要写回：旧逻辑会把多色 run 压成第一段样式，双击即变色。
+    if (draftText === originalText) {
+      setEditingShape(null);
+      return;
+    }
+    // 只提交纯文本；样式由 Ribbon / 原 XML run 保留（applyShapeTextToSlideXml 保 run）
+    onShapeTextChange(editingShape, { text: draftText });
     setEditingShape(null);
   };
 
-  const beginEdit = (shapeIndex: number, paragraphs: SlideTextParagraph[]) => {
+  const beginEdit = (shapeIndex: number, paragraphs: SlideTextParagraph[], elementId?: number) => {
     if (!editable || !onShapeTextChange) return;
     const seed = shapeParagraphsToStyle(paragraphs);
     onSelectShape?.(shapeIndex, seed);
+    if (elementId != null) onSelectElement?.(elementId);
     const override = shapeTextOverrides?.[shapeIndex];
     const initial =
       override !== undefined
@@ -454,6 +460,14 @@ export default function BulletinCompositeSlide({
         : seed.text;
     setDraftText(initial);
     setEditingShape(shapeIndex);
+    onTextCharRangeChange?.(
+      elementId != null ? { elementId, start: 0, end: 0 } : null,
+    );
+  };
+
+  const reportTextRange = (elementId: number | undefined, start: number, end: number) => {
+    if (elementId == null || !onTextCharRangeChange) return;
+    onTextCharRangeChange({ elementId, start, end });
   };
 
   const selectShape = (shapeIndex: number, paragraphs: SlideTextParagraph[]) => {
@@ -556,6 +570,7 @@ export default function BulletinCompositeSlide({
           if (editingShape != null) commitEdit();
           onSelectShape?.(null);
           onSelectElement?.(null);
+          onTextCharRangeChange?.(null);
         }}
       >
         {layers.map((layer, i) => {
@@ -701,7 +716,7 @@ export default function BulletinCompositeSlide({
                 canEditShape && !isEditing
                   ? (e) => {
                       e.stopPropagation();
-                      beginEdit(shapeIndex, layer.paragraphs);
+                      beginEdit(shapeIndex, layer.paragraphs, layer.elementId);
                     }
                   : undefined
               }
@@ -712,7 +727,7 @@ export default function BulletinCompositeSlide({
                   ? (e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
-                        beginEdit(shapeIndex, layer.paragraphs);
+                        beginEdit(shapeIndex, layer.paragraphs, layer.elementId);
                       }
                     }
                   : undefined
@@ -724,6 +739,18 @@ export default function BulletinCompositeSlide({
                   className="bulletin-composite-shape-editor"
                   value={draftText}
                   onChange={(e) => setDraftText(e.target.value)}
+                  onSelect={(e) => {
+                    const el = e.currentTarget;
+                    reportTextRange(layer.elementId, el.selectionStart, el.selectionEnd);
+                  }}
+                  onKeyUp={(e) => {
+                    const el = e.currentTarget;
+                    reportTextRange(layer.elementId, el.selectionStart, el.selectionEnd);
+                  }}
+                  onMouseUp={(e) => {
+                    const el = e.currentTarget;
+                    reportTextRange(layer.elementId, el.selectionStart, el.selectionEnd);
+                  }}
                   onBlur={commitEdit}
                   onClick={(e) => e.stopPropagation()}
                   onKeyDown={(e) => {
@@ -731,6 +758,7 @@ export default function BulletinCompositeSlide({
                     if (e.key === 'Escape') {
                       e.preventDefault();
                       setEditingShape(null);
+                      onTextCharRangeChange?.(null);
                     }
                     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
                       e.preventDefault();

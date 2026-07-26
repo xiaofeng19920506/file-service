@@ -173,6 +173,150 @@ export function applyRunPatchToElement(
   return replaceElement(slideXml, el, nextEl);
 }
 
+type CharRunSpan = {
+  /** run 在元素 xml 中的绝对起止（相对 el.xml） */
+  start: number;
+  end: number;
+  textStart: number;
+  textEnd: number;
+  rPr: string;
+  text: string;
+  runInnerStart: number;
+};
+
+function listCharRuns(elementXml: string): CharRunSpan[] {
+  const bodyAt = elementXml.indexOf('<p:txBody>');
+  const bodyTo = elementXml.lastIndexOf('</p:txBody>');
+  if (bodyAt < 0 || bodyTo < 0) return [];
+  const body = elementXml.slice(bodyAt, bodyTo);
+  const runs: CharRunSpan[] = [];
+  let absOffset = 0;
+  let searchFrom = 0;
+
+  const paraRe = /<a:p>([\s\S]*?)<\/a:p>/g;
+  let para: RegExpExecArray | null;
+  let paraIndex = 0;
+  while ((para = paraRe.exec(body)) !== null) {
+    if (paraIndex > 0) absOffset += 1; // 段落之间的 \n
+    const paraInner = para[1];
+    const paraAbsStart = bodyAt + para.index + '<a:p>'.length;
+    const runRe = /<a:r>([\s\S]*?)<\/a:r>/g;
+    let run: RegExpExecArray | null;
+    while ((run = runRe.exec(paraInner)) !== null) {
+      const inner = run[1];
+      const rPr =
+        inner.match(/<a:rPr\b[^>]*\/>/)?.[0] ??
+        inner.match(/<a:rPr\b[\s\S]*?<\/a:rPr>/)?.[0] ??
+        '<a:rPr lang="zh-CN"/>';
+      const tMatch = inner.match(/<a:t(?:\s[^>]*)?>([\s\S]*?)<\/a:t>/);
+      const text = tMatch ? unescapeXml(tMatch[1]) : '';
+      const runStart = paraAbsStart + run.index;
+      const runEnd = runStart + run[0].length;
+      runs.push({
+        start: runStart,
+        end: runEnd,
+        textStart: absOffset,
+        textEnd: absOffset + text.length,
+        rPr,
+        text,
+        runInnerStart: runStart + '<a:r>'.length,
+      });
+      absOffset += text.length;
+    }
+    paraIndex += 1;
+    searchFrom = paraRe.lastIndex;
+  }
+  void searchFrom;
+  return runs;
+}
+
+function serializeRun(rPr: string, text: string): string {
+  const tTag =
+    text === ''
+      ? `<a:t xml:space="preserve"></a:t>`
+      : /^\s|\s$/.test(text)
+        ? `<a:t xml:space="preserve">${escapeXml(text)}</a:t>`
+        : `<a:t>${escapeXml(text)}</a:t>`;
+  return `<a:r>${rPr}${tTag}</a:r>`;
+}
+
+/**
+ * 对元素内 [start, end) 字符区间（段落间以 \\n 计）应用格式。
+ * 会在边界处拆分 run，只改选中部分的颜色/字号等。
+ */
+export function applyRunPatchToCharRange(
+  slideXml: string,
+  elementId: number,
+  start: number,
+  end: number,
+  patch: RunPatch,
+): string {
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
+    return applyRunPatchToElement(slideXml, elementId, patch);
+  }
+  const el = findElementById(slideXml, elementId);
+  if (!el) return slideXml;
+
+  const runs = listCharRuns(el.xml);
+  if (!runs.length) return applyRunPatchToElement(slideXml, elementId, patch);
+
+  // 从后往前替换，避免下标错位
+  let nextXml = el.xml;
+  for (let i = runs.length - 1; i >= 0; i -= 1) {
+    const run = runs[i];
+    const overlapStart = Math.max(run.textStart, start);
+    const overlapEnd = Math.min(run.textEnd, end);
+    if (overlapEnd <= overlapStart) continue;
+
+    const localStart = overlapStart - run.textStart;
+    const localEnd = overlapEnd - run.textStart;
+    const before = run.text.slice(0, localStart);
+    const mid = run.text.slice(localStart, localEnd);
+    const after = run.text.slice(localEnd);
+    const midPr = patchRunPr(run.rPr, 'a:rPr', patch);
+
+    const parts: string[] = [];
+    if (before) parts.push(serializeRun(run.rPr, before));
+    if (mid || (!before && !after)) parts.push(serializeRun(midPr, mid));
+    if (after) parts.push(serializeRun(run.rPr, after));
+
+    nextXml = nextXml.slice(0, run.start) + parts.join('') + nextXml.slice(run.end);
+  }
+
+  return replaceElement(slideXml, el, nextXml);
+}
+
+/** 光标落在某个 run 内时，返回该 run 的字符区间（用于未拖选时改当前片段） */
+export function charRangeForCaret(
+  elementXml: string,
+  caret: number,
+): { start: number; end: number } | null {
+  const runs = listCharRuns(elementXml);
+  if (!runs.length) return null;
+  const hit =
+    runs.find((r) => caret >= r.textStart && caret < r.textEnd) ??
+    runs.find((r) => caret === r.textEnd && r.textEnd > r.textStart) ??
+    runs[runs.length - 1];
+  if (!hit || hit.textEnd <= hit.textStart) return null;
+  return { start: hit.textStart, end: hit.textEnd };
+}
+
+/** 读取元素内指定字符区间第一个 run 的格式；无区间则读首个 run */
+export function readRunFormatInRange(
+  elementXml: string,
+  start?: number,
+  end?: number,
+): ReturnType<typeof readRunFormat> {
+  if (start == null || end == null || end <= start) {
+    return readRunFormat(elementXml);
+  }
+  const runs = listCharRuns(elementXml);
+  const hit = runs.find((r) => r.textEnd > start && r.textStart < end);
+  if (!hit) return readRunFormat(elementXml);
+  // 构造最小片段供 readRunFormat 解析
+  return readRunFormat(`<a:r>${hit.rPr}<a:t>x</a:t></a:r>`);
+}
+
 /** 读取元素内第一个 run 的字符格式，用于 Ribbon 状态回显 */
 export function readRunFormat(elementXml: string): {
   bold?: boolean;

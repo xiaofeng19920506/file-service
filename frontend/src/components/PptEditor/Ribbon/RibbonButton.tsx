@@ -35,6 +35,10 @@ export default function RibbonButton({
     <button
       type="button"
       className={`ppt-rb-btn ppt-rb-btn--${size}${active ? ' is-active' : ''}${notImplemented ? ' is-todo' : ''}`}
+      onMouseDown={(e) => {
+        // 避免抢焦点导致文本框 blur 丢失高亮选区
+        if (!isDisabled) e.preventDefault();
+      }}
       onClick={onClick}
       disabled={isDisabled}
       title={tooltip}

@@ -39,6 +39,11 @@ export default function PptEditor({
   const { t } = useI18n();
   const [zoom, setZoom] = useState(100);
   const [selectedShapeIndex, setSelectedShapeIndex] = useState<number | null>(null);
+  const [textCharRange, setTextCharRange] = useState<{
+    elementId: number;
+    start: number;
+    end: number;
+  } | null>(null);
   const [showGrid, setShowGrid] = useState(false);
   const [showGuides, setShowGuides] = useState(false);
   const [showRuler, setShowRuler] = useState(false);
@@ -103,10 +108,12 @@ export default function PptEditor({
     openFind: () => setFindMode('find'),
     openReplace: () => setFindMode('replace'),
     toggleSelectionPane: () => setSelectionPaneOpen((v) => !v),
+    textCharRange,
   });
 
   useEffect(() => {
     setSelectedShapeIndex(null);
+    setTextCharRange(null);
   }, [focusIndex]);
 
   const replaceOnSlide = useCallback(
@@ -132,6 +139,25 @@ export default function PptEditor({
         if (e.shiftKey) redo();
         else undo();
         return;
+      }
+      // 文本框内：Ctrl/Cmd+B/I/U 仍作用于当前高亮选区
+      if (typing && mod) {
+        switch (e.key.toLowerCase()) {
+          case 'b':
+            e.preventDefault();
+            ribbon.cmd.toggleBold?.();
+            return;
+          case 'i':
+            e.preventDefault();
+            ribbon.cmd.toggleItalic?.();
+            return;
+          case 'u':
+            e.preventDefault();
+            ribbon.cmd.toggleUnderline?.();
+            return;
+          default:
+            return;
+        }
       }
       if (typing) return;
 
@@ -366,8 +392,12 @@ export default function PptEditor({
                 onShapeTextChange={(shapeIndex, style) =>
                   setShapeTextOverride(focusIndex, shapeIndex, style)
                 }
+                onTextCharRangeChange={setTextCharRange}
                 selectedElementId={selectedElementId}
-                onSelectElement={setSelectedElementId}
+                onSelectElement={(id) => {
+                  setSelectedElementId(id);
+                  if (id == null) setTextCharRange(null);
+                }}
                 onMoveElement={ribbon.moveElementByPct}
                 onResizeElement={ribbon.resizeElementByPct}
                 showGrid={showGrid}

@@ -32,9 +32,12 @@ import {
   insertWordArt,
 } from '../lib/ppt-ops/insert';
 import {
+  applyRunPatchToCharRange,
   applyRunPatchToElement,
   changeElementCase,
+  charRangeForCaret,
   readRunFormat,
+  readRunFormatInRange,
   type RunPatch,
 } from '../lib/ppt-ops/text';
 import { findElementById, pctToEmu, type BoxEmu } from '../lib/ppt-ops/xml';
@@ -56,6 +59,8 @@ export type RibbonUiState = {
   openFind: () => void;
   openReplace: () => void;
   toggleSelectionPane: () => void;
+  /** 画布文本框内高亮选区；有区间时字体命令只改选中字符 */
+  textCharRange?: { elementId: number; start: number; end: number } | null;
 };
 
 const FONT_STEP_PT = 2;
@@ -107,8 +112,15 @@ export function useRibbonCommands(editor: Editor, ui: RibbonUiState): RibbonComm
 
   const textFormat = useMemo(() => {
     if (!selectedXml || !hasTextSelection) return null;
-    return { ...readRunFormat(selectedXml), ...readParagraphFormat(selectedXml) };
-  }, [hasTextSelection, selectedXml]);
+    const range = ui.textCharRange;
+    const runFmt =
+      range &&
+      range.elementId === selectedElementId &&
+      range.end > range.start
+        ? readRunFormatInRange(selectedXml, range.start, range.end)
+        : readRunFormat(selectedXml);
+    return { ...runFmt, ...readParagraphFormat(selectedXml) };
+  }, [hasTextSelection, selectedElementId, selectedXml, ui.textCharRange]);
 
   const shapeFormat = useMemo(() => {
     if (!selectedXml) return null;
@@ -136,9 +148,25 @@ export function useRibbonCommands(editor: Editor, ui: RibbonUiState): RibbonComm
 
   const runPatch = useCallback(
     (patch: RunPatch) => {
-      editSelected((xml, id) => applyRunPatchToElement(xml, id, patch));
+      if (selectedElementId == null) return;
+      const id = selectedElementId;
+      const range = ui.textCharRange;
+      edit((xml) => {
+        if (range && range.elementId === id) {
+          if (range.end > range.start) {
+            return applyRunPatchToCharRange(xml, id, range.start, range.end, patch);
+          }
+          // 编辑中仅有光标：只改光标所在 run，避免整框多色被一锅端
+          const el = findElementById(xml, id);
+          const span = el ? charRangeForCaret(el.xml, range.start) : null;
+          if (span) {
+            return applyRunPatchToCharRange(xml, id, span.start, span.end, patch);
+          }
+        }
+        return applyRunPatchToElement(xml, id, patch);
+      });
     },
-    [editSelected],
+    [edit, selectedElementId, ui.textCharRange],
   );
 
   // 格式刷：激活后点选下一个元素即套用

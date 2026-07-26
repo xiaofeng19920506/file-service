@@ -45,6 +45,7 @@ export default function RibbonColorPicker({
                 style={{ background: c }}
                 title={c}
                 aria-label={c}
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => {
                   onPick?.(c);
                   close();
@@ -62,6 +63,7 @@ export default function RibbonColorPicker({
                 style={{ background: c }}
                 title={c}
                 aria-label={c}
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => {
                   onPick?.(c);
                   close();

@@ -38,6 +38,9 @@ export default function RibbonSplitButton({
         <button
           type="button"
           className={`ppt-rb-btn ppt-rb-btn--${size} ppt-rb-split-main${active ? ' is-active' : ''}`}
+          onMouseDown={(e) => {
+            if (!disabled) e.preventDefault();
+          }}
           onClick={onClick}
           disabled={disabled}
           title={label}
@@ -59,6 +62,9 @@ export default function RibbonSplitButton({
       <button
         type="button"
         className={`ppt-rb-btn ppt-rb-split-arrow ppt-rb-split-arrow--${size}${onClick ? '' : ' ppt-rb-split-solo'}${open ? ' is-open' : ''}`}
+        onMouseDown={(e) => {
+          if (!disabled) e.preventDefault();
+        }}
         onClick={() => setOpen((v) => !v)}
         disabled={disabled}
         title={onClick ? `${label} 选项` : label}

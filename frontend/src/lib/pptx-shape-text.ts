@@ -121,7 +121,142 @@ function buildRunPr(base: string, style: ShapeTextStyle): string {
   return rPr;
 }
 
-function replaceShapeTxBody(spXml: string, style: ShapeTextStyle): string {
+function decodeXmlText(text: string): string {
+  return text
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'");
+}
+
+function shapePlainText(spXml: string): string {
+  const txBody = spXml.match(/<p:txBody>([\s\S]*?)<\/p:txBody>/)?.[1] ?? '';
+  const paras = [...txBody.matchAll(/<a:p>([\s\S]*?)<\/a:p>/g)];
+  return paras
+    .map((p) =>
+      [...p[1].matchAll(/<a:t(?:\s[^>]*)?>([\s\S]*?)<\/a:t>/g)]
+        .map((m) => decodeXmlText(m[1]))
+        .join(''),
+    )
+    .join('\n');
+}
+
+type ParsedRun = { rPr: string; text: string };
+
+function parseParaRuns(paraInner: string): { pPr: string; endPr: string; runs: ParsedRun[] } {
+  const pPr =
+    paraInner.match(/<a:pPr\b[^>]*\/>/)?.[0] ??
+    paraInner.match(/<a:pPr\b[^>]*>[\s\S]*?<\/a:pPr>/)?.[0] ??
+    '<a:pPr/>';
+  const endPr =
+    paraInner.match(/<a:endParaRPr\b[^>]*\/>/)?.[0] ??
+    paraInner.match(/<a:endParaRPr\b[\s\S]*?<\/a:endParaRPr>/)?.[0] ??
+    '<a:endParaRPr/>';
+  const runs: ParsedRun[] = [];
+  for (const m of paraInner.matchAll(/<a:r>([\s\S]*?)<\/a:r>/g)) {
+    const inner = m[1];
+    const rPr =
+      inner.match(/<a:rPr\b[^>]*\/>/)?.[0] ??
+      inner.match(/<a:rPr\b[\s\S]*?<\/a:rPr>/)?.[0] ??
+      '<a:rPr lang="zh-CN"/>';
+    const text = [...inner.matchAll(/<a:t(?:\s[^>]*)?>([\s\S]*?)<\/a:t>/g)]
+      .map((t) => decodeXmlText(t[1]))
+      .join('');
+    runs.push({ rPr, text });
+  }
+  return { pPr, endPr, runs };
+}
+
+/** 把新段落文字按旧 run 长度比例铺回去，保留每个 run 的 rPr（颜色/字号等） */
+function remapRuns(oldRuns: ParsedRun[], newText: string, fallbackRPr: string): ParsedRun[] {
+  if (!newText) {
+    const base = oldRuns[0]?.rPr ?? fallbackRPr;
+    return [{ rPr: base, text: '' }];
+  }
+  if (oldRuns.length <= 1) {
+    return [{ rPr: oldRuns[0]?.rPr ?? fallbackRPr, text: newText }];
+  }
+  const oldTotal = oldRuns.reduce((sum, r) => sum + r.text.length, 0);
+  if (oldTotal <= 0) {
+    return [{ rPr: oldRuns[0]?.rPr ?? fallbackRPr, text: newText }];
+  }
+  // 正文没变：原样保留（避免无意义重写）
+  const oldJoined = oldRuns.map((r) => r.text).join('');
+  if (oldJoined === newText) return oldRuns;
+
+  let allocated = 0;
+  const out: ParsedRun[] = [];
+  for (let i = 0; i < oldRuns.length; i += 1) {
+    const isLast = i === oldRuns.length - 1;
+    const len = isLast
+      ? newText.length - allocated
+      : Math.max(0, Math.round((newText.length * oldRuns[i].text.length) / oldTotal));
+    const text = newText.slice(allocated, allocated + len);
+    allocated += len;
+    if (text.length === 0 && !isLast) continue;
+    out.push({ rPr: oldRuns[i].rPr, text });
+  }
+  if (!out.length) out.push({ rPr: oldRuns[0].rPr, text: newText });
+  return out;
+}
+
+function serializePara(pPr: string, runs: ParsedRun[], endPr: string): string {
+  const runXml = runs
+    .map((run) => {
+      const tTag =
+        run.text === ''
+          ? `<a:t xml:space="preserve"></a:t>`
+          : /\s$|^\s/.test(run.text)
+            ? `<a:t xml:space="preserve">${escapeXml(run.text)}</a:t>`
+            : `<a:t>${escapeXml(run.text)}</a:t>`;
+      return `<a:r>${run.rPr}${tTag}</a:r>`;
+    })
+    .join('');
+  return `<a:p>${pPr}${runXml}${endPr}</a:p>`;
+}
+
+/**
+ * 只改文字，尽量保留原段落/run 的颜色、字号、字体。
+ * 未改动的段落 XML 原样保留；改动的段落按旧 run 比例重铺。
+ */
+export function rewriteShapeTextPreservingRuns(spXml: string, newText: string): string {
+  const normalized = newText.replace(/\r\n/g, '\n');
+  if (shapePlainText(spXml) === normalized) return spXml;
+
+  const txBodyMatch = spXml.match(/<p:txBody>([\s\S]*?)<\/p:txBody>/);
+  if (!txBodyMatch) return spXml;
+  const txBody = txBodyMatch[1];
+  const bodyPr = bodyPrXml(spXml);
+  const lstStyle =
+    txBody.match(/<a:lstStyle\b[^>]*\/>/)?.[0] ??
+    txBody.match(/<a:lstStyle\b[\s\S]*?<\/a:lstStyle>/)?.[0] ??
+    '<a:lstStyle/>';
+
+  const oldParas = [...txBody.matchAll(/<a:p>([\s\S]*?)<\/a:p>/g)].map((m) => ({
+    full: m[0],
+    ...parseParaRuns(m[1]),
+  }));
+  const newLines = normalized.split('\n');
+  const fallbackRPr = firstRunPr(spXml);
+  const fallbackPPr = firstParaPr(spXml);
+
+  const nextParas = newLines.map((line, i) => {
+    const old = oldParas[Math.min(i, Math.max(0, oldParas.length - 1))];
+    if (old) {
+      const oldLine = old.runs.map((r) => r.text).join('');
+      if (oldLine === line && i < oldParas.length) return old.full;
+      const runs = remapRuns(old.runs, line, fallbackRPr);
+      return serializePara(old.pPr, runs, old.endPr);
+    }
+    return serializePara(fallbackPPr, [{ rPr: fallbackRPr, text: line }], '<a:endParaRPr/>');
+  });
+
+  const newTxBody = `<p:txBody>${bodyPr}${lstStyle}${nextParas.join('') || `<a:p>${fallbackPPr}<a:endParaRPr/></a:p>`}</p:txBody>`;
+  return spXml.replace(/<p:txBody>[\s\S]*?<\/p:txBody>/, newTxBody);
+}
+
+function replaceShapeTxBodyFlatten(spXml: string, style: ShapeTextStyle): string {
   const lines = style.text.replace(/\r\n/g, '\n').split('\n');
   const rPr = buildRunPr(firstRunPr(spXml), style);
   const pPr = firstParaPr(spXml);
@@ -142,8 +277,19 @@ function replaceShapeTxBody(spXml: string, style: ShapeTextStyle): string {
   return spXml;
 }
 
+function shapeStyleHasCharOverrides(style: ShapeTextStyle): boolean {
+  return (
+    style.fontFamily != null ||
+    style.fontSizePt != null ||
+    style.bold != null ||
+    style.italic != null
+  );
+}
+
 /**
  * 按「带 txBody 的 p:sp」顺序，把文字与样式写入第 shapeIndex 个形状。
+ * - 仅改 text：保留原 run 颜色/字号（避免双击编辑后多色被压成单色）
+ * - 同时带 bold/字号等：整框统一成该样式（显式整框格式化）
  */
 export function applyShapeTextToSlideXml(
   xml: string,
@@ -152,12 +298,15 @@ export function applyShapeTextToSlideXml(
 ): string {
   if (!Number.isFinite(shapeIndex) || shapeIndex < 0) return xml;
   const style = normalizeShapeTextOverride(value);
+  const flatten = shapeStyleHasCharOverrides(style);
   let textShapeCount = -1;
   return xml.replace(/<p:sp>([\s\S]*?)<\/p:sp>/g, (full) => {
     if (!full.includes('<p:txBody>')) return full;
     textShapeCount += 1;
     if (textShapeCount !== shapeIndex) return full;
-    return replaceShapeTxBody(full, style);
+    return flatten
+      ? replaceShapeTxBodyFlatten(full, style)
+      : rewriteShapeTextPreservingRuns(full, style.text);
   });
 }
 
