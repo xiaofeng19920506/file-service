@@ -8083,7 +8083,8 @@ body.bulletin-slideshow-window {
   line-height: 1.1;
   pointer-events: none;
   box-sizing: border-box;
-  container-type: size;
+  /* 不要在 shape 上设 container-type：字号用 cqw 相对整页宽度（见 SLIDE_WIDTH_PT），
+     若相对文本框宽度，窄框（封面日期行）字号会系统性偏小。 */
 }
 
 .bulletin-composite-slide--editable .bulletin-composite-shape--editable {
@@ -8140,7 +8141,7 @@ body.bulletin-slideshow-window {
 .bulletin-composite-shape--date {
   overflow: visible;
   contain: none;
-  justify-content: center;
+  /* 垂直对齐跟 XML anchor（--top/--middle/--bottom），勿强制居中 */
 }
 
 .bulletin-composite-date-row {
@@ -8158,13 +8159,14 @@ body.bulletin-slideshow-window {
   flex-shrink: 0;
 }
 
+/* 祷告/封面主文框：不要强制垂直居中——PPT bodyPr@anchor 已映射为
+   --top/--middle/--bottom；强行 center 会把短标题（如自定义封面文案）
+   拉到高大文本框中部，与 LibreOffice 预览不一致。 */
 .bulletin-composite-shape--prayer {
   contain: none;
-  justify-content: center;
 }
 
 .bulletin-composite-shape--prayer .bulletin-composite-paragraph {
-  text-align: center;
   flex-shrink: 0;
   max-height: none;
   overflow: visible;
