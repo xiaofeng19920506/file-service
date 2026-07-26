@@ -19,18 +19,6 @@ type Props = {
   onSaved: (bulletin: WeeklyBulletin) => void;
 };
 
-function triggerDownload(file: File) {
-  const url = URL.createObjectURL(file);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = file.name;
-  a.rel = 'noopener';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
 export default function BulletinSectionPptEditor({
   sectionId,
   draft,
@@ -109,6 +97,14 @@ export default function BulletinSectionPptEditor({
     };
   }, [loadSectionFile, sectionId, reloadToken]);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   const persistSectionFile = async (file: File) => {
     const named = new File([file], downloadName, { type: PPTX_MIME });
     const uploaded = await uploadFile(named, {
@@ -126,11 +122,6 @@ export default function BulletinSectionPptEditor({
       ...updated,
       sectionPptxOverrides: updated.sectionPptxOverrides ?? nextOverrides,
     });
-  };
-
-  const handleDownload = () => {
-    if (!sectionFile) return;
-    triggerDownload(new File([sectionFile], downloadName, { type: PPTX_MIME }));
   };
 
   const handleResetToTemplate = async () => {
@@ -172,7 +163,7 @@ export default function BulletinSectionPptEditor({
           <header className="bulletin-section-ppt-native-header">
             <h2>{t('bulletin.editSlidesSectionTitle', { section: sectionLabel })}</h2>
             <button type="button" className="btn-secondary btn-sm" onClick={onClose}>
-              {t('library.closePreviewTab')}
+              {t('common.close')}
             </button>
           </header>
           <p className="form-error">{loadError ?? t('preview.emptyFile')}</p>
@@ -187,9 +178,6 @@ export default function BulletinSectionPptEditor({
         title={t('bulletin.editSlidesSectionTitle', { section: sectionLabel })}
         mergedUrl={previewUrl}
         onSaveFile={persistSectionFile}
-        onClose={onClose}
-        onDownload={handleDownload}
-        canDownload={!!sectionFile}
         onResetToTemplate={hasOverride ? handleResetToTemplate : undefined}
       />
     </div>
