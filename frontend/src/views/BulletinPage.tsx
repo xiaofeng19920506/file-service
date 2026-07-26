@@ -48,6 +48,26 @@ import { readWorshipLiveConfig, writeWorshipLiveConfig } from '../lib/worship-li
 
 type AnnouncementDraft = AnnouncementInput & { key: string };
 
+const EDIT_SLIDES_PARAM = 'editSlides';
+
+function bulletinHashParams(): URLSearchParams {
+  const hash = window.location.hash;
+  const q = hash.indexOf('?');
+  return q === -1 ? new URLSearchParams() : new URLSearchParams(hash.slice(q + 1));
+}
+
+function bulletinHashWithParams(params: URLSearchParams): string {
+  const qs = params.toString();
+  return qs ? `#/bulletin?${qs}` : '#/bulletin';
+}
+
+function editSlidesSectionFromHash(): string | null {
+  if (!window.location.hash.startsWith('#/bulletin')) return null;
+  const sectionId = bulletinHashParams().get(EDIT_SLIDES_PARAM)?.trim() || null;
+  if (!sectionId || !(BULLETIN_SECTION_TEMPLATE_SLIDES[sectionId]?.length ?? 0)) return null;
+  return sectionId;
+}
+
 function emptyAnnouncement(): AnnouncementDraft {
   return { key: crypto.randomUUID(), category: 'general', title: '', body: '' };
 }
@@ -123,10 +143,66 @@ export default function BulletinPage() {
   const [worshipPreviewRevision, setWorshipPreviewRevision] = useState(0);
   const [worshipYoutubeOauthReady, setWorshipYoutubeOauthReady] = useState(false);
   const [worshipOauthError, setWorshipOauthError] = useState<string | null>(null);
-  const [editSlidesSectionId, setEditSlidesSectionId] = useState<string | null>(null);
+  const [editSlidesSectionId, setEditSlidesSectionId] = useState<string | null>(() =>
+    editSlidesSectionFromHash(),
+  );
+  /** 本次打开编辑器是否 push 过历史条目；关闭时优先 history.back，避免残留 query */
+  const editSlidesHistoryPushedRef = useRef(false);
   const savingRef = useRef(false);
   const scripturePersistingRef = useRef(false);
   savingRef.current = saving || publishing;
+
+  const openEditSlides = useCallback((sectionId: string) => {
+    if (!(BULLETIN_SECTION_TEMPLATE_SLIDES[sectionId]?.length ?? 0)) return;
+    const params = bulletinHashParams();
+    const current = params.get(EDIT_SLIDES_PARAM);
+    params.set(EDIT_SLIDES_PARAM, sectionId);
+    const nextHash = bulletinHashWithParams(params);
+    if (current === sectionId && window.location.hash === nextHash) {
+      setEditSlidesSectionId(sectionId);
+      return;
+    }
+    if (current) {
+      window.history.replaceState(null, '', nextHash);
+    } else {
+      window.history.pushState({ bulletinEditSlides: sectionId }, '', nextHash);
+      editSlidesHistoryPushedRef.current = true;
+    }
+    setEditSlidesSectionId(sectionId);
+  }, []);
+
+  const closeEditSlides = useCallback(() => {
+    const params = bulletinHashParams();
+    if (!params.get(EDIT_SLIDES_PARAM)) {
+      setEditSlidesSectionId(null);
+      editSlidesHistoryPushedRef.current = false;
+      return;
+    }
+    if (editSlidesHistoryPushedRef.current) {
+      editSlidesHistoryPushedRef.current = false;
+      window.history.back();
+      return;
+    }
+    params.delete(EDIT_SLIDES_PARAM);
+    window.history.replaceState(null, '', bulletinHashWithParams(params));
+    setEditSlidesSectionId(null);
+  }, []);
+
+  useEffect(() => {
+    const syncFromHistory = () => {
+      const sectionId = editSlidesSectionFromHash();
+      if (!sectionId) {
+        editSlidesHistoryPushedRef.current = false;
+      }
+      setEditSlidesSectionId(sectionId);
+    };
+    window.addEventListener('popstate', syncFromHistory);
+    window.addEventListener('hashchange', syncFromHistory);
+    return () => {
+      window.removeEventListener('popstate', syncFromHistory);
+      window.removeEventListener('hashchange', syncFromHistory);
+    };
+  }, []);
 
   const stepperSteps = useMemo(
     () =>
@@ -737,7 +813,7 @@ export default function BulletinPage() {
                 onStepVisibilityChange={handleSectionVisibilityChange}
                 onEditSlides={(sectionId) => {
                   selectNavSection(sectionId);
-                  setEditSlidesSectionId(sectionId);
+                  openEditSlides(sectionId);
                 }}
                 onStepSelect={(index) => {
                   const section = BULLETIN_NAV_SECTIONS[index];
@@ -752,7 +828,7 @@ export default function BulletinPage() {
                     <button
                       type="button"
                       className="btn-primary bulletin-edit-slides-banner-btn"
-                      onClick={() => setEditSlidesSectionId(activeSectionId)}
+                      onClick={() => openEditSlides(activeSectionId)}
                     >
                       {t('bulletin.editSlidesOpenEditor')}
                     </button>
@@ -769,7 +845,7 @@ export default function BulletinPage() {
               <BulletinSectionPptEditor
                 sectionId={editSlidesSectionId}
                 draft={draft}
-                onClose={() => setEditSlidesSectionId(null)}
+                onClose={closeEditSlides}
                 onSaved={handleSectionPptxSaved}
               />
             ) : null}
