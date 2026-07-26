@@ -2,9 +2,12 @@ import type { WeeklyBulletin } from '../api/bulletins';
 import {
   applyBulletinPatches,
   applySlidePatches,
+  buildBirthdaySlideReplacements,
+  buildCoverPatch,
   bulletinDynamicTextOverrides,
   mergeSlideTextOverrides,
   patchesFromBulletin,
+  type SlideTextPatch,
 } from './bulletin-pptx-patches';
 import { bulletinSlidePathsToDelete } from './bulletin-section-visibility';
 import { BULLETIN_SECTION_TEMPLATE_SLIDES } from './bulletin-section-visibility';
@@ -45,21 +48,48 @@ export async function generateBulletinPptx(
     copy.set(buf);
     file = new File([copy.buffer], filename, { type: PPTX_MIME });
 
-    // splice 会用分区快照整页替换，导致封面日期/公告等动态文字回退到编辑分区时的旧值。
-    // 在 splice 之后再用当前表单/覆盖文字做一次 indexed 替换：文字以表单为准，手动样式保留。
+    // splice 会用分区快照整页替换，导致封面日期/会前主席/公告等回退到旧值。
+    // 之后再盖一遍表单语义字段：文字以表单为准，手动样式尽量保留。
+    const reapply: SlideTextPatch[] = [];
+    if (bulletin.serviceDate) {
+      reapply.push(buildCoverPatch(bulletin.serviceDate, bulletin.serviceTime));
+    }
+    if (bulletin.showPreServiceChairName && bulletin.preServiceChairNames?.trim()) {
+      reapply.push({
+        slideNumber: 2,
+        replacements: [],
+        preServiceChairName: bulletin.preServiceChairNames.trim(),
+      });
+    }
+    const month = bulletin.birthdayMonth?.trim() ?? '';
+    const names = bulletin.birthdayNames?.trim() ?? '';
+    if (month || names) {
+      reapply.push({
+        slideNumber: 24,
+        replacements: buildBirthdaySlideReplacements(
+          bulletin.birthdayMonth ?? '',
+          bulletin.birthdayNames ?? '',
+        ),
+      });
+    }
+    if (bulletin.verseOfWeek?.trim()) {
+      reapply.push({
+        slideNumber: 35,
+        replacements: [{ textIndex: 18, text: bulletin.verseOfWeek.trim() }],
+      });
+    }
     const overrides = mergeSlideTextOverrides(
       bulletinDynamicTextOverrides(bulletin),
       bulletin.slideTextOverrides,
     );
-    if (overrides.length) {
-      file = await applySlidePatches(
-        file,
-        overrides.map((o) => ({
-          slideNumber: o.slide,
-          replacements: [{ textIndex: o.textIndex, text: o.text }],
-        })),
-        filename,
-      );
+    for (const o of overrides) {
+      reapply.push({
+        slideNumber: o.slide,
+        replacements: [{ textIndex: o.textIndex, text: o.text }],
+      });
+    }
+    if (reapply.length) {
+      file = await applySlidePatches(file, reapply, filename);
     }
   }
 

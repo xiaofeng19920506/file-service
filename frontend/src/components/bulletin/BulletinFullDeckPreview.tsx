@@ -9,7 +9,7 @@ import {
 } from '../../lib/bulletin-deck-plan';
 import {
   bulletinPreviewCacheKey,
-  previewPatchForSection,
+  previewPatchFull,
   sectionPptxOverridesKey,
   type BulletinPreviewPatchFields,
 } from '../../lib/bulletin-preview-patch';
@@ -61,14 +61,8 @@ function deckSlidePropsEqual(prev: DeckSlideItemProps, next: DeckSlideItemProps)
   ) {
     return false;
   }
-  const prevKey = bulletinPreviewCacheKey(
-    prev.slideNumber,
-    previewPatchForSection(prev.sectionId, prev.patch),
-  );
-  const nextKey = bulletinPreviewCacheKey(
-    next.slideNumber,
-    previewPatchForSection(next.sectionId, next.patch),
-  );
+  const prevKey = bulletinPreviewCacheKey(prev.slideNumber, previewPatchFull(prev.patch));
+  const nextKey = bulletinPreviewCacheKey(next.slideNumber, previewPatchFull(next.patch));
   return prevKey === nextKey;
 }
 
@@ -86,10 +80,7 @@ const DeckSlideItem = memo(function DeckSlideItem({
   worshipFirstSlide,
   worshipLyricsPptxBlobId,
 }: DeckSlideItemProps) {
-  const slidePatch = useMemo(
-    () => previewPatchForSection(sectionId, patch),
-    [sectionId, patch],
-  );
+  const slidePatch = useMemo(() => previewPatchFull(patch), [patch]);
 
   const showWorshipPlayer =
     worshipFirstSlide != null &&
@@ -97,10 +88,14 @@ const DeckSlideItem = memo(function DeckSlideItem({
     worshipPlaylistId &&
     hasBulletinWorshipPlayItems(worshipItems);
 
+  // 封面 + 会前祷告（前 3 页）以及当前高亮页立即拉 PNG，避免首屏一直转圈
+  const eager = highlight || slideNumber <= 3;
+
   return (
     <div
       className={`bulletin-deck-slide${highlight ? ' bulletin-deck-slide--highlight' : ''}${showWorshipPlayer ? ' bulletin-deck-slide--worship' : ''}`}
       data-slide={slideNumber}
+      data-section-slide={sectionId}
     >
       {showWorshipPlayer ? (
         <BulletinWorshipEmbeddedPlayer
@@ -121,6 +116,7 @@ const DeckSlideItem = memo(function DeckSlideItem({
           requireDate={false}
           emptyLabel={emptyLabel}
           slideLabel={label}
+          lazy={!eager}
         />
       )}
     </div>

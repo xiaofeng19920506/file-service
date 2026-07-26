@@ -18,7 +18,7 @@ import {
   mapYoutubeApiError,
   normalizeUserRole,
   patchBulletinPreviewInPptx,
-  applySlideTextOverridesToPptx,
+  reapplyBulletinFormFieldsInPptx,
   buildBulletinDeckPlanFromPptxBytes,
   extractPresentationSlideAsPptx,
   extractIndexedTextRunsFromPptx,
@@ -69,8 +69,8 @@ const BULLETIN_TEMPLATE_DIR = resolveBulletinTemplateDir();
 const slidePreviewCache = new Map<string, Buffer>();
 /** 同一套补丁参数共享已补丁 PPTX，避免每页都重新 patch */
 const patchedPptxCache = new Map<string, Buffer>();
-/** 预览补丁版本；v30=分区迷你 PPTX splice */
-const SLIDE_PREVIEW_PATCH_REV = 'v31';
+/** 预览补丁版本；v32=splice 后重打封面/会前/生日/金句 + 统一 full patch */
+const SLIDE_PREVIEW_PATCH_REV = 'v32';
 
 async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   const chunks: Buffer[] = [];
@@ -438,10 +438,21 @@ async function buildPatchedBulletinPptxBuf(opts: {
       }),
     );
     pptxBuf = await applySectionPptxOverridesToBuf(db, storage, pptxBuf, sectionOverrides);
-    // 分区 splice 会整页替换回旧文字：对有覆盖的分区，splice 后再盖一遍表单/文字覆盖，
-    // 保证封面日期/公告等动态文字以表单为准（手动样式保留）。
-    if (Object.keys(sectionOverrides).length && slideTextOverrides.length) {
-      pptxBuf = Buffer.from(await applySlideTextOverridesToPptx(pptxBuf, slideTextOverrides));
+    // 分区 splice 会整页替换回旧文字：重打封面日期、会前主席、生日、金句与文字覆盖，
+    // 保证表单字段在预览每一页上都正确（手动样式尽量保留）。
+    if (Object.keys(sectionOverrides).length) {
+      pptxBuf = Buffer.from(
+        await reapplyBulletinFormFieldsInPptx(pptxBuf, {
+          serviceDate: q.serviceDate,
+          serviceTime: q.serviceTime,
+          showPreServiceChairName: q.showPreServiceChairName,
+          preServiceChairNames: q.preServiceChairNames,
+          birthdayMonth: q.birthdayMonth,
+          birthdayNames: q.birthdayNames,
+          verseOfWeek: q.verseOfWeek,
+          slideTextOverrides,
+        }),
+      );
     }
     rememberLru(patchedPptxCache, patchKey, pptxBuf, 12);
   }

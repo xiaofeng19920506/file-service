@@ -14,7 +14,10 @@ import {
   type BulletinDeckPlan,
 } from '../../lib/bulletin-deck-plan';
 import { nextSundayIso } from '../../lib/bulletin-date';
-import { sectionPptxOverridesKey } from '../../lib/bulletin-preview-patch';
+import {
+  previewPatchFull,
+  sectionPptxOverridesKey,
+} from '../../lib/bulletin-preview-patch';
 import {
   bulletinDynamicTextOverrides,
   mergeSlideTextOverrides,
@@ -166,25 +169,28 @@ export default function BulletinPreviewPanel({
   );
 
   const previewPatch = useMemo(
-    (): BulletinSlidePreviewParams => ({
-      serviceDate: bulletin.serviceDate || nextSundayIso(),
-      serviceTime: bulletin.serviceTime || '11:00',
-      scriptureBook: bulletin.scriptureBook,
-      scriptureReference: bulletin.scriptureReference,
-      showPreServiceChairName: bulletin.showPreServiceChairName,
-      preServiceChairNames: bulletin.preServiceChairNames,
-      birthdayMonth: bulletin.birthdayMonth,
-      birthdayNames: bulletin.birthdayNames,
-      verseOfWeek: bulletin.verseOfWeek,
-      hiddenSections: bulletin.hiddenSections,
-      weeklyMeetingVariant: bulletin.weeklyMeetingVariant,
-      slideTextOverrides: mergeSlideTextOverrides(
-        bulletinDynamicTextOverrides(bulletin),
-        bulletin.slideTextOverrides,
-      ),
-      bulletinId: bulletin.id,
-      sectionPptxKey: sectionPptxOverridesKey(bulletin.sectionPptxOverrides),
-    }),
+    (): BulletinSlidePreviewParams =>
+      previewPatchFull({
+        serviceDate: bulletin.serviceDate || nextSundayIso(),
+        serviceTime: bulletin.serviceTime || '11:00',
+        scriptureBook: bulletin.scriptureBook,
+        scriptureReference: bulletin.scriptureReference,
+        showPreServiceChairName: bulletin.showPreServiceChairName,
+        preServiceChairNames: bulletin.preServiceChairNames,
+        birthdayMonth: bulletin.birthdayMonth,
+        birthdayNames: bulletin.birthdayNames,
+        verseOfWeek: bulletin.verseOfWeek,
+        hiddenSections: bulletin.hiddenSections,
+        skipTestimonyWeek: bulletin.skipTestimonyWeek,
+        skipDepartmentReports: bulletin.skipDepartmentReports,
+        weeklyMeetingVariant: bulletin.weeklyMeetingVariant,
+        slideTextOverrides: mergeSlideTextOverrides(
+          bulletinDynamicTextOverrides(bulletin),
+          bulletin.slideTextOverrides,
+        ),
+        bulletinId: bulletin.id,
+        sectionPptxKey: sectionPptxOverridesKey(bulletin.sectionPptxOverrides),
+      }),
     [
       bulletin.id,
       bulletin.serviceDate,
@@ -197,6 +203,8 @@ export default function BulletinPreviewPanel({
       bulletin.birthdayNames,
       bulletin.verseOfWeek,
       bulletin.hiddenSections,
+      bulletin.skipTestimonyWeek,
+      bulletin.skipDepartmentReports,
       bulletin.weeklyMeetingVariant,
       bulletin.slideTextOverrides,
       bulletin.sectionPptxOverrides,

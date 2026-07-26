@@ -340,6 +340,55 @@ export async function applySlideTextOverridesToPptx(
   return zip.generateAsync({ type: 'uint8array' });
 }
 
+/**
+ * 分区 splice 之后重打「表单语义字段」（不改页结构、不加读经页）。
+ * 封面日期、会前主席、生日、金句、slideTextOverrides 都以当前表单为准；
+ * 手动改过的字体/颜色等样式尽量保留（indexed 替换只动文字）。
+ */
+export async function reapplyBulletinFormFieldsInPptx(
+  template: PptxInputBytes,
+  input: Pick<
+    BulletinPreviewPatchInput,
+    | 'serviceDate'
+    | 'serviceTime'
+    | 'showPreServiceChairName'
+    | 'preServiceChairNames'
+    | 'birthdayMonth'
+    | 'birthdayNames'
+    | 'verseOfWeek'
+    | 'slideTextOverrides'
+  >,
+): Promise<Uint8Array> {
+  let buf: PptxInputBytes = template;
+  if (input.serviceDate) {
+    buf = await patchCoverSlideInPptx(buf, {
+      serviceDate: input.serviceDate,
+      serviceTime: input.serviceTime,
+    });
+  }
+
+  const zip = await JSZip.loadAsync(buf);
+  const showChair = Boolean(input.showPreServiceChairName);
+  const chairName = input.preServiceChairNames?.trim() ?? '';
+  if (showChair && chairName) {
+    const slide2 = zip.file('ppt/slides/slide2.xml');
+    if (slide2) {
+      const xml = await slide2.async('string');
+      zip.file('ppt/slides/slide2.xml', patchPreServiceChairNameOnSlide2Xml(xml, chairName));
+    }
+  }
+
+  await applyBirthdayFieldsToZip(zip, input.birthdayMonth, input.birthdayNames);
+  await applyVerseOfWeekToZip(zip, input.verseOfWeek);
+
+  const overrides = normalizeSlideTextOverrides(input.slideTextOverrides);
+  if (overrides.length) {
+    await applySlideTextOverridesToZip(zip, overrides);
+  }
+
+  return zip.generateAsync({ type: 'uint8array' });
+}
+
 function splitBirthdayNameLines(names: string, max = 3): string[] {
   return names
     .split(/[\n,，、]/)

@@ -7,6 +7,10 @@ import { BULLETIN_WIZARD_STEPS } from './bulletin-template-steps';
 import { BULLETIN_NAV_SECTIONS } from './bulletin-sections';
 import { resolveHiddenSections } from './bulletin-section-visibility';
 import { sectionPptxOverridesKey } from './bulletin-preview-patch';
+import {
+  bulletinDynamicTextOverrides,
+  mergeSlideTextOverrides,
+} from './bulletin-pptx-patches';
 
 type TemplateSlideSection = { id: string; slides: number[] };
 
@@ -181,6 +185,10 @@ export async function buildBulletinDeckPlanFromFile(file: Blob): Promise<Bulleti
  */
 export async function buildBulletinDeckPlan(bulletin: WeeklyBulletin): Promise<BulletinDeckPlan> {
   const hiddenSections = resolveHiddenSections(bulletin);
+  const slideTextOverrides = mergeSlideTextOverrides(
+    bulletinDynamicTextOverrides(bulletin),
+    bulletin.slideTextOverrides,
+  );
   const dto = await fetchBulletinDeckPlan({
     serviceDate: bulletin.serviceDate,
     serviceTime: bulletin.serviceTime || '11:00',
@@ -193,7 +201,7 @@ export async function buildBulletinDeckPlan(bulletin: WeeklyBulletin): Promise<B
     verseOfWeek: bulletin.verseOfWeek,
     hiddenSections,
     weeklyMeetingVariant: bulletin.weeklyMeetingVariant,
-    slideTextOverrides: bulletin.slideTextOverrides,
+    slideTextOverrides,
     bulletinId: bulletin.id,
     sectionPptxKey: sectionPptxOverridesKey(bulletin.sectionPptxOverrides),
   });

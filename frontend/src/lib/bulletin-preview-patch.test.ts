@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   bulletinPreviewCacheKey,
   previewPatchForSection,
+  previewPatchFull,
 } from './bulletin-preview-patch';
 
 const full = {
@@ -11,44 +12,58 @@ const full = {
   scriptureReference: '1:1-6',
   showPreServiceChairName: true,
   preServiceChairNames: '王凯',
+  birthdayMonth: '七月',
+  birthdayNames: '甲,乙',
+  verseOfWeek: '金句',
   hiddenSections: [] as string[],
   weeklyMeetingVariant: 28 as number | null,
 };
 
-describe('previewPatchForSection', () => {
-  it('includes scripture + visibility structure + date for cover', () => {
-    expect(previewPatchForSection('cover', full)).toEqual({
-      scriptureBook: '诗篇 Psalms',
-      scriptureReference: '1:1-6',
-      hiddenSections: [],
-      weeklyMeetingVariant: 28,
+describe('previewPatchFull / previewPatchForSection', () => {
+  it('returns the same full patch for every section (no per-section trimming)', () => {
+    const expected = {
       serviceDate: '2026-07-20',
       serviceTime: '11:00',
-    });
-  });
-
-  it('includes chair fields for pre_service', () => {
-    expect(previewPatchForSection('pre_service', full)).toEqual({
       scriptureBook: '诗篇 Psalms',
       scriptureReference: '1:1-6',
-      hiddenSections: [],
-      weeklyMeetingVariant: 28,
       showPreServiceChairName: true,
       preServiceChairNames: '王凯',
-    });
+      birthdayMonth: '七月',
+      birthdayNames: '甲,乙',
+      verseOfWeek: '金句',
+      hiddenSections: [],
+      weeklyMeetingVariant: 28,
+      slideTextOverrides: undefined,
+      bulletinId: undefined,
+      sectionPptxKey: undefined,
+    };
+    expect(previewPatchFull(full)).toEqual(expected);
+    expect(previewPatchForSection('cover', full)).toEqual(expected);
+    expect(previewPatchForSection('pre_service', full)).toEqual(expected);
+    expect(previewPatchForSection('worship', full)).toEqual(expected);
+    expect(previewPatchForSection('offering', full)).toEqual(expected);
   });
 
-  it('keeps worship key stable when only chair changes', () => {
-    const a = bulletinPreviewCacheKey(10, previewPatchForSection('worship', full));
+  it('changes keys when chair or date changes (full patch is shared)', () => {
+    const a = bulletinPreviewCacheKey(2, previewPatchForSection('pre_service', full));
     const b = bulletinPreviewCacheKey(
+      2,
+      previewPatchForSection('pre_service', {
+        ...full,
+        preServiceChairNames: '别人',
+      }),
+    );
+    expect(a).not.toBe(b);
+
+    const c = bulletinPreviewCacheKey(10, previewPatchForSection('worship', full));
+    const d = bulletinPreviewCacheKey(
       10,
       previewPatchForSection('worship', {
         ...full,
-        preServiceChairNames: '别人',
         serviceDate: '2026-08-01',
       }),
     );
-    expect(a).toBe(b);
+    expect(c).not.toBe(d);
   });
 
   it('changes keys when hidden sections change', () => {

@@ -34,11 +34,19 @@ export function sectionPptxOverridesKey(
     .join('|');
 }
 
-function structureParams(full: BulletinPreviewPatchFields): BulletinSlidePreviewParams {
+/**
+ * 整份 deck 共用的完整预览参数（封面/会前/读经/生日/覆盖…）。
+ * 每一页 PNG 与 deck-plan 必须带同一套参数，否则演示页码或文字会对不上。
+ */
+export function previewPatchFull(full: BulletinPreviewPatchFields): BulletinSlidePreviewParams {
   const hidden = resolveHiddenSections(full);
   return {
+    serviceDate: full.serviceDate,
+    serviceTime: full.serviceTime || '11:00',
     scriptureBook: full.scriptureBook,
     scriptureReference: full.scriptureReference,
+    showPreServiceChairName: full.showPreServiceChairName,
+    preServiceChairNames: full.preServiceChairNames,
     birthdayMonth: full.birthdayMonth,
     birthdayNames: full.birthdayNames,
     verseOfWeek: full.verseOfWeek,
@@ -51,31 +59,13 @@ function structureParams(full: BulletinPreviewPatchFields): BulletinSlidePreview
 }
 
 /**
- * 按分区裁剪预览 query。
- * 读经 / 隐藏分区 / 聚会版式会影响演示页码，所有页都必须带同一套结构参数。
+ * @deprecated 名称保留兼容旧调用；现已返回完整 patch（不再按分区裁剪）。
  */
 export function previewPatchForSection(
-  sectionId: string,
+  _sectionId: string,
   full: BulletinPreviewPatchFields,
 ): BulletinSlidePreviewParams {
-  const structure = structureParams(full);
-
-  switch (sectionId) {
-    case 'cover':
-      return {
-        ...structure,
-        serviceDate: full.serviceDate,
-        serviceTime: full.serviceTime || '11:00',
-      };
-    case 'pre_service':
-      return {
-        ...structure,
-        showPreServiceChairName: full.showPreServiceChairName,
-        preServiceChairNames: full.preServiceChairNames,
-      };
-    default:
-      return structure;
-  }
+  return previewPatchFull(full);
 }
 
 export function bulletinPreviewCacheKey(
