@@ -8,11 +8,9 @@ import LibraryPage from './views/LibraryPage';
 import MergePage from './views/MergePage';
 import PlaylistsPage from './views/PlaylistsPage';
 import BulletinPage from './views/BulletinPage';
-import WorshipPage from './views/WorshipPage';
 import WorshipSongsInvitePage from './views/WorshipSongsInvitePage';
 import BulletinSlideShowPresenterPage from './views/BulletinSlideShowPresenterPage';
 import BulletinSlideShowProjectorPage from './views/BulletinSlideShowProjectorPage';
-import WorshipLivePage from './views/WorshipLivePage';
 import VipVideoPage from './views/VipVideoPage';
 import UploadConfirmPage from './views/UploadConfirmPage';
 import { useLibraryUpload } from './hooks/useLibraryUpload';
@@ -93,9 +91,6 @@ function AppShellInner({
       navigate(home);
       return;
     }
-    if (page === 'worship' && !permissions.canStartWorship) {
-      navigate(home);
-    }
     if (page === 'vip-video' && !permissions.canAccessVipVideo) {
       navigate(home);
       return;
@@ -146,9 +141,7 @@ function AppShellInner({
             ? t('pages.adminTitle')
             : page === 'bulletin'
               ? t('pages.bulletinTitle')
-              : page === 'worship'
-                ? t('pages.worshipTitle')
-                : page === 'library'
+              : page === 'library'
               ? t('pages.libraryTitle')
               : t('pages.playlistsTitle');
   }, [page, t]);
@@ -207,9 +200,7 @@ function AppShellInner({
           ? t('nav.adminShort')
           : page === 'bulletin'
             ? t('nav.bulletinShort')
-            : page === 'worship'
-              ? t('nav.worshipShort')
-              : page === 'library'
+            : page === 'library'
             ? t('nav.libraryShort')
             : t('nav.playlistsShort');
 
@@ -267,7 +258,6 @@ function AppShellInner({
               canAccessPlaylists={permissions.canAccessPlaylists}
               canMerge={permissions.canMerge}
               canViewBulletin={permissions.canViewBulletin}
-              canStartWorship={permissions.canStartWorship}
               canEdit={permissions.canEdit}
               canAccessVipVideo={permissions.canAccessVipVideo}
               variant="header"
@@ -351,7 +341,6 @@ function AppShellInner({
         )}
         {page === 'merge' && permissions.canMerge && <MergePage mergePlaylistId={mergePlaylistId} />}
         {page === 'bulletin' && permissions.canViewBulletin && <BulletinPage />}
-        {page === 'worship' && permissions.canStartWorship && <WorshipPage />}
         {page === 'admin' && permissions.canEdit && <AdminPage />}
       </div>
 
@@ -363,7 +352,6 @@ function AppShellInner({
           canAccessPlaylists={permissions.canAccessPlaylists}
           canMerge={permissions.canMerge}
           canViewBulletin={permissions.canViewBulletin}
-          canStartWorship={permissions.canStartWorship}
           canEdit={permissions.canEdit}
           canAccessVipVideo={permissions.canAccessVipVideo}
           variant="bottom"
@@ -386,7 +374,7 @@ function AppShellWithMenu() {
 
 export default function App() {
   const { user, loading, permissions } = useAuth();
-  const { page, previewBlobId, mergeEditBlobIds, mergeEditTitle, worshipPlaylistId, worshipBulletinId, worshipMode, worshipSongsInviteToken, worshipSongsBulletinId, slideshowSessionId } = useAppPage();
+  const { page, previewBlobId, mergeEditBlobIds, mergeEditTitle, worshipSongsInviteToken, worshipSongsBulletinId, slideshowSessionId } = useAppPage();
   const libraryUpload = useLibraryUpload();
   const { t } = useI18n();
 
@@ -473,30 +461,6 @@ export default function App() {
         inviteToken={worshipSongsInviteToken}
         bulletinId={worshipSongsBulletinId}
       />
-    );
-  }
-
-  if (
-    page === 'worship-live' &&
-    worshipPlaylistId &&
-    worshipMode &&
-    permissions.canStartWorship
-  ) {
-    return (
-      <WorshipLivePage
-        playlistId={worshipPlaylistId}
-        bulletinId={worshipBulletinId}
-        mode={worshipMode}
-      />
-    );
-  }
-
-  if (page === 'worship-live') {
-    window.location.hash = '#/worship';
-    return (
-      <div className="auth-page">
-        <p className="auth-loading">{t('worship.loading')}</p>
-      </div>
     );
   }
 

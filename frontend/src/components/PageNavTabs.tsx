@@ -6,7 +6,6 @@ import {
   MergeNavIcon,
   PlaylistsNavIcon,
   VipNavIcon,
-  WorshipNavIcon,
 } from './icons';
 import type { AppPage } from '../hooks/useAppPage';
 import { useI18n } from '../i18n';
@@ -17,7 +16,6 @@ type NavTarget =
   | 'playlist-lists'
   | 'merge'
   | 'bulletin'
-  | 'worship'
   | 'admin'
   | 'vip-video';
 
@@ -28,7 +26,6 @@ type PageNavTabsProps = {
   canAccessPlaylists: boolean;
   canMerge: boolean;
   canViewBulletin: boolean;
-  canStartWorship: boolean;
   canEdit: boolean;
   canAccessVipVideo: boolean;
   variant: 'header' | 'bottom';
@@ -43,14 +40,12 @@ const NAV_ITEMS: {
     | 'nav.playlistLists'
     | 'nav.merge'
     | 'nav.bulletinShort'
-    | 'nav.worshipShort'
     | 'nav.admin'
     | 'nav.vipShort';
   requiresSearch?: boolean;
   requiresPlaylists?: boolean;
   requiresMerge?: boolean;
   requiresBulletin?: boolean;
-  requiresWorship?: boolean;
   requiresEdit?: boolean;
   requiresVipVideo?: boolean;
   bottomOnly?: boolean;
@@ -90,12 +85,6 @@ const NAV_ITEMS: {
     requiresBulletin: true,
   },
   {
-    id: 'worship',
-    icon: WorshipNavIcon,
-    labelKey: 'nav.worshipShort',
-    requiresWorship: true,
-  },
-  {
     id: 'vip-video',
     icon: VipNavIcon,
     labelKey: 'nav.vipShort',
@@ -116,7 +105,6 @@ export default function PageNavTabs({
   canAccessPlaylists,
   canMerge,
   canViewBulletin,
-  canStartWorship,
   canEdit,
   canAccessVipVideo,
   variant,
@@ -131,7 +119,6 @@ export default function PageNavTabs({
     if (item.requiresPlaylists && !canAccessPlaylists) return false;
     if (item.requiresMerge && !canMerge) return false;
     if (item.requiresBulletin && !canViewBulletin) return false;
-    if (item.requiresWorship && !canStartWorship) return false;
     if (item.requiresEdit && !canEdit) return false;
     if (item.requiresVipVideo && !canAccessVipVideo) return false;
     return true;
@@ -147,8 +134,7 @@ export default function PageNavTabs({
     >
       {items.map((item) => {
         const Icon = item.icon;
-        const active =
-          page === item.id || (item.id === 'worship' && page === 'worship-live');
+        const active = page === item.id;
         const label = t(item.labelKey);
 
         return (

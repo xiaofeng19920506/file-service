@@ -15,9 +15,7 @@ export type AppPage =
   | 'bulletin'
   | 'bulletin-slideshow-presenter'
   | 'bulletin-slideshow-projector'
-  | 'worship'
   | 'worship-songs'
-  | 'worship-live'
   | 'vip-video';
 
 export type AppRoute = {
@@ -28,9 +26,6 @@ export type AppRoute = {
   playlistId?: string;
   playlistShareToken?: string;
   mergePlaylistId?: string;
-  worshipPlaylistId?: string;
-  worshipBulletinId?: string;
-  worshipMode?: 'youtube' | 'ppt';
   worshipSongsInviteToken?: string;
   worshipSongsBulletinId?: string;
   slideshowSessionId?: string;
@@ -93,24 +88,10 @@ function routeFromHash(rawHash: string): AppRoute {
     return { page: 'playlists', playlistId, playlistShareToken };
   }
   if (hash === '#/admin') return { page: 'admin' };
-  if (hash.startsWith('#/worship/live')) {
-    const qIndex = hash.indexOf('?');
-    const params =
-      qIndex === -1 ? new URLSearchParams() : new URLSearchParams(hash.slice(qIndex + 1));
-    const worshipPlaylistId = params.get('playlist')?.trim() || undefined;
-    const worshipBulletinId = params.get('bulletin')?.trim() || undefined;
-    const modeRaw = params.get('mode')?.trim();
-    const worshipMode = modeRaw === 'youtube' || modeRaw === 'ppt' ? modeRaw : undefined;
-    if (worshipPlaylistId && worshipMode) {
-      return {
-        page: 'worship-live',
-        worshipPlaylistId,
-        worshipBulletinId,
-        worshipMode,
-      };
-    }
+  // 旧「敬拜」独立页已下线，落到周报（hash 在 useAppPage 初始化时改写）
+  if (hash === '#/worship' || hash.startsWith('#/worship?') || hash.startsWith('#/worship/live')) {
+    return { page: 'bulletin' };
   }
-  if (hash === '#/worship' || hash.startsWith('#/worship?')) return { page: 'worship' };
   if (hash.startsWith('#/worship-songs')) {
     const qIndex = hash.indexOf('?');
     const params =
@@ -151,7 +132,14 @@ function routeFromHash(rawHash: string): AppRoute {
 
 export function useAppPage() {
   const [route, setRoute] = useState<AppRoute>(() => {
-    const normalized = normalizeHash(window.location.hash);
+    const raw = window.location.hash;
+    const isLegacyWorship =
+      raw === '#/worship' || raw.startsWith('#/worship?') || raw.startsWith('#/worship/live');
+    if (isLegacyWorship) {
+      window.location.replace('#/bulletin');
+      return { page: 'bulletin' };
+    }
+    const normalized = normalizeHash(raw);
     if (window.location.hash !== normalized) {
       window.location.replace(normalized);
     }
@@ -159,7 +147,17 @@ export function useAppPage() {
   });
 
   useEffect(() => {
-    const onHashChange = () => setRoute(routeFromHash(window.location.hash));
+    const onHashChange = () => {
+      const raw = window.location.hash;
+      const isLegacyWorship =
+        raw === '#/worship' || raw.startsWith('#/worship?') || raw.startsWith('#/worship/live');
+      if (isLegacyWorship) {
+        window.location.replace('#/bulletin');
+        setRoute({ page: 'bulletin' });
+        return;
+      }
+      setRoute(routeFromHash(raw));
+    };
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
@@ -176,13 +174,11 @@ export function useAppPage() {
               ? '#/admin'
               : next === 'bulletin'
                 ? '#/bulletin'
-                : next === 'worship'
-                  ? '#/worship'
-                  : next === 'vip-video'
-                    ? '#/vip'
-                    : next === 'login'
-                ? '#/login'
-                : '#/library';
+                : next === 'vip-video'
+                  ? '#/vip'
+                  : next === 'login'
+                    ? '#/login'
+                    : '#/library';
     if (window.location.hash !== hash) {
       window.location.hash = hash;
     }
@@ -227,9 +223,6 @@ export function useAppPage() {
     playlistId: route.playlistId,
     playlistShareToken: route.playlistShareToken,
     mergePlaylistId: route.mergePlaylistId,
-    worshipPlaylistId: route.worshipPlaylistId,
-    worshipBulletinId: route.worshipBulletinId,
-    worshipMode: route.worshipMode,
     worshipSongsInviteToken: route.worshipSongsInviteToken,
     worshipSongsBulletinId: route.worshipSongsBulletinId,
     slideshowSessionId: route.slideshowSessionId,

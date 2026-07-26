@@ -53,10 +53,6 @@ export function canEditBulletinWorshipSongs(role: UserRole | null): boolean {
   return canViewBulletin(role);
 }
 
-export function canStartWorship(role: UserRole | null): boolean {
-  return isWorshipCapable(role);
-}
-
 export function canAccessVipVideo(role: UserRole | null): boolean {
   return role === 'vip' || role === 'admin';
 }
@@ -87,7 +83,6 @@ export function permissionsForRole(role: UserRole | null) {
     canManageBulletin: canManageBulletin(normalized),
     canViewBulletin: canViewBulletin(normalized),
     canEditBulletinWorshipSongs: canEditBulletinWorshipSongs(normalized),
-    canStartWorship: canStartWorship(normalized),
     canAccessVipVideo: canAccessVipVideo(normalized),
     canPlayPlaylistVideo: canPlayPlaylistVideo(normalized),
     isVipOnly: isVipOnlyRole(normalized),

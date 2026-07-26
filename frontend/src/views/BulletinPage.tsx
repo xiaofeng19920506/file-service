@@ -44,8 +44,6 @@ import {
 import { BULLETIN_WIZARD_STEPS } from '../lib/bulletin-template-steps';
 import { buildBulletinPptxFile, publishBulletinPptx } from '../lib/bulletin-publish';
 import { friendlyError } from '../lib/error-messages';
-import { readWorshipLiveConfig, writeWorshipLiveConfig } from '../lib/worship-live-config';
-
 type AnnouncementDraft = AnnouncementInput & { key: string };
 
 const EDIT_SLIDES_PARAM = 'editSlides';
@@ -772,23 +770,6 @@ export default function BulletinPage() {
           {canManage && (
             <button type="button" className="btn-primary" disabled={saving} onClick={handleCreate}>
               {t('bulletin.create')}
-            </button>
-          )}
-          {permissions.canStartWorship && draft && (
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => {
-                const prev = readWorshipLiveConfig();
-                writeWorshipLiveConfig({
-                  mode: 'ppt',
-                  playlistId: prev?.playlistId ?? '',
-                  bulletinId: draft.id,
-                });
-                window.location.hash = '#/worship';
-              }}
-            >
-              {t('worship.start')}
             </button>
           )}
         </div>
