@@ -291,6 +291,9 @@ function bulletinPreviewQuery(params: BulletinSlidePreviewParams): string {
     qs.set('slideTextOverrides', JSON.stringify(params.slideTextOverrides));
   }
   if (params.bulletinId) qs.set('bulletinId', params.bulletinId);
+  // 仅作 URL cache-buster：分区 PPT 覆盖变化后 URL 必须不同，
+  // 否则浏览器/代理可能复用旧 PNG（服务端会忽略此参数，按 bulletinId 取真实覆盖）。
+  if (params.sectionPptxKey) qs.set('sectionPptxKey', params.sectionPptxKey);
   return qs.toString();
 }
 

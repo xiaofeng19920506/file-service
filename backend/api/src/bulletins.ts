@@ -669,7 +669,7 @@ export function registerBulletinRoutes(
       });
 
       const plan = await buildBulletinDeckPlanFromPptxBytes(pptxBuf);
-      return reply.send({
+      return reply.header('Cache-Control', 'private, no-store').send({
         rev: SLIDE_PREVIEW_PATCH_REV,
         totalSlides: plan.totalSlides,
         slides: plan.slides,
@@ -739,7 +739,11 @@ export function registerBulletinRoutes(
       const cacheKey = `${SLIDE_PREVIEW_PATCH_REV}:${slideNumber}:${previewPatchCacheSuffix(q, overridesKey)}:sec:${sectionKey}`;
       const cached = slidePreviewCache.get(cacheKey);
       if (cached) {
-        return reply.header('Content-Type', 'image/png').header('X-Preview-Cached', 'true').send(cached);
+        return reply
+          .header('Content-Type', 'image/png')
+          .header('Cache-Control', 'private, no-store')
+          .header('X-Preview-Cached', 'true')
+          .send(cached);
       }
 
       const pptxPath = join(workRoot, 'preview.pptx');
@@ -766,7 +770,11 @@ export function registerBulletinRoutes(
             })(),
       );
       rememberLru(slidePreviewCache, cacheKey, pngBuf, 120);
-      return reply.header('Content-Type', 'image/png').header('X-Preview-Cached', 'false').send(pngBuf);
+      return reply
+        .header('Content-Type', 'image/png')
+        .header('Cache-Control', 'private, no-store')
+        .header('X-Preview-Cached', 'false')
+        .send(pngBuf);
     } catch (err) {
       request.log.warn({ err, slideNumber }, 'bulletin slide preview failed');
       return reply.code(503).send({ error: 'slide_preview_unavailable' });
