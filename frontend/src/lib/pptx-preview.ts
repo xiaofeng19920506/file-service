@@ -461,7 +461,7 @@ export async function parsePptxSlidesDetailed(
   file: Blob,
   meta?: { sourceFile?: string; sourceItemId?: string },
 ): Promise<EditableSlide[]> {
-  const zip = await JSZip.loadAsync(file);
+  const zip = await JSZip.loadAsync(await file.arrayBuffer());
   const slidePaths = Object.keys(zip.files)
     .filter((n) => /^ppt\/slides\/slide\d+\.xml$/.test(n))
     .sort((a, b) => slideNumber(a) - slideNumber(b));
@@ -494,7 +494,7 @@ export async function applySlidesToPptx(
   slides: Pick<EditableSlide, 'slidePath' | 'title' | 'snippet'>[],
   filename: string,
 ): Promise<File> {
-  const zip = await JSZip.loadAsync(file);
+  const zip = await JSZip.loadAsync(await file.arrayBuffer());
   for (const slide of slides) {
     if (!slide.slidePath) continue;
     const entry = zip.file(slide.slidePath);
@@ -694,7 +694,7 @@ export async function applyImageReplacementsToPptx(
       : new File([file], 'presentation.pptx', { type: PPTX_MIME });
   }
 
-  const zip = await JSZip.loadAsync(file);
+  const zip = await JSZip.loadAsync(await file.arrayBuffer());
   for (const { mediaPath, blob } of replacements) {
     const buf = await blob.arrayBuffer();
     zip.file(mediaPath, buf);
@@ -778,7 +778,7 @@ export async function applyBackgroundEditsToPptx(
       : new File([file], 'presentation.pptx', { type: PPTX_MIME });
   }
 
-  const zip = await JSZip.loadAsync(file);
+  const zip = await JSZip.loadAsync(await file.arrayBuffer());
   for (const slide of toWrite) {
     const entry = zip.file(slide.slidePath);
     if (!entry) continue;
@@ -844,7 +844,7 @@ export async function applySlideXmlOverridesToPptx(
       : new File([file], 'presentation.pptx', { type: PPTX_MIME });
   }
 
-  const zip = await JSZip.loadAsync(file);
+  const zip = await JSZip.loadAsync(await file.arrayBuffer());
   for (const { slidePath, xml } of targets) {
     if (!zip.file(slidePath)) continue;
     zip.file(slidePath, xml);
@@ -869,7 +869,7 @@ export async function applyShapeTextEditsToPptx(
       : new File([file], 'presentation.pptx', { type: PPTX_MIME });
   }
 
-  const zip = await JSZip.loadAsync(file);
+  const zip = await JSZip.loadAsync(await file.arrayBuffer());
   for (const slide of toWrite) {
     const entry = zip.file(slide.slidePath);
     if (!entry) continue;
@@ -993,7 +993,7 @@ export async function duplicateSlideInPptx(
   sourceSlidePath: string,
   options?: { insertAfterPath?: string | null; blank?: boolean },
 ): Promise<{ file: File; newSlidePath: string }> {
-  const zip = await JSZip.loadAsync(file);
+  const zip = await JSZip.loadAsync(await file.arrayBuffer());
   const srcEntry = zip.file(sourceSlidePath);
   if (!srcEntry) throw new Error('slide_not_found');
 
@@ -1069,7 +1069,7 @@ export async function deleteSlidesFromPptx(file: Blob, slidePaths: string[]): Pr
         });
   }
 
-  const zip = await JSZip.loadAsync(file);
+  const zip = await JSZip.loadAsync(await file.arrayBuffer());
   const { presPath, relsPath, presEntry, relsEntry } = readPresentationParts(zip);
   let presXml = await presEntry.async('string');
   let presRels = await relsEntry.async('string');
@@ -1103,7 +1103,7 @@ export async function deleteSlidesFromPptx(file: Blob, slidePaths: string[]): Pr
 
 /** 按给定顺序重排 presentation 中的幻灯片 */
 export async function reorderSlidesInPptx(file: Blob, orderedPaths: string[]): Promise<File> {
-  const zip = await JSZip.loadAsync(file);
+  const zip = await JSZip.loadAsync(await file.arrayBuffer());
   const { presPath, presEntry, relsEntry } = readPresentationParts(zip);
   let presXml = await presEntry.async('string');
   const presRels = await relsEntry.async('string');
@@ -1195,8 +1195,21 @@ export async function applySlideEditsToPptx(
   }
 
   const xmlTargets = target
-    .map((s) => ({ slidePath: resolvePath(s), xml: s.slideXmlOverride }))
-    .filter((s): s is { slidePath: string; xml: string } => !!s.slidePath && !!s.xml);
+    .map((s) => {
+      const slidePath = resolvePath(s);
+      if (!slidePath) return null;
+      let xml = s.slideXmlOverride ?? null;
+      // 同一页若同时有 overlay 文字与 XML 改写，先把 overlay 合进 XML，避免后写 overlay 盖掉 Ribbon 样式
+      if (xml && s.shapeTextOverrides) {
+        for (const [idxStr, value] of Object.entries(s.shapeTextOverrides)) {
+          const idx = Number(idxStr);
+          if (!Number.isFinite(idx)) continue;
+          xml = applyShapeTextToSlideXml(xml, idx, value);
+        }
+      }
+      return xml ? { slidePath, xml } : null;
+    })
+    .filter((s): s is { slidePath: string; xml: string } => !!s);
   if (xmlTargets.length) {
     working = await applySlideXmlOverridesToPptx(working, xmlTargets);
   }
@@ -1207,7 +1220,11 @@ export async function applySlideEditsToPptx(
       slidePath: resolvePath(s),
     }))
     .filter(
-      (s) => s.slidePath && s.shapeTextOverrides && Object.keys(s.shapeTextOverrides).length > 0,
+      (s) =>
+        s.slidePath &&
+        !s.slideXmlOverride &&
+        s.shapeTextOverrides &&
+        Object.keys(s.shapeTextOverrides).length > 0,
     );
   if (shapeTextTargets.length) {
     working = await applyShapeTextEditsToPptx(working, shapeTextTargets);

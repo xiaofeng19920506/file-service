@@ -49,21 +49,27 @@ export function shapeTextOverrideEquals(
 }
 
 function firstRunPr(spXml: string): string {
+  // 自闭合必须用 [^>]*\/>：旧写法 [^/]*\/> 会把
+  // <a:rPr ...><a:solidFill><a:srgbClr val="…"/> 误当成完整 rPr，
+  // 写出缺 </a:rPr> 的坏 XML，保存后被 well-formed 检查丢掉。
   return (
-    spXml.match(/<a:r>[\s\S]*?(<a:rPr\b[^/]*\/>)/)?.[1] ??
-    spXml.match(/<a:r>[\s\S]*?(<a:rPr\b[\s\S]*?<\/a:rPr>)/)?.[1] ??
+    spXml.match(/<a:r>\s*(<a:rPr\b[^>]*\/>)/)?.[1] ??
+    spXml.match(/<a:r>\s*(<a:rPr\b[\s\S]*?<\/a:rPr>)/)?.[1] ??
     '<a:rPr lang="zh-CN"/>'
   );
 }
 
 function firstParaPr(spXml: string): string {
-  const m = spXml.match(/<a:pPr\b[^>]*\/>/)?.[0] ?? spXml.match(/<a:pPr\b[^>]*>[\s\S]*?<\/a:pPr>/)?.[0];
+  const m =
+    spXml.match(/<a:pPr\b[^>]*\/>/)?.[0] ??
+    spXml.match(/<a:pPr\b[^>]*>[\s\S]*?<\/a:pPr>/)?.[0];
   return m ?? '<a:pPr/>';
 }
 
 function bodyPrXml(spXml: string): string {
+  // 与 firstRunPr 相同：自闭合必须 [^>]*\/>，否则会吃掉子标签的 />
   return (
-    spXml.match(/<a:bodyPr\b[^/]*\/>/)?.[0] ??
+    spXml.match(/<a:bodyPr\b[^>]*\/>/)?.[0] ??
     spXml.match(/<a:bodyPr\b[\s\S]*?<\/a:bodyPr>/)?.[0] ??
     '<a:bodyPr/>'
   );

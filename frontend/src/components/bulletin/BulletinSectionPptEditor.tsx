@@ -113,6 +113,8 @@ export default function BulletinSectionPptEditor({
       [sectionId]: uploaded.blobId,
     };
     const updated = await updateBulletin(draft.id, { sectionPptxOverrides: nextOverrides });
+    // 本会话下载要用最新文件；编辑器内存态已由 saveChanges 更新，勿改 previewUrl 以免整页重载
+    setSectionFile(named);
     onSaved({
       ...updated,
       sectionPptxOverrides: updated.sectionPptxOverrides ?? nextOverrides,

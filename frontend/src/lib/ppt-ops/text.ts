@@ -185,7 +185,7 @@ export function readRunFormat(elementXml: string): {
   fontFamily?: string;
 } {
   const rPr =
-    elementXml.match(/<a:r>\s*(<a:rPr(?:"[^"]*"|[^>"])*?\/>)/)?.[1] ??
+    elementXml.match(/<a:r>\s*(<a:rPr\b[^>]*\/>)/)?.[1] ??
     elementXml.match(/<a:r>\s*(<a:rPr[\s\S]*?<\/a:rPr>)/)?.[1] ??
     '';
   const attrs = rPr.match(/^<a:rPr((?:"[^"]*"|[^>"])*?)\/?>/)?.[1] ?? '';

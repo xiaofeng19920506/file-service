@@ -285,7 +285,7 @@ function extractTextContent(
       if (!text && !/\s/.test(t)) continue;
       const rPrXml =
         rXml.match(/<a:rPr[^>]*>[\s\S]*?<\/a:rPr>/)?.[0]
-        ?? rXml.match(/<a:rPr[^/]*\/>/)?.[0]
+        ?? rXml.match(/<a:rPr[^>]*\/>/)?.[0]
         ?? '<a:rPr/>';
       runs.push({ text, ...extractRunStyle(rPrXml, schemeColors) });
     }

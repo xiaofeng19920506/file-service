@@ -20,6 +20,7 @@ import {
 } from '../lib/pptx-preview';
 import { insertPictureIntoPptx } from '../lib/pptx-insert-elements';
 import {
+  applyShapeTextToSlideXml,
   normalizeShapeTextOverride,
   type ShapeTextStyle,
 } from '../lib/pptx-shape-text';
@@ -394,11 +395,35 @@ export function useMergedPptEditor({
     [updateSlides],
   );
 
+  /**
+   * 画布改文字/样式：直接写进 slideXmlOverride（与 Ribbon 同一条文档模型），
+   * 不再只塞 shapeTextOverrides —— 否则保存时样式在 XML、正文在 overlay，
+   * 二者互相覆盖，用户改完保存后样式/内容会丢。
+   */
   const setShapeTextOverride = useCallback(
     (arrayIndex: number, shapeIndex: number, value: ShapeTextStyle) => {
       updateSlides((prev) =>
         prev.map((s, i) => {
           if (i !== arrayIndex) return s;
+          const currentXml = getSlideXml(s, baseSlideXml);
+          if (currentXml) {
+            let nextXml: string;
+            try {
+              nextXml = applyShapeTextToSlideXml(currentXml, shapeIndex, value);
+            } catch {
+              return s;
+            }
+            if (nextXml === currentXml) return s;
+            const next: EditableSlide = { ...s, slideXmlOverride: nextXml };
+            if (s.shapeTextOverrides?.[shapeIndex] !== undefined) {
+              const rest = { ...s.shapeTextOverrides };
+              delete rest[shapeIndex];
+              if (Object.keys(rest).length) next.shapeTextOverrides = rest;
+              else delete next.shapeTextOverrides;
+            }
+            return next;
+          }
+          // 无 XML 可读时退回 overlay（新建空白页等）
           return {
             ...s,
             shapeTextOverrides: {
@@ -409,7 +434,7 @@ export function useMergedPptEditor({
         }),
       );
     },
-    [updateSlides],
+    [baseSlideXml, updateSlides],
   );
 
   const patchShapeTextStyle = useCallback(
@@ -419,24 +444,51 @@ export function useMergedPptEditor({
       patch: Partial<ShapeTextStyle>,
       fallbackText = '',
     ) => {
-      updateSlides((prev) =>
-        prev.map((s, i) => {
+      updateSlides((prev) => {
+        const slide = prev[arrayIndex];
+        if (!slide) return prev;
+        const fromOverride = slide.shapeTextOverrides?.[shapeIndex];
+        const currentXml = getSlideXml(slide, baseSlideXml);
+        // 优先从当前 XML 里该形状已有文字拼底，避免 overlay 空文本盖掉正文
+        let baseText = fallbackText;
+        if (fromOverride !== undefined) {
+          baseText = normalizeShapeTextOverride(fromOverride, fallbackText).text;
+        }
+        const merged = {
+          ...normalizeShapeTextOverride(fromOverride, baseText),
+          ...patch,
+          text: patch.text ?? baseText,
+        };
+        return prev.map((s, i) => {
           if (i !== arrayIndex) return s;
-          const current = normalizeShapeTextOverride(
-            s.shapeTextOverrides?.[shapeIndex],
-            fallbackText,
-          );
+          if (currentXml) {
+            let nextXml: string;
+            try {
+              nextXml = applyShapeTextToSlideXml(currentXml, shapeIndex, merged);
+            } catch {
+              return s;
+            }
+            if (nextXml === currentXml) return s;
+            const next: EditableSlide = { ...s, slideXmlOverride: nextXml };
+            if (s.shapeTextOverrides?.[shapeIndex] !== undefined) {
+              const rest = { ...s.shapeTextOverrides };
+              delete rest[shapeIndex];
+              if (Object.keys(rest).length) next.shapeTextOverrides = rest;
+              else delete next.shapeTextOverrides;
+            }
+            return next;
+          }
           return {
             ...s,
             shapeTextOverrides: {
               ...(s.shapeTextOverrides ?? {}),
-              [shapeIndex]: { ...current, ...patch, text: patch.text ?? current.text },
+              [shapeIndex]: merged,
             },
           };
-        }),
-      );
+        });
+      });
     },
-    [updateSlides],
+    [baseSlideXml, updateSlides],
   );
 
   const openCrop = useCallback((arrayIndex: number, imageIndex: number, url: string) => {

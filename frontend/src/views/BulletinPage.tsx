@@ -483,7 +483,7 @@ export default function BulletinPage() {
 
   const handleSectionPptxSaved = (bulletin: WeeklyBulletin) => {
     setDraft(withHiddenSections(bulletin));
-    setEditSlidesSectionId(null);
+    // 保存后留在编辑器里（与 PowerPoint 一致），方便继续改内容/样式；用户自行点关闭
     setMessage(t('bulletin.editSlidesSaved'));
   };
 

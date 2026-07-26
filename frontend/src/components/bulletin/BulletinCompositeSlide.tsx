@@ -425,7 +425,21 @@ export default function BulletinCompositeSlide({
       return;
     }
     const existing = normalizeShapeTextOverride(shapeTextOverrides?.[editingShape]);
-    onShapeTextChange(editingShape, { ...existing, text: draftText });
+    const layer = layers.find((l) => l.kind === 'shape' && l.shapeIndex === editingShape);
+    const fromLayer =
+      layer && layer.kind === 'shape' ? shapeParagraphsToStyle(layer.paragraphs) : null;
+    // 提交时把画布上当前可见样式一并写入 XML。只传「有值」的字段，
+    // 避免 bold:false 把 Ribbon/模板里已有的加粗清掉。
+    const next: ShapeTextStyle = { text: draftText };
+    const fontFamily = existing.fontFamily ?? fromLayer?.fontFamily;
+    const fontSizePt = existing.fontSizePt ?? fromLayer?.fontSizePt;
+    const bold = existing.bold ?? fromLayer?.bold;
+    const italic = existing.italic ?? fromLayer?.italic;
+    if (fontFamily) next.fontFamily = fontFamily;
+    if (fontSizePt != null) next.fontSizePt = fontSizePt;
+    if (bold) next.bold = true;
+    if (italic) next.italic = true;
+    onShapeTextChange(editingShape, next);
     setEditingShape(null);
   };
 
