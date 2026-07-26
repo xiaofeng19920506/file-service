@@ -16,7 +16,23 @@ export type BulletinPreviewPatchFields = {
   skipDepartmentReports?: boolean;
   weeklyMeetingVariant?: number | null;
   slideTextOverrides?: BulletinSlidePreviewParams['slideTextOverrides'];
+  /** 带上后服务端会拼入分区 PPT 覆盖（字体/样式等） */
+  bulletinId?: string;
+  /** sectionId:blobId 排序指纹，驱动前端预览缓存失效 */
+  sectionPptxKey?: string;
 };
+
+/** 把 sectionPptxOverrides 压成稳定缓存指纹 */
+export function sectionPptxOverridesKey(
+  overrides: Record<string, string> | null | undefined,
+): string {
+  if (!overrides) return '';
+  return Object.entries(overrides)
+    .filter(([, blobId]) => !!blobId)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, v]) => `${k}:${v}`)
+    .join('|');
+}
 
 function structureParams(full: BulletinPreviewPatchFields): BulletinSlidePreviewParams {
   const hidden = resolveHiddenSections(full);
@@ -29,6 +45,8 @@ function structureParams(full: BulletinPreviewPatchFields): BulletinSlidePreview
     hiddenSections: hidden,
     weeklyMeetingVariant: full.weeklyMeetingVariant ?? null,
     slideTextOverrides: full.slideTextOverrides,
+    bulletinId: full.bulletinId,
+    sectionPptxKey: full.sectionPptxKey,
   };
 }
 
@@ -82,5 +100,7 @@ export function bulletinPreviewCacheKey(
     hidden,
     params.weeklyMeetingVariant == null ? '' : String(params.weeklyMeetingVariant),
     overrides,
+    params.bulletinId ?? '',
+    params.sectionPptxKey ?? '',
   ].join('\0');
 }

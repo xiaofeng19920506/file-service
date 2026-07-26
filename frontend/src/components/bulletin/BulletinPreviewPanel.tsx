@@ -14,6 +14,7 @@ import {
   type BulletinDeckPlan,
 } from '../../lib/bulletin-deck-plan';
 import { nextSundayIso } from '../../lib/bulletin-date';
+import { sectionPptxOverridesKey } from '../../lib/bulletin-preview-patch';
 import BulletinFullDeckPreview, {
   type BulletinPreviewScrollRequest,
 } from './BulletinFullDeckPreview';
@@ -89,6 +90,7 @@ export default function BulletinPreviewPanel({
     bulletin.skipDepartmentReports,
     bulletin.weeklyMeetingVariant,
     bulletin.slideTextOverrides,
+    bulletin.sectionPptxOverrides,
   ]);
 
   useEffect(() => {
@@ -155,8 +157,11 @@ export default function BulletinPreviewPanel({
       hiddenSections: bulletin.hiddenSections,
       weeklyMeetingVariant: bulletin.weeklyMeetingVariant,
       slideTextOverrides: bulletin.slideTextOverrides,
+      bulletinId: bulletin.id,
+      sectionPptxKey: sectionPptxOverridesKey(bulletin.sectionPptxOverrides),
     }),
     [
+      bulletin.id,
       bulletin.serviceDate,
       bulletin.serviceTime,
       bulletin.scriptureBook,
@@ -169,6 +174,7 @@ export default function BulletinPreviewPanel({
       bulletin.hiddenSections,
       bulletin.weeklyMeetingVariant,
       bulletin.slideTextOverrides,
+      bulletin.sectionPptxOverrides,
     ],
   );
 

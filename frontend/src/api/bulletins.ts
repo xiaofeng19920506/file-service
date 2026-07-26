@@ -251,6 +251,16 @@ export type BulletinSlidePreviewParams = {
   weeklyMeetingVariant?: number | null;
   /** 草稿文字覆盖（与预览/导出一致） */
   slideTextOverrides?: SlideTextOverride[];
+  /**
+   * 周报 id：服务端据此加载 sectionPptxOverrides 并拼进预览 PPTX，
+   * 否则右侧预览只看模板补丁，分区编辑器里改的字体/样式都看不到。
+   */
+  bulletinId?: string;
+  /**
+   * 分区 PPT 覆盖指纹（sectionId:blobId），仅用于前端缓存失效；
+   * 实际内容由服务端按 bulletinId 读取。
+   */
+  sectionPptxKey?: string;
 };
 
 export type BulletinDeckPlanDto = {
@@ -278,6 +288,7 @@ function bulletinPreviewQuery(params: BulletinSlidePreviewParams): string {
   if (params.slideTextOverrides?.length) {
     qs.set('slideTextOverrides', JSON.stringify(params.slideTextOverrides));
   }
+  if (params.bulletinId) qs.set('bulletinId', params.bulletinId);
   return qs.toString();
 }
 

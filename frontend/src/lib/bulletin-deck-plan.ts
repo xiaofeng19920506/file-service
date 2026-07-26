@@ -6,6 +6,7 @@ import { listPptxSlidesInPresentationOrder } from './pptx-preview';
 import { BULLETIN_WIZARD_STEPS } from './bulletin-template-steps';
 import { BULLETIN_NAV_SECTIONS } from './bulletin-sections';
 import { resolveHiddenSections } from './bulletin-section-visibility';
+import { sectionPptxOverridesKey } from './bulletin-preview-patch';
 
 type TemplateSlideSection = { id: string; slides: number[] };
 
@@ -193,6 +194,8 @@ export async function buildBulletinDeckPlan(bulletin: WeeklyBulletin): Promise<B
     hiddenSections,
     weeklyMeetingVariant: bulletin.weeklyMeetingVariant,
     slideTextOverrides: bulletin.slideTextOverrides,
+    bulletinId: bulletin.id,
+    sectionPptxKey: sectionPptxOverridesKey(bulletin.sectionPptxOverrides),
   });
   const slides = dto.slides.map((s) => ({
     index: s.index,

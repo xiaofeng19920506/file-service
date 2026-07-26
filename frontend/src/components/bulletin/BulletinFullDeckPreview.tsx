@@ -10,6 +10,7 @@ import {
 import {
   bulletinPreviewCacheKey,
   previewPatchForSection,
+  sectionPptxOverridesKey,
   type BulletinPreviewPatchFields,
 } from '../../lib/bulletin-preview-patch';
 import { navSectionById } from '../../lib/bulletin-sections';
@@ -204,8 +205,11 @@ export default function BulletinFullDeckPreview({
       skipDepartmentReports: bulletin.skipDepartmentReports,
       weeklyMeetingVariant: bulletin.weeklyMeetingVariant,
       slideTextOverrides: bulletin.slideTextOverrides,
+      bulletinId: bulletin.id,
+      sectionPptxKey: sectionPptxOverridesKey(bulletin.sectionPptxOverrides),
     }),
     [
+      bulletin.id,
       bulletin.serviceDate,
       bulletin.serviceTime,
       bulletin.scriptureBook,
@@ -220,6 +224,7 @@ export default function BulletinFullDeckPreview({
       bulletin.skipDepartmentReports,
       bulletin.weeklyMeetingVariant,
       bulletin.slideTextOverrides,
+      bulletin.sectionPptxOverrides,
     ],
   );
 

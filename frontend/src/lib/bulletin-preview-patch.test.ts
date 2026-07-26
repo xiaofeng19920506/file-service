@@ -62,4 +62,24 @@ describe('previewPatchForSection', () => {
     );
     expect(a).not.toBe(b);
   });
+
+  it('changes keys when section pptx overrides fingerprint changes', () => {
+    const a = bulletinPreviewCacheKey(
+      10,
+      previewPatchForSection('worship', {
+        ...full,
+        bulletinId: 'b1',
+        sectionPptxKey: 'worship:blob-a',
+      }),
+    );
+    const b = bulletinPreviewCacheKey(
+      10,
+      previewPatchForSection('worship', {
+        ...full,
+        bulletinId: 'b1',
+        sectionPptxKey: 'worship:blob-b',
+      }),
+    );
+    expect(a).not.toBe(b);
+  });
 });
