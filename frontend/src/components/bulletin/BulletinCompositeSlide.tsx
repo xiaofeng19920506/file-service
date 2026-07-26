@@ -315,7 +315,6 @@ export default function BulletinCompositeSlide({
   const [layersLoading, setLayersLoading] = useState(false);
   const [editingShape, setEditingShape] = useState<number | null>(null);
   const [draftText, setDraftText] = useState('');
-  const [editTextDirty, setEditTextDirty] = useState(false);
   const editOriginalTextRef = useRef('');
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
@@ -438,13 +437,11 @@ export default function BulletinCompositeSlide({
     // 而已有 overlay 也可能与底层 XML 不同；拿当前 layers 比会把未改文字误判成修改。
     if (draftText === editOriginalTextRef.current) {
       setEditingShape(null);
-      setEditTextDirty(false);
       return;
     }
     // 只提交纯文本；样式由 Ribbon / 原 XML run 保留（applyShapeTextToSlideXml 保 run）
     onShapeTextChange(editingShape, { text: draftText });
     setEditingShape(null);
-    setEditTextDirty(false);
   };
 
   const beginEdit = (shapeIndex: number, paragraphs: SlideTextParagraph[], elementId?: number) => {
@@ -459,7 +456,6 @@ export default function BulletinCompositeSlide({
         : seed.text;
     editOriginalTextRef.current = initial;
     setDraftText(initial);
-    setEditTextDirty(false);
     setEditingShape(shapeIndex);
     onTextCharRangeChange?.(
       elementId != null ? { elementId, start: 0, end: 0 } : null,
@@ -735,23 +731,12 @@ export default function BulletinCompositeSlide({
               }
             >
               {isEditing ? (
-                <>
-                  {!editTextDirty && (
-                    <div className="bulletin-composite-shape-editor-preview" aria-hidden="true">
-                      {displayParagraphs.map((para, pi) =>
-                        renderParagraph(para, role, useAutoFit, fitScale, pi),
-                      )}
-                    </div>
-                  )}
-                  <textarea
+                <textarea
                     ref={editorRef}
-                    className={`bulletin-composite-shape-editor${
-                      editTextDirty ? '' : ' is-preserving-runs'
-                    }`}
+                    className="bulletin-composite-shape-editor"
                     value={draftText}
                     onChange={(e) => {
                       setDraftText(e.target.value);
-                      setEditTextDirty(true);
                     }}
                     onSelect={(e) => {
                       const el = e.currentTarget;
@@ -772,7 +757,6 @@ export default function BulletinCompositeSlide({
                       if (e.key === 'Escape') {
                         e.preventDefault();
                         setEditingShape(null);
-                        setEditTextDirty(false);
                         onTextCharRangeChange?.(null);
                       }
                       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
@@ -797,7 +781,6 @@ export default function BulletinCompositeSlide({
                     }}
                     aria-label={`文本框 ${shapeIndex! + 1}`}
                   />
-                </>
               ) : (
                 displayParagraphs.map((para, pi) =>
                   renderParagraph(para, role, useAutoFit, fitScale, pi),

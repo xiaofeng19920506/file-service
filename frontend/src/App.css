@@ -7993,23 +7993,6 @@ body.bulletin-slideshow-window {
   word-break: keep-all;
 }
 
-.bulletin-composite-shape-editor-preview {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: inherit;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.bulletin-composite-shape-editor.is-preserving-runs {
-  color: transparent !important;
-  caret-color: #2563eb;
-  -webkit-text-fill-color: transparent;
-}
-
 .bulletin-composite-shape--middle {
   justify-content: center;
 }
