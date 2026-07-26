@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   getBulletinWorshipPlaylist,
   type BulletinSlidePreviewParams,
@@ -57,6 +57,12 @@ export default function BulletinPreviewPanel({
     setScrollRequest((prev) => ({ slide, id: prev.id + 1, sectionId }));
   }, []);
 
+  // 用值指纹当依赖：draft 对象引用变化但内容没变时（如 SSE 刷新），不重建 deck，
+  // 否则预览列表会被反复重置、后面的页一直停在加载中。
+  const hiddenSectionsKey = (bulletin.hiddenSections ?? []).join(',');
+  const slideTextOverridesKey = JSON.stringify(bulletin.slideTextOverrides ?? []);
+  const sectionPptxKey = sectionPptxOverridesKey(bulletin.sectionPptxOverrides);
+
   useEffect(() => {
     let cancelled = false;
     let debounceTimer = 0;
@@ -78,6 +84,7 @@ export default function BulletinPreviewPanel({
       cancelled = true;
       window.clearTimeout(debounceTimer);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- bulletin 以下方值指纹为准
   }, [
     bulletin.id,
     bulletin.scriptureBook,
@@ -85,16 +92,24 @@ export default function BulletinPreviewPanel({
     bulletin.birthdayMonth,
     bulletin.birthdayNames,
     bulletin.verseOfWeek,
-    bulletin.hiddenSections,
+    hiddenSectionsKey,
     bulletin.skipTestimonyWeek,
     bulletin.skipDepartmentReports,
     bulletin.weeklyMeetingVariant,
-    bulletin.slideTextOverrides,
-    bulletin.sectionPptxOverrides,
+    slideTextOverridesKey,
+    sectionPptxKey,
   ]);
+
+  // 区分「点击左侧分区」与「预览滚动跟随」：后者也会改 scrollToSectionId，
+  // 若照样回滚预览，用户手动下滚会被不断拽回当前分区，永远滚不到后面的页。
+  const lastVisibleSectionRef = useRef<string>('');
+  const prevScrollBumpRef = useRef(scrollToSectionBump);
 
   useEffect(() => {
     if (!deckPlan) return;
+    const bumpChanged = prevScrollBumpRef.current !== scrollToSectionBump;
+    prevScrollBumpRef.current = scrollToSectionBump;
+    if (!bumpChanged && scrollToSectionId === lastVisibleSectionRef.current) return;
     const slide = firstSlideForSection(scrollToSectionId, deckPlan);
     if (slide != null) requestScroll(slide, scrollToSectionId);
   }, [scrollToSectionId, scrollToSectionBump, deckPlan, requestScroll]);
@@ -138,7 +153,10 @@ export default function BulletinPreviewPanel({
   const handleVisibleSlide = useCallback(
     (slide: number) => {
       const sectionId = sectionIdForSlide(slide, deckPlan);
-      if (sectionId) onVisibleSectionChange?.(sectionId);
+      if (sectionId) {
+        lastVisibleSectionRef.current = sectionId;
+        onVisibleSectionChange?.(sectionId);
+      }
     },
     [deckPlan, onVisibleSectionChange],
   );

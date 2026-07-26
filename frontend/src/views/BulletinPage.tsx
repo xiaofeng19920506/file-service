@@ -216,11 +216,17 @@ export default function BulletinPage() {
       void (async () => {
         const remote = await getBulletin(selectedId);
         const normalized = withHiddenSections(remote);
+        // 内容没变（updatedAt 相同）时保留原引用，避免 setDraft 触发
+        // 「重渲染 → 自动保存 → SSE → 再刷新」的循环。
         setDraft((prev) => {
-          if (!prev || prev.id !== normalized.id) return normalized;
+          if (prev && prev.id === normalized.id && prev.updatedAt === normalized.updatedAt) {
+            return prev;
+          }
           return normalized;
         });
-        setAnnouncements(toDrafts(normalized));
+        if (!(draft && draft.id === normalized.id && draft.updatedAt === normalized.updatedAt)) {
+          setAnnouncements(toDrafts(normalized));
+        }
       })();
     },
     Boolean(selectedId),

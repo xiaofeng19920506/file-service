@@ -597,15 +597,16 @@ export function registerBulletinRoutes(
         scriptureReference,
       });
       if (scriptureBook || scriptureReference) {
+        // 通知与落库用同一时间戳：客户端才能用 updatedAt 去重，避免自触发刷新循环
+        const updatedAt = new Date();
         await db
           .update(weeklyBulletins)
           .set({
             scriptureBook,
             scriptureReference,
-            updatedAt: new Date(),
+            updatedAt,
           })
           .where(eq(weeklyBulletins.id, bulletinId));
-        const updatedAt = preference.updatedAt;
         void notifyBulletinUpdated(redisUrl, bulletinId, updatedAt).catch((err) => {
           app.log.warn({ err, bulletinId }, 'bulletin realtime notify failed');
         });

@@ -19,6 +19,11 @@ export function useBulletinScripturePersistence(
 ) {
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const restoredForRef = useRef<string | null>(null);
+  // 记录已入队/已保存的内容指纹：内容没变时绝不重复 PUT。
+  // 否则「保存 → 服务端 bump updatedAt → SSE → 重拉 setDraft → 重渲染 → 再保存」会形成死循环。
+  const lastQueuedRef = useRef<string | null>(null);
+  const onPersistingChangeRef = useRef(onPersistingChange);
+  onPersistingChangeRef.current = onPersistingChange;
 
   useEffect(() => {
     purgeExpiredLocalScripturePreferences();
@@ -75,22 +80,26 @@ export function useBulletinScripturePersistence(
     const reference = draft.scriptureReference.trim();
     if (!book || !reference) return;
 
+    const fingerprint = `${draft.id}\u0000${book}\u0000${reference}`;
+    if (lastQueuedRef.current === fingerprint) return;
+
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
+      lastQueuedRef.current = fingerprint;
       writeLocalScripturePreference(draft.id, book, reference);
       if (!canPersistRemote) return;
-      onPersistingChange?.(true);
+      onPersistingChangeRef.current?.(true);
       void saveScripturePreference({
         bulletinId: draft.id,
         scriptureBook: book,
         scriptureReference: reference,
       })
         .catch(() => undefined)
-        .finally(() => onPersistingChange?.(false));
+        .finally(() => onPersistingChangeRef.current?.(false));
     }, 600);
 
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
-  }, [canPersistRemote, draft?.id, draft?.scriptureBook, draft?.scriptureReference, onPersistingChange]);
+  }, [canPersistRemote, draft?.id, draft?.scriptureBook, draft?.scriptureReference]);
 }
