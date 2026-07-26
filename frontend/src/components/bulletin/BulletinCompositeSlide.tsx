@@ -263,7 +263,7 @@ function paragraphsFromOverride(
   const style = normalizeShapeTextOverride(override);
   const sample =
     template.find((p) => !p.spacer && p.runs.length)?.runs[0] ??
-    ({ text: '', color: '#1e2d31', fontSizePt: 14 } satisfies SlideTextRun);
+    ({ text: '', color: '#000000', fontSizePt: 14 } satisfies SlideTextRun);
   const align = template.find((p) => !p.spacer)?.align ?? 'left';
   const lineSpacing = template.find((p) => !p.spacer)?.lineSpacing ?? 1;
   return style.text.split('\n').map((line) => ({

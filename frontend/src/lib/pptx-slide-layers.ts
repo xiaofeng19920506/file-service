@@ -115,6 +115,45 @@ async function loadThemeSchemeColors(zip: JSZip): Promise<Record<string, string>
   return colors;
 }
 
+/**
+ * 无 solidFill 的 run 该用什么颜色：OOXML 里由 presentation.xml 的
+ * defaultTextStyle（文本框）/ 母版 otherStyle 决定，兜底黑色。
+ * 不能退回 theme 的 tx1/dk2——本模板 clrMap 把 tx1 映射到白色 dk1，
+ * 直接取会让封面日期、底部提示语变色，与 LibreOffice 预览不一致。
+ */
+async function loadDefaultTextColor(
+  zip: JSZip,
+  schemeColors: Record<string, string>,
+): Promise<string> {
+  const sources: (string | undefined)[] = [];
+  const pres = zip.file('ppt/presentation.xml');
+  if (pres) {
+    const xml = await pres.async('string');
+    sources.push(xml.match(/<p:defaultTextStyle>[\s\S]*?<\/p:defaultTextStyle>/)?.[0]);
+  }
+  const masterPath = Object.keys(zip.files).find((n) =>
+    /^ppt\/slideMasters\/slideMaster\d+\.xml$/.test(n),
+  );
+  const master = masterPath ? zip.file(masterPath) : null;
+  if (master) {
+    const xml = await master.async('string');
+    sources.push(xml.match(/<p:otherStyle>[\s\S]*?<\/p:otherStyle>/)?.[0]);
+  }
+
+  for (const source of sources) {
+    const defRPr = source?.match(/<a:lvl1pPr[\s\S]*?<a:defRPr[\s\S]*?<\/a:defRPr>/)?.[0];
+    if (!defRPr) continue;
+    const fill = defRPr.match(/<a:solidFill>([\s\S]*?)<\/a:solidFill>/)?.[1];
+    if (!fill) continue;
+    const rgb = fill.match(/<a:srgbClr val="([0-9A-Fa-f]{6})"/)?.[1];
+    if (rgb) return `#${rgb}`;
+    const scheme = fill.match(/<a:schemeClr val="([^"]+)"/)?.[1];
+    const resolved = scheme ? resolveSchemeColor(schemeColors, scheme) : null;
+    if (resolved) return resolved;
+  }
+  return '#000000';
+}
+
 function extractShapeBoxEmu(chunk: string): {
   left: number;
   top: number;
@@ -226,6 +265,7 @@ function extractShapeLineColor(chunk: string, schemeColors: Record<string, strin
 function extractRunStyle(
   rPrXml: string,
   schemeColors: Record<string, string>,
+  defaultColor: string,
 ): Omit<SlideTextRun, 'text'> {
   let color: string | undefined;
   const rgb = rPrXml.match(/<a:srgbClr val="([0-9A-Fa-f]{6})"/);
@@ -240,7 +280,7 @@ function extractRunStyle(
   const latin = rPrXml.match(/<a:latin typeface="([^"]+)"/)?.[1];
   const fontFamily = ea || latin;
   return {
-    color: color ?? schemeColors.tx1 ?? schemeColors.dk2 ?? '#1E2D31',
+    color: color ?? defaultColor,
     bold,
     italic,
     fontSizePt,
@@ -251,6 +291,7 @@ function extractRunStyle(
 function extractTextContent(
   xml: string,
   schemeColors: Record<string, string>,
+  defaultColor: string,
 ): {
   paragraphs: SlideTextParagraph[];
   valign: 'top' | 'middle' | 'bottom';
@@ -287,7 +328,7 @@ function extractTextContent(
         rXml.match(/<a:rPr[^>]*>[\s\S]*?<\/a:rPr>/)?.[0]
         ?? rXml.match(/<a:rPr[^>]*\/>/)?.[0]
         ?? '<a:rPr/>';
-      runs.push({ text, ...extractRunStyle(rPrXml, schemeColors) });
+      runs.push({ text, ...extractRunStyle(rPrXml, schemeColors, defaultColor) });
     }
 
     if (runs.length) {
@@ -362,6 +403,7 @@ export async function parseSlideVisualLayers(
   const urlCache = new Map<string, string>();
   const slideSize = await loadSlideSizeEmu(zip);
   const schemeColors = await loadThemeSchemeColors(zip);
+  const defaultTextColor = await loadDefaultTextColor(zip, schemeColors);
 
   async function urlForEmbed(rId: string): Promise<string | null> {
     const mediaPath = await resolveMediaPath(zip, slidePath, rId);
@@ -420,7 +462,7 @@ export async function parseSlideVisualLayers(
 
     if (hasText) {
       const txBody = chunk.match(/<p:txBody>([\s\S]*?)<\/p:txBody>/)?.[1] ?? '';
-      const text = extractTextContent(chunk, schemeColors);
+      const text = extractTextContent(chunk, schemeColors, defaultTextColor);
       const paddingPct = extractTextBoxPadding(txBody, slideSize.cx);
       const shapeIndex = textShapeIndex;
       textShapeIndex += 1;
