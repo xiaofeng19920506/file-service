@@ -8162,11 +8162,12 @@ body.bulletin-slideshow-window {
 .bulletin-composite-text p,
 .bulletin-composite-paragraph {
   margin: 0;
-  max-height: 100%;
-  overflow: hidden;
+  /* 勿 flex-shrink + overflow 横切大字号 CJK（敬拜标题等会被裁成偏旁碎片） */
+  max-height: none;
+  overflow: visible;
   white-space: pre-wrap;
   word-break: keep-all;
-  flex-shrink: 1;
+  flex-shrink: 0;
   min-height: 0;
   width: 100%;
 }

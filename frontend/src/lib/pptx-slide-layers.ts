@@ -346,7 +346,24 @@ function extractTextContent(
     }
   }
 
-  return { paragraphs, valign, autoFit };
+  return { paragraphs: trimEdgeBlankParagraphs(paragraphs), valign, autoFit };
+}
+
+/** 去掉文本框首尾的空行/spacer（Google 导出常用来垫高）；保留夹在正文中间的间距 */
+export function trimEdgeBlankParagraphs(paragraphs: SlideTextParagraph[]): SlideTextParagraph[] {
+  if (paragraphs.length <= 1) return paragraphs;
+
+  const isBlank = (p: SlideTextParagraph): boolean => {
+    if (p.spacer) return true;
+    if (!p.runs.length) return true;
+    return p.runs.every((r) => !r.text.trim());
+  };
+
+  let start = 0;
+  while (start < paragraphs.length && isBlank(paragraphs[start]!)) start += 1;
+  let end = paragraphs.length;
+  while (end > start && isBlank(paragraphs[end - 1]!)) end -= 1;
+  return paragraphs.slice(start, end);
 }
 
 async function resolveMediaPath(zip: JSZip, slidePath: string, rId: string): Promise<string | null> {

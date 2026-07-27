@@ -127,9 +127,25 @@ function runStyle(
     color: run.color,
     fontWeight: run.bold ? 700 : undefined,
     fontStyle: run.italic ? 'italic' : undefined,
-    fontFamily: run.fontFamily ? `"${run.fontFamily}", sans-serif` : undefined,
+    fontFamily: cssFontFamily(run.fontFamily),
     fontSize: runFontSizeCqw(run.fontSizePt, useAutoFit, fitScale),
   };
+}
+
+/** PPT 常指定本机没有的 CJK 字体（如 DFKai-SB）；补系统楷体/黑体回退，避免缺字或残缺渲染 */
+function cssFontFamily(fontFamily: string | undefined): string | undefined {
+  if (!fontFamily) return undefined;
+  const name = fontFamily.trim();
+  if (!name) return undefined;
+  const lower = name.toLowerCase();
+  const cjkHint =
+    /kai|ming|song|hei|yuan|gothic|cjk|chinese|noto|pingfang|hiragino|yuanti|fangsong|dfkai|biaukai/i.test(
+      lower,
+    );
+  if (cjkHint) {
+    return `"${name}", "BiauKaiTC", "Kaiti TC", "STKaiti", "KaiTi", "PingFang TC", "Noto Sans TC", "Noto Sans CJK TC", sans-serif`;
+  }
+  return `"${name}", sans-serif`;
 }
 
 type ShapeRole = 'header' | 'date' | 'prayer' | 'footer' | 'default';
