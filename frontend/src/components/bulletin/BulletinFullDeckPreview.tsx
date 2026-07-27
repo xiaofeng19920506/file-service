@@ -14,7 +14,7 @@ import {
   type BulletinPreviewPatchFields,
 } from '../../lib/bulletin-preview-patch';
 import { navSectionById } from '../../lib/bulletin-sections';
-import { nextSundayIso } from '../../lib/bulletin-date';
+import { upcomingSundayIso } from '../../lib/bulletin-date';
 import {
   bulletinDynamicTextOverrides,
   mergeSlideTextOverrides,
@@ -191,7 +191,7 @@ export default function BulletinFullDeckPreview({
 
   const fullPatch = useMemo(
     (): BulletinPreviewPatchFields => ({
-      serviceDate: bulletin.serviceDate || nextSundayIso(),
+      serviceDate: bulletin.serviceDate || upcomingSundayIso(),
       serviceTime: bulletin.serviceTime || '11:00',
       scriptureBook: bulletin.scriptureBook,
       scriptureReference: bulletin.scriptureReference,

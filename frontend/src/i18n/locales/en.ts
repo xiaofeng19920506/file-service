@@ -334,7 +334,8 @@ const en: MessageTree = {
     steps: {
       cover: 'Cover date',
       coverTitle: 'Cover · service date',
-      coverIntro: 'Edit the service date and time on slide 1.',
+      coverIntro: 'One PPT template each week. The cover date defaults to the upcoming Sunday; usually only the time needs a check.',
+      coverIntroAuto: 'Cover date is set automatically to the upcoming Sunday {date}. Change it below only if needed.',
       pre_service: 'Pre-service prayer',
       preServiceTitle: 'Pre-service prayer',
       preServiceIntro:

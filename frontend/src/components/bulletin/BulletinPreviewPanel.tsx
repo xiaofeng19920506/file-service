@@ -13,7 +13,7 @@ import {
   slidesForSection,
   type BulletinDeckPlan,
 } from '../../lib/bulletin-deck-plan';
-import { nextSundayIso } from '../../lib/bulletin-date';
+import { upcomingSundayIso } from '../../lib/bulletin-date';
 import {
   previewPatchFull,
   sectionPptxOverridesKey,
@@ -171,7 +171,7 @@ export default function BulletinPreviewPanel({
   const previewPatch = useMemo(
     (): BulletinSlidePreviewParams =>
       previewPatchFull({
-        serviceDate: bulletin.serviceDate || nextSundayIso(),
+        serviceDate: bulletin.serviceDate || upcomingSundayIso(),
         serviceTime: bulletin.serviceTime || '11:00',
         scriptureBook: bulletin.scriptureBook,
         scriptureReference: bulletin.scriptureReference,

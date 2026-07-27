@@ -27,7 +27,7 @@ import BulletinSectionPptEditor from '../components/bulletin/BulletinSectionPptE
 import { useBulletinRealtime } from '../hooks/useBulletinRealtime';
 import { useBulletinScripturePersistence } from '../hooks/useBulletinScripturePersistence';
 import { useI18n } from '../i18n';
-import { nextSundayIso } from '../lib/bulletin-date';
+import { resolveAvailableSundayIso, upcomingSundayIso } from '../lib/bulletin-date';
 import {
   isBulletinSectionVisible,
   resolveHiddenSections,
@@ -317,9 +317,31 @@ export default function BulletinPage() {
     (async () => {
       try {
         setLoading(true);
-        const rows = await refreshList();
-        if (!cancelled && rows[0]) {
-          setSelectedId(rows[0].id);
+        setError(null);
+        let rows = await refreshList();
+        if (cancelled) return;
+
+        const targetDate = upcomingSundayIso();
+        let target = rows.find((b) => b.serviceDate === targetDate) ?? null;
+
+        if (!target && canManage) {
+          try {
+            target = await createBulletin(targetDate);
+            rows = await refreshList();
+            target = rows.find((b) => b.serviceDate === targetDate) ?? target;
+          } catch (err) {
+            const code = err instanceof Error ? err.message : String(err);
+            if (code === 'bulletin_exists') {
+              rows = await refreshList();
+              target = rows.find((b) => b.serviceDate === targetDate) ?? null;
+            } else {
+              throw err;
+            }
+          }
+        }
+
+        if (!cancelled) {
+          setSelectedId(target?.id ?? rows[0]?.id ?? null);
         }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : String(err));
@@ -330,7 +352,7 @@ export default function BulletinPage() {
     return () => {
       cancelled = true;
     };
-  }, [refreshList]);
+  }, [refreshList, canManage]);
 
   useEffect(() => {
     if (!selectedId) {
@@ -495,7 +517,8 @@ export default function BulletinPage() {
     try {
       setSaving(true);
       setError(null);
-      const bulletin = await createBulletin(nextSundayIso());
+      const serviceDate = resolveAvailableSundayIso(bulletins.map((b) => b.serviceDate));
+      const bulletin = await createBulletin(serviceDate);
       await refreshList();
       setSelectedId(bulletin.id);
       setWizardStep(0);

@@ -321,7 +321,8 @@ export default {
     steps: {
       cover: '封面日期',
       coverTitle: '封面 · 主日日期',
-      coverIntro: '每周使用同一份 PPT 模板，本页只需修改主日日期与崇拜时间。',
+      coverIntro: '每周使用同一份 PPT 模板。封面日期由系统按「即将到来的主日」自动选择，一般只需确认时间。',
+      coverIntroAuto: '系统已自动将封面日期设为即将到来的主日 {date}。如需改日可在下方调整。',
       pre_service: '会前祷告',
       preServiceTitle: '会前祷告',
       preServiceIntro: '会前祷告固定为 1 页。若需要显示主席姓名，勾选后填写即可写到该页上。',
