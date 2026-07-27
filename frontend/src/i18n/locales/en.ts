@@ -214,16 +214,17 @@ const en: MessageTree = {
     previewSectionHiddenHint:
       'This section is hidden, so it has no slides in the preview. Check “Show” on the left — Communion is template slides 10–13; Welcome is slide 14. They are never mixed.',
     sectionVisibleNavHint:
-      'Each section has “Edit slides”; you can also open the slide editor above the form to change text, backgrounds, and images in the browser.',
+      'Each section has “Edit slides” on the left; you can also upload a PPTX above the form to replace the whole section.',
     editSlidesOpenEditor: 'Open slide editor',
     editSlidesOpenHint:
       'Edit text and images in the browser, or upload a PPTX to replace this whole section (page count may change).',
     editSlidesReplaceUpload: 'Upload PPT to replace section',
     editSlidesReplaceUploadHint:
       'Pick a local .pptx to replace this section (preview and export update immediately)',
-    editSlidesReplaceHint: 'Upload a PPTX to replace this section. For in-browser edits, use “Edit slides” on the left.',
+    editSlidesReplaceHint:
+      'Upload a PPTX to replace this section. For in-browser editing, use “Edit slides” on the left.',
     editSlidesReplacedHint:
-      'This section uses a custom PPT. Edit via “Edit slides” on the left, or restore the template.',
+      'This section uses a custom PPT. Keep editing via “Edit slides” on the left, or restore the template.',
     skipTestimony: 'Skip testimony week slide (16)',
     skipDepartment: 'Skip department reports slide (36)',
     meetingVariant: 'Weekly meeting layout',

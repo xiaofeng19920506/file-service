@@ -205,14 +205,14 @@ export default {
     previewSectionHiddenHint:
       '此分区当前已隐藏，因此预览里没有对应页。请在左侧勾选「显示」——例如圣餐是模板第 10–13 页，欢迎新朋友是第 14 页，两者不会混用。',
     sectionVisibleNavHint:
-      '左侧每个分区旁有「改幻灯片」可网页编辑；表单上方可上传 PPT 整段替换本区。',
+      '左侧每个分区旁有「改幻灯片」；也可在分区上方上传 PPTX 整段替换本区。',
     editSlidesOpenEditor: '打开幻灯片编辑器',
     editSlidesOpenHint:
       '可在网页里改本区文字与图片，或直接上传一份 PPTX 整段替换本区（页数可增减）。',
     editSlidesReplaceUpload: '上传 PPT 替换本区',
     editSlidesReplaceUploadHint: '选择本机 .pptx，整段替换当前分区（预览与导出立即生效）',
-    editSlidesReplaceHint: '可上传 PPTX 整段替换本区；网页内编辑请用左侧「改幻灯片」。',
-    editSlidesReplacedHint: '本区已用自定义 PPT 替换。可继续网页编辑（左侧「改幻灯片」），或点「恢复原版」回到模板。',
+    editSlidesReplaceHint: '上传本机 PPTX 可整段替换本区；网页内编辑请用左侧「改幻灯片」。',
+    editSlidesReplacedHint: '本区已用自定义 PPT 替换。可用左侧「改幻灯片」继续编辑，或点「恢复原版」回到模板。',
     skipTestimony: '跳过见证周页（第 16 页）',
     skipDepartment: '跳过部门报告页（第 36 页）',
     meetingVariant: '本週聚会版式',
