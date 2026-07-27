@@ -13,7 +13,6 @@ import {
 import {
   shapeParagraphsToStyle,
   normalizeShapeTextOverride,
-  paragraphsPreservingRunStyles,
   type ShapeTextOverrideValue,
   type ShapeTextStyle,
 } from '../../lib/pptx-shape-text';
@@ -290,26 +289,97 @@ function paragraphsFromOverride(
   }));
 }
 
-/** 编辑预览：去掉 spacer，并统一字号/行高与 textarea 一致（保留各 run 颜色），光标才跟得上 */
-function paragraphsForCaretAlignedEdit(
-  base: SlideTextParagraph[],
-  draftText: string,
-): SlideTextParagraph[] {
-  const remapped = paragraphsPreservingRunStyles(base, draftText).filter((p) => !p.spacer);
-  const sample = remapped.find((p) => p.runs.length)?.runs[0];
-  if (!sample) return remapped;
-  const lineSpacing = remapped.find((p) => p.runs.length)?.lineSpacing || 1;
-  return remapped.map((p) => ({
-    ...p,
-    lineSpacing,
-    runs: p.runs.map((r) => ({
-      ...r,
-      fontSizePt: sample.fontSizePt,
-      fontFamily: sample.fontFamily ?? r.fontFamily,
-      bold: sample.bold ?? r.bold,
-      italic: sample.italic ?? r.italic,
-    })),
-  }));
+/** 从 contenteditable 抽出与 shapeParagraphsToPlainText 一致的纯文本（跳过 spacer） */
+function plainTextFromContentEditable(root: HTMLElement): string {
+  const parts: string[] = [];
+  for (const child of Array.from(root.children)) {
+    if (child.classList.contains('bulletin-composite-spacer')) continue;
+    parts.push(child.textContent ?? '');
+  }
+  if (parts.length === 0) {
+    return (root.innerText || '').replace(/\r\n/g, '\n').replace(/\n+$/, '');
+  }
+  return parts.join('\n');
+}
+
+/** contenteditable 选区 → 纯文本字符偏移（段落间计 \\n，跳过 spacer） */
+function charRangeFromContentEditable(root: HTMLElement): { start: number; end: number } | null {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return null;
+  if (!root.contains(sel.anchorNode) || !root.contains(sel.focusNode)) return null;
+
+  const offsetAt = (node: Node, nodeOffset: number): number => {
+    let total = 0;
+    let firstContent = true;
+    for (const child of Array.from(root.children)) {
+      if (child.classList.contains('bulletin-composite-spacer')) continue;
+      if (!firstContent) total += 1; // \\n between content paras
+      firstContent = false;
+      if (child === node || child.contains(node)) {
+        const pre = document.createRange();
+        pre.selectNodeContents(child);
+        try {
+          pre.setEnd(node, nodeOffset);
+        } catch {
+          return total + (child.textContent?.length ?? 0);
+        }
+        return total + pre.toString().length;
+      }
+      total += child.textContent?.length ?? 0;
+    }
+    return total;
+  };
+
+  const a = offsetAt(sel.anchorNode!, sel.anchorOffset);
+  const b = offsetAt(sel.focusNode!, sel.focusOffset);
+  return { start: Math.min(a, b), end: Math.max(a, b) };
+}
+
+function renderEditableParagraph(
+  para: SlideTextParagraph,
+  role: ShapeRole,
+  useAutoFit: boolean,
+  fitScale: number,
+  pi: number,
+) {
+  if (para.spacer) {
+    return (
+      <p
+        key={pi}
+        className="bulletin-composite-spacer"
+        contentEditable={false}
+        style={{ height: runFontSizeCqw(para.spacerHeightPt, false, 1) }}
+        aria-hidden
+      />
+    );
+  }
+
+  if (role === 'date' && para.runs.length > 1) {
+    const { left, right } = splitCoverDateRuns(para.runs);
+    return (
+      <div key={pi} className="bulletin-composite-date-row bulletin-composite-paragraph">
+        <span className="bulletin-composite-date-left">
+          {renderRuns(left, false, fitScale, `dl-${pi}`)}
+        </span>
+        <span className="bulletin-composite-date-right">
+          {renderRuns(right, false, fitScale, `dr-${pi}`)}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <p
+      key={pi}
+      className="bulletin-composite-paragraph"
+      style={{
+        textAlign: para.align,
+        lineHeight: para.lineSpacing || 1,
+      }}
+    >
+      {renderRuns(para.runs, useAutoFit, fitScale, `p-${pi}`)}
+    </p>
+  );
 }
 
 export default function BulletinCompositeSlide({
@@ -337,11 +407,13 @@ export default function BulletinCompositeSlide({
   const [slideSize, setSlideSize] = useState<SlideSizeEmu>({ ...DEFAULT_SLIDE_SIZE });
   const [layersLoading, setLayersLoading] = useState(false);
   const [editingShape, setEditingShape] = useState<number | null>(null);
-  const [draftText, setDraftText] = useState('');
+  /** 每次进入编辑递增，强制 remount contenteditable，避免受控重绘抢走光标 */
+  const [editorMountKey, setEditorMountKey] = useState(0);
   const editOriginalTextRef = useRef('');
-  /** 进入编辑时的多色段落快照，输入时按比例重铺颜色 */
+  const draftTextRef = useRef('');
+  /** 进入编辑时的多色段落快照（仅作初始 DOM，之后由浏览器管光标） */
   const editBaseParagraphsRef = useRef<SlideTextParagraph[]>([]);
-  const editorRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
   /**
@@ -449,23 +521,35 @@ export default function BulletinCompositeSlide({
 
   useEffect(() => {
     if (editingShape == null) return;
-    editorRef.current?.focus();
-    editorRef.current?.select();
-  }, [editingShape]);
+    const el = editorRef.current;
+    if (!el) return;
+    el.focus();
+    // 光标落到正文末尾（不要 select-all，否则大框里会看起来漂在角落）
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(range);
+  }, [editingShape, editorMountKey]);
 
   const commitEdit = () => {
     if (editingShape == null || !onShapeTextChange) {
       setEditingShape(null);
       return;
     }
+    const text = editorRef.current
+      ? plainTextFromContentEditable(editorRef.current)
+      : draftTextRef.current;
+    draftTextRef.current = text;
     // 必须与“进入编辑时”的文本比较。Ribbon 改样式会令 layers 重新解析，
     // 而已有 overlay 也可能与底层 XML 不同；拿当前 layers 比会把未改文字误判成修改。
-    if (draftText === editOriginalTextRef.current) {
+    if (text === editOriginalTextRef.current) {
       setEditingShape(null);
       return;
     }
     // 只提交纯文本；样式由 Ribbon / 原 XML run 保留（applyShapeTextToSlideXml 保 run）
-    onShapeTextChange(editingShape, { text: draftText });
+    onShapeTextChange(editingShape, { text });
     setEditingShape(null);
   };
 
@@ -479,17 +563,20 @@ export default function BulletinCompositeSlide({
     if (elementId != null) onSelectElement?.(elementId);
     const initial = seed.text;
     editOriginalTextRef.current = initial;
+    draftTextRef.current = initial;
     editBaseParagraphsRef.current = baseParagraphs;
-    setDraftText(initial);
+    setEditorMountKey((k) => k + 1);
     setEditingShape(shapeIndex);
     onTextCharRangeChange?.(
       elementId != null ? { elementId, start: 0, end: 0 } : null,
     );
   };
 
-  const reportTextRange = (elementId: number | undefined, start: number, end: number) => {
-    if (elementId == null || !onTextCharRangeChange) return;
-    onTextCharRangeChange({ elementId, start, end });
+  const syncEditableRange = (elementId: number | undefined) => {
+    if (elementId == null || !onTextCharRangeChange || !editorRef.current) return;
+    const range = charRangeFromContentEditable(editorRef.current);
+    if (!range) return;
+    onTextCharRangeChange({ elementId, ...range });
   };
 
   const selectShape = (shapeIndex: number, paragraphs: SlideTextParagraph[]) => {
@@ -686,14 +773,10 @@ export default function BulletinCompositeSlide({
           const isSelected = canEditShape && selectedShapeIndex === shapeIndex;
           const overrideValue =
             shapeIndex != null ? shapeTextOverrides?.[shapeIndex] : undefined;
-          const overrideStyle =
-            overrideValue !== undefined ? normalizeShapeTextOverride(overrideValue) : undefined;
           const displayParagraphs =
             overrideValue !== undefined
               ? paragraphsFromOverride(overrideValue, layer.paragraphs)
               : layer.paragraphs;
-          const sampleRun = displayParagraphs.find((p) => !p.spacer)?.runs[0]
-            ?? layer.paragraphs.find((p) => !p.spacer)?.runs[0];
 
           return (
             <div
@@ -756,75 +839,49 @@ export default function BulletinCompositeSlide({
               }
             >
               {isEditing ? (
-                (() => {
-                  const baseParas = editBaseParagraphsRef.current.length
+                <div
+                  key={editorMountKey}
+                  ref={editorRef}
+                  className="bulletin-composite-shape-editor"
+                  contentEditable
+                  suppressContentEditableWarning
+                  role="textbox"
+                  aria-multiline="true"
+                  aria-label={`文本框 ${shapeIndex! + 1}`}
+                  onInput={(e) => {
+                    draftTextRef.current = plainTextFromContentEditable(e.currentTarget);
+                    syncEditableRange(layer.elementId);
+                  }}
+                  onSelect={() => syncEditableRange(layer.elementId)}
+                  onKeyUp={() => syncEditableRange(layer.elementId)}
+                  onMouseUp={() => syncEditableRange(layer.elementId)}
+                  onBlur={commitEdit}
+                  onClick={(e) => e.stopPropagation()}
+                  onPaste={(e) => {
+                    e.preventDefault();
+                    const text = e.clipboardData.getData('text/plain').replace(/\r\n/g, '\n');
+                    document.execCommand('insertText', false, text);
+                  }}
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
+                    if (e.key === 'Escape') {
+                      e.preventDefault();
+                      setEditingShape(null);
+                      onTextCharRangeChange?.(null);
+                    }
+                    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                      e.preventDefault();
+                      commitEdit();
+                    }
+                  }}
+                >
+                  {(editBaseParagraphsRef.current.length
                     ? editBaseParagraphsRef.current
-                    : displayParagraphs;
-                  const editParas = paragraphsForCaretAlignedEdit(baseParas, draftText);
-                  const caretPara = editParas.find((p) => !p.spacer) ?? editParas[0];
-                  const caretRun = caretPara?.runs[0] ?? sampleRun;
-                  const caretLineHeight = caretPara?.lineSpacing || 1;
-                  const caretAlign = caretPara?.align ?? 'left';
-                  return (
-                    <div className="bulletin-composite-shape-editor-stack">
-                      <div className="bulletin-composite-shape-editor-preview" aria-hidden="true">
-                        {editParas.map((para, pi) =>
-                          renderParagraph(para, role, useAutoFit, fitScale, pi),
-                        )}
-                      </div>
-                      <textarea
-                        ref={editorRef}
-                        className="bulletin-composite-shape-editor is-preserving-runs"
-                        value={draftText}
-                        onChange={(e) => {
-                          setDraftText(e.target.value);
-                        }}
-                        onSelect={(e) => {
-                          const el = e.currentTarget;
-                          reportTextRange(layer.elementId, el.selectionStart, el.selectionEnd);
-                        }}
-                        onKeyUp={(e) => {
-                          const el = e.currentTarget;
-                          reportTextRange(layer.elementId, el.selectionStart, el.selectionEnd);
-                        }}
-                        onMouseUp={(e) => {
-                          const el = e.currentTarget;
-                          reportTextRange(layer.elementId, el.selectionStart, el.selectionEnd);
-                        }}
-                        onBlur={commitEdit}
-                        onClick={(e) => e.stopPropagation()}
-                        onKeyDown={(e) => {
-                          e.stopPropagation();
-                          if (e.key === 'Escape') {
-                            e.preventDefault();
-                            setEditingShape(null);
-                            onTextCharRangeChange?.(null);
-                          }
-                          if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-                            e.preventDefault();
-                            commitEdit();
-                          }
-                        }}
-                        style={{
-                          /* 与预览首段度量对齐，光标落在可见文字处 */
-                          fontWeight: (overrideStyle?.bold ?? caretRun?.bold) ? 700 : undefined,
-                          fontStyle: (overrideStyle?.italic ?? caretRun?.italic) ? 'italic' : undefined,
-                          fontFamily: (overrideStyle?.fontFamily ?? caretRun?.fontFamily)
-                            ? `"${overrideStyle?.fontFamily ?? caretRun?.fontFamily}", sans-serif`
-                            : undefined,
-                          fontSize: runFontSizeCqw(
-                            overrideStyle?.fontSizePt ?? caretRun?.fontSizePt,
-                            useAutoFit,
-                            fitScale,
-                          ),
-                          textAlign: caretAlign,
-                          lineHeight: caretLineHeight,
-                        }}
-                        aria-label={`文本框 ${shapeIndex! + 1}`}
-                      />
-                    </div>
-                  );
-                })()
+                    : displayParagraphs
+                  ).map((para, pi) =>
+                    renderEditableParagraph(para, role, useAutoFit, fitScale, pi),
+                  )}
+                </div>
               ) : (
                 displayParagraphs.map((para, pi) =>
                   renderParagraph(para, role, useAutoFit, fitScale, pi),
