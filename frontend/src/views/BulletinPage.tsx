@@ -18,7 +18,6 @@ import {
   BulletinMoreStep,
   BulletinOfferingStep,
   BulletinPreServiceStep,
-  BulletinReadonlySectionStep,
   BulletinScriptureStep,
   BulletinVerseStep,
 } from '../components/bulletin/BulletinWizardSteps';
@@ -613,16 +612,8 @@ export default function BulletinPage() {
     };
 
     if (activeSectionReadonly) {
-      return (
-        <BulletinReadonlySectionStep
-          sectionId={activeSectionId}
-          draft={draft}
-          canEdit={canManage}
-          saving={saving}
-          onSectionVisibilityChange={handleSectionVisibilityChange}
-          onSave={() => void handleSaveFields(visibilitySaveFields(draft))}
-        />
-      );
+      // 模板固定页：中间无需表单/说明；显示与改幻灯片用左侧入口即可
+      return null;
     }
 
     const common = {
@@ -843,6 +834,7 @@ export default function BulletinPage() {
               />
               <div className="bulletin-step-panel">
                 {canManage &&
+                !activeSectionReadonly &&
                 (BULLETIN_SECTION_TEMPLATE_SLIDES[activeSectionId]?.length ?? 0) > 0 ? (
                   <BulletinSectionReplaceBanner
                     sectionId={activeSectionId}
