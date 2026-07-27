@@ -37,11 +37,9 @@ export async function startBulletinSlideShow(opts: {
     totalSlides,
   });
 
-  const { projector, presenter } = openSlideShowWindows(sessionId);
-  if (!projector || !presenter) {
+  const { projector } = openSlideShowWindows(sessionId);
+  if (!projector) {
     removeSlideShowSession(sessionId);
-    projector?.close();
-    presenter?.close();
     return { ok: false, reason: 'popup_blocked' };
   }
 

@@ -121,22 +121,22 @@ export function useBulletinSlideShow(opts: {
   const goPrev = useCallback(() => {
     const next = Math.max(1, stateRef.current.currentSlide - 1);
     setCurrentSlide(next);
-    if (role === 'presenter') publishSync(next);
-  }, [publishSync, role]);
+    publishSync(next);
+  }, [publishSync]);
 
   const goNext = useCallback(() => {
     const next = Math.min(totalSlides, stateRef.current.currentSlide + 1);
     setCurrentSlide(next);
-    if (role === 'presenter') publishSync(next);
-  }, [publishSync, role, totalSlides]);
+    publishSync(next);
+  }, [publishSync, totalSlides]);
 
   const goToSlide = useCallback(
     (slide: number) => {
       const next = Math.min(totalSlides, Math.max(1, slide));
       setCurrentSlide(next);
-      if (role === 'presenter') publishSync(next);
+      publishSync(next);
     },
-    [publishSync, role, totalSlides],
+    [publishSync, totalSlides],
   );
 
   const endShow = useCallback(() => {

@@ -6475,6 +6475,8 @@ body.bulletin-slideshow-window {
   align-items: center;
   justify-content: center;
   background: #000;
+  position: relative;
+  outline: none;
 }
 
 .bulletin-slideshow-projector:fullscreen {
@@ -6488,6 +6490,23 @@ body.bulletin-slideshow-window {
   width: auto;
   height: auto;
   object-fit: contain;
+}
+
+.bulletin-slideshow-projector-hint {
+  position: absolute;
+  left: 0.75rem;
+  bottom: 0.6rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.55);
+  background: rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  user-select: none;
+}
+
+.bulletin-slideshow-projector:fullscreen .bulletin-slideshow-projector-hint {
+  opacity: 0;
 }
 
 .bulletin-slideshow-projector-loading,
