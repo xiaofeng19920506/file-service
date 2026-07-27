@@ -3,7 +3,10 @@ import {
   buildScriptureSlideBodies,
   estimateChineseBlockVisualLines,
   estimateEnglishLineVisualLines,
+  formatChineseVerseBlock,
   loadScripturePassage,
+  resolveChineseVerseWindow,
+  sanitizeChineseVerseText,
   SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES,
   SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES,
   SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES,
@@ -174,5 +177,73 @@ describe('buildScriptureSlideBodies', () => {
     });
     expect(bodies.englishPages.length).toBeGreaterThan(1);
     expect(bodies.englishPages.flat().join(' ')).toContain('word');
+  });
+});
+
+describe('sanitizeChineseVerseText / footnote residue', () => {
+  it('strips ChiUn footnote letter leftovers', () => {
+    expect(sanitizeChineseVerseText('a ')).toBe('');
+    expect(sanitizeChineseVerseText('a   ')).toBe('');
+    expect(sanitizeChineseVerseText('耶和華─我們的主啊')).toContain('耶和華');
+  });
+
+  it('expands empty leading verses back to the parent verse', () => {
+    const chapter = [
+      { verse: 6, text: '你派他管理你手所造的' },
+      { verse: 7, text: '' },
+      { verse: 8, text: '' },
+      { verse: 9, text: '耶和華我們的主啊' },
+    ];
+    expect(resolveChineseVerseWindow(chapter, 7, 9)).toEqual({ start: 6, end: 9 });
+    expect(resolveChineseVerseWindow(chapter, 9, 9)).toEqual({ start: 9, end: 9 });
+  });
+
+  it('formatChineseVerseBlock skips empty verses and never emits lone a', () => {
+    const block = formatChineseVerseBlock([
+      verse(7, ''),
+      verse(8, ''),
+      verse(9, '耶和華我們的主啊你的名在全地何其美'),
+    ]);
+    expect(block).not.toMatch(/\ba\b/);
+    expect(block).toBe('9 耶和華我們的主啊你的名在全地何其美');
+  });
+});
+
+describe('loadScripturePassage real ChiUn data', () => {
+  it('Psalm 8:7-9 does not show footnote a and includes verse 6 content', async () => {
+    const passage = await loadScripturePassage('诗篇 Psalms', '8:7-9');
+    expect(passage).not.toBeNull();
+    const block = formatChineseVerseBlock(passage!.zh);
+    expect(block).not.toMatch(/\ba\b/);
+    expect(block).toContain('牛羊');
+    expect(block).toContain('耶和華');
+    expect(passage!.zh.some((v) => v.verse === 6)).toBe(true);
+    expect(passage!.zh.some((v) => v.verse === 9)).toBe(true);
+    const bodies = buildScriptureSlideBodies(passage!);
+    expect(bodies.chinesePages.join('')).not.toMatch(/\ba\b/);
+  });
+
+  it('Psalm 8:9 alone stays on verse 9', async () => {
+    const passage = await loadScripturePassage('诗篇 Psalms', '8:9');
+    expect(passage).not.toBeNull();
+    expect(passage!.zh.map((v) => v.verse)).toEqual([9]);
+    expect(formatChineseVerseBlock(passage!.zh)).toContain('何其美');
+  });
+
+  it('does not emit footnote a across sampled books', async () => {
+    const samples: Array<[string, string]> = [
+      ['诗篇 Psalms', '8:6-9'],
+      ['诗篇 Psalms', '49:8-10'],
+      ['民数记 Numbers', '1:20-22'],
+      ['箴言 Proverbs', '15:1-5'],
+      ['约翰福音 John', '3:16-17'],
+    ];
+    for (const [book, ref] of samples) {
+      const passage = await loadScripturePassage(book, ref);
+      expect(passage, `${book} ${ref}`).not.toBeNull();
+      const zh = formatChineseVerseBlock(passage!.zh);
+      expect(zh, `${book} ${ref}`).not.toMatch(/\ba\b/);
+      expect(zh.length, `${book} ${ref}`).toBeGreaterThan(0);
+    }
   });
 });

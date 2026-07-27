@@ -52,6 +52,50 @@ function normalizeEnglishText(text: string): string {
   return text.replace(/\s+/g, ' ').trim();
 }
 
+/**
+ * ChiUn 数据里大量「见上节」被存成脚注字母残留 `"a "`。
+ * 规范化后若只剩拉丁字母，视为无正文。
+ */
+export function sanitizeChineseVerseText(raw: string): string {
+  const normalized = normalizeChineseText(raw);
+  if (!normalized) return '';
+  if (/^[a-z]+$/i.test(normalized)) return '';
+  return normalized;
+}
+
+/**
+ * 和合本常把多节并入上一节，后续节为空。若所选起点无正文，
+ * 向前并入最近一节有正文的经文，避免出现 `7 a 8 a 9 …`。
+ */
+export function resolveChineseVerseWindow(
+  chapterVerses: readonly { verse: number; text: string }[],
+  startVerse: number,
+  endVerse: number,
+): { start: number; end: number } {
+  const byVerse = new Map(chapterVerses.map((v) => [v.verse, v.text]));
+  let firstWithText = startVerse;
+  while (firstWithText <= endVerse && !(byVerse.get(firstWithText) ?? '')) {
+    firstWithText += 1;
+  }
+
+  const findPrecedingWithText = (from: number): number | null => {
+    for (let v = from; v >= 1; v -= 1) {
+      if (byVerse.get(v)) return v;
+    }
+    return null;
+  };
+
+  if (firstWithText > endVerse) {
+    const back = findPrecedingWithText(startVerse - 1);
+    return { start: back ?? startVerse, end: endVerse };
+  }
+  if (firstWithText > startVerse) {
+    const back = findPrecedingWithText(firstWithText - 1);
+    if (back != null) return { start: back, end: endVerse };
+  }
+  return { start: startVerse, end: endVerse };
+}
+
 async function readBookJson(dir: string, fileName: string): Promise<BibleBookJson> {
   const raw = await readFile(join(dir, `${fileName}.json`), 'utf8');
   return JSON.parse(raw) as BibleBookJson;
@@ -74,20 +118,30 @@ export async function loadScripturePassage(
   const enChapter = enBook.chapters.find((c) => Number(c.chapter) === parsed.chapter);
   if (!zhChapter || !enChapter) return null;
 
-  const zh = zhChapter.verses
-    .filter((v) => v.verse >= parsed.startVerse && v.verse <= parsed.endVerse)
-    .map((v) => ({ verse: v.verse, text: normalizeChineseText(v.text) }));
+  const zhSanitized = zhChapter.verses.map((v) => ({
+    verse: v.verse,
+    text: sanitizeChineseVerseText(v.text),
+  }));
+  const window = resolveChineseVerseWindow(zhSanitized, parsed.startVerse, parsed.endVerse);
+
+  const zh = zhSanitized
+    .filter((v) => v.verse >= window.start && v.verse <= window.end)
+    .filter((v) => v.text.length > 0);
   const en = enChapter.verses
     .filter((v) => Number(v.verse) >= parsed.startVerse && Number(v.verse) <= parsed.endVerse)
-    .map((v) => ({ verse: Number(v.verse), text: normalizeEnglishText(v.text) }));
+    .map((v) => ({ verse: Number(v.verse), text: normalizeEnglishText(v.text) }))
+    .filter((v) => v.text.length > 0);
 
   if (!zh.length || !en.length) return null;
   return { zh, en };
 }
 
-/** 中文 slide 5：节号 + 经文，节与节之间空格（与模板一致） */
+/** 中文 slide 5：节号 + 经文，节与节之间空格（与模板一致）；跳过无正文节 */
 export function formatChineseVerseBlock(verses: BibleVerse[]): string {
-  return verses.map((v) => `${v.verse} ${v.text}`).join(' ');
+  return verses
+    .filter((v) => v.text.trim().length > 0)
+    .map((v) => `${v.verse} ${v.text}`)
+    .join(' ');
 }
 
 /** 英文 slide 6：节号 + 经文，节与节之间空格（与中文一致，按行数流式分页） */

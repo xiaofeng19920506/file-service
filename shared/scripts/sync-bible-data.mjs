@@ -27,6 +27,13 @@ async function main() {
     return r.json();
   });
   for (const book of chiun.books) {
+    // ChiUn 里「见上节」常被存成脚注字母 "a "，清洗为空串以免幻灯片出现 "7 a 8 a"
+    for (const ch of book.chapters ?? []) {
+      for (const v of ch.verses ?? []) {
+        const compact = String(v.text ?? '').replace(/\s+/g, '').trim();
+        if (/^[a-z]+$/i.test(compact)) v.text = '';
+      }
+    }
     const path = join(outZh, `${book.name}.json`);
     await writeFile(path, JSON.stringify(book), 'utf8');
   }

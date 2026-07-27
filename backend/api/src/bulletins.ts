@@ -70,8 +70,8 @@ const BULLETIN_TEMPLATE_DIR = resolveBulletinTemplateDir();
 const slidePreviewCache = new Map<string, Buffer>();
 /** 同一套补丁参数共享已补丁 PPTX，避免每页都重新 patch */
 const patchedPptxCache = new Map<string, Buffer>();
-/** 预览补丁版本；v33=跳过损坏的 sectionPptxOverrides（坏 XML 导致 LibreOffice 整页无字） */
-const SLIDE_PREVIEW_PATCH_REV = 'v33';
+/** 预览补丁版本；v34=清洗 ChiUn 脚注 a 残留并并入空节上文 **/
+const SLIDE_PREVIEW_PATCH_REV = 'v34';
 
 async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   const chunks: Buffer[] = [];
