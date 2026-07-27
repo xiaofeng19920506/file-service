@@ -290,6 +290,28 @@ function paragraphsFromOverride(
   }));
 }
 
+/** 编辑预览：去掉 spacer，并统一字号/行高与 textarea 一致（保留各 run 颜色），光标才跟得上 */
+function paragraphsForCaretAlignedEdit(
+  base: SlideTextParagraph[],
+  draftText: string,
+): SlideTextParagraph[] {
+  const remapped = paragraphsPreservingRunStyles(base, draftText).filter((p) => !p.spacer);
+  const sample = remapped.find((p) => p.runs.length)?.runs[0];
+  if (!sample) return remapped;
+  const lineSpacing = remapped.find((p) => p.runs.length)?.lineSpacing || 1;
+  return remapped.map((p) => ({
+    ...p,
+    lineSpacing,
+    runs: p.runs.map((r) => ({
+      ...r,
+      fontSizePt: sample.fontSizePt,
+      fontFamily: sample.fontFamily ?? r.fontFamily,
+      bold: sample.bold ?? r.bold,
+      italic: sample.italic ?? r.italic,
+    })),
+  }));
+}
+
 export default function BulletinCompositeSlide({
   slide,
   pptxBlob,
@@ -734,68 +756,75 @@ export default function BulletinCompositeSlide({
               }
             >
               {isEditing ? (
-                <>
-                  <div className="bulletin-composite-shape-editor-preview" aria-hidden="true">
-                    {paragraphsPreservingRunStyles(
-                      editBaseParagraphsRef.current.length
-                        ? editBaseParagraphsRef.current
-                        : displayParagraphs,
-                      draftText,
-                    ).map((para, pi) =>
-                      renderParagraph(para, role, useAutoFit, fitScale, pi),
-                    )}
-                  </div>
-                  <textarea
-                    ref={editorRef}
-                    className="bulletin-composite-shape-editor is-preserving-runs"
-                    value={draftText}
-                    onChange={(e) => {
-                      setDraftText(e.target.value);
-                    }}
-                    onSelect={(e) => {
-                      const el = e.currentTarget;
-                      reportTextRange(layer.elementId, el.selectionStart, el.selectionEnd);
-                    }}
-                    onKeyUp={(e) => {
-                      const el = e.currentTarget;
-                      reportTextRange(layer.elementId, el.selectionStart, el.selectionEnd);
-                    }}
-                    onMouseUp={(e) => {
-                      const el = e.currentTarget;
-                      reportTextRange(layer.elementId, el.selectionStart, el.selectionEnd);
-                    }}
-                    onBlur={commitEdit}
-                    onClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => {
-                      e.stopPropagation();
-                      if (e.key === 'Escape') {
-                        e.preventDefault();
-                        setEditingShape(null);
-                        onTextCharRangeChange?.(null);
-                      }
-                      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-                        e.preventDefault();
-                        commitEdit();
-                      }
-                    }}
-                    style={{
-                      /* 文字透明，仅用字号/行高对齐光标；颜色由底层多色预览负责 */
-                      fontWeight: (overrideStyle?.bold ?? sampleRun?.bold) ? 700 : undefined,
-                      fontStyle: (overrideStyle?.italic ?? sampleRun?.italic) ? 'italic' : undefined,
-                      fontFamily: (overrideStyle?.fontFamily ?? sampleRun?.fontFamily)
-                        ? `"${overrideStyle?.fontFamily ?? sampleRun?.fontFamily}", sans-serif`
-                        : undefined,
-                      fontSize: runFontSizeCqw(
-                        overrideStyle?.fontSizePt ?? sampleRun?.fontSizePt,
-                        useAutoFit,
-                        fitScale,
-                      ),
-                      textAlign: layer.paragraphs.find((p) => !p.spacer)?.align ?? 'left',
-                      lineHeight: layer.paragraphs.find((p) => !p.spacer)?.lineSpacing || 1.15,
-                    }}
-                    aria-label={`文本框 ${shapeIndex! + 1}`}
-                  />
-                </>
+                (() => {
+                  const baseParas = editBaseParagraphsRef.current.length
+                    ? editBaseParagraphsRef.current
+                    : displayParagraphs;
+                  const editParas = paragraphsForCaretAlignedEdit(baseParas, draftText);
+                  const caretPara = editParas.find((p) => !p.spacer) ?? editParas[0];
+                  const caretRun = caretPara?.runs[0] ?? sampleRun;
+                  const caretLineHeight = caretPara?.lineSpacing || 1;
+                  const caretAlign = caretPara?.align ?? 'left';
+                  return (
+                    <div className="bulletin-composite-shape-editor-stack">
+                      <div className="bulletin-composite-shape-editor-preview" aria-hidden="true">
+                        {editParas.map((para, pi) =>
+                          renderParagraph(para, role, useAutoFit, fitScale, pi),
+                        )}
+                      </div>
+                      <textarea
+                        ref={editorRef}
+                        className="bulletin-composite-shape-editor is-preserving-runs"
+                        value={draftText}
+                        onChange={(e) => {
+                          setDraftText(e.target.value);
+                        }}
+                        onSelect={(e) => {
+                          const el = e.currentTarget;
+                          reportTextRange(layer.elementId, el.selectionStart, el.selectionEnd);
+                        }}
+                        onKeyUp={(e) => {
+                          const el = e.currentTarget;
+                          reportTextRange(layer.elementId, el.selectionStart, el.selectionEnd);
+                        }}
+                        onMouseUp={(e) => {
+                          const el = e.currentTarget;
+                          reportTextRange(layer.elementId, el.selectionStart, el.selectionEnd);
+                        }}
+                        onBlur={commitEdit}
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => {
+                          e.stopPropagation();
+                          if (e.key === 'Escape') {
+                            e.preventDefault();
+                            setEditingShape(null);
+                            onTextCharRangeChange?.(null);
+                          }
+                          if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                            e.preventDefault();
+                            commitEdit();
+                          }
+                        }}
+                        style={{
+                          /* 与预览首段度量对齐，光标落在可见文字处 */
+                          fontWeight: (overrideStyle?.bold ?? caretRun?.bold) ? 700 : undefined,
+                          fontStyle: (overrideStyle?.italic ?? caretRun?.italic) ? 'italic' : undefined,
+                          fontFamily: (overrideStyle?.fontFamily ?? caretRun?.fontFamily)
+                            ? `"${overrideStyle?.fontFamily ?? caretRun?.fontFamily}", sans-serif`
+                            : undefined,
+                          fontSize: runFontSizeCqw(
+                            overrideStyle?.fontSizePt ?? caretRun?.fontSizePt,
+                            useAutoFit,
+                            fitScale,
+                          ),
+                          textAlign: caretAlign,
+                          lineHeight: caretLineHeight,
+                        }}
+                        aria-label={`文本框 ${shapeIndex! + 1}`}
+                      />
+                    </div>
+                  );
+                })()
               ) : (
                 displayParagraphs.map((para, pi) =>
                   renderParagraph(para, role, useAutoFit, fitScale, pi),

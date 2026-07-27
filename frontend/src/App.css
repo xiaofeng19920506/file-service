@@ -7975,13 +7975,22 @@ body.bulletin-slideshow-window {
   outline-offset: 1px;
 }
 
-.bulletin-composite-shape-editor {
+/* 编辑栈：随 shape 的 justify-content 垂直对齐，textarea 叠在同高预览上，光标跟文字走 */
+.bulletin-composite-shape-editor-stack {
   position: relative;
+  z-index: 2;
+  width: 100%;
+  flex: 0 0 auto;
+  align-self: stretch;
+}
+
+.bulletin-composite-shape-editor {
+  position: absolute;
+  inset: 0;
   z-index: 2;
   display: block;
   width: 100%;
   height: 100%;
-  min-height: 100%;
   margin: 0;
   padding: 0;
   border: none;
@@ -7989,21 +7998,26 @@ body.bulletin-slideshow-window {
   resize: none;
   background: transparent;
   box-sizing: border-box;
-  overflow: auto;
+  overflow: hidden;
   white-space: pre-wrap;
   word-break: keep-all;
 }
 
-/* 未改字时：textarea 透明，底层继续画多色 run，避免整框被首 run 色刷成单色 */
+/* 与 textarea 同盒：正常文档流撑开栈高度；颜色由这里画，textarea 只负责光标 */
 .bulletin-composite-shape-editor-preview {
-  position: absolute;
-  inset: 0;
+  position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
-  justify-content: inherit;
+  width: 100%;
   pointer-events: none;
-  overflow: hidden;
+  overflow: visible;
+}
+
+.bulletin-composite-shape-editor-preview .bulletin-composite-paragraph {
+  flex-shrink: 0;
+  max-height: none;
+  overflow: visible;
 }
 
 .bulletin-composite-shape-editor.is-preserving-runs {
