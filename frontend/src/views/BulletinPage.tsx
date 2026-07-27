@@ -24,6 +24,7 @@ import {
 } from '../components/bulletin/BulletinWizardSteps';
 import ProgressStepper from '../components/ProgressStepper';
 import BulletinSectionPptEditor from '../components/bulletin/BulletinSectionPptEditor';
+import BulletinSectionReplaceBanner from '../components/bulletin/BulletinSectionReplaceBanner';
 import { useBulletinRealtime } from '../hooks/useBulletinRealtime';
 import { useBulletinScripturePersistence } from '../hooks/useBulletinScripturePersistence';
 import { useI18n } from '../i18n';
@@ -843,18 +844,12 @@ export default function BulletinPage() {
               <div className="bulletin-step-panel">
                 {canManage &&
                 (BULLETIN_SECTION_TEMPLATE_SLIDES[activeSectionId]?.length ?? 0) > 0 ? (
-                  <div className="bulletin-edit-slides-banner">
-                    <button
-                      type="button"
-                      className="btn-primary bulletin-edit-slides-banner-btn"
-                      onClick={() => openEditSlides(activeSectionId)}
-                    >
-                      {t('bulletin.editSlidesOpenEditor')}
-                    </button>
-                    <p className="bulletin-edit-slides-banner-hint">
-                      {t('bulletin.editSlidesOpenHint')}
-                    </p>
-                  </div>
+                  <BulletinSectionReplaceBanner
+                    sectionId={activeSectionId}
+                    draft={draft}
+                    onOpenEditor={() => openEditSlides(activeSectionId)}
+                    onSaved={handleSectionPptxSaved}
+                  />
                 ) : null}
                 {renderStepPanel()}
               </div>

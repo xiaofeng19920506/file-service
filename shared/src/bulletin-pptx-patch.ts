@@ -344,7 +344,18 @@ export async function applySlideTextOverridesToPptx(
  * 分区 splice 之后重打「表单语义字段」（不改页结构、不加读经页）。
  * 封面日期、会前主席、生日、金句、slideTextOverrides 都以当前表单为准；
  * 手动改过的字体/颜色等样式尽量保留（indexed 替换只动文字）。
+ *
+ * 若某分区已用自定义 PPT 整段替换，应跳过该区回写，否则会盖掉上传内容。
  */
+export type BulletinFormFieldReapplyOptions = {
+  skipCover?: boolean;
+  skipPreService?: boolean;
+  skipBirthday?: boolean;
+  skipVerseOfWeek?: boolean;
+  /** 跳过这些模板页号上的 slideTextOverrides */
+  skipSlideNumbers?: ReadonlySet<number> | readonly number[];
+};
+
 export async function reapplyBulletinFormFieldsInPptx(
   template: PptxInputBytes,
   input: Pick<
@@ -358,9 +369,10 @@ export async function reapplyBulletinFormFieldsInPptx(
     | 'verseOfWeek'
     | 'slideTextOverrides'
   >,
+  options: BulletinFormFieldReapplyOptions = {},
 ): Promise<Uint8Array> {
   let buf: PptxInputBytes = template;
-  if (input.serviceDate) {
+  if (input.serviceDate && !options.skipCover) {
     buf = await patchCoverSlideInPptx(buf, {
       serviceDate: input.serviceDate,
       serviceTime: input.serviceTime,
@@ -370,7 +382,7 @@ export async function reapplyBulletinFormFieldsInPptx(
   const zip = await JSZip.loadAsync(buf);
   const showChair = Boolean(input.showPreServiceChairName);
   const chairName = input.preServiceChairNames?.trim() ?? '';
-  if (showChair && chairName) {
+  if (!options.skipPreService && showChair && chairName) {
     const slide2 = zip.file('ppt/slides/slide2.xml');
     if (slide2) {
       const xml = await slide2.async('string');
@@ -378,10 +390,21 @@ export async function reapplyBulletinFormFieldsInPptx(
     }
   }
 
-  await applyBirthdayFieldsToZip(zip, input.birthdayMonth, input.birthdayNames);
-  await applyVerseOfWeekToZip(zip, input.verseOfWeek);
+  if (!options.skipBirthday) {
+    await applyBirthdayFieldsToZip(zip, input.birthdayMonth, input.birthdayNames);
+  }
+  if (!options.skipVerseOfWeek) {
+    await applyVerseOfWeekToZip(zip, input.verseOfWeek);
+  }
 
-  const overrides = normalizeSlideTextOverrides(input.slideTextOverrides);
+  const skipSlides = new Set(
+    options.skipSlideNumbers instanceof Set
+      ? options.skipSlideNumbers
+      : (options.skipSlideNumbers ?? []),
+  );
+  const overrides = normalizeSlideTextOverrides(input.slideTextOverrides).filter(
+    (o) => !skipSlides.has(o.slide),
+  );
   if (overrides.length) {
     await applySlideTextOverridesToZip(zip, overrides);
   }

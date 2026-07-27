@@ -207,7 +207,11 @@ export default {
     sectionVisibleNavHint:
       '左侧每个分区旁有「改幻灯片」；当前分区表单上方也可点「打开幻灯片编辑器」在网页内改文字、背景与图片。',
     editSlidesOpenEditor: '打开幻灯片编辑器',
-    editSlidesOpenHint: '在网页里像 PPT 一样改本区文字、背景与图片；也可下载到本机 PowerPoint 再上传。',
+    editSlidesOpenHint:
+      '可在网页里改本区文字与图片，或直接上传一份 PPTX 整段替换本区（页数可增减）。',
+    editSlidesReplaceUpload: '上传 PPT 替换本区',
+    editSlidesReplaceUploadHint: '选择本机 .pptx，整段替换当前分区（预览与导出立即生效）',
+    editSlidesReplacedHint: '本区已用自定义 PPT 替换。可继续网页编辑，或点「恢复原版」回到模板。',
     skipTestimony: '跳过见证周页（第 16 页）',
     skipDepartment: '跳过部门报告页（第 36 页）',
     meetingVariant: '本週聚会版式',
@@ -1124,6 +1128,7 @@ export default {
     unauthorized: '未登录或会话已过期，请重新登录',
     file_too_large: '文件超出大小限制，请压缩后重试',
     upload_failed: '上传失败，请检查网络后重试',
+    invalid_pptx: '请上传有效的 .pptx 文件（幻灯片结构需完整）',
     missing_file: '未选择有效文件',
     missing_chunk: '分片上传异常，请重试',
     upload_not_found: '上传会话已过期，请重新上传',

@@ -21,6 +21,29 @@ export function slidesToDelete(bulletin: WeeklyBulletin): string[] {
   return bulletinSlidePathsToDelete(bulletin);
 }
 
+function formFieldReapplySkipFromSectionBlobs(sectionBlobs: Record<string, Blob> | undefined): {
+  skipCover: boolean;
+  skipPreService: boolean;
+  skipBirthday: boolean;
+  skipVerse: boolean;
+  skipSlides: Set<number>;
+} {
+  const ids = new Set(Object.keys(sectionBlobs ?? {}));
+  const skipSlides = new Set<number>();
+  for (const sectionId of ids) {
+    for (const slide of BULLETIN_SECTION_TEMPLATE_SLIDES[sectionId] ?? []) {
+      skipSlides.add(slide);
+    }
+  }
+  return {
+    skipCover: ids.has('cover'),
+    skipPreService: ids.has('pre_service'),
+    skipBirthday: ids.has('birthday'),
+    skipVerse: ids.has('verse_of_week'),
+    skipSlides,
+  };
+}
+
 export async function generateBulletinPptx(
   templateBlob: Blob,
   bulletin: WeeklyBulletin,
@@ -48,13 +71,17 @@ export async function generateBulletinPptx(
     copy.set(buf);
     file = new File([copy.buffer], filename, { type: PPTX_MIME });
 
-    // splice 会用分区快照整页替换，导致封面日期/会前主席/公告等回退到旧值。
-    // 之后再盖一遍表单语义字段：文字以表单为准，手动样式尽量保留。
+    // splice 后只回写「未自定义」分区的表单字段，避免盖掉上传 PPT。
+    const skip = formFieldReapplySkipFromSectionBlobs(sectionBlobs);
     const reapply: SlideTextPatch[] = [];
-    if (bulletin.serviceDate) {
+    if (bulletin.serviceDate && !skip.skipCover) {
       reapply.push(buildCoverPatch(bulletin.serviceDate, bulletin.serviceTime));
     }
-    if (bulletin.showPreServiceChairName && bulletin.preServiceChairNames?.trim()) {
+    if (
+      !skip.skipPreService &&
+      bulletin.showPreServiceChairName &&
+      bulletin.preServiceChairNames?.trim()
+    ) {
       reapply.push({
         slideNumber: 2,
         replacements: [],
@@ -63,7 +90,7 @@ export async function generateBulletinPptx(
     }
     const month = bulletin.birthdayMonth?.trim() ?? '';
     const names = bulletin.birthdayNames?.trim() ?? '';
-    if (month || names) {
+    if (!skip.skipBirthday && (month || names)) {
       reapply.push({
         slideNumber: 24,
         replacements: buildBirthdaySlideReplacements(
@@ -72,7 +99,7 @@ export async function generateBulletinPptx(
         ),
       });
     }
-    if (bulletin.verseOfWeek?.trim()) {
+    if (!skip.skipVerse && bulletin.verseOfWeek?.trim()) {
       reapply.push({
         slideNumber: 35,
         replacements: [{ textIndex: 18, text: bulletin.verseOfWeek.trim() }],
@@ -83,6 +110,7 @@ export async function generateBulletinPptx(
       bulletin.slideTextOverrides,
     );
     for (const o of overrides) {
+      if (skip.skipSlides.has(o.slide)) continue;
       reapply.push({
         slideNumber: o.slide,
         replacements: [{ textIndex: o.textIndex, text: o.text }],

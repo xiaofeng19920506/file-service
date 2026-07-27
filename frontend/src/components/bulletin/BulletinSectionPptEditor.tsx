@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { fetchBlobContent, uploadFile } from '../../api/client';
-import { fetchBulletinTemplateFile, updateBulletin, type WeeklyBulletin } from '../../api/bulletins';
+import { fetchBlobContent } from '../../api/client';
+import { fetchBulletinTemplateFile, type WeeklyBulletin } from '../../api/bulletins';
 import PptEditor from '../PptEditor/PptEditor';
 import { useI18n } from '../../i18n';
 import { buildPatchedBulletinForSectionExtract } from '../../lib/bulletin-pptx';
+import {
+  bulletinSectionLabel,
+  clearBulletinSectionPptx,
+  replaceBulletinSectionPptx,
+} from '../../lib/bulletin-section-pptx';
 import { BULLETIN_SECTION_TEMPLATE_SLIDES } from '../../lib/bulletin-section-visibility';
 import { extractSlidesByFileNumbersAsPptx } from '../../lib/pptx-extract-slide';
-import { navSectionById } from '../../lib/bulletin-sections';
 import { pptxSlidesAreWellFormed } from '../../lib/pptx-integrity';
 
 const PPTX_MIME =
@@ -30,15 +34,16 @@ export default function BulletinSectionPptEditor({
   draftSnapRef.current = draft;
   /** 为 true 时跳过已存 override，强制从模板重抽（「恢复原版」） */
   const forceTemplateRef = useRef(false);
+  const replaceInputRef = useRef<HTMLInputElement>(null);
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [resetting, setResetting] = useState(false);
+  const [replacing, setReplacing] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
 
-  const sectionMeta = navSectionById(sectionId);
-  const sectionLabel = sectionMeta ? t(sectionMeta.labelKey) : sectionId;
+  const sectionLabel = bulletinSectionLabel(sectionId, t);
   const downloadName = `周报-${draft.serviceDate}-${sectionLabel}.pptx`;
   const hasOverride = Boolean(draft.sectionPptxOverrides?.[sectionId]);
 
@@ -49,8 +54,6 @@ export default function BulletinSectionPptEditor({
     const existingBlobId = forceTemplate ? undefined : snap.sectionPptxOverrides?.[sectionId];
     if (existingBlobId) {
       const blob = await fetchBlobContent(existingBlobId);
-      // 早期版本的文本回写会写出坏 XML（整页空白、文字残缺）。这种存档没有价值，
-      // 直接按当前 draft 重新生成，用户下次保存即覆盖。
       if (await pptxSlidesAreWellFormed(blob)) {
         return new File([blob], downloadName, { type: PPTX_MIME });
       }
@@ -97,7 +100,6 @@ export default function BulletinSectionPptEditor({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented) return;
-      // 文本框/输入框里的 Esc 属于「取消当前编辑」，不能顺手把编辑器整个关掉
       const target = e.target as HTMLElement | null;
       if (target?.closest('input, textarea, select, [contenteditable="true"]')) return;
       onClose();
@@ -107,21 +109,8 @@ export default function BulletinSectionPptEditor({
   }, [onClose]);
 
   const persistSectionFile = async (file: File) => {
-    const named = new File([file], downloadName, { type: PPTX_MIME });
-    const uploaded = await uploadFile(named, {
-      title: `周报分区 ${sectionLabel} ${draft.serviceDate}`,
-      notes: `bulletin section pptx ${draft.id} ${sectionId}`,
-    });
-    const nextOverrides = {
-      ...(draft.sectionPptxOverrides ?? {}),
-      [sectionId]: uploaded.blobId,
-    };
-    const updated = await updateBulletin(draft.id, { sectionPptxOverrides: nextOverrides });
-    // 编辑器内存态已由 saveChanges 更新，勿改 previewUrl 以免整页重载
-    onSaved({
-      ...updated,
-      sectionPptxOverrides: updated.sectionPptxOverrides ?? nextOverrides,
-    });
+    const updated = await replaceBulletinSectionPptx(draft, sectionId, file, sectionLabel);
+    onSaved(updated);
   };
 
   const handleResetToTemplate = async () => {
@@ -129,13 +118,8 @@ export default function BulletinSectionPptEditor({
     setResetting(true);
     setLoadError(null);
     try {
-      const nextOverrides = { ...(draft.sectionPptxOverrides ?? {}) };
-      delete nextOverrides[sectionId];
-      const updated = await updateBulletin(draft.id, { sectionPptxOverrides: nextOverrides });
-      onSaved({
-        ...updated,
-        sectionPptxOverrides: updated.sectionPptxOverrides ?? nextOverrides,
-      });
+      const updated = await clearBulletinSectionPptx(draft, sectionId);
+      onSaved(updated);
       forceTemplateRef.current = true;
       setReloadToken((n) => n + 1);
     } catch (e) {
@@ -145,12 +129,34 @@ export default function BulletinSectionPptEditor({
     }
   };
 
-  if (loading || resetting) {
+  const handleReplaceUpload = async (file: File | null) => {
+    if (!file || replacing) return;
+    setReplacing(true);
+    setLoadError(null);
+    try {
+      const updated = await replaceBulletinSectionPptx(draft, sectionId, file, sectionLabel);
+      onSaved(updated);
+      setReloadToken((n) => n + 1);
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : 'upload_failed');
+    } finally {
+      setReplacing(false);
+      if (replaceInputRef.current) replaceInputRef.current.value = '';
+    }
+  };
+
+  if (loading || resetting || replacing) {
     return (
       <div className="bulletin-section-ppt-overlay" role="dialog" aria-modal="true">
         <div className="preview-empty">
           <div className="preview-spinner" />
-          <p>{resetting ? t('bulletin.editSlidesResetting') : t('preview.converting')}</p>
+          <p>
+            {replacing
+              ? t('bulletin.editSlidesUploading')
+              : resetting
+                ? t('bulletin.editSlidesResetting')
+                : t('preview.converting')}
+          </p>
         </div>
       </div>
     );
@@ -167,6 +173,22 @@ export default function BulletinSectionPptEditor({
             </button>
           </header>
           <p className="form-error">{loadError ?? t('preview.emptyFile')}</p>
+          <div className="bulletin-section-ppt-native-actions">
+            <input
+              ref={replaceInputRef}
+              type="file"
+              accept=".pptx,.ppt,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+              hidden
+              onChange={(e) => void handleReplaceUpload(e.target.files?.[0] ?? null)}
+            />
+            <button
+              type="button"
+              className="btn-primary btn-sm"
+              onClick={() => replaceInputRef.current?.click()}
+            >
+              {t('bulletin.editSlidesReplaceUpload')}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -174,11 +196,20 @@ export default function BulletinSectionPptEditor({
 
   return (
     <div className="bulletin-section-ppt-overlay" role="dialog" aria-modal="true">
+      <input
+        ref={replaceInputRef}
+        type="file"
+        accept=".pptx,.ppt,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        hidden
+        onChange={(e) => void handleReplaceUpload(e.target.files?.[0] ?? null)}
+      />
       <PptEditor
         title={t('bulletin.editSlidesSectionTitle', { section: sectionLabel })}
         mergedUrl={previewUrl}
         onSaveFile={persistSectionFile}
         onResetToTemplate={hasOverride ? handleResetToTemplate : undefined}
+        onUploadReplace={() => replaceInputRef.current?.click()}
+        onClose={onClose}
       />
     </div>
   );

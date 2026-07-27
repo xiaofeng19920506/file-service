@@ -217,7 +217,12 @@ const en: MessageTree = {
       'Each section has “Edit slides”; you can also open the slide editor above the form to change text, backgrounds, and images in the browser.',
     editSlidesOpenEditor: 'Open slide editor',
     editSlidesOpenHint:
-      'Edit this section’s text, backgrounds, and images in the browser like PowerPoint — or download, edit on desktop, and upload again.',
+      'Edit text and images in the browser, or upload a PPTX to replace this whole section (page count may change).',
+    editSlidesReplaceUpload: 'Upload PPT to replace section',
+    editSlidesReplaceUploadHint:
+      'Pick a local .pptx to replace this section (preview and export update immediately)',
+    editSlidesReplacedHint:
+      'This section uses a custom PPT. Keep editing in the browser, or restore the template.',
     skipTestimony: 'Skip testimony week slide (16)',
     skipDepartment: 'Skip department reports slide (36)',
     meetingVariant: 'Weekly meeting layout',
@@ -1145,6 +1150,7 @@ const en: MessageTree = {
     unauthorized: 'Not signed in or session expired — please sign in again',
     file_too_large: 'File exceeds size limit',
     upload_failed: 'Upload failed — check your network',
+    invalid_pptx: 'Please upload a valid .pptx file with intact slide structure',
     missing_file: 'No valid file selected',
     missing_chunk: 'Chunk upload error — retry',
     upload_not_found: 'Upload session expired — upload again',

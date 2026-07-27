@@ -36,6 +36,7 @@ import {
   normalizeHiddenSections,
   normalizeSlideTextOverrides,
   normalizeSectionPptxOverrides,
+  formFieldReapplyOptionsForSectionOverrides,
   BULLETIN_SECTION_TEMPLATE_SLIDES,
   spliceAllSectionOverridesIntoPptx,
   pptxBufferSlidesAreWellFormed,
@@ -72,7 +73,7 @@ const slidePreviewCache = new Map<string, Buffer>();
 /** 同一套补丁参数共享已补丁 PPTX，避免每页都重新 patch */
 const patchedPptxCache = new Map<string, Buffer>();
 /** 预览补丁版本；v35=分区 override 支持增删页（splice 变长） */
-const SLIDE_PREVIEW_PATCH_REV = 'v35';
+const SLIDE_PREVIEW_PATCH_REV = 'v36';
 
 async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   const chunks: Buffer[] = [];
@@ -529,20 +530,23 @@ async function buildPatchedBulletinPptxBuf(opts: {
         return buf;
       },
     );
-    // 分区 splice 会整页替换回旧文字：重打封面日期、会前主席、生日、金句与文字覆盖，
-    // 保证表单字段在预览每一页上都正确（手动样式尽量保留）。
+    // 分区 splice 会整页替换：仅对「未自定义」的分区回写表单字段，避免盖掉上传 PPT。
     if (Object.keys(sectionOverrides).length) {
       pptxBuf = Buffer.from(
-        await reapplyBulletinFormFieldsInPptx(pptxBuf, {
-          serviceDate: q.serviceDate,
-          serviceTime: q.serviceTime,
-          showPreServiceChairName: q.showPreServiceChairName,
-          preServiceChairNames: q.preServiceChairNames,
-          birthdayMonth: q.birthdayMonth,
-          birthdayNames: q.birthdayNames,
-          verseOfWeek: q.verseOfWeek,
-          slideTextOverrides,
-        }),
+        await reapplyBulletinFormFieldsInPptx(
+          pptxBuf,
+          {
+            serviceDate: q.serviceDate,
+            serviceTime: q.serviceTime,
+            showPreServiceChairName: q.showPreServiceChairName,
+            preServiceChairNames: q.preServiceChairNames,
+            birthdayMonth: q.birthdayMonth,
+            birthdayNames: q.birthdayNames,
+            verseOfWeek: q.verseOfWeek,
+            slideTextOverrides,
+          },
+          formFieldReapplyOptionsForSectionOverrides(sectionOverrides),
+        ),
       );
     }
     rememberLru(patchedPptxCache, patchKey, pptxBuf, 12);

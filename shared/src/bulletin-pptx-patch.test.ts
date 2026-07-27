@@ -209,4 +209,48 @@ describe('patchScriptureSlideInSlideXml', () => {
     expect(slide1).toContain('07/26/2026');
     expect(slide2).toContain('王凯弟兄');
   });
+
+  it('skips form reapply for sections replaced by custom PPT', async () => {
+    const tpl = await readFile(templatePath);
+    const base = await patchBulletinPreviewInPptx(tpl, {
+      serviceDate: '2026-07-26',
+      serviceTime: '11:00',
+      showPreServiceChairName: true,
+      preServiceChairNames: '王凯弟兄',
+    });
+    const wiped = await JSZip.loadAsync(base);
+    wiped.file(
+      'ppt/slides/slide2.xml',
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+    <p:grpSpPr/>
+    <p:sp>
+      <p:nvSpPr><p:cNvPr id="276" name="title"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+      <p:spPr/>
+      <p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>自定义会前</a:t></a:r></a:p></p:txBody>
+    </p:sp>
+  </p:spTree></p:cSld>
+</p:sld>`,
+    );
+    const wipedBuf = await wiped.generateAsync({ type: 'nodebuffer' });
+
+    const restored = await reapplyBulletinFormFieldsInPptx(
+      wipedBuf,
+      {
+        serviceDate: '2026-07-26',
+        serviceTime: '11:00',
+        showPreServiceChairName: true,
+        preServiceChairNames: '王凯弟兄',
+      },
+      { skipPreService: true },
+    );
+    const zip = await JSZip.loadAsync(restored);
+    const slide1 = await zip.file('ppt/slides/slide1.xml')!.async('string');
+    const slide2 = await zip.file('ppt/slides/slide2.xml')!.async('string');
+    expect(slide1).toContain('07/26/2026');
+    expect(slide2).toContain('自定义会前');
+    expect(slide2).not.toContain('王凯弟兄');
+  });
 });

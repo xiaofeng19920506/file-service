@@ -1,4 +1,5 @@
 import { BULLETIN_SECTION_TEMPLATE_SLIDES } from './bulletin-section-visibility.js';
+import type { BulletinFormFieldReapplyOptions } from './bulletin-pptx-patch.js';
 
 /** sectionId → blobId */
 export type SectionPptxOverrides = Record<string, string>;
@@ -34,4 +35,24 @@ export function setSectionPptxOverride(
   if (!UUID_RE.test(blobId)) return next;
   next[sectionId] = blobId;
   return next;
+}
+
+/** 已整段替换的分区：splice 后不要再回写该区表单字段 */
+export function formFieldReapplyOptionsForSectionOverrides(
+  overrides: SectionPptxOverrides | null | undefined,
+): BulletinFormFieldReapplyOptions {
+  const ids = new Set(Object.keys(normalizeSectionPptxOverrides(overrides)));
+  const skipSlideNumbers = new Set<number>();
+  for (const sectionId of ids) {
+    for (const slide of BULLETIN_SECTION_TEMPLATE_SLIDES[sectionId] ?? []) {
+      skipSlideNumbers.add(slide);
+    }
+  }
+  return {
+    skipCover: ids.has('cover'),
+    skipPreService: ids.has('pre_service'),
+    skipBirthday: ids.has('birthday'),
+    skipVerseOfWeek: ids.has('verse_of_week'),
+    skipSlideNumbers,
+  };
 }

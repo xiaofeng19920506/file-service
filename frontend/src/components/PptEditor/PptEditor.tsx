@@ -21,6 +21,8 @@ type PptEditorProps = {
   downloading?: boolean;
   /** 丢弃本区已保存覆盖，重新加载模板原版 */
   onResetToTemplate?: () => void;
+  /** 用本机 PPTX 整段替换本区 */
+  onUploadReplace?: () => void;
   onClose?: () => void;
   /**
    * 锁定幻灯片结构：禁用新建/复制/删除/拖拽重排幻灯片。
@@ -39,6 +41,7 @@ export default function PptEditor({
   canDownload = false,
   downloading = false,
   onResetToTemplate,
+  onUploadReplace,
   onClose,
   lockSlideStructure = false,
 }: PptEditorProps) {
@@ -313,6 +316,16 @@ export default function PptEditor({
                 onClick={() => onDownload()}
               >
                 {downloading ? t('library.downloading') : t('slides.download')}
+              </button>
+            )}
+            {onUploadReplace && (
+              <button
+                type="button"
+                className="btn-secondary btn-sm"
+                onClick={() => onUploadReplace()}
+                title={t('bulletin.editSlidesReplaceUploadHint')}
+              >
+                {t('bulletin.editSlidesReplaceUpload')}
               </button>
             )}
             {onResetToTemplate && (
