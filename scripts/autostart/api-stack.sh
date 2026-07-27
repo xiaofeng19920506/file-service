@@ -82,6 +82,10 @@ if [[ ! -f "$SUPERVISOR" ]]; then
   exit 1
 fi
 
+# API 通过 @file-service/shared 的 dist 导入；源码变更后必须先 build，否则会缺 export 导致进程秒崩
+log "构建 @file-service/shared"
+npm run build --workspace=@file-service/shared >> "$LOG_FILE" 2>&1
+
 log "启动 API + Worker（端口 ${PORT:-3000}）"
 exec bash "$SUPERVISOR" \
   "cd '${ROOT}' && exec '${TSX}' backend/api/src/index.ts" \
