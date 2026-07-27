@@ -222,7 +222,7 @@ export const weeklyBulletins = pgTable('weekly_bulletins', {
   id: uuid('id').defaultRandom().primaryKey(),
   serviceDate: date('service_date').notNull(),
   serviceTime: text('service_time').notNull().default('11:00'),
-  status: text('status').notNull().default('draft'),
+  status: text('status').notNull().default('ready'),
   lastWeekOfferingDate: text('last_week_offering_date').notNull().default(''),
   offeringQuarterLabel: text('offering_quarter_label').notNull().default(''),
   birthdayMonth: text('birthday_month').notNull().default(''),

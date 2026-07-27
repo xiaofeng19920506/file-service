@@ -170,6 +170,7 @@ export default {
     publishToLibrary: '发布到诗库',
     publishing: '发布中…',
     published: '已发布到诗库',
+    publishedBadge: '已发布',
     publishedHint: '已关联诗库条目，敬拜现场将优先加载已发布版本。',
     openInLibrary: '预览诗库 PPT',
     verseOfWeek: '本週金句（第 35 页）',

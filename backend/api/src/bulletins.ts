@@ -885,6 +885,7 @@ export function registerBulletinRoutes(
       .insert(weeklyBulletins)
       .values({
         serviceDate,
+        status: 'ready',
         createdByUserId: user.id,
       })
       .returning();

@@ -774,7 +774,9 @@ export default function BulletinPage() {
               >
                 {bulletins.map((b) => (
                   <option key={b.id} value={b.id}>
-                    {b.serviceDate} ({b.status})
+                    {b.outputBlobId
+                      ? `${b.serviceDate} (${t('bulletin.publishedBadge')})`
+                      : b.serviceDate}
                   </option>
                 ))}
               </select>
