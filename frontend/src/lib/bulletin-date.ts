@@ -55,8 +55,8 @@ export function resolveAvailableSundayIso(
 ): string {
   const taken = new Set(occupiedDates);
   let date = upcomingSundayIso(from);
-  for (let i = 0; i < 52; i += 1) {
-    if (!taken.has(date)) return date;
+  // 占用集合有限，必能找到空闲主日；勿在未检查的情况下 return 推进后的 date
+  while (taken.has(date)) {
     date = sundayAfterIso(date);
   }
   return date;

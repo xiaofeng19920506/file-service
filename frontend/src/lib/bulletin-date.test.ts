@@ -38,6 +38,18 @@ describe('bulletin-date', () => {
     expect(resolveAvailableSundayIso(['2026-08-02', '2026-08-09'], from)).toBe('2026-08-16');
   });
 
+  it('resolveAvailableSundayIso never returns an unchecked occupied Sunday', () => {
+    const from = new Date(2026, 6, 27); // → 2026-08-02
+    const occupied: string[] = [];
+    let date = '2026-08-02';
+    // 旧实现只检查 52 周，然后无校验返回第 53 个；若该日也被占用会漏检
+    for (let i = 0; i < 53; i += 1) {
+      occupied.push(date);
+      date = sundayAfterIso(date);
+    }
+    expect(resolveAvailableSundayIso(occupied, from)).toBe(date);
+  });
+
   it('toLocalIsoDate uses local calendar components', () => {
     expect(toLocalIsoDate(new Date(2026, 0, 5))).toBe('2026-01-05');
   });
