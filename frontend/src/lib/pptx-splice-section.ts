@@ -1,10 +1,19 @@
 import JSZip, { type JSZipInstance } from './jszip';
 import { listPptxSlidesInPresentationOrder } from './pptx-preview';
+import { duplicateSlideInZip, removeSlidesFromPptxZip } from './pptx-duplicate-slide';
 
 type PptxBytes = ArrayBuffer | Uint8Array | Blob;
 
 function slideNumber(path: string): number {
   return Number.parseInt(path.match(/slide(\d+)\.xml$/)?.[1] ?? '0', 10);
+}
+
+function slidePathForFile(fileNum: number): string {
+  return `ppt/slides/slide${fileNum}.xml`;
+}
+
+function slideRelsPath(slidePath: string): string {
+  return slidePath.replace('ppt/slides/', 'ppt/slides/_rels/') + '.rels';
 }
 
 function nextMediaName(zip: JSZipInstance, ext: string): string {
@@ -39,9 +48,46 @@ async function toArrayBuffer(pptx: PptxBytes): Promise<ArrayBuffer> {
   return pptx;
 }
 
+async function writeMiniSlideOntoBase(
+  baseZip: JSZipInstance,
+  miniZip: JSZipInstance,
+  basePath: string,
+  miniPath: string,
+): Promise<void> {
+  const miniSlideEntry = miniZip.file(miniPath);
+  if (!miniSlideEntry) return;
+  const slideXml = await miniSlideEntry.async('string');
+  const miniRelsPath = slideRelsPath(miniPath);
+  const baseRelsPath = slideRelsPath(basePath);
+  const miniRelsEntry = miniZip.file(miniRelsPath);
+  let relsXml = miniRelsEntry ? await miniRelsEntry.async('string') : null;
+
+  if (relsXml) {
+    const mediaMap = new Map<string, string>();
+    for (const m of relsXml.matchAll(/<Relationship([^>]*Target="([^"]+)"[^>]*)\/?>/g)) {
+      const target = m[2]!;
+      if (!target.includes('media/')) continue;
+      const srcPath = relTargetToMediaPath(target);
+      const src = miniZip.file(srcPath);
+      if (!src) continue;
+      const ext = extFromPath(srcPath);
+      const destPath = nextMediaName(baseZip, ext);
+      baseZip.file(destPath, await src.async('uint8array'));
+      const destName = destPath.replace(/^ppt\/media\//, '');
+      mediaMap.set(target, `../media/${destName}`);
+    }
+    for (const [from, to] of mediaMap) {
+      relsXml = relsXml.split(from).join(to);
+    }
+    baseZip.file(baseRelsPath, relsXml);
+  }
+
+  baseZip.file(basePath, slideXml);
+}
+
 /**
- * 将迷你 PPT（分区编辑结果）按顺序覆盖 base 中指定文件号的幻灯片。
- * 浏览器侧副本。
+ * 将迷你 PPT（分区编辑结果）按顺序对齐到 base。
+ * 页数不同时：多则插入、少则删掉锚点尾部（与 shared 实现一致）。
  */
 export async function spliceSectionSlidesIntoPptx(
   basePptx: PptxBytes,
@@ -61,43 +107,39 @@ export async function spliceSectionSlidesIntoPptx(
   const baseZip = await JSZip.loadAsync(baseBuf);
   const miniZip = await JSZip.loadAsync(miniBuf);
   const miniOrder = await listPptxSlidesInPresentationOrder(new Blob([miniBuf]));
-  const count = Math.min(targets.length, miniOrder.length);
+  const n = miniOrder.length;
+  if (n === 0) {
+    return baseZip.generateAsync({ type: 'uint8array' });
+  }
 
-  for (let i = 0; i < count; i++) {
-    const targetFile = targets[i]!;
-    const miniSlide = miniOrder[i]!;
-    const basePath = `ppt/slides/slide${targetFile}.xml`;
-    const baseRelsPath = `ppt/slides/_rels/slide${targetFile}.xml.rels`;
-    const miniPath = miniSlide.slidePath;
-    const miniRelsPath = miniPath.replace('ppt/slides/', 'ppt/slides/_rels/') + '.rels';
+  const liveTargets = targets.filter((fileNum) => Boolean(baseZip.file(slidePathForFile(fileNum))));
+  if (!liveTargets.length) {
+    return baseZip.generateAsync({ type: 'uint8array' });
+  }
 
-    const miniSlideEntry = miniZip.file(miniPath);
-    if (!miniSlideEntry) continue;
-    const slideXml = await miniSlideEntry.async('string');
-    const miniRelsEntry = miniZip.file(miniRelsPath);
-    let relsXml = miniRelsEntry ? await miniRelsEntry.async('string') : null;
+  const overlap = Math.min(n, liveTargets.length);
+  let lastPath = slidePathForFile(liveTargets[0]!);
 
-    if (relsXml) {
-      const mediaMap = new Map<string, string>();
-      for (const m of relsXml.matchAll(/<Relationship([^>]*Target="([^"]+)"[^>]*)\/?>/g)) {
-        const target = m[2]!;
-        if (!target.includes('media/')) continue;
-        const srcPath = relTargetToMediaPath(target);
-        const src = miniZip.file(srcPath);
-        if (!src) continue;
-        const ext = extFromPath(srcPath);
-        const destPath = nextMediaName(baseZip, ext);
-        baseZip.file(destPath, await src.async('uint8array'));
-        const destName = destPath.replace(/^ppt\/media\//, '');
-        mediaMap.set(target, `../media/${destName}`);
-      }
-      for (const [from, to] of mediaMap) {
-        relsXml = relsXml.split(from).join(to);
-      }
-      baseZip.file(baseRelsPath, relsXml);
+  for (let i = 0; i < overlap; i++) {
+    const basePath = slidePathForFile(liveTargets[i]!);
+    await writeMiniSlideOntoBase(baseZip, miniZip, basePath, miniOrder[i]!.slidePath);
+    lastPath = basePath;
+  }
+
+  for (let i = overlap; i < n; i++) {
+    const newPath = await duplicateSlideInZip(baseZip, lastPath, { insertAfterPath: lastPath });
+    await writeMiniSlideOntoBase(baseZip, miniZip, newPath, miniOrder[i]!.slidePath);
+    lastPath = newPath;
+  }
+
+  if (n < liveTargets.length) {
+    const removePaths = liveTargets
+      .slice(n)
+      .map((fileNum) => slidePathForFile(fileNum))
+      .filter((p) => Boolean(baseZip.file(p)));
+    if (removePaths.length) {
+      await removeSlidesFromPptxZip(baseZip, removePaths);
     }
-
-    baseZip.file(basePath, slideXml);
   }
 
   return baseZip.generateAsync({ type: 'uint8array' });

@@ -179,7 +179,7 @@ export default function BulletinSectionPptEditor({
         mergedUrl={previewUrl}
         onSaveFile={persistSectionFile}
         onResetToTemplate={hasOverride ? handleResetToTemplate : undefined}
-        lockSlideStructure
+        lockSlideStructure={sectionId === 'scripture'}
       />
     </div>
   );
