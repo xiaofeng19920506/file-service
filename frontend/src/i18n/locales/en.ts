@@ -221,8 +221,9 @@ const en: MessageTree = {
     editSlidesReplaceUpload: 'Upload PPT to replace section',
     editSlidesReplaceUploadHint:
       'Pick a local .pptx to replace this section (preview and export update immediately)',
+    editSlidesReplaceHint: 'Upload a PPTX to replace this section. For in-browser edits, use “Edit slides” on the left.',
     editSlidesReplacedHint:
-      'This section uses a custom PPT. Keep editing in the browser, or restore the template.',
+      'This section uses a custom PPT. Edit via “Edit slides” on the left, or restore the template.',
     skipTestimony: 'Skip testimony week slide (16)',
     skipDepartment: 'Skip department reports slide (36)',
     meetingVariant: 'Weekly meeting layout',

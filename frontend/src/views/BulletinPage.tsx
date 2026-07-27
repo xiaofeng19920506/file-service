@@ -847,7 +847,6 @@ export default function BulletinPage() {
                   <BulletinSectionReplaceBanner
                     sectionId={activeSectionId}
                     draft={draft}
-                    onOpenEditor={() => openEditSlides(activeSectionId)}
                     onSaved={handleSectionPptxSaved}
                   />
                 ) : null}

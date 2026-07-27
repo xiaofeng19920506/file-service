@@ -11,14 +11,12 @@ import { useI18n } from '../../i18n';
 type Props = {
   sectionId: string;
   draft: WeeklyBulletin;
-  onOpenEditor: () => void;
   onSaved: (bulletin: WeeklyBulletin) => void;
 };
 
 export default function BulletinSectionReplaceBanner({
   sectionId,
   draft,
-  onOpenEditor,
   onSaved,
 }: Props) {
   const { t } = useI18n();
@@ -37,9 +35,7 @@ export default function BulletinSectionReplaceBanner({
       onSaved(updated);
     } catch (err) {
       const code = err instanceof Error ? err.message : 'upload_failed';
-      setError(
-        friendlyError(code === 'invalid_pptx' ? 'invalid_pptx' : code, t),
-      );
+      setError(friendlyError(code === 'invalid_pptx' ? 'invalid_pptx' : code, t));
     } finally {
       setBusy(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -63,14 +59,6 @@ export default function BulletinSectionReplaceBanner({
   return (
     <div className="bulletin-edit-slides-banner">
       <div className="bulletin-edit-slides-banner-actions">
-        <button
-          type="button"
-          className="btn-primary bulletin-edit-slides-banner-btn"
-          onClick={onOpenEditor}
-          disabled={busy}
-        >
-          {t('bulletin.editSlidesOpenEditor')}
-        </button>
         <input
           ref={fileInputRef}
           type="file"
@@ -101,7 +89,7 @@ export default function BulletinSectionReplaceBanner({
       <p className="bulletin-edit-slides-banner-hint">
         {hasOverride
           ? t('bulletin.editSlidesReplacedHint')
-          : t('bulletin.editSlidesOpenHint')}
+          : t('bulletin.editSlidesReplaceHint')}
       </p>
       {error ? <p className="error-msg">{error}</p> : null}
     </div>
