@@ -178,6 +178,7 @@ const en: MessageTree = {
     publishToLibrary: 'Publish to library',
     publishing: 'Publishing…',
     published: 'Published to library',
+    publishedBadge: 'Published',
     publishedHint: 'Linked to a library entry — worship live will load the published file first.',
     openInLibrary: 'Preview library PPT',
     verseOfWeek: 'Verse of the week (slide 35)',
