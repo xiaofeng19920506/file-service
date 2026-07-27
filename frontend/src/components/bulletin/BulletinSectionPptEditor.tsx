@@ -10,6 +10,7 @@ import {
   replaceBulletinSectionPptx,
 } from '../../lib/bulletin-section-pptx';
 import { BULLETIN_SECTION_TEMPLATE_SLIDES } from '../../lib/bulletin-section-visibility';
+import { friendlyError } from '../../lib/error-messages';
 import { extractSlidesByFileNumbersAsPptx } from '../../lib/pptx-extract-slide';
 import { pptxSlidesAreWellFormed } from '../../lib/pptx-integrity';
 
@@ -83,7 +84,7 @@ export default function BulletinSectionPptEditor({
         setPreviewUrl(objectUrl);
       } catch (e) {
         if (!cancelled) {
-          setLoadError(e instanceof Error ? e.message : 'load_failed');
+          setLoadError(friendlyError(e instanceof Error ? e.message : 'load_failed', t));
           setPreviewUrl(null);
         }
       } finally {
@@ -95,7 +96,7 @@ export default function BulletinSectionPptEditor({
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [loadSectionFile, sectionId, reloadToken]);
+  }, [loadSectionFile, sectionId, reloadToken, t]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -123,7 +124,7 @@ export default function BulletinSectionPptEditor({
       forceTemplateRef.current = true;
       setReloadToken((n) => n + 1);
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : 'reset_failed');
+      setLoadError(friendlyError(e instanceof Error ? e.message : 'reset_failed', t));
     } finally {
       setResetting(false);
     }
@@ -138,7 +139,8 @@ export default function BulletinSectionPptEditor({
       onSaved(updated);
       setReloadToken((n) => n + 1);
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : 'upload_failed');
+      const code = e instanceof Error ? e.message : 'upload_failed';
+      setLoadError(friendlyError(code === 'invalid_pptx' ? 'invalid_pptx' : code, t));
     } finally {
       setReplacing(false);
       if (replaceInputRef.current) replaceInputRef.current.value = '';
