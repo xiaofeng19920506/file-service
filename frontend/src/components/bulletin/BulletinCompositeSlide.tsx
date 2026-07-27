@@ -13,6 +13,7 @@ import {
 import {
   shapeParagraphsToStyle,
   normalizeShapeTextOverride,
+  paragraphsPreservingRunStyles,
   type ShapeTextOverrideValue,
   type ShapeTextStyle,
 } from '../../lib/pptx-shape-text';
@@ -315,9 +316,9 @@ export default function BulletinCompositeSlide({
   const [layersLoading, setLayersLoading] = useState(false);
   const [editingShape, setEditingShape] = useState<number | null>(null);
   const [draftText, setDraftText] = useState('');
-  /** 未改字时用透明 textarea + 底层多色预览，避免首 run 色把整框刷成单色（如全变红） */
-  const [editTextDirty, setEditTextDirty] = useState(false);
   const editOriginalTextRef = useRef('');
+  /** 进入编辑时的多色段落快照，输入时按比例重铺颜色 */
+  const editBaseParagraphsRef = useRef<SlideTextParagraph[]>([]);
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
@@ -439,28 +440,25 @@ export default function BulletinCompositeSlide({
     // 而已有 overlay 也可能与底层 XML 不同；拿当前 layers 比会把未改文字误判成修改。
     if (draftText === editOriginalTextRef.current) {
       setEditingShape(null);
-      setEditTextDirty(false);
       return;
     }
     // 只提交纯文本；样式由 Ribbon / 原 XML run 保留（applyShapeTextToSlideXml 保 run）
     onShapeTextChange(editingShape, { text: draftText });
     setEditingShape(null);
-    setEditTextDirty(false);
   };
 
   const beginEdit = (shapeIndex: number, paragraphs: SlideTextParagraph[], elementId?: number) => {
     if (!editable || !onShapeTextChange) return;
-    const seed = shapeParagraphsToStyle(paragraphs);
+    const override = shapeTextOverrides?.[shapeIndex];
+    const baseParagraphs =
+      override !== undefined ? paragraphsFromOverride(override, paragraphs) : paragraphs;
+    const seed = shapeParagraphsToStyle(baseParagraphs);
     onSelectShape?.(shapeIndex, seed);
     if (elementId != null) onSelectElement?.(elementId);
-    const override = shapeTextOverrides?.[shapeIndex];
-    const initial =
-      override !== undefined
-        ? normalizeShapeTextOverride(override).text
-        : seed.text;
+    const initial = seed.text;
     editOriginalTextRef.current = initial;
+    editBaseParagraphsRef.current = baseParagraphs;
     setDraftText(initial);
-    setEditTextDirty(false);
     setEditingShape(shapeIndex);
     onTextCharRangeChange?.(
       elementId != null ? { elementId, start: 0, end: 0 } : null,
@@ -737,22 +735,22 @@ export default function BulletinCompositeSlide({
             >
               {isEditing ? (
                 <>
-                  {!editTextDirty && (
-                    <div className="bulletin-composite-shape-editor-preview" aria-hidden="true">
-                      {displayParagraphs.map((para, pi) =>
-                        renderParagraph(para, role, useAutoFit, fitScale, pi),
-                      )}
-                    </div>
-                  )}
+                  <div className="bulletin-composite-shape-editor-preview" aria-hidden="true">
+                    {paragraphsPreservingRunStyles(
+                      editBaseParagraphsRef.current.length
+                        ? editBaseParagraphsRef.current
+                        : displayParagraphs,
+                      draftText,
+                    ).map((para, pi) =>
+                      renderParagraph(para, role, useAutoFit, fitScale, pi),
+                    )}
+                  </div>
                   <textarea
                     ref={editorRef}
-                    className={`bulletin-composite-shape-editor${
-                      editTextDirty ? '' : ' is-preserving-runs'
-                    }`}
+                    className="bulletin-composite-shape-editor is-preserving-runs"
                     value={draftText}
                     onChange={(e) => {
                       setDraftText(e.target.value);
-                      setEditTextDirty(true);
                     }}
                     onSelect={(e) => {
                       const el = e.currentTarget;
@@ -773,7 +771,6 @@ export default function BulletinCompositeSlide({
                       if (e.key === 'Escape') {
                         e.preventDefault();
                         setEditingShape(null);
-                        setEditTextDirty(false);
                         onTextCharRangeChange?.(null);
                       }
                       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
@@ -782,7 +779,7 @@ export default function BulletinCompositeSlide({
                       }
                     }}
                     style={{
-                      color: sampleRun?.color,
+                      /* 文字透明，仅用字号/行高对齐光标；颜色由底层多色预览负责 */
                       fontWeight: (overrideStyle?.bold ?? sampleRun?.bold) ? 700 : undefined,
                       fontStyle: (overrideStyle?.italic ?? sampleRun?.italic) ? 'italic' : undefined,
                       fontFamily: (overrideStyle?.fontFamily ?? sampleRun?.fontFamily)

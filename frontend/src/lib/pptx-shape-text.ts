@@ -344,6 +344,91 @@ export function shapeParagraphsToPlainText(
     .join('\n');
 }
 
+type DisplayRun = {
+  text: string;
+  color: string;
+  bold?: boolean;
+  italic?: boolean;
+  fontSizePt?: number;
+  fontFamily?: string;
+};
+
+type DisplayParagraph = {
+  runs: DisplayRun[];
+  align: 'left' | 'center' | 'right';
+  lineSpacing: number;
+  spacer?: boolean;
+  spacerHeightPt?: number;
+};
+
+/** 把新纯文本按旧 run 长度比例铺回，保留每段/每 run 的颜色字号（编辑态预览用） */
+function remapDisplayRuns(oldRuns: DisplayRun[], newText: string): DisplayRun[] {
+  const fallback: DisplayRun = oldRuns[0] ?? { text: '', color: '#000000' };
+  if (!newText) return [{ ...fallback, text: '' }];
+  if (oldRuns.length <= 1) return [{ ...fallback, text: newText }];
+  const oldTotal = oldRuns.reduce((sum, r) => sum + r.text.length, 0);
+  if (oldTotal <= 0) return [{ ...fallback, text: newText }];
+  const oldJoined = oldRuns.map((r) => r.text).join('');
+  if (oldJoined === newText) return oldRuns;
+
+  let allocated = 0;
+  const out: DisplayRun[] = [];
+  for (let i = 0; i < oldRuns.length; i += 1) {
+    const isLast = i === oldRuns.length - 1;
+    const len = isLast
+      ? newText.length - allocated
+      : Math.max(0, Math.round((newText.length * oldRuns[i]!.text.length) / oldTotal));
+    const text = newText.slice(allocated, allocated + len);
+    allocated += len;
+    if (text.length === 0 && !isLast) continue;
+    out.push({ ...oldRuns[i]!, text });
+  }
+  if (!out.length) out.push({ ...fallback, text: newText });
+  return out;
+}
+
+/**
+ * 编辑态显示：draft 文字按原段落/run 比例重铺，颜色不随输入被压成首 run 单色。
+ * 规则与 rewriteShapeTextPreservingRuns 对齐（跳过 spacer）。
+ */
+export function paragraphsPreservingRunStyles(
+  template: DisplayParagraph[],
+  newText: string,
+): DisplayParagraph[] {
+  const newLines = newText.replace(/\r\n/g, '\n').split('\n');
+  let contentIdx = 0;
+  const next: DisplayParagraph[] = [];
+  for (const old of template) {
+    const oldLine = old.runs.map((r) => r.text).join('');
+    if (old.spacer || oldLine.length === 0) {
+      next.push(old);
+      continue;
+    }
+    const line = newLines[contentIdx] ?? '';
+    contentIdx += 1;
+    if (oldLine === line) {
+      next.push(old);
+      continue;
+    }
+    next.push({ ...old, runs: remapDisplayRuns(old.runs, line) });
+  }
+  const fallbackRun =
+    [...template].reverse().find((p) => !p.spacer && p.runs.some((r) => r.text))?.runs.at(-1) ??
+    template.find((p) => p.runs.length)?.runs[0] ??
+    ({ text: '', color: '#000000' } satisfies DisplayRun);
+  const align = template.find((p) => !p.spacer)?.align ?? 'left';
+  const lineSpacing = template.find((p) => !p.spacer)?.lineSpacing ?? 1;
+  while (contentIdx < newLines.length) {
+    next.push({
+      runs: [{ ...fallbackRun, text: newLines[contentIdx]! }],
+      align,
+      lineSpacing,
+    });
+    contentIdx += 1;
+  }
+  return next;
+}
+
 export function shapeParagraphsToStyle(
   paragraphs: {
     spacer?: boolean;

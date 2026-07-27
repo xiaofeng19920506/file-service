@@ -43,6 +43,34 @@ describe('rewriteShapeTextPreservingRuns', () => {
   });
 });
 
+describe('paragraphsPreservingRunStyles', () => {
+  it('keeps red and blue colors when typing into a multi-color box', async () => {
+    const { paragraphsPreservingRunStyles } = await import('../pptx-shape-text');
+    const template = [
+      {
+        runs: [{ text: '主耶和華', color: '#800000', bold: true, fontSizePt: 46 }],
+        align: 'center' as const,
+        lineSpacing: 1,
+      },
+      {
+        runs: [
+          { text: '保持安靜', color: '#3333CC', bold: true, fontSizePt: 41 },
+          { text: '並', color: '#3333CC', bold: true, fontSizePt: 33 },
+          { text: '認罪禱告', color: '#3333CC', bold: true, fontSizePt: 41 },
+        ],
+        align: 'center' as const,
+        lineSpacing: 1,
+      },
+    ];
+    const out = paragraphsPreservingRunStyles(template, '主耶和華神\n保持安靜並認罪禱告啊');
+    expect(out[0]!.runs.some((r) => r.color === '#800000')).toBe(true);
+    expect(out[1]!.runs.every((r) => r.color === '#3333CC')).toBe(true);
+    expect(out.map((p) => p.runs.map((r) => r.text).join('')).join('\n')).toBe(
+      '主耶和華神\n保持安靜並認罪禱告啊',
+    );
+  });
+});
+
 describe('applyRunPatchToCharRange', () => {
   it('recolors only the highlighted substring', () => {
     const slide =
