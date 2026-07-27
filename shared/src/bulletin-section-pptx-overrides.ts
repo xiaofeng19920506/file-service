@@ -37,22 +37,25 @@ export function setSectionPptxOverride(
   return next;
 }
 
-/** 已整段替换的分区：splice 后不要再回写该区表单字段 */
+/** 已整段替换的分区：splice 后不要再回写该区「自由文字覆盖」；
+ * 封面/会前/生日/金句仍由表单驱动，必须回写，否则中间改了右侧预览不变。 */
 export function formFieldReapplyOptionsForSectionOverrides(
   overrides: SectionPptxOverrides | null | undefined,
 ): BulletinFormFieldReapplyOptions {
   const ids = new Set(Object.keys(normalizeSectionPptxOverrides(overrides)));
+  const formDriven = new Set(['cover', 'pre_service', 'birthday', 'verse_of_week', 'offering']);
   const skipSlideNumbers = new Set<number>();
   for (const sectionId of ids) {
+    if (formDriven.has(sectionId)) continue;
     for (const slide of BULLETIN_SECTION_TEMPLATE_SLIDES[sectionId] ?? []) {
       skipSlideNumbers.add(slide);
     }
   }
   return {
-    skipCover: ids.has('cover'),
-    skipPreService: ids.has('pre_service'),
-    skipBirthday: ids.has('birthday'),
-    skipVerseOfWeek: ids.has('verse_of_week'),
+    skipCover: false,
+    skipPreService: false,
+    skipBirthday: false,
+    skipVerseOfWeek: false,
     skipSlideNumbers,
   };
 }

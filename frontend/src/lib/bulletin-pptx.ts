@@ -29,17 +29,19 @@ function formFieldReapplySkipFromSectionBlobs(sectionBlobs: Record<string, Blob>
   skipSlides: Set<number>;
 } {
   const ids = new Set(Object.keys(sectionBlobs ?? {}));
+  const formDriven = new Set(['cover', 'pre_service', 'birthday', 'verse_of_week', 'offering']);
   const skipSlides = new Set<number>();
   for (const sectionId of ids) {
+    if (formDriven.has(sectionId)) continue;
     for (const slide of BULLETIN_SECTION_TEMPLATE_SLIDES[sectionId] ?? []) {
       skipSlides.add(slide);
     }
   }
   return {
-    skipCover: ids.has('cover'),
-    skipPreService: ids.has('pre_service'),
-    skipBirthday: ids.has('birthday'),
-    skipVerse: ids.has('verse_of_week'),
+    skipCover: false,
+    skipPreService: false,
+    skipBirthday: false,
+    skipVerse: false,
     skipSlides,
   };
 }

@@ -379,7 +379,28 @@ export default function BulletinPage() {
 
   const patchField = <K extends keyof WeeklyBulletin>(key: K, value: WeeklyBulletin[K]) => {
     // 左右实时一致：草稿一改，右侧预览同步用同一份数据
-    setDraft((prev) => (prev ? { ...prev, [key]: value } : prev));
+    setDraft((prev) => {
+      if (!prev) return prev;
+      let next: WeeklyBulletin = { ...prev, [key]: value };
+      // 表单驱动分区：改字段时清掉该区自定义 PPT，避免覆盖快照挡住预览更新
+      const sectionForField: Partial<Record<keyof WeeklyBulletin, string>> = {
+        birthdayMonth: 'birthday',
+        birthdayNames: 'birthday',
+        verseOfWeek: 'verse_of_week',
+        serviceDate: 'cover',
+        serviceTime: 'cover',
+        showPreServiceChairName: 'pre_service',
+        preServiceChairNames: 'pre_service',
+        lastWeekOfferingDate: 'offering',
+      };
+      const sectionId = sectionForField[key];
+      if (sectionId && next.sectionPptxOverrides?.[sectionId]) {
+        const overrides = { ...next.sectionPptxOverrides };
+        delete overrides[sectionId];
+        next = { ...next, sectionPptxOverrides: overrides };
+      }
+      return next;
+    });
   };
 
   const handleSectionVisibilityChange = (sectionId: string, visible: boolean) => {
@@ -423,21 +444,30 @@ export default function BulletinPage() {
     },
   });
 
-  // 生日月份/名单：预览即时更新，并防抖自动保存
+  // 生日月份/名单：预览即时更新，并防抖自动保存（同时持久化已清除的分区覆盖）
   useEffect(() => {
     if (!canManage || !draft) return;
     const timer = window.setTimeout(() => {
       const id = draft.id;
-      // 标记保存中并在成功后只回写 updatedAt：
-      // 否则这次自动保存触发的 SSE 会用远端整对象覆盖草稿，丢掉其它未保存字段。
+      const birthdayMonth = draft.birthdayMonth;
+      const birthdayNames = draft.birthdayNames;
+      const sectionPptxOverrides = draft.sectionPptxOverrides ?? {};
       savingRef.current = true;
       void updateBulletin(id, {
-        birthdayMonth: draft.birthdayMonth,
-        birthdayNames: draft.birthdayNames,
+        birthdayMonth,
+        birthdayNames,
+        sectionPptxOverrides,
       })
         .then((updated) => {
           setDraft((prev) =>
-            prev && prev.id === updated.id ? { ...prev, updatedAt: updated.updatedAt } : prev,
+            prev && prev.id === updated.id
+              ? {
+                  ...prev,
+                  updatedAt: updated.updatedAt,
+                  sectionPptxOverrides:
+                    updated.sectionPptxOverrides ?? prev.sectionPptxOverrides,
+                }
+              : prev,
           );
         })
         .catch(() => {
@@ -446,9 +476,11 @@ export default function BulletinPage() {
         .finally(() => {
           savingRef.current = false;
         });
-    }, 800);
+    }, 400);
     return () => window.clearTimeout(timer);
   }, [canManage, draft?.id, draft?.birthdayMonth, draft?.birthdayNames]);
+  // sectionPptxOverrides 不进依赖：改生日时已在 patchField 清掉 birthday 覆盖，随本次 debounce 一并保存即可
+
 
   const handleServiceDateChange = (isoDate: string) => {
     const existing = bulletins.find((b) => b.serviceDate === isoDate);
