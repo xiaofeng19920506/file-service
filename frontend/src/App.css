@@ -8032,13 +8032,15 @@ body.bulletin-slideshow-window {
 
 .bulletin-composite-shape {
   position: absolute;
-  overflow: hidden;
+  /* 文本框勿 hidden/contain 裁切：紧行距 CJK 与 LO 度量差会导致字形被横切 */
+  overflow: visible;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  line-height: 1.1;
+  line-height: 1.15;
   pointer-events: none;
   box-sizing: border-box;
+  contain: none;
   /* 不要在 shape 上设 container-type：字号用 cqw 相对整页宽度（见 SLIDE_WIDTH_PT），
      若相对文本框宽度，窄框（封面日期行）字号会系统性偏小。 */
 }
@@ -8156,7 +8158,7 @@ body.bulletin-slideshow-window {
 
 .bulletin-composite-text,
 .bulletin-composite-shape:not(.bulletin-composite-shape--date):not(.bulletin-composite-shape--prayer):not(.bulletin-composite-shape--header):not(.bulletin-composite-shape--footer) {
-  contain: layout paint;
+  contain: none;
 }
 
 .bulletin-composite-text p,

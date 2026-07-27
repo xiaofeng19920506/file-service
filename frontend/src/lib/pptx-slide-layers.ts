@@ -31,6 +31,8 @@ export type SlideTextParagraph = {
   /** 空段落，用于红/蓝区之间的行距 */
   spacer?: boolean;
   spacerHeightPt?: number;
+  spaceBeforePt?: number;
+  spaceAfterPt?: number;
 };
 
 export type SlideVisualLayer =
@@ -315,7 +317,14 @@ function extractTextContent(
     else if (algn === 'r') align = 'right';
 
     const lnSpc = pXml.match(/<a:lnSpc>[\s\S]*?<a:spcPct val="(\d+)"/)?.[1];
-    const lineSpacing = lnSpc ? Number(lnSpc) / 100_000 : 1;
+    const lineSpacingRaw = lnSpc ? Number(lnSpc) / 100_000 : 1;
+    // PPT 常写 0.7 等紧行距；CSS 按此裁切 CJK 字形。下限避免编辑器里残缺，仍保留偏紧观感。
+    const lineSpacing = Math.max(0.9, lineSpacingRaw || 1);
+
+    const spcBefPts = pXml.match(/<a:spcBef>[\s\S]*?<a:spcPts val="(\d+)"/)?.[1];
+    const spcAftPts = pXml.match(/<a:spcAft>[\s\S]*?<a:spcPts val="(\d+)"/)?.[1];
+    const spaceBeforePt = spcBefPts ? Number(spcBefPts) / 100 : undefined;
+    const spaceAfterPt = spcAftPts ? Number(spcAftPts) / 100 : undefined;
 
     const runs: SlideTextRun[] = [];
     for (const run of pXml.matchAll(/<a:r>([\s\S]*?)<\/a:r>/g)) {
@@ -332,7 +341,13 @@ function extractTextContent(
     }
 
     if (runs.length) {
-      paragraphs.push({ runs, align, lineSpacing });
+      paragraphs.push({
+        runs,
+        align,
+        lineSpacing,
+        spaceBeforePt,
+        spaceAfterPt,
+      });
     } else if (/<a:r>[\s\S]*?<a:t[^>]*>\s*<\/a:t>/.test(pXml)) {
       const endSz = pXml.match(/<a:endParaRPr[^>]*sz="(\d+)"/)?.[1];
       const fontSizePt = endSz ? Number(endSz) / 100 : 14;

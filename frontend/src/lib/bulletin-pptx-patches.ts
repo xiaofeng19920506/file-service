@@ -174,6 +174,24 @@ export function buildBirthdaySlideReplacements(
   return reps;
 }
 
+/**
+ * 奉献页 P19 日期行被拆成多 run：`上週奉獻` `:` `0` `6/07` `/20` `2` `6`
+ * 必须把完整日期写入碎片起始 run（7），并清空后续碎片，否则会拼成双日期。
+ */
+export function buildOfferingDateReplacements(
+  lastWeekOfferingDate: string,
+): { textIndex: number; text: string }[] {
+  const date = lastWeekOfferingDate.trim();
+  if (!date) return [];
+  return [
+    { textIndex: 7, text: date },
+    { textIndex: 8, text: '' },
+    { textIndex: 9, text: '' },
+    { textIndex: 10, text: '' },
+    { textIndex: 11, text: '' },
+  ];
+}
+
 function formatScriptureBookRun(book: string): string {
   const trimmed = book.trim();
   if (!trimmed) return '';
@@ -220,11 +238,9 @@ export function patchesForStep(stepId: string, bulletin: WeeklyBulletin): SlideT
     }
     case 'offering': {
       const patches: SlideTextPatch[] = [];
-      if (bulletin.lastWeekOfferingDate.trim()) {
-        patches.push({
-          slideNumber: 19,
-          replacements: [{ textIndex: 6, text: bulletin.lastWeekOfferingDate.trim() }],
-        });
+      const dateReps = buildOfferingDateReplacements(bulletin.lastWeekOfferingDate);
+      if (dateReps.length) {
+        patches.push({ slideNumber: 19, replacements: dateReps });
       }
       return patches;
     }
@@ -299,8 +315,10 @@ export type BulletinSlideTextOverride = { slide: number; textIndex: number; text
  */
 export function bulletinDynamicTextOverrides(bulletin: WeeklyBulletin): BulletinSlideTextOverride[] {
   const out: BulletinSlideTextOverride[] = [];
-  const offering = bulletin.lastWeekOfferingDate?.trim() ?? '';
-  if (offering) out.push({ slide: 19, textIndex: 6, text: offering });
+  const offeringReps = buildOfferingDateReplacements(bulletin.lastWeekOfferingDate ?? '');
+  for (const rep of offeringReps) {
+    out.push({ slide: 19, textIndex: rep.textIndex, text: rep.text });
+  }
   // 公告：announcements[0]→P25，[1]→P26（P27 留给浸礼）
   const announcementSlides = [25, 26];
   (bulletin.announcements ?? []).forEach((item, index) => {

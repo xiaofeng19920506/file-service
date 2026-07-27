@@ -187,7 +187,7 @@
     },
     {
       "slide": 19,
-      "fields": [{ "key": "lastWeekOfferingDate", "textIndex": 6, "example": "6/07" }]
+      "fields": [{ "key": "lastWeekOfferingDate", "textIndex": 7, "example": "06/07/2026" }]
     },
     {
       "slide": 24,

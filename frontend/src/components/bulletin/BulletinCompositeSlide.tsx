@@ -272,6 +272,12 @@ function renderParagraph(
       style={{
         textAlign: para.align,
         lineHeight: para.lineSpacing || 1,
+        marginTop: para.spaceBeforePt
+          ? runFontSizeCqw(para.spaceBeforePt, false, 1)
+          : undefined,
+        marginBottom: para.spaceAfterPt
+          ? runFontSizeCqw(para.spaceAfterPt, false, 1)
+          : undefined,
       }}
     >
       {renderRuns(para.runs, useAutoFit, fitScale, `p-${pi}`)}
@@ -391,6 +397,12 @@ function renderEditableParagraph(
       style={{
         textAlign: para.align,
         lineHeight: para.lineSpacing || 1,
+        marginTop: para.spaceBeforePt
+          ? runFontSizeCqw(para.spaceBeforePt, false, 1)
+          : undefined,
+        marginBottom: para.spaceAfterPt
+          ? runFontSizeCqw(para.spaceAfterPt, false, 1)
+          : undefined,
       }}
     >
       {renderRuns(para.runs, useAutoFit, fitScale, `p-${pi}`)}
