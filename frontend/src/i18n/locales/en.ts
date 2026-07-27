@@ -321,6 +321,7 @@ const en: MessageTree = {
       department_reports: 'Department reports',
       doxology: 'Doxology',
       benediction: 'Blessing',
+      doxology_benediction: 'Doxology & Benediction',
     },
     previewPrev: 'Previous',
     previewNext: 'Next',

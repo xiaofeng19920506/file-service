@@ -9,6 +9,11 @@ export type ProgressStepperStep = {
   readonly?: boolean;
   /** 是否显示该分区（纳入 PPT）；缺省不渲染勾选 */
   visible?: boolean;
+  /** 树形缩进深度 */
+  depth?: number;
+  /** 仅分组、无独立模板页：不显示可见性勾选 / 改幻灯片 */
+  groupOnly?: boolean;
+  hasChildren?: boolean;
 };
 
 type ProgressStepperProps = {
@@ -55,7 +60,9 @@ export default function ProgressStepper({
   useEffect(() => {
     const list = listRef.current;
     if (!list || focusIndex < 0) return;
-    const item = list.children[focusIndex] as HTMLElement | undefined;
+    const item = list.querySelector(
+      `[data-step-index="${focusIndex}"]`,
+    ) as HTMLElement | null;
     if (item) scrollItemIntoScroller(item);
   }, [focusIndex]);
 
@@ -66,21 +73,31 @@ export default function ProgressStepper({
     >
       <ol ref={listRef} className="progress-stepper-list">
         {steps.map((step, index) => {
+          const depth = step.depth ?? 0;
           const isFocused = index === focusIndex;
           const isEditing =
             index === currentIndex && previewIndex != null && previewIndex !== currentIndex;
           const isComplete = index < focusIndex;
           const isDisabled = step.enabled === false;
           const isReadonly = Boolean(step.readonly);
+          const isGroup = Boolean(step.groupOnly);
           const canSelect = !isDisabled && Boolean(onStepSelect);
-          const showVisibility = typeof step.visible === 'boolean';
+          const showVisibility = !isGroup && typeof step.visible === 'boolean';
           const isHidden = showVisibility && step.visible === false;
-          const showEditSlides = Boolean(onEditSlides) && canEditSlides;
+          const showEditSlides =
+            Boolean(onEditSlides) && canEditSlides && !isGroup;
+          const topLevelNumber =
+            depth === 0
+              ? steps.slice(0, index + 1).filter((s) => (s.depth ?? 0) === 0).length
+              : null;
 
           return (
             <li
               key={step.id}
-              className={`progress-stepper-item${isFocused ? ' is-current' : ''}${isEditing ? ' is-editing' : ''}${isComplete ? ' is-complete' : ''}${isDisabled ? ' is-disabled' : ''}${isReadonly ? ' is-readonly' : ''}${isHidden ? ' is-section-hidden' : ''}`}
+              data-step-index={index}
+              data-depth={depth}
+              className={`progress-stepper-item${isFocused ? ' is-current' : ''}${isEditing ? ' is-editing' : ''}${isComplete ? ' is-complete' : ''}${isDisabled ? ' is-disabled' : ''}${isReadonly ? ' is-readonly' : ''}${isHidden ? ' is-section-hidden' : ''}${isGroup ? ' is-group' : ''}${step.hasChildren ? ' has-children' : ''}${depth > 0 ? ' is-nested' : ''}`}
+              style={depth > 0 ? { paddingLeft: `${depth * 0.85}rem` } : undefined}
             >
               {showVisibility && (
                 <label
@@ -97,6 +114,7 @@ export default function ProgressStepper({
                   <span className="visually-hidden">{t('bulletin.sectionVisible')}</span>
                 </label>
               )}
+              {isGroup ? <span className="progress-stepper-visibility-spacer" aria-hidden /> : null}
               {canSelect ? (
                 <button
                   type="button"
@@ -104,12 +122,12 @@ export default function ProgressStepper({
                   onClick={() => onStepSelect?.(index)}
                   aria-current={isFocused ? 'step' : undefined}
                 >
-                  <span className="progress-stepper-index">{index + 1}</span>
+                  <span className="progress-stepper-index">{topLevelNumber ?? '·'}</span>
                   <span className="progress-stepper-label">{step.label}</span>
                 </button>
               ) : (
                 <span className="progress-stepper-btn progress-stepper-btn--static">
-                  <span className="progress-stepper-index">{index + 1}</span>
+                  <span className="progress-stepper-index">{topLevelNumber ?? '·'}</span>
                   <span className="progress-stepper-label">{step.label}</span>
                 </span>
               )}

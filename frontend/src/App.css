@@ -7621,6 +7621,25 @@ body.bulletin-slideshow-window {
   display: flex;
   align-items: center;
   gap: 0.3rem;
+  box-sizing: border-box;
+}
+
+.progress-stepper--vertical .progress-stepper-item.is-nested {
+  border-left: 2px solid color-mix(in srgb, var(--border-light) 85%, var(--blue) 15%);
+  margin-left: 0.35rem;
+}
+
+.progress-stepper--vertical .progress-stepper-item.has-children > .progress-stepper-btn {
+  font-weight: 650;
+}
+
+.progress-stepper--vertical .progress-stepper-item.is-group > .progress-stepper-btn {
+  font-weight: 650;
+}
+
+.progress-stepper-visibility-spacer {
+  flex: 0 0 0.95rem;
+  width: 0.95rem;
 }
 
 .progress-stepper--vertical .progress-stepper-btn {

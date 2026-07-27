@@ -306,6 +306,7 @@ export default {
       department_reports: '部门报告',
       doxology: '三一颂',
       benediction: '祝福祷告',
+      doxology_benediction: '三一颂跟祝福祷告',
     },
     previewPrev: '上一张',
     previewNext: '下一张',

@@ -40,6 +40,7 @@ import {
   isReadonlyNavSection,
   navSectionById,
   navSectionIndexById,
+  resolveNavTargetSectionId,
 } from '../lib/bulletin-sections';
 import { BULLETIN_WIZARD_STEPS } from '../lib/bulletin-template-steps';
 import { buildBulletinPptxFile, publishBulletinPptx } from '../lib/bulletin-publish';
@@ -208,8 +209,15 @@ export default function BulletinPage() {
         id: section.id,
         label: t(section.labelKey),
         enabled: true,
-        readonly: section.editableStepId == null,
-        visible: draft ? isBulletinSectionVisible(section.id, draft) : true,
+        readonly: section.editableStepId == null || Boolean(section.groupOnly),
+        visible: section.groupOnly
+          ? undefined
+          : draft
+            ? isBulletinSectionVisible(section.id, draft)
+            : true,
+        depth: section.depth,
+        groupOnly: section.groupOnly,
+        hasChildren: section.hasChildren,
       })),
     [t, draft],
   );
@@ -232,16 +240,17 @@ export default function BulletinPage() {
   }, []);
 
   const selectNavSection = useCallback((sectionId: string) => {
-    const section = navSectionById(sectionId);
+    const targetId = resolveNavTargetSectionId(sectionId);
+    const section = navSectionById(targetId);
     if (!section) return;
 
-    if (sectionId === activeSectionId) {
+    if (targetId === activeSectionId) {
       setPreviewScrollBump((b) => b + 1);
       return;
     }
 
-    setActiveSectionId(sectionId);
-    setPreviewSectionId(sectionId);
+    setActiveSectionId(targetId);
+    setPreviewSectionId(targetId);
 
     if (section.editableStepId) {
       const stepIdx = BULLETIN_WIZARD_STEPS.findIndex((s) => s.id === section.editableStepId);
