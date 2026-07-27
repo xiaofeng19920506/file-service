@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { asc, desc, eq, and } from 'drizzle-orm';
+import { asc, desc, eq, and, inArray } from 'drizzle-orm';
 import type { Queue } from 'bullmq';
 import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
@@ -29,6 +29,7 @@ import {
   getScripturePreference,
   purgeExpiredScripturePreferences,
   upsertScripturePreference,
+  users,
   weeklyBulletins,
   signPlaylistEditToken,
   formatUserDisplayName,
@@ -404,6 +405,63 @@ async function ensureBulletinServicePlaylist(
 function buildWorshipInviteUrl(webAppUrl: string, token: string): string {
   return `${webAppUrl}/#/worship-songs?invite=${encodeURIComponent(token)}`;
 }
+
+function isValidEmailAddress(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+async function sendWorshipPlaylistInviteEmail(opts: {
+  mailConfig: NonNullable<ReturnType<typeof resolveMailConfig>>;
+  to: string;
+  senderName: string;
+  serviceDate: string;
+  playlistTitle: string;
+  inviteUrl: string;
+  optionalMessage?: string;
+  ttlDays: number;
+}): Promise<void> {
+  const {
+    mailConfig,
+    to,
+    senderName,
+    serviceDate,
+    playlistTitle,
+    inviteUrl,
+    optionalMessage,
+    ttlDays,
+  } = opts;
+  const subject = `${senderName} 邀请你添加 ${serviceDate} 敬拜歌曲`;
+  const textLines = [
+    `${senderName} 邀请你为 ${serviceDate} 主日崇拜填写敬拜歌单「${playlistTitle}」。`,
+    optionalMessage ? `\n附言：${optionalMessage}\n` : '',
+    '打开链接后，你可以：',
+    '• 搜索并逐首添加歌曲',
+    '• 粘贴 YouTube 播放列表或单曲链接直接导入',
+    inviteUrl,
+    '',
+    `链接 ${ttlDays} 天内有效。`,
+  ].filter((line) => line !== '');
+
+  await sendMail({
+    config: mailConfig,
+    to,
+    subject,
+    text: textLines.join('\n'),
+    html: [
+      `<p><strong>${senderName}</strong> 邀请你为 <strong>${serviceDate}</strong> 主日崇拜填写敬拜歌单「${playlistTitle}」。</p>`,
+      optionalMessage
+        ? `<p><strong>附言：</strong>${optionalMessage.replace(/</g, '&lt;')}</p>`
+        : '',
+      '<p>打开链接后，你可以：</p>',
+      '<ul><li>搜索并逐首添加歌曲</li><li>粘贴 YouTube 播放列表或单曲链接直接导入</li></ul>',
+      `<p><a href="${inviteUrl.replace(/"/g, '&quot;')}">打开加歌页面</a></p>`,
+      `<p style="color:#666;font-size:13px;">链接 ${ttlDays} 天内有效。</p>`,
+    ]
+      .filter(Boolean)
+      .join(''),
+  });
+}
+
 
 
 async function buildPatchedBulletinPptxBuf(opts: {
@@ -852,6 +910,36 @@ export function registerBulletinRoutes(
     }
   });
 
+  app.get('/v1/bulletins/worship-team-members', async (request, reply) => {
+    const user = requireUser(request);
+    if (!user || !canManageBulletin(user.role)) {
+      return reply.code(403).send({ error: 'bulletin_forbidden' });
+    }
+
+    const rows = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        role: users.role,
+      })
+      .from(users)
+      .where(inArray(users.role, ['worship_team', 'creator', 'admin']))
+      .orderBy(asc(users.email));
+
+    return {
+      members: rows
+        .filter((row) => row.id !== user.id)
+        .map((row) => ({
+          id: row.id,
+          email: row.email,
+          displayName: formatUserDisplayName(row) || row.email,
+          role: normalizeUserRole(row.role),
+        })),
+    };
+  });
+
   app.get<{ Params: { id: string } }>('/v1/bulletins/:id', async (request, reply) => {
     const user = requireUser(request);
     if (!user || !canViewBulletin(user.role)) {
@@ -1105,7 +1193,12 @@ export function registerBulletinRoutes(
 
   app.post<{
     Params: { id: string };
-    Body: { email?: string; message?: string };
+    Body: {
+      email?: string;
+      emails?: string[];
+      userIds?: string[];
+      message?: string;
+    };
   }>('/v1/bulletins/:id/worship-playlist/invite', async (request, reply) => {
     const user = requireUser(request);
     if (!user || !canManageBulletin(user.role)) {
@@ -1128,47 +1221,57 @@ export function registerBulletinRoutes(
     });
     const webAppUrl = resolveWebAppUrl(env);
     const inviteUrl = buildWorshipInviteUrl(webAppUrl, inviteToken);
+    const ttlDays = Math.ceil(env.SHARE_LINK_TTL_SECONDS / 86_400);
+    const optionalMessage = request.body?.message?.trim();
+    const senderName = formatUserDisplayName(user) || user.email;
 
-    const recipientEmail = request.body?.email?.trim().toLowerCase();
-    if (recipientEmail) {
+    const recipientEmails = new Set<string>();
+    const singleEmail = request.body?.email?.trim().toLowerCase();
+    if (singleEmail) recipientEmails.add(singleEmail);
+    for (const raw of request.body?.emails ?? []) {
+      const email = raw?.trim().toLowerCase();
+      if (email) recipientEmails.add(email);
+    }
+
+    const userIds = (request.body?.userIds ?? []).filter(Boolean);
+    if (userIds.length > 0) {
+      const memberRows = await db
+        .select({ id: users.id, email: users.email, role: users.role })
+        .from(users)
+        .where(inArray(users.id, userIds));
+      for (const row of memberRows) {
+        const role = normalizeUserRole(row.role);
+        if (role === 'worship_team' || role === 'creator' || role === 'admin') {
+          recipientEmails.add(row.email.trim().toLowerCase());
+        }
+      }
+    }
+
+    if (recipientEmails.size > 0) {
       const mailConfig = resolveMailConfig(env);
       if (!mailConfig) {
         return reply.code(503).send({ error: 'email_not_configured' });
       }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail)) {
-        return reply.code(400).send({ error: 'invalid_email' });
+
+      for (const recipientEmail of recipientEmails) {
+        if (!isValidEmailAddress(recipientEmail)) {
+          return reply.code(400).send({ error: 'invalid_email' });
+        }
       }
 
-      const senderName = formatUserDisplayName(user) || user.email;
-      const optionalMessage = request.body?.message?.trim();
-      const subject = `${senderName} 邀请你填写 ${bulletin.serviceDate} 敬拜歌单`;
-      const textLines = [
-        `${senderName} 邀请你为 ${bulletin.serviceDate} 主日崇拜填写敬拜歌单「${playlist.title}」。`,
-        optionalMessage ? `\n附言：${optionalMessage}\n` : '',
-        '你可以从 YouTube 播放列表导入，或逐首粘贴 YouTube 链接添加：',
-        inviteUrl,
-        '',
-        `链接 ${Math.ceil(env.SHARE_LINK_TTL_SECONDS / 86_400)} 天内有效。`,
-      ].filter((line) => line !== '');
-
       try {
-        await sendMail({
-          config: mailConfig,
-          to: recipientEmail,
-          subject,
-          text: textLines.join('\n'),
-          html: [
-            `<p><strong>${senderName}</strong> 邀请你为 <strong>${bulletin.serviceDate}</strong> 主日崇拜填写敬拜歌单「${playlist.title}」。</p>`,
-            optionalMessage
-              ? `<p><strong>附言：</strong>${optionalMessage.replace(/</g, '&lt;')}</p>`
-              : '',
-            '<p>你可以从 YouTube 播放列表导入，或逐首粘贴 YouTube 链接添加。</p>',
-            `<p><a href="${inviteUrl.replace(/"/g, '&quot;')}">打开链接编辑歌单</a></p>`,
-            `<p style="color:#666;font-size:13px;">链接 ${Math.ceil(env.SHARE_LINK_TTL_SECONDS / 86_400)} 天内有效。</p>`,
-          ]
-            .filter(Boolean)
-            .join(''),
-        });
+        for (const recipientEmail of recipientEmails) {
+          await sendWorshipPlaylistInviteEmail({
+            mailConfig,
+            to: recipientEmail,
+            senderName,
+            serviceDate: bulletin.serviceDate,
+            playlistTitle: playlist.title,
+            inviteUrl,
+            optionalMessage,
+            ttlDays,
+          });
+        }
       } catch (e) {
         request.log.error(e, 'worship playlist invite email failed');
         return reply.code(502).send({ error: 'email_send_failed' });
@@ -1189,7 +1292,8 @@ export function registerBulletinRoutes(
       inviteToken,
       inviteUrl,
       expiresAtUnix,
-      emailed: Boolean(recipientEmail),
+      emailed: recipientEmails.size > 0,
+      emailedCount: recipientEmails.size,
     });
   });
 

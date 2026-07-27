@@ -136,7 +136,18 @@ export default function BulletinWorshipYoutubeImportPanel({
   }
 
   if (!status.dataApiReady) {
-    return <p className="error-msg">{t('bulletin.worshipImportYoutubeUnavailable')}</p>;
+    const reason = status.dataApiError
+      ? friendlyError(status.dataApiError, t)
+      : t('bulletin.worshipImportYoutubeUnavailable');
+    return (
+      <div className="bulletin-worship-youtube-unavailable">
+        <p className="error-msg">{reason}</p>
+        {status.dataApiError === 'youtube_api_not_enabled' ? (
+          <p className="export-youtube-hint">{t('playlists.exportYoutubeApiEnableHint')}</p>
+        ) : null}
+        <p className="playlists-muted">{t('bulletin.worshipImportYoutubeFallbackHint')}</p>
+      </div>
+    );
   }
 
   if (loadingPlaylists) {

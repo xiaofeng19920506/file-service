@@ -391,13 +391,25 @@ const en: MessageTree = {
     worshipReorderHint: 'Drag to reorder, or remove individual tracks.',
     worshipEmptyHint: 'No songs yet',
     worshipImportedCount: 'Added {count} track(s)',
-    worshipShowInvite: 'Invite someone to help',
+    worshipShowInvite: 'Invite worship team to add songs',
     worshipHideInvite: 'Hide',
+    worshipInviteSectionTitle: 'Invite worship team',
+    worshipInviteSectionHint:
+      'Email selected members. The link lets them search for songs or paste a YouTube playlist / video URL.',
+    worshipInvitePickMembers: 'Pick worship team members',
+    worshipInviteNoMembers:
+      'No worship team members yet. An admin can set a user’s role to “Worship team”.',
+    worshipInviteLoadingMembers: 'Loading members…',
+    worshipInviteOtherEmail: 'Or another email',
+    worshipInviteSentCount: 'Invite email sent to {count} people',
     worshipImportYoutubeTitle: 'Pick a YouTube playlist',
     worshipImportYoutubeConnect: 'Sign in with Google',
     worshipImportYoutubeLoadingLists: 'Loading…',
     worshipImportYoutubeEmpty: 'No playlists',
-    worshipImportYoutubeUnavailable: 'Unavailable — contact an admin',
+    worshipImportYoutubeUnavailable:
+      'Can’t load your YouTube playlists (account linked, but the Data API is unavailable)',
+    worshipImportYoutubeFallbackHint:
+      'Use “Search / add songs” above, or paste a public YouTube playlist or video URL instead.',
     worshipImportYoutubeTrackCount: '{count} tracks',
     worshipImportYoutubeImporting: 'Importing…',
     worshipImportYoutubeConfirm: 'OK',

@@ -3,10 +3,12 @@ import {
   ensureBulletinWorshipPlaylist,
   getBulletinWorshipPlaylist,
   inviteBulletinWorshipLeader,
+  listWorshipTeamMembers,
   removeBulletinWorshipPlaylistItem,
   reorderBulletinWorshipPlaylistItems,
   updateBulletin,
   type WeeklyBulletin,
+  type WorshipTeamMember,
 } from '../../api/bulletins';
 import { uploadFile } from '../../api/client';
 import type { PlaylistDetail, PlaylistItem } from '../../api/playlists';
@@ -61,6 +63,9 @@ export default function BulletinWorshipStep({
   const [items, setItems] = useState<PlaylistItem[]>([]);
   const [inviteUrl, setInviteUrl] = useState('');
   const [email, setEmail] = useState('');
+  const [members, setMembers] = useState<WorshipTeamMember[]>([]);
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -98,6 +103,31 @@ export default function BulletinWorshipStep({
   useEffect(() => {
     if (oauthJustConnected || oauthError) setSourceTab('youtube');
   }, [oauthJustConnected, oauthError]);
+
+  useEffect(() => {
+    if (!canManage) return;
+    let cancelled = false;
+    setLoadingMembers(true);
+    void listWorshipTeamMembers()
+      .then((data) => {
+        if (!cancelled) setMembers(data.members);
+      })
+      .catch(() => {
+        if (!cancelled) setMembers([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingMembers(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [canManage]);
+
+  const toggleMember = (id: string) => {
+    setSelectedMemberIds((prev) =>
+      prev.includes(id) ? prev.filter((row) => row !== id) : [...prev, id],
+    );
+  };
 
   const handleSourceTabChange = (id: string) => {
     const next = id as WorshipSourceTab;
@@ -184,14 +214,25 @@ export default function BulletinWorshipStep({
 
   const sendInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail && selectedMemberIds.length === 0) return;
     setBusy(true);
     setError(null);
     try {
-      const result = await inviteBulletinWorshipLeader(draft.id, { email: email.trim() });
+      const result = await inviteBulletinWorshipLeader(draft.id, {
+        email: trimmedEmail || undefined,
+        userIds: selectedMemberIds,
+      });
       onPlaylistReady(result.playlist.id);
       setInviteUrl(result.inviteUrl);
-      setStatus(t('bulletin.worshipInviteSent'));
+      const count = result.emailedCount ?? (result.emailed ? 1 : 0);
+      setStatus(
+        count > 0
+          ? t('bulletin.worshipInviteSentCount', { count })
+          : t('bulletin.worshipInviteSent'),
+      );
+      setSelectedMemberIds([]);
+      setEmail('');
     } catch (err) {
       setError(friendlyError(err instanceof Error ? err.message : 'email_send_failed', t));
     } finally {
@@ -421,9 +462,11 @@ export default function BulletinWorshipStep({
       </section>
 
       {canManage && (
-        <details className="bulletin-worship-invite-details">
-          <summary>{t('bulletin.worshipShowInvite')}</summary>
-          <div className="bulletin-worship-invite-section">
+        <section className="bulletin-worship-invite-section">
+          <h4 className="bulletin-worship-playlist-heading">{t('bulletin.worshipInviteSectionTitle')}</h4>
+          <p className="bulletin-worship-search-hint">{t('bulletin.worshipInviteSectionHint')}</p>
+
+          <div className="bulletin-worship-invite-actions">
             <button
               type="button"
               className="btn-secondary btn-sm"
@@ -432,7 +475,37 @@ export default function BulletinWorshipStep({
             >
               {t('bulletin.worshipCopyInvite')}
             </button>
-            <form className="bulletin-worship-invite-form" onSubmit={(e) => void sendInvite(e)}>
+          </div>
+
+          {loadingMembers ? (
+            <p className="playlists-muted">{t('bulletin.worshipInviteLoadingMembers')}</p>
+          ) : members.length === 0 ? (
+            <p className="playlists-muted">{t('bulletin.worshipInviteNoMembers')}</p>
+          ) : (
+            <fieldset className="bulletin-worship-invite-members">
+              <legend>{t('bulletin.worshipInvitePickMembers')}</legend>
+              <ul className="bulletin-worship-invite-member-list">
+                {members.map((member) => (
+                  <li key={member.id}>
+                    <label className="bulletin-worship-invite-member">
+                      <input
+                        type="checkbox"
+                        checked={selectedMemberIds.includes(member.id)}
+                        onChange={() => toggleMember(member.id)}
+                        disabled={busy}
+                      />
+                      <span className="bulletin-worship-invite-member-name">{member.displayName}</span>
+                      <span className="bulletin-worship-invite-member-email">{member.email}</span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </fieldset>
+          )}
+
+          <form className="bulletin-worship-invite-form" onSubmit={(e) => void sendInvite(e)}>
+            <label className="share-playlist-field">
+              <span>{t('bulletin.worshipInviteOtherEmail')}</span>
               <input
                 type="email"
                 className="playlists-text-input"
@@ -441,12 +514,22 @@ export default function BulletinWorshipStep({
                 placeholder={t('bulletin.worshipInviteEmailPlaceholder')}
                 disabled={busy}
               />
-              <button type="submit" className="btn-secondary btn-sm" disabled={busy || !email.trim()}>
-                {t('bulletin.worshipSendInvite')}
-              </button>
-            </form>
-          </div>
-        </details>
+            </label>
+            <button
+              type="submit"
+              className="btn-primary btn-sm"
+              disabled={busy || (!email.trim() && selectedMemberIds.length === 0)}
+            >
+              {t('bulletin.worshipSendInvite')}
+            </button>
+          </form>
+
+          {inviteUrl ? (
+            <p className="playlists-muted bulletin-worship-invite-url" title={inviteUrl}>
+              {t('bulletin.worshipInviteLink')}: {inviteUrl}
+            </p>
+          ) : null}
+        </section>
       )}
 
       {status && <p className="success-msg">{status}</p>}

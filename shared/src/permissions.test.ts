@@ -39,6 +39,7 @@ describe('resolvePathAccessLevel', () => {
     expect(resolvePathAccessLevel('POST', '/v1/playlists/x/export-youtube')).toBe('youtube_export');
     expect(resolvePathAccessLevel('GET', '/v1/youtube/oauth/callback')).toBe('public');
     expect(resolvePathAccessLevel('GET', '/v1/youtube/thumbnails/abc12345678')).toBe('public');
+    expect(resolvePathAccessLevel('GET', '/v1/bulletins/worship-team-members')).toBe('bulletin_manage');
   });
 
   it('defaults unknown v1 routes to member', () => {

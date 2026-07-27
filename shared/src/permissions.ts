@@ -150,6 +150,8 @@ export function isBulletinPath(_method: string, path: string): boolean {
 
 function isBulletinWritePath(method: string, path: string): boolean {
   if (!path.startsWith('/v1/bulletins')) return false;
+  // Creator/admin directory for inviting worship team to add songs
+  if (method === 'GET' && path === '/v1/bulletins/worship-team-members') return true;
   return method !== 'GET';
 }
 

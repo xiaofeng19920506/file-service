@@ -352,7 +352,20 @@ export type WorshipPlaylistInvite = {
   inviteUrl: string;
   expiresAtUnix: number;
   emailed?: boolean;
+  emailedCount?: number;
 };
+
+export type WorshipTeamMember = {
+  id: string;
+  email: string;
+  displayName: string;
+  role: string;
+};
+
+export async function listWorshipTeamMembers(): Promise<{ members: WorshipTeamMember[] }> {
+  const res = await apiFetch('/v1/bulletins/worship-team-members');
+  return parseJson<{ members: WorshipTeamMember[] }>(res);
+}
 
 export async function ensureBulletinWorshipPlaylist(bulletinId: string): Promise<WorshipPlaylistInvite> {
   const res = await apiFetch(`/v1/bulletins/${encodeURIComponent(bulletinId)}/worship-playlist`, {
@@ -363,7 +376,7 @@ export async function ensureBulletinWorshipPlaylist(bulletinId: string): Promise
 
 export async function inviteBulletinWorshipLeader(
   bulletinId: string,
-  body: { email?: string; message?: string },
+  body: { email?: string; emails?: string[]; userIds?: string[]; message?: string },
 ): Promise<WorshipPlaylistInvite> {
   const res = await apiFetch(
     `/v1/bulletins/${encodeURIComponent(bulletinId)}/worship-playlist/invite`,
