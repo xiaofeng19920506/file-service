@@ -31,7 +31,21 @@ export function apiFetch(path: string, init: RequestInit = {}): Promise<Response
 }
 
 export async function parseJson<T>(res: Response): Promise<T> {
-  const data = await res.json();
+  const text = await res.text();
+  let data: unknown;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    const snippet = text.replace(/\s+/g, ' ').trim().slice(0, 160);
+    if (!res.ok) {
+      throw new Error(
+        res.status === 502 || /internal server error/i.test(snippet)
+          ? 'api_unavailable'
+          : snippet || res.statusText || 'invalid_json',
+      );
+    }
+    throw new Error(snippet || 'invalid_json');
+  }
   if (!res.ok) {
     const msg =
       typeof data === 'object' && data && 'error' in data

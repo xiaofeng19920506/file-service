@@ -1160,6 +1160,7 @@ const en: MessageTree = {
     incomplete_upload: 'Upload incomplete — retry',
     assemble_failed: 'Failed to assemble file — upload again',
     network_error: 'Network error',
+    api_unavailable: 'Service temporarily unavailable — please refresh and try again',
     preview_conversion_failed: 'Preview conversion failed — use .pptx or install LibreOffice',
     inputs_required: 'Upload at least one file',
     unknown_blob_id: 'Invalid file reference — re-upload',

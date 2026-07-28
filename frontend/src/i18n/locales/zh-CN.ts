@@ -1137,6 +1137,7 @@ export default {
     incomplete_upload: '上传未完成，请重试',
     assemble_failed: '文件组装失败，请重新上传',
     network_error: '网络连接失败，请检查网络',
+    api_unavailable: '服务暂时不可用，请稍后刷新重试',
     preview_conversion_failed: '预览转换失败，请安装 LibreOffice 或转为 .pptx',
     inputs_required: '请至少上传一个文件',
     unknown_blob_id: '文件引用无效，请重新上传',
