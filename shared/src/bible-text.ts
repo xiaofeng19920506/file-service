@@ -177,7 +177,13 @@ export const SCRIPTURE_ZH_PAGE_MAX_CHARS =
 /** 英文 22pt 每行约容纳字符数（投影实测：字号加大后略收窄） */
 export const SCRIPTURE_EN_CHARS_PER_LINE = 52;
 
-/** 英文每页视觉行数：最少 10 行、最多 11 行（14 行会超出文本框被裁切） */
+/**
+ * 英文每页最多节数（用户规则：一页不超过 10 节）。
+ * 视觉行数仅作超长单节的兜底裁切，不再作为主分页依据。
+ */
+export const SCRIPTURE_EN_PAGE_MAX_VERSES = 10;
+
+/** 英文每页视觉行数上限（单节过长时拆页，避免文本框裁切） */
 export const SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES = 10;
 export const SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES = 11;
 
@@ -389,16 +395,33 @@ function paginateChineseVerses(verses: BibleVerse[]): string[] {
 }
 
 function paginateEnglishVerses(verses: BibleVerse[]): string[][] {
-  const chunks = splitTextToVisualLineChunks(
-    formatEnglishPassageText(verses),
-    SCRIPTURE_EN_CHARS_PER_LINE,
-    estimateEnglishLineVisualLines,
-  );
-  return paginateLineChunksToPages(
-    chunks,
-    SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES,
-    SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES,
-  );
+  const nonempty = verses.filter((v) => v.text.trim().length > 0);
+  if (!nonempty.length) return [];
+
+  const pages: string[][] = [];
+
+  for (let i = 0; i < nonempty.length; i += SCRIPTURE_EN_PAGE_MAX_VERSES) {
+    const chunk = nonempty.slice(i, i + SCRIPTURE_EN_PAGE_MAX_VERSES);
+    const chunks = splitTextToVisualLineChunks(
+      formatEnglishPassageText(chunk),
+      SCRIPTURE_EN_CHARS_PER_LINE,
+      estimateEnglishLineVisualLines,
+    );
+    // 节数已封顶；若单页视觉行仍超文本框，再按行拆开避免裁切
+    if (chunks.length <= SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES) {
+      pages.push(chunks);
+    } else {
+      pages.push(
+        ...paginateLineChunksToPages(
+          chunks,
+          SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES,
+          SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES,
+        ),
+      );
+    }
+  }
+
+  return pages;
 }
 
 /** 估算一段英文经文在 slide 上占用的视觉行数 */
