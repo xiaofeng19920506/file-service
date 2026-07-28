@@ -141,6 +141,11 @@ export function bulletinSectionContentRev(
 }
 
 /**
+ * 前端 PNG 缓存代数：与后端 SLIDE_PREVIEW_PATCH_REV 对齐 bump，避免错页缓存残留。
+ */
+export const BULLETIN_PREVIEW_BLOB_GEN = 'v46';
+
+/**
  * 前端 PNG 缓存 key：结构 + 本分区内容 + 本页文字覆盖。
  * 传入 sectionId 后，改无关分区字段不会使该页缓存失效。
  */
@@ -154,6 +159,7 @@ export function bulletinPreviewCacheKey(
     .map((o) => `${o.slide}:${o.textIndex}:${o.text}`)
     .join('|');
   return [
+    BULLETIN_PREVIEW_BLOB_GEN,
     slideNumber,
     bulletinStructureRev(params),
     bulletinSectionContentRev(sectionId, params),
