@@ -7,7 +7,6 @@ import {
   loadScripturePassage,
   resolveChineseVerseWindow,
   sanitizeChineseVerseText,
-  SCRIPTURE_EN_PAGE_MAX_VERSES,
   SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES,
   SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES,
   SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES,
@@ -28,16 +27,6 @@ function englishPageVisualLines(page: string[]): number {
   return page.reduce((sum, line) => sum + estimateEnglishLineVisualLines(line), 0);
 }
 
-/** 从英文页文本中提取节号（格式：`N text`；续页片段可能无节号） */
-function verseNumbersOnEnglishPage(page: string[]): number[] {
-  const nums: number[] = [];
-  for (const line of page) {
-    const m = line.match(/^(\d+)\s+(?=[A-Za-z“"‘'])/);
-    if (m) nums.push(Number(m[1]));
-  }
-  return nums;
-}
-
 function assertChinesePageInRange(page: string, isLastPage: boolean) {
   const lines = estimateChineseBlockVisualLines(page);
   expect(lines).toBeLessThanOrEqual(SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES);
@@ -48,11 +37,9 @@ function assertChinesePageInRange(page: string, isLastPage: boolean) {
 
 function assertEnglishPageInRange(page: string[], isLastPage: boolean) {
   const lines = englishPageVisualLines(page);
-  expect(page.length).toBeLessThanOrEqual(SCRIPTURE_EN_PAGE_MAX_VERSES);
   expect(lines).toBeLessThanOrEqual(SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES);
   if (!isLastPage) {
-    // 非末页应尽量接近容量；至少有内容
-    expect(lines).toBeGreaterThan(0);
+    expect(lines).toBeGreaterThanOrEqual(SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES);
   }
 }
 
@@ -128,16 +115,16 @@ describe('buildScriptureSlideBodies', () => {
     expect(firstPageLines).toBeLessThanOrEqual(SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES);
   });
 
-  it('paginates english by at most 10 verses per slide (proverbs 15:1-11)', async () => {
+  it('auto-paginates english overflow like chinese (proverbs 15:1-11)', async () => {
     const passage = await loadScripturePassage('箴言 Proverbs', '15:1-11');
     expect(passage).not.toBeNull();
     expect(passage!.en.length).toBe(11);
     const bodies = buildScriptureSlideBodies(passage!);
-    // 22pt 下一节约 2 行，11 节必然多页；且每页不超过 10 节
     expect(bodies.englishPages.length).toBeGreaterThanOrEqual(2);
+    expect(bodies.chinesePages.length).toBeGreaterThanOrEqual(1);
 
     bodies.englishPages.forEach((page, i) => {
-      expect(page.length).toBeLessThanOrEqual(SCRIPTURE_EN_PAGE_MAX_VERSES);
+      expect(page).toHaveLength(1);
       assertEnglishPageInRange(page, i === bodies.englishPages.length - 1);
     });
 
@@ -161,19 +148,19 @@ describe('buildScriptureSlideBodies', () => {
       zh: [verse(1, '一節')],
       en,
     });
-    // 长节约 2 行/节，40 节在行数上限下远超 4 页
     expect(bodies.englishPages.length).toBeGreaterThanOrEqual(4);
     const joined = bodies.englishPages.flat().join(' ');
     for (const v of en) {
       expect(joined).toContain(String(v.verse));
     }
     expect(joined).not.toContain('…');
-    bodies.englishPages.forEach((page) => {
-      expect(page.length).toBeLessThanOrEqual(SCRIPTURE_EN_PAGE_MAX_VERSES);
+    bodies.englishPages.forEach((page, i) => {
+      expect(page).toHaveLength(1);
+      assertEnglishPageInRange(page, i === bodies.englishPages.length - 1);
     });
   });
 
-  it('never puts more than 10 English verses on one slide', () => {
+  it('keeps english visual lines within capacity on every page', () => {
     const en: BibleVerse[] = [];
     for (let i = 1; i <= 30; i++) {
       en.push(verse(i, `Short verse number ${i}.`));
@@ -182,25 +169,20 @@ describe('buildScriptureSlideBodies', () => {
       zh: [verse(1, '一節')],
       en,
     });
-    // 短节约 1 行，受 9 行上限约束会拆成多页，且每页 ≤10 节
-    expect(bodies.englishPages.length).toBeGreaterThanOrEqual(3);
-    bodies.englishPages.forEach((page) => {
-      expect(page.length).toBeLessThanOrEqual(SCRIPTURE_EN_PAGE_MAX_VERSES);
-      expect(verseNumbersOnEnglishPage(page).length).toBeLessThanOrEqual(
-        SCRIPTURE_EN_PAGE_MAX_VERSES,
-      );
+    expect(bodies.englishPages.length).toBeGreaterThanOrEqual(2);
+    bodies.englishPages.forEach((page, i) => {
+      assertEnglishPageInRange(page, i === bodies.englishPages.length - 1);
     });
   });
 
-  it('keeps whole English verses together when they fit', async () => {
-    const passage = await loadScripturePassage('箴言 Proverbs', '15:1-4');
+  it('keeps short English passages on one page', async () => {
+    const passage = await loadScripturePassage('箴言 Proverbs', '15:1-2');
     expect(passage).not.toBeNull();
     const bodies = buildScriptureSlideBodies(passage!);
-    // 4 节 × ~2 行 = 8 行，应落在一页内（未超 9 行上限）
     expect(bodies.englishPages.length).toBe(1);
-    expect(bodies.englishPages[0]!.length).toBe(4);
+    expect(bodies.englishPages[0]).toHaveLength(1);
     expect(bodies.englishPages[0]![0]).toMatch(/^1 /);
-    expect(bodies.englishPages[0]![3]).toMatch(/^4 /);
+    expect(bodies.englishPages[0]![0]).toContain('2 ');
   });
 
   it('splits a single long English verse across pages', () => {

@@ -157,9 +157,17 @@ export function formatEnglishPassageText(verses: BibleVerse[]): string {
 export type ScriptureSlideBodies = {
   /** 中文经文页（slide 5 模板，可继续复制） */
   chinesePages: string[];
-  /** 英文经文页（slide 6 模板；每项为一节/片段，一节一段） */
+  /**
+   * 英文经文页（slide 6 模板）。
+   * 与中文相同：每页一段连续正文；外层数组为页，内层仅 1 项（兼容旧的 string[][] 形状）。
+   */
   englishPages: string[][];
 };
+
+/**
+ * 中英文共用规则：按文本框视觉行数装箱。
+ * 一页装不下 → 自动加页，溢出落到下一页（不缩字号）。
+ */
 
 /** 中文 29pt 每行约容纳字数（按投影实测校准：~22 字/行） */
 export const SCRIPTURE_ZH_CHARS_PER_LINE = 22;
@@ -181,14 +189,8 @@ export const SCRIPTURE_ZH_PAGE_MAX_CHARS =
 export const SCRIPTURE_EN_CHARS_PER_LINE = 48;
 
 /**
- * 英文每页最多节数（用户规则：一页不超过 10 节）。
- * 主分页按「整节」装箱；单节过长再按视觉行拆。
- */
-export const SCRIPTURE_EN_PAGE_MAX_VERSES = 10;
-
-/**
- * 英文每页视觉行数上限（22pt + 一节一段）。
- * 文本框内高约 381pt，按 ~28pt/行约可容 13 行；留余量避免 LibreOffice/投影裁切。
+ * 英文每页视觉行数（与中文同一套「容量自适应 → 溢出加页」）。
+ * 22pt 行高更大，故上限略低于中文 11 行。
  */
 export const SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES = 8;
 export const SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES = 9;
@@ -198,6 +200,9 @@ export const SCRIPTURE_EN_PAGE_MIN_CHARS =
   SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES * SCRIPTURE_EN_CHARS_PER_LINE;
 export const SCRIPTURE_EN_PAGE_MAX_CHARS =
   SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES * SCRIPTURE_EN_CHARS_PER_LINE;
+
+/** @deprecated 分页已改为纯容量自适应，不再按节数封顶 */
+export const SCRIPTURE_EN_PAGE_MAX_VERSES = 10;
 
 /** @deprecated 使用 SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES */
 export const SCRIPTURE_EN_PAGE_MAX_LINES = SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES;
@@ -333,89 +338,27 @@ function paginateChineseVerses(verses: BibleVerse[]): string[] {
   );
 }
 
-/**
- * 英文分页（与模板一致：一节一段）：
- * - 每页最多 SCRIPTURE_EN_PAGE_MAX_VERSES 节
- * - 视觉行数不超过 SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES（22pt 文本框）
- * - 单节过长时按视觉行拆到后续页，避免裁切
- */
-function paginateEnglishVerses(verses: BibleVerse[]): string[][] {
-  const nonempty = verses.filter((v) => v.text.trim().length > 0);
-  if (!nonempty.length) return [];
-
-  const pages: string[][] = [];
-  let current: string[] = [];
-  let currentLines = 0;
-
-  const flush = () => {
-    if (!current.length) return;
-    pages.push(current);
-    current = [];
-    currentLines = 0;
-  };
-
-  const pushFragment = (text: string, lines: number) => {
-    if (!text.trim()) return;
-    if (
-      current.length > 0 &&
-      (current.length >= SCRIPTURE_EN_PAGE_MAX_VERSES ||
-        currentLines + lines > SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES)
-    ) {
-      flush();
-    }
-    current.push(text);
-    currentLines += lines;
-  };
-
-  for (const verse of nonempty) {
-    const full = formatEnglishVerseLine(verse);
-    const fullLines = estimateEnglishLineVisualLines(full);
-
-    if (fullLines <= SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES) {
-      pushFragment(full, fullLines);
-      continue;
-    }
-
-    // 单节超过一页容量：按视觉行硬拆（保留节号只在第一段）
-    let remaining = full;
-    let firstChunk = true;
-    while (remaining.length > 0) {
-      const roomLines =
-        current.length === 0
-          ? SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES
-          : current.length >= SCRIPTURE_EN_PAGE_MAX_VERSES
-            ? 0
-            : SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES - currentLines;
-
-      if (roomLines <= 0) {
-        flush();
-        continue;
-      }
-
-      const [head, tail] = takeHeadVisualLines(
-        remaining,
-        roomLines,
-        SCRIPTURE_EN_CHARS_PER_LINE,
-        estimateEnglishLineVisualLines,
-      );
-      if (!head.length) break;
-
-      const chunkText = firstChunk ? head : head.replace(/^\d+\s+/, '').trim() || head;
-      firstChunk = false;
-      pushFragment(chunkText, estimateEnglishLineVisualLines(chunkText));
-      remaining = tail;
-    }
-  }
-
-  flush();
-  return pages;
-}
-
-/** 估算一段英文经文在 slide 上占用的视觉行数 */
+/** 估算一段英文经文在 slide 上占用的视觉行数（与中文同一套行估算） */
 export function estimateEnglishLineVisualLines(line: string): number {
   const trimmed = line.trim();
   if (!trimmed) return 0;
   return Math.max(1, Math.ceil(trimmed.length / SCRIPTURE_EN_CHARS_PER_LINE));
+}
+
+/**
+ * 英文分页：与中文相同——连续正文按视觉行装箱，超出自动加页。
+ * 返回 string[][] 时每页仅含一段连续文本，便于 PPT 单段落自动换行。
+ */
+function paginateEnglishVerses(verses: BibleVerse[]): string[][] {
+  const pages = paginateTextByVisualLines(
+    formatEnglishPassageText(verses),
+    SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES,
+    SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES,
+    SCRIPTURE_EN_PAGE_MAX_CHARS,
+    SCRIPTURE_EN_CHARS_PER_LINE,
+    estimateEnglishLineVisualLines,
+  );
+  return pages.map((page) => [page]);
 }
 
 export function buildScriptureSlideBodies(passage: BiblePassage): ScriptureSlideBodies {

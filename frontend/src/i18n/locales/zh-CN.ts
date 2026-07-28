@@ -187,7 +187,7 @@ export default {
     scriptureSelectBookFirst: '请先选择经卷，再选择章与经节。',
     scriptureSelectChapterFirst: '请选择章后，再选择开始与结束经节。',
     scriptureReference: '经节',
-    scriptureHint: '选好书卷与经节后自动保存（30 天）；第 5–6 页自动填入中英文经文，过长时中文续到第 6 页。',
+    scriptureHint: '选好书卷与经节后自动保存（30 天）；第 5–6 页自动填入中英文经文，超出文本框容量时自动加页续写。',
     lastWeekOffering: '上週奉献日期',
     offeringQuarter: '季度奉献说明',
     birthdayMonth: '生日月份',
