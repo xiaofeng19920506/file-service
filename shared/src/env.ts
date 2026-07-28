@@ -1,8 +1,19 @@
 import { z } from 'zod';
+import { isValidLibreOfficePreviewUrlList } from './libreoffice-preview-client.js';
 
 const retention = z.coerce.number().int().positive().default(7);
 
 const apiKeyField = z.string().min(8).optional();
+
+/** 单个或逗号分隔的 LibreOffice 预览 URL */
+const sofficePreviewUrlField = z
+  .string()
+  .min(1)
+  .refine(isValidLibreOfficePreviewUrlList, {
+    message:
+      'SOFFICE_PREVIEW_URL must be one or more comma-separated http(s) URLs (e.g. http://localhost:3010,http://localhost:3011)',
+  })
+  .optional();
 
 /** 60 年（按 365 天/年计算） */
 export const USER_SESSION_TTL_60_YEARS_SECONDS = 60 * 365 * 24 * 60 * 60;
@@ -27,7 +38,7 @@ const apiFs = z.object({
    * 单个：http://localhost:3010
    * 多个（逗号分隔，轮询）：http://localhost:3010,http://localhost:3011
    */
-  SOFFICE_PREVIEW_URL: z.string().min(1).optional(),
+  SOFFICE_PREVIEW_URL: sofficePreviewUrlField,
   API_KEY: apiKeyField,
   AUTH_REQUIRED: z
     .enum(['true', 'false', '1', '0'])
@@ -85,7 +96,7 @@ const apiS3 = z.object({
    * 单个：http://localhost:3010
    * 多个（逗号分隔，轮询）：http://localhost:3010,http://localhost:3011
    */
-  SOFFICE_PREVIEW_URL: z.string().min(1).optional(),
+  SOFFICE_PREVIEW_URL: sofficePreviewUrlField,
   API_KEY: apiKeyField,
   AUTH_REQUIRED: z
     .enum(['true', 'false', '1', '0'])

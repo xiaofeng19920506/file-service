@@ -14,12 +14,36 @@ export function parseLibreOfficePreviewUrls(raw?: string | null): string[] {
     .filter(Boolean);
 }
 
-let roundRobin = 0;
+/** 校验逗号分隔的 http(s) 预览 URL（启动时 / zod 用） */
+export function isValidLibreOfficePreviewUrlList(raw: string): boolean {
+  const parts = raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (!parts.length) return false;
+  return parts.every((part) => {
+    try {
+      const u = new URL(part);
+      return u.protocol === 'http:' || u.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  });
+}
+
+/** 原子递增，避免并发请求拿到相同轮询下标 */
+const roundRobinSlot = new Int32Array(new SharedArrayBuffer(4));
+
+function nextRoundRobinIndex(length: number): number {
+  if (length <= 0) throw new Error('slide_preview_service_url_missing');
+  const n = Atomics.add(roundRobinSlot, 0, 1);
+  // >>> 0：把有符号溢出规范成无符号再取模
+  return (n >>> 0) % length;
+}
 
 function pickUrl(urls: string[]): string {
   if (!urls.length) throw new Error('slide_preview_service_url_missing');
-  const i = roundRobin++ % urls.length;
-  return urls[i]!;
+  return urls[nextRoundRobinIndex(urls.length)]!;
 }
 
 function rotateUrls(urls: string[], start: string): string[] {
