@@ -4,7 +4,6 @@ import { useBulletinSlideShow } from '../hooks/useBulletinSlideShow';
 import { createSlideShowBus } from '../lib/bulletin-slideshow-bus';
 import {
   readSlideShowSession,
-  removeSlideShowSession,
   type BulletinSlideShowSession,
 } from '../lib/bulletin-slideshow-session';
 
@@ -123,21 +122,6 @@ export default function BulletinSlideShowProjectorPage({ sessionId }: BulletinSl
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [show.goNext, show.goPrev, show.goToSlide, show.endShow, show.totalSlides]);
-
-  useEffect(() => {
-    const cleanupSession = () => {
-      removeSlideShowSession(sessionId);
-      const bus = createSlideShowBus(sessionId);
-      bus.publish({ type: 'close', from: 'projector' });
-      bus.close();
-    };
-    window.addEventListener('beforeunload', cleanupSession);
-    window.addEventListener('pagehide', cleanupSession);
-    return () => {
-      window.removeEventListener('beforeunload', cleanupSession);
-      window.removeEventListener('pagehide', cleanupSession);
-    };
-  }, [sessionId]);
 
   if (!session) {
     return (

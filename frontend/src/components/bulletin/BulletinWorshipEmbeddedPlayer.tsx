@@ -17,7 +17,6 @@ type BulletinWorshipEmbeddedPlayerProps = {
   slideNumber: number;
   patch: BulletinSlidePreviewParams;
   slideLabel: string;
-  emptyLabel: string;
   lyricsPptxBlobId?: string | null;
 };
 
@@ -42,7 +41,6 @@ export default function BulletinWorshipEmbeddedPlayer({
   slideNumber,
   patch,
   slideLabel,
-  emptyLabel,
   lyricsPptxBlobId = null,
 }: BulletinWorshipEmbeddedPlayerProps) {
   const { t } = useI18n();
@@ -82,8 +80,6 @@ export default function BulletinWorshipEmbeddedPlayer({
           <BulletinPptSlidePreview
             slideNumber={slideNumber}
             patch={patch}
-            requireDate={false}
-            emptyLabel={emptyLabel}
           />
         </div>
 

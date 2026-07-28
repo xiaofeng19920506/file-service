@@ -7,11 +7,11 @@ export type ProgressStepperStep = {
   enabled?: boolean;
   /** 可点击导航但无编辑表单（模板固定页） */
   readonly?: boolean;
-  /** 是否显示该分区（纳入 PPT）；缺省不渲染勾选 */
+  /** @deprecated 分区显隐 UI 已移除；保留字段以免调用方报错 */
   visible?: boolean;
   /** 树形缩进深度 */
   depth?: number;
-  /** 仅分组、无独立模板页：不显示可见性勾选 / 改幻灯片 */
+  /** 仅分组、无独立模板页 */
   groupOnly?: boolean;
   hasChildren?: boolean;
 };
@@ -22,6 +22,7 @@ type ProgressStepperProps = {
   /** 右侧预览可见分区；有值时驱动主高亮（可与 currentIndex 不同） */
   previewIndex?: number | null;
   onStepSelect?: (index: number) => void;
+  /** @deprecated 分区显隐 UI 已移除 */
   onStepVisibilityChange?: (sectionId: string, visible: boolean) => void;
   /** 每个分区旁的「修改幻灯片」 */
   onEditSlides?: (sectionId: string) => void;
@@ -47,9 +48,7 @@ export default function ProgressStepper({
   currentIndex,
   previewIndex = null,
   onStepSelect,
-  onStepVisibilityChange,
   onEditSlides,
-  canEditVisibility = false,
   canEditSlides = false,
   orientation = 'horizontal',
 }: ProgressStepperProps) {
@@ -82,8 +81,7 @@ export default function ProgressStepper({
           const isReadonly = Boolean(step.readonly);
           const isGroup = Boolean(step.groupOnly);
           const canSelect = !isDisabled && Boolean(onStepSelect);
-          const showVisibility = !isGroup && typeof step.visible === 'boolean';
-          const isHidden = showVisibility && step.visible === false;
+          const isHidden = step.visible === false;
           const showEditSlides =
             Boolean(onEditSlides) && canEditSlides && !isGroup;
           const topLevelNumber =
@@ -99,22 +97,6 @@ export default function ProgressStepper({
               className={`progress-stepper-item${isFocused ? ' is-current' : ''}${isEditing ? ' is-editing' : ''}${isComplete ? ' is-complete' : ''}${isDisabled ? ' is-disabled' : ''}${isReadonly ? ' is-readonly' : ''}${isHidden ? ' is-section-hidden' : ''}${isGroup ? ' is-group' : ''}${step.hasChildren ? ' has-children' : ''}${depth > 0 ? ' is-nested' : ''}`}
               style={depth > 0 ? { paddingLeft: `${depth * 0.85}rem` } : undefined}
             >
-              {showVisibility && (
-                <label
-                  className="progress-stepper-visibility"
-                  title={t('bulletin.sectionVisible')}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <input
-                    type="checkbox"
-                    checked={step.visible !== false}
-                    disabled={!canEditVisibility || !onStepVisibilityChange}
-                    onChange={(e) => onStepVisibilityChange?.(step.id, e.target.checked)}
-                  />
-                  <span className="visually-hidden">{t('bulletin.sectionVisible')}</span>
-                </label>
-              )}
-              {isGroup ? <span className="progress-stepper-visibility-spacer" aria-hidden /> : null}
               {canSelect ? (
                 <button
                   type="button"

@@ -1,18 +1,14 @@
 import JSZip from './jszip';
 import type { ScriptureSlideBodies } from '../api/bulletins';
-import {
-  patchChineseScriptureBodyInSlideXml,
-  patchSlide6ScriptureBodyInSlideXml,
-} from './bulletin-scripture-body-patch';
-import { duplicateSlideInPptx } from './pptx-preview';
+import { applyScripturePagesToZip } from './bulletin-scripture-pptx-zip';
 
 const PPTX_MIME =
   'application/vnd.openxmlformats-officedocument.presentationml.presentation';
 
-const SLIDE5_PATH = 'ppt/slides/slide5.xml';
-const SLIDE6_PATH = 'ppt/slides/slide6.xml';
-
-/** 在读经段复制 slide 5/6 模板以容纳多页经文（首屏已在 applySlidePatches 中写入） */
+/**
+ * 发布路径经文加页：复用与预览相同的 applyScripturePagesToZip，避免双路径漂移。
+ * 首屏正文已由 applySlidePatches 写入；此处仅在有后续页时扩展。
+ */
 export async function expandScriptureSlidesInPptx(
   file: File,
   bodies: ScriptureSlideBodies,
@@ -21,43 +17,9 @@ export async function expandScriptureSlidesInPptx(
   const enExtra = bodies.englishPages.slice(1).filter((p) => p.length);
   if (!zhExtra.length && !enExtra.length) return file;
 
-  let working = file;
-
-  let lastChinesePath = SLIDE5_PATH;
-  for (const text of zhExtra) {
-    const { file: next, newSlidePath } = await duplicateSlideInPptx(working, SLIDE5_PATH, {
-      insertAfterPath: lastChinesePath,
-    });
-    const zip = await JSZip.loadAsync(next);
-    const entry = zip.file(newSlidePath);
-    if (entry) {
-      const xml = await entry.async('string');
-      zip.file(newSlidePath, patchChineseScriptureBodyInSlideXml(xml, text));
-      const buf = await zip.generateAsync({ type: 'arraybuffer' });
-      working = new File([buf], working.name, { type: PPTX_MIME });
-    } else {
-      working = next;
-    }
-    lastChinesePath = newSlidePath;
-  }
-
-  let lastEnglishPath = SLIDE6_PATH;
-  for (const lines of enExtra) {
-    const { file: next, newSlidePath } = await duplicateSlideInPptx(working, SLIDE6_PATH, {
-      insertAfterPath: lastEnglishPath,
-    });
-    const zip = await JSZip.loadAsync(next);
-    const entry = zip.file(newSlidePath);
-    if (entry) {
-      const xml = await entry.async('string');
-      zip.file(newSlidePath, patchSlide6ScriptureBodyInSlideXml(xml, null, lines));
-      const buf = await zip.generateAsync({ type: 'arraybuffer' });
-      working = new File([buf], working.name, { type: PPTX_MIME });
-    } else {
-      working = next;
-    }
-    lastEnglishPath = newSlidePath;
-  }
-
-  return working;
+  const zip = await JSZip.loadAsync(file);
+  // 首屏已写入：仍走完整 apply，幂等重写第 1 页并插入后续页
+  await applyScripturePagesToZip(zip, bodies.chinesePages, bodies.englishPages);
+  const buf = await zip.generateAsync({ type: 'arraybuffer' });
+  return new File([buf], file.name, { type: PPTX_MIME });
 }

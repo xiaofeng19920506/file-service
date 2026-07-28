@@ -5,6 +5,7 @@ const DRAFT_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 /** 可进 localStorage、并防抖同步到后端的字段 */
 export const BULLETIN_LOCAL_SYNC_KEYS = [
+  'serviceDate',
   'serviceTime',
   'scriptureBook',
   'scriptureReference',
@@ -20,6 +21,7 @@ export const BULLETIN_LOCAL_SYNC_KEYS = [
   'testimonyShareDate',
   'serviceRosterText',
   'weeklyMeetingVariant',
+  'hiddenSections',
   'sectionPptxOverrides',
 ] as const satisfies ReadonlyArray<keyof BulletinPatch>;
 
@@ -41,6 +43,7 @@ function storageKey(bulletinId: string): string {
 
 export function fieldToSectionId(key: BulletinLocalSyncKey | string): string | null {
   switch (key) {
+    case 'serviceDate':
     case 'serviceTime':
       return 'cover';
     case 'scriptureBook':
@@ -63,6 +66,7 @@ export function fieldToSectionId(key: BulletinLocalSyncKey | string): string | n
     case 'testimonyShareDate':
     case 'serviceRosterText':
     case 'weeklyMeetingVariant':
+    case 'hiddenSections':
       return 'more';
     case 'sectionPptxOverrides':
       return null;
@@ -87,6 +91,10 @@ export function readLocalBulletinDraft(bulletinId: string): BulletinLocalDraft |
   } catch {
     return null;
   }
+}
+
+export function isLocalBulletinDraftDirty(bulletinId: string): boolean {
+  return readLocalBulletinDraft(bulletinId)?.dirty === true;
 }
 
 export function writeLocalBulletinDraft(
@@ -153,6 +161,12 @@ export function localDraftToPatch(local: BulletinLocalDraft): BulletinPatch {
     if (key in local.fields && local.fields[key] !== undefined) {
       (patch as Record<string, unknown>)[key] = local.fields[key];
     }
+  }
+  // 隐藏分区变更时同步布尔别名，避免后端只认 flags 的旧路径
+  if (patch.hiddenSections) {
+    const hidden = new Set(patch.hiddenSections);
+    patch.skipTestimonyWeek = hidden.has('testimony_week');
+    patch.skipDepartmentReports = hidden.has('department_reports');
   }
   return patch;
 }

@@ -92,7 +92,7 @@ export default function BulletinPreviewPanel({
       })();
     };
 
-    debounceTimer = window.setTimeout(run, 180);
+    debounceTimer = window.setTimeout(run, 80);
 
     return () => {
       cancelled = true;
@@ -101,8 +101,12 @@ export default function BulletinPreviewPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- bulletin 以下方值指纹为准
   }, [
     bulletin.id,
+    bulletin.serviceDate,
+    bulletin.serviceTime,
     bulletin.scriptureBook,
     bulletin.scriptureReference,
+    bulletin.showPreServiceChairName,
+    bulletin.preServiceChairNames,
     bulletin.birthdayMonth,
     bulletin.birthdayNames,
     bulletin.verseOfWeek,
@@ -223,6 +227,14 @@ export default function BulletinPreviewPanel({
     ],
   );
 
+  // 结构变化才整卷 planRefreshing；否则仅 busySectionId 标分区
+  const structureRefreshing =
+    planRefreshing &&
+    (busySectionId == null ||
+      busySectionId === 'scripture' ||
+      busySectionId === 'more' ||
+      Boolean(bulletin.sectionPptxOverrides?.[busySectionId ?? '']));
+
   return (
     <div className="bulletin-preview-panel">
       <header className="bulletin-preview-panel-header">
@@ -245,7 +257,7 @@ export default function BulletinPreviewPanel({
         deckPlan={deckPlan}
         highlightSlides={highlightSlides}
         highlightSectionId={highlightSectionId}
-        busySectionId={busySectionId ?? (planRefreshing ? highlightSectionId : null)}
+        busySectionId={busySectionId ?? (structureRefreshing ? highlightSectionId : null)}
         scrollRequest={scrollRequest}
         worshipItems={worshipItems}
         worshipPlaylistTitle={worshipPlaylistTitle}

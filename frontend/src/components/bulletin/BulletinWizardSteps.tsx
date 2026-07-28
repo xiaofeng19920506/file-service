@@ -78,138 +78,23 @@ function SelectField({ label, value, disabled, placeholder, options, onChange }:
   );
 }
 
-type SaveProps = {
-  saving?: boolean;
-  canEdit: boolean;
-  onSave: () => void;
-};
-
-function SaveButton({ saving, canEdit, onSave }: SaveProps) {
-  const { t } = useI18n();
-  if (!canEdit) return null;
-  return (
-    <button type="button" className="btn-primary" disabled={saving} onClick={onSave}>
-      {saving ? t('bulletin.saving') : t('bulletin.save')}
-    </button>
-  );
-}
-
 export type BulletinStepPanelProps = {
   draft: WeeklyBulletin;
   canEdit: boolean;
   saving?: boolean;
   onPatch: <K extends keyof WeeklyBulletin>(key: K, value: WeeklyBulletin[K]) => void;
-  onSave: () => void;
-  sectionId: string;
-  onSectionVisibilityChange: (sectionId: string, visible: boolean) => void;
+  /** 公告等仍走专用保存；其它分区自动同步，可不传 */
+  onSave?: () => void;
 };
-
-export function SectionVisibleCheckbox({
-  sectionId,
-  draft,
-  canEdit,
-  onSectionVisibilityChange,
-}: {
-  sectionId: string;
-  draft: WeeklyBulletin;
-  canEdit: boolean;
-  onSectionVisibilityChange: (sectionId: string, visible: boolean) => void;
-}) {
-  const { t } = useI18n();
-  const hidden = new Set(draft.hiddenSections ?? []);
-  if (draft.skipTestimonyWeek) hidden.add('testimony_week');
-  if (draft.skipDepartmentReports) hidden.add('department_reports');
-  const visible = !hidden.has(sectionId);
-
-  return (
-    <label className="bulletin-field bulletin-field--checkbox">
-      <input
-        type="checkbox"
-        checked={visible}
-        disabled={!canEdit}
-        onChange={(e) => onSectionVisibilityChange(sectionId, e.target.checked)}
-      />
-      <span>{t('bulletin.sectionVisible')}</span>
-    </label>
-  );
-}
-
-export function BulletinSectionControls({
-  sectionId,
-  draft,
-  canEdit,
-  onSectionVisibilityChange,
-}: {
-  sectionId: string;
-  draft: WeeklyBulletin;
-  canEdit: boolean;
-  onSectionVisibilityChange: (sectionId: string, visible: boolean) => void;
-}) {
-  return (
-    <div className="bulletin-section-controls">
-      <SectionVisibleCheckbox
-        sectionId={sectionId}
-        draft={draft}
-        canEdit={canEdit}
-        onSectionVisibilityChange={onSectionVisibilityChange}
-      />
-    </div>
-  );
-}
-
-export function BulletinReadonlySectionStep({
-  sectionId,
-  draft,
-  canEdit,
-  saving,
-  onSectionVisibilityChange,
-  onSave,
-}: {
-  sectionId: string;
-  draft: WeeklyBulletin;
-  canEdit: boolean;
-  saving?: boolean;
-  onSectionVisibilityChange: (sectionId: string, visible: boolean) => void;
-  onSave: () => void;
-}) {
-  const { t } = useI18n();
-  return (
-    <div className="bulletin-wizard-step">
-      <header className="bulletin-step-header">
-        <h3>{t('bulletin.sectionReadonlyTitle')}</h3>
-        <p className="bulletin-step-intro">{t('bulletin.sectionReadonlyHint')}</p>
-      </header>
-      <div className="bulletin-cover-step-fields">
-        <BulletinSectionControls
-          sectionId={sectionId}
-          draft={draft}
-          canEdit={canEdit}
-          onSectionVisibilityChange={onSectionVisibilityChange}
-        />
-        <SaveButton saving={saving} canEdit={canEdit} onSave={onSave} />
-      </div>
-    </div>
-  );
-}
 
 export function BulletinScriptureStep({
   draft,
   canEdit,
-  saving,
   onPatch,
-  onSave,
-  sectionId,
-  onSectionVisibilityChange,
 }: BulletinStepPanelProps) {
   const { t } = useI18n();
   return (
     <StepShell titleKey="bulletin.steps.scriptureTitle" introKey="bulletin.steps.scriptureIntro">
-      <BulletinSectionControls
-        sectionId={sectionId}
-        draft={draft}
-        canEdit={canEdit}
-        onSectionVisibilityChange={onSectionVisibilityChange}
-      />
       <div className="bulletin-scripture-picker">
         <SelectField
           label={t('bulletin.scriptureBook')}
@@ -230,7 +115,6 @@ export function BulletinScriptureStep({
         />
       </div>
       <p className="bulletin-field-hint">{t('bulletin.scriptureHint')}</p>
-      <SaveButton saving={saving} canEdit={canEdit} onSave={onSave} />
     </StepShell>
   );
 }
@@ -238,21 +122,11 @@ export function BulletinScriptureStep({
 export function BulletinOfferingStep({
   draft,
   canEdit,
-  saving,
   onPatch,
-  onSave,
-  sectionId,
-  onSectionVisibilityChange,
 }: BulletinStepPanelProps) {
   const { t } = useI18n();
   return (
     <StepShell titleKey="bulletin.steps.offeringTitle" introKey="bulletin.steps.offeringIntro">
-      <BulletinSectionControls
-        sectionId={sectionId}
-        draft={draft}
-        canEdit={canEdit}
-        onSectionVisibilityChange={onSectionVisibilityChange}
-      />
       <TextField
         label={t('bulletin.lastWeekOffering')}
         value={draft.lastWeekOfferingDate}
@@ -265,7 +139,6 @@ export function BulletinOfferingStep({
         disabled={!canEdit}
         onChange={(v) => onPatch('offeringQuarterLabel', v)}
       />
-      <SaveButton saving={saving} canEdit={canEdit} onSave={onSave} />
     </StepShell>
   );
 }
@@ -273,21 +146,11 @@ export function BulletinOfferingStep({
 export function BulletinBirthdayStep({
   draft,
   canEdit,
-  saving,
   onPatch,
-  onSave,
-  sectionId,
-  onSectionVisibilityChange,
 }: BulletinStepPanelProps) {
   const { t } = useI18n();
   return (
     <StepShell titleKey="bulletin.steps.birthdayTitle" introKey="bulletin.steps.birthdayIntro">
-      <BulletinSectionControls
-        sectionId={sectionId}
-        draft={draft}
-        canEdit={canEdit}
-        onSectionVisibilityChange={onSectionVisibilityChange}
-      />
       <TextField
         label={t('bulletin.birthdayMonth')}
         value={draft.birthdayMonth}
@@ -301,7 +164,6 @@ export function BulletinBirthdayStep({
         multiline
         onChange={(v) => onPatch('birthdayNames', v)}
       />
-      <SaveButton saving={saving} canEdit={canEdit} onSave={onSave} />
     </StepShell>
   );
 }
@@ -309,22 +171,12 @@ export function BulletinBirthdayStep({
 export function BulletinPreServiceStep({
   draft,
   canEdit,
-  saving,
   onPatch,
-  onSave,
-  sectionId,
-  onSectionVisibilityChange,
 }: BulletinStepPanelProps) {
   const { t } = useI18n();
   const showChair = Boolean(draft.showPreServiceChairName);
   return (
     <StepShell titleKey="bulletin.steps.preServiceTitle" introKey="bulletin.steps.preServiceIntro">
-      <BulletinSectionControls
-        sectionId={sectionId}
-        draft={draft}
-        canEdit={canEdit}
-        onSectionVisibilityChange={onSectionVisibilityChange}
-      />
       <label className="bulletin-field bulletin-field--checkbox">
         <input
           type="checkbox"
@@ -343,7 +195,6 @@ export function BulletinPreServiceStep({
         />
       ) : null}
       <p className="bulletin-field-hint">{t('bulletin.preServiceChairNamesHint')}</p>
-      <SaveButton saving={saving} canEdit={canEdit} onSave={onSave} />
     </StepShell>
   );
 }
@@ -361,24 +212,15 @@ type AnnouncementsProps = BulletinStepPanelProps & {
 };
 
 export function BulletinAnnouncementsStep({
-  draft,
   canEdit,
   saving,
   announcements,
   onAnnouncementsChange,
   onSave,
-  sectionId,
-  onSectionVisibilityChange,
 }: AnnouncementsProps) {
   const { t } = useI18n();
   return (
     <StepShell titleKey="bulletin.steps.announcementsTitle" introKey="bulletin.steps.announcementsIntro">
-      <BulletinSectionControls
-        sectionId={sectionId}
-        draft={draft}
-        canEdit={canEdit}
-        onSectionVisibilityChange={onSectionVisibilityChange}
-      />
       {announcements.map((item, index) => (
         <div key={item.key} className="bulletin-announcement-block">
           <TextField
@@ -404,7 +246,11 @@ export function BulletinAnnouncementsStep({
           />
         </div>
       ))}
-      <SaveButton saving={saving} canEdit={canEdit} onSave={onSave} />
+      {canEdit && onSave ? (
+        <button type="button" className="btn-primary" disabled={saving} onClick={onSave}>
+          {saving ? t('bulletin.saving') : t('bulletin.save')}
+        </button>
+      ) : null}
     </StepShell>
   );
 }
@@ -412,21 +258,11 @@ export function BulletinAnnouncementsStep({
 export function BulletinVerseStep({
   draft,
   canEdit,
-  saving,
   onPatch,
-  onSave,
-  sectionId,
-  onSectionVisibilityChange,
 }: BulletinStepPanelProps) {
   const { t } = useI18n();
   return (
     <StepShell titleKey="bulletin.steps.verseTitle" introKey="bulletin.steps.verseIntro">
-      <BulletinSectionControls
-        sectionId={sectionId}
-        draft={draft}
-        canEdit={canEdit}
-        onSectionVisibilityChange={onSectionVisibilityChange}
-      />
       <TextField
         label={t('bulletin.verseOfWeek')}
         value={draft.verseOfWeek}
@@ -434,7 +270,6 @@ export function BulletinVerseStep({
         multiline
         onChange={(v) => onPatch('verseOfWeek', v)}
       />
-      <SaveButton saving={saving} canEdit={canEdit} onSave={onSave} />
     </StepShell>
   );
 }
@@ -442,22 +277,11 @@ export function BulletinVerseStep({
 export function BulletinMoreStep({
   draft,
   canEdit,
-  saving,
   onPatch,
-  onSave,
-  sectionId,
-  onSectionVisibilityChange,
 }: BulletinStepPanelProps) {
   const { t } = useI18n();
   return (
     <StepShell titleKey="bulletin.steps.moreTitle" introKey="bulletin.steps.moreIntro">
-      <BulletinSectionControls
-        sectionId={sectionId}
-        draft={draft}
-        canEdit={canEdit}
-        onSectionVisibilityChange={onSectionVisibilityChange}
-      />
-      <p className="bulletin-field-hint">{t('bulletin.sectionVisibleNavHint')}</p>
       <TextField
         label={t('bulletin.staffMeeting')}
         value={draft.staffMeetingDate}
@@ -498,7 +322,6 @@ export function BulletinMoreStep({
           <option value="30">{t('bulletin.meetingVariant30')}</option>
         </select>
       </label>
-      <SaveButton saving={saving} canEdit={canEdit} onSave={onSave} />
     </StepShell>
   );
 }

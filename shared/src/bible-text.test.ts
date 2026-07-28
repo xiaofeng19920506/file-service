@@ -115,6 +115,20 @@ describe('buildScriptureSlideBodies', () => {
     expect(firstPageLines).toBeLessThanOrEqual(SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES);
   });
 
+  it('fills psalm 119 english capacity without half-empty early pages', async () => {
+    const passage = await loadScripturePassage('诗篇 Psalms', '119:1-24');
+    expect(passage).not.toBeNull();
+    const bodies = buildScriptureSlideBodies(passage!);
+    expect(bodies.englishPages.length).toBeGreaterThanOrEqual(2);
+    bodies.englishPages.forEach((page, i) => {
+      assertEnglishPageInRange(page, i === bodies.englishPages.length - 1);
+    });
+    const joined = bodies.englishPages.flat().join(' ');
+    for (const v of passage!.en) {
+      expect(joined).toContain(`${v.verse} `);
+    }
+  });
+
   it('auto-paginates english overflow like chinese (proverbs 15:1-11)', async () => {
     const passage = await loadScripturePassage('箴言 Proverbs', '15:1-11');
     expect(passage).not.toBeNull();

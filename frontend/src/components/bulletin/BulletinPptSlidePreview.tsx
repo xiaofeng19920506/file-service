@@ -14,13 +14,11 @@ import PreviewConversionGuide from '../PreviewConversionGuide';
 
 type BulletinPptSlidePreviewProps = {
   slideNumber: number;
-  /** 由 previewPatchForSection 裁剪；经文参数须与 deck 结构一致 */
+  /** 由 previewPatchFull 生成；经文参数须与 deck 结构一致 */
   patch?: BulletinSlidePreviewParams;
-  /** @deprecated 预览不再要求用户先选主日日期 */
-  requireDate?: boolean;
+  /** 分区 id：用于分区感知缓存，改无关分区不废本页 PNG */
+  sectionId?: string;
   loading?: boolean;
-  /** @deprecated 无图时统一转圈，不再展示「请选择日期」类文案 */
-  emptyLabel?: string;
   slideLabel?: string;
   large?: boolean;
   overlay?: ReactNode;
@@ -37,6 +35,7 @@ function withPreviewDate(patch?: BulletinSlidePreviewParams): BulletinSlidePrevi
 export default function BulletinPptSlidePreview({
   slideNumber,
   patch,
+  sectionId,
   loading: externalLoading,
   slideLabel,
   large,
@@ -56,7 +55,7 @@ export default function BulletinPptSlidePreview({
   const patchRef = useRef(effectivePatch);
   patchRef.current = effectivePatch;
 
-  const cacheKey = bulletinPreviewCacheKey(slideNumber, effectivePatch);
+  const cacheKey = bulletinPreviewCacheKey(slideNumber, effectivePatch, sectionId);
 
   useEffect(() => {
     if (!lazy || inView) return;
@@ -117,7 +116,7 @@ export default function BulletinPptSlidePreview({
           }
           setLoading(false);
         });
-    }, 180);
+    }, lazy ? 80 : 0);
 
     return () => {
       cancelled = true;

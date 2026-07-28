@@ -68,29 +68,83 @@ export function previewPatchForSection(
   return previewPatchFull(full);
 }
 
-export function bulletinPreviewCacheKey(
-  slideNumber: number,
-  params: BulletinSlidePreviewParams,
-): string {
+/** 影响 deck 结构/页码的指纹（经文加页、隐藏分区、variant、分区 PPT） */
+export function bulletinStructureRev(params: BulletinSlidePreviewParams): string {
   const hidden = (params.hiddenSections ?? []).slice().sort().join(',');
-  const overrides = (params.slideTextOverrides ?? [])
-    .map((o) => `${o.slide}:${o.textIndex}:${o.text}`)
-    .join('|');
   return [
-    slideNumber,
-    params.serviceDate ?? '',
-    params.serviceTime ?? '',
+    hidden,
     params.scriptureBook ?? '',
     params.scriptureReference ?? '',
+    params.weeklyMeetingVariant == null ? '' : String(params.weeklyMeetingVariant),
+    params.bulletinId ?? '',
+    params.sectionPptxKey ?? '',
+  ].join('\0');
+}
+
+function fullContentRev(params: BulletinSlidePreviewParams): string {
+  return [
+    params.serviceDate ?? '',
+    params.serviceTime ?? '',
     params.showPreServiceChairName ? '1' : '0',
     params.preServiceChairNames ?? '',
     params.birthdayMonth ?? '',
     params.birthdayNames ?? '',
     params.verseOfWeek ?? '',
-    hidden,
-    params.weeklyMeetingVariant == null ? '' : String(params.weeklyMeetingVariant),
+  ].join('\0');
+}
+
+/** 分区内容指纹：改生日不应废掉崇拜区 PNG */
+export function bulletinSectionContentRev(
+  sectionId: string | undefined,
+  params: BulletinSlidePreviewParams,
+): string {
+  if (!sectionId) return fullContentRev(params);
+  switch (sectionId) {
+    case 'cover':
+      return [params.serviceDate ?? '', params.serviceTime ?? ''].join('\0');
+    case 'pre_service':
+      return [
+        params.showPreServiceChairName ? '1' : '0',
+        params.preServiceChairNames ?? '',
+      ].join('\0');
+    case 'scripture':
+    case 'scripture_zh':
+    case 'scripture_en':
+      return '';
+    case 'birthday':
+      return [params.birthdayMonth ?? '', params.birthdayNames ?? ''].join('\0');
+    case 'verse':
+    case 'verse_of_week':
+      return params.verseOfWeek ?? '';
+    case 'worship':
+    case 'offering':
+    case 'announcements':
+    case 'communion':
+    case 'more':
+      // 这些区主要靠 slideTextOverrides / 结构；内容字段不并入
+      return '';
+    default:
+      return fullContentRev(params);
+  }
+}
+
+/**
+ * 前端 PNG 缓存 key：结构 + 本分区内容 + 本页文字覆盖。
+ * 传入 sectionId 后，改无关分区字段不会使该页缓存失效。
+ */
+export function bulletinPreviewCacheKey(
+  slideNumber: number,
+  params: BulletinSlidePreviewParams,
+  sectionId?: string,
+): string {
+  const overrides = (params.slideTextOverrides ?? [])
+    .filter((o) => o.slide === slideNumber)
+    .map((o) => `${o.slide}:${o.textIndex}:${o.text}`)
+    .join('|');
+  return [
+    slideNumber,
+    bulletinStructureRev(params),
+    bulletinSectionContentRev(sectionId, params),
     overrides,
-    params.bulletinId ?? '',
-    params.sectionPptxKey ?? '',
   ].join('\0');
 }

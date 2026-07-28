@@ -51,6 +51,10 @@ import { getValidYoutubeAccessToken, resolveOAuthConfig } from './youtube-oauth-
 import { notifyBulletinUpdated } from './bulletin-realtime.js';
 import { resolveMailConfig, resolveWebAppUrl, sendMail } from './mail.js';
 import { appendVideosToPlaylist, buildPlaylistDetail } from './playlists.js';
+import {
+  readBulletinPreviewDiskCache,
+  writeBulletinPreviewDiskCache,
+} from './bulletin-preview-disk-cache.js';
 
 function resolveBulletinTemplateDir(): string {
   const here = dirname(fileURLToPath(import.meta.url));
@@ -496,10 +500,17 @@ async function buildPatchedBulletinPptxBuf(opts: {
     .map(([k, v]) => `${k}:${v}`)
     .join('|');
   const patchKey = `${SLIDE_PREVIEW_PATCH_REV}:pptx:${previewPatchCacheSuffix(q, overridesKey)}:sec:${sectionKey}`;
-  let pptxBuf = patchedPptxCache.get(patchKey);
+  let pptxBuf: Buffer | undefined = patchedPptxCache.get(patchKey);
+  if (!pptxBuf) {
+    const fromDisk = await readBulletinPreviewDiskCache(patchKey);
+    if (fromDisk) {
+      pptxBuf = fromDisk;
+      rememberLru(patchedPptxCache, patchKey, fromDisk, 24);
+    }
+  }
   if (!pptxBuf) {
     const templateBuf = await readFile(join(BULLETIN_TEMPLATE_DIR, BULLETIN_TEMPLATE_FILE));
-    pptxBuf = Buffer.from(
+    let built = Buffer.from(
       await patchBulletinPreviewInPptx(templateBuf, {
         serviceDate: q.serviceDate,
         serviceTime: q.serviceTime,
@@ -515,26 +526,28 @@ async function buildPatchedBulletinPptxBuf(opts: {
         slideTextOverrides,
       }),
     );
-    pptxBuf = await applySectionPptxOverridesToBuf(db, storage, pptxBuf, sectionOverrides).then(
-      async ({ buf, skippedSectionIds }) => {
-        // 历史坏档会让 LibreOffice 整页无字：从 DB 清掉，避免前端一直带着无效 blobId
-        if (bulletinId && skippedSectionIds.length) {
-          const next = { ...sectionOverrides };
-          for (const id of skippedSectionIds) delete next[id];
-          await db
-            .update(weeklyBulletins)
-            .set({ sectionPptxOverrides: next, updatedAt: new Date() })
-            .where(eq(weeklyBulletins.id, bulletinId));
-          sectionOverrides = next;
-        }
-        return buf;
-      },
+    built = Buffer.from(
+      await applySectionPptxOverridesToBuf(db, storage, built, sectionOverrides).then(
+        async ({ buf, skippedSectionIds }) => {
+          // 历史坏档会让 LibreOffice 整页无字：从 DB 清掉，避免前端一直带着无效 blobId
+          if (bulletinId && skippedSectionIds.length) {
+            const next = { ...sectionOverrides };
+            for (const id of skippedSectionIds) delete next[id];
+            await db
+              .update(weeklyBulletins)
+              .set({ sectionPptxOverrides: next, updatedAt: new Date() })
+              .where(eq(weeklyBulletins.id, bulletinId));
+            sectionOverrides = next;
+          }
+          return buf;
+        },
+      ),
     );
     // 分区 splice 会整页替换：仅对「未自定义」的分区回写表单字段，避免盖掉上传 PPT。
     if (Object.keys(sectionOverrides).length) {
-      pptxBuf = Buffer.from(
+      built = Buffer.from(
         await reapplyBulletinFormFieldsInPptx(
-          pptxBuf,
+          built,
           {
             serviceDate: q.serviceDate,
             serviceTime: q.serviceTime,
@@ -549,7 +562,9 @@ async function buildPatchedBulletinPptxBuf(opts: {
         ),
       );
     }
-    rememberLru(patchedPptxCache, patchKey, pptxBuf, 12);
+    pptxBuf = built;
+    rememberLru(patchedPptxCache, patchKey, built, 24);
+    void writeBulletinPreviewDiskCache(patchKey, built);
   }
   return { pptxBuf, sectionKey, overridesKey };
 }
@@ -849,7 +864,14 @@ export function registerBulletinRoutes(
         bulletinId,
       });
       const cacheKey = `${SLIDE_PREVIEW_PATCH_REV}:${slideNumber}:${previewPatchCacheSuffix(q, overridesKey)}:sec:${sectionKey}`;
-      const cached = slidePreviewCache.get(cacheKey);
+      let cached = slidePreviewCache.get(cacheKey);
+      if (!cached) {
+        const fromDisk = await readBulletinPreviewDiskCache(cacheKey);
+        if (fromDisk) {
+          cached = fromDisk;
+          rememberLru(slidePreviewCache, cacheKey, cached, 240);
+        }
+      }
       if (cached) {
         return reply
           .header('Content-Type', 'image/png')
@@ -881,7 +903,8 @@ export function registerBulletinRoutes(
               return readFile(pngPath);
             })(),
       );
-      rememberLru(slidePreviewCache, cacheKey, pngBuf, 120);
+      rememberLru(slidePreviewCache, cacheKey, pngBuf, 240);
+      void writeBulletinPreviewDiskCache(cacheKey, pngBuf);
       return reply
         .header('Content-Type', 'image/png')
         .header('Cache-Control', 'private, no-store')

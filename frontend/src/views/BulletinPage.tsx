@@ -32,7 +32,6 @@ import { resolveAvailableSundayIso, upcomingSundayIso } from '../lib/bulletin-da
 import {
   isBulletinSectionVisible,
   resolveHiddenSections,
-  setBulletinSectionVisible,
   BULLETIN_SECTION_TEMPLATE_SLIDES,
 } from '../lib/bulletin-section-visibility';
 import { withTemplateFieldDefaults } from '../lib/bulletin-template-field-defaults';
@@ -46,6 +45,7 @@ import {
 import { BULLETIN_WIZARD_STEPS } from '../lib/bulletin-template-steps';
 import { buildBulletinPptxFile, publishBulletinPptx } from '../lib/bulletin-publish';
 import { friendlyError } from '../lib/error-messages';
+import { isLocalBulletinDraftDirty } from '../lib/bulletin-local-draft';
 type AnnouncementDraft = AnnouncementInput & { key: string };
 
 const EDIT_SLIDES_PARAM = 'editSlides';
@@ -151,7 +151,7 @@ export default function BulletinPage() {
   const savingRef = useRef(false);
   const scripturePersistingRef = useRef(false);
   const [busySectionId, setBusySectionId] = useState<string | null>(null);
-  savingRef.current = saving || publishing;
+  savingRef.current = saving || publishing || scripturePersistingRef.current;
 
   const openEditSlides = useCallback((sectionId: string) => {
     if (!(BULLETIN_SECTION_TEMPLATE_SLIDES[sectionId]?.length ?? 0)) return;
@@ -297,12 +297,17 @@ export default function BulletinPage() {
     selectedId,
     (event) => {
       if (!selectedId || savingRef.current || scripturePersistingRef.current) return;
+      if (isLocalBulletinDraftDirty(selectedId)) {
+        // 本地未同步：只对齐 updatedAt，避免整表覆盖盖掉编辑
+        setDraft((prev) =>
+          prev && prev.id === selectedId ? { ...prev, updatedAt: event.updatedAt } : prev,
+        );
+        return;
+      }
       if (event.updatedAt === draft?.updatedAt) return;
       void (async () => {
         const remote = await getBulletin(selectedId);
         const normalized = withHiddenSections(remote);
-        // 内容没变（updatedAt 相同）时保留原引用，避免 setDraft 触发
-        // 「重渲染 → 自动保存 → SSE → 再刷新」的循环。
         setDraft((prev) => {
           if (prev && prev.id === normalized.id && prev.updatedAt === normalized.updatedAt) {
             return prev;
@@ -414,40 +419,6 @@ export default function BulletinPage() {
     });
   };
 
-  const handleSectionVisibilityChange = (sectionId: string, visible: boolean) => {
-    if (!draft) return;
-    const hiddenSections = setBulletinSectionVisible(draft.hiddenSections, sectionId, visible);
-    const patch = {
-      hiddenSections,
-      skipTestimonyWeek: hiddenSections.includes('testimony_week'),
-      skipDepartmentReports: hiddenSections.includes('department_reports'),
-    };
-    // 勾选「显示」后立即反映到预览
-    setDraft((prev) => (prev ? { ...prev, ...patch } : prev));
-
-    if (visible) {
-      setActiveSectionId(sectionId);
-      setPreviewSectionId(sectionId);
-      // deck 重建后再滚到该分区
-      window.setTimeout(() => setPreviewScrollBump((b) => b + 1), 280);
-    }
-
-    if (!canManage) return;
-    void updateBulletin(draft.id, patch)
-      .then((updated) => {
-        const normalized = withHiddenSections(updated);
-        setDraft(normalized);
-        if (visible) {
-          setActiveSectionId(sectionId);
-          setPreviewSectionId(sectionId);
-          window.setTimeout(() => setPreviewScrollBump((b) => b + 1), 280);
-        }
-      })
-      .catch((err) => {
-        setError(err instanceof Error ? err.message : String(err));
-      });
-  };
-
   useBulletinScripturePersistence(draft, patchField, {
     canFetchRemote: canManage,
   });
@@ -459,6 +430,7 @@ export default function BulletinPage() {
       scripturePersistingRef.current = busy;
       savingRef.current = busy || saving || publishing;
     },
+    externalSavingRef: savingRef,
   });
 
   const handleServiceDateChange = (isoDate: string) => {
@@ -468,27 +440,6 @@ export default function BulletinPage() {
       return;
     }
     patchField('serviceDate', isoDate);
-  };
-
-  const handleSaveCover = async () => {
-    if (!canManage || !draft) return;
-    try {
-      setSaving(true);
-      setError(null);
-      const updated = await updateBulletin(draft.id, {
-        serviceDate: draft.serviceDate,
-        serviceTime: draft.serviceTime,
-        ...visibilitySaveFields(draft),
-      });
-      const normalized = withHiddenSections(updated);
-      setDraft(normalized);
-      await refreshList();
-      setMessage(t('bulletin.saved'));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSaving(false);
-    }
   };
 
   const handleSaveFields = async (
@@ -587,6 +538,8 @@ export default function BulletinPage() {
         scriptureReference: draft.scriptureReference,
         verseOfWeek: draft.verseOfWeek,
         weeklyMeetingVariant: draft.weeklyMeetingVariant,
+        showPreServiceChairName: draft.showPreServiceChairName,
+        preServiceChairNames: draft.preServiceChairNames,
         ...visibilitySaveFields(draft),
       });
       const withAnnouncements = await saveBulletinAnnouncements(
@@ -617,11 +570,6 @@ export default function BulletinPage() {
   const renderStepPanel = () => {
     if (!draft) return null;
 
-    const visibilityProps = {
-      sectionId: activeSectionId,
-      onSectionVisibilityChange: handleSectionVisibilityChange,
-    };
-
     if (activeSectionReadonly) {
       // 模板固定页：中间无需表单/说明；显示与改幻灯片用左侧入口即可
       return null;
@@ -632,7 +580,6 @@ export default function BulletinPage() {
       canEdit: canManage,
       saving,
       onPatch: patchField,
-      ...visibilityProps,
     };
 
     switch (currentStepDef?.id) {
@@ -641,13 +588,9 @@ export default function BulletinPage() {
           <BulletinCoverStep
             serviceDate={draft.serviceDate}
             serviceTime={draft.serviceTime}
-            draft={draft}
             canEdit={canManage}
-            saving={saving}
             onServiceDateChange={handleServiceDateChange}
             onServiceTimeChange={(time) => patchField('serviceTime', time)}
-            onSectionVisibilityChange={handleSectionVisibilityChange}
-              onSave={handleSaveCover}
             onCoverPreviewFocus={() =>
               setPreviewScrollToSlide((prev) => ({
                 slide: 1,
@@ -657,29 +600,9 @@ export default function BulletinPage() {
           />
         );
       case 'pre_service':
-        return (
-          <BulletinPreServiceStep
-            {...common}
-            onSave={() =>
-              void handleSaveFields({
-                showPreServiceChairName: draft.showPreServiceChairName,
-                preServiceChairNames: draft.preServiceChairNames,
-              })
-            }
-          />
-        );
+        return <BulletinPreServiceStep {...common} />;
       case 'scripture':
-        return (
-          <BulletinScriptureStep
-            {...common}
-            onSave={() =>
-              void handleSaveFields({
-                scriptureBook: draft.scriptureBook,
-                scriptureReference: draft.scriptureReference,
-              })
-            }
-          />
-        );
+        return <BulletinScriptureStep {...common} />;
       case 'worship':
         return (
           <BulletinWorshipStep
@@ -698,35 +621,12 @@ export default function BulletinPage() {
               setDraft((prev) => (prev ? { ...prev, worshipLyricsPptxBlobId: blobId } : prev));
               setWorshipPreviewRevision((v) => v + 1);
             }}
-            onSectionVisibilityChange={handleSectionVisibilityChange}
-              onSaveVisibility={() => void handleSaveFields(visibilitySaveFields(draft))}
-            saving={saving}
           />
         );
       case 'offering':
-        return (
-          <BulletinOfferingStep
-            {...common}
-            onSave={() =>
-              void handleSaveFields({
-                lastWeekOfferingDate: draft.lastWeekOfferingDate,
-                offeringQuarterLabel: draft.offeringQuarterLabel,
-              })
-            }
-          />
-        );
+        return <BulletinOfferingStep {...common} />;
       case 'birthday':
-        return (
-          <BulletinBirthdayStep
-            {...common}
-            onSave={() =>
-              void handleSaveFields({
-                birthdayMonth: draft.birthdayMonth,
-                birthdayNames: draft.birthdayNames,
-              })
-            }
-          />
-        );
+        return <BulletinBirthdayStep {...common} />;
       case 'announcements':
         return (
           <BulletinAnnouncementsStep
@@ -753,27 +653,9 @@ export default function BulletinPage() {
           />
         );
       case 'verse':
-        return (
-          <BulletinVerseStep
-            {...common}
-            onSave={() => void handleSaveFields({ verseOfWeek: draft.verseOfWeek })}
-          />
-        );
+        return <BulletinVerseStep {...common} />;
       case 'more':
-        return (
-          <BulletinMoreStep
-            {...common}
-            onSave={() =>
-              void handleSaveFields({
-                staffMeetingDate: draft.staffMeetingDate,
-                testimonyShareDate: draft.testimonyShareDate,
-                serviceRosterText: draft.serviceRosterText,
-                baptismText: draft.baptismText,
-                weeklyMeetingVariant: draft.weeklyMeetingVariant,
-              })
-            }
-          />
-        );
+        return <BulletinMoreStep {...common} />;
       default:
         return <p className="bulletin-step-placeholder">{t('bulletin.steps.comingSoon')}</p>;
     }
@@ -830,9 +712,7 @@ export default function BulletinPage() {
                 currentIndex={navCurrentIndex}
                 previewIndex={navPreviewIndex}
                 orientation="vertical"
-                canEditVisibility={canManage}
                 canEditSlides={canManage}
-                onStepVisibilityChange={handleSectionVisibilityChange}
                 onEditSlides={(sectionId) => {
                   selectNavSection(sectionId);
                   openEditSlides(sectionId);

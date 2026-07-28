@@ -17,7 +17,6 @@ import MobileSegmentedControl from '../MobileSegmentedControl';
 import BulletinWorshipYoutubeImportPanel from './BulletinWorshipYoutubeImportPanel';
 import { friendlyError } from '../../lib/error-messages';
 import { useI18n } from '../../i18n';
-import { BulletinSectionControls } from './BulletinWizardSteps';
 
 type WorshipSourceTab = 'youtube' | 'search';
 
@@ -31,9 +30,6 @@ type BulletinWorshipStepProps = {
   onPlaylistReady: (playlistId: string) => void;
   onPlaylistChanged?: () => void;
   onLyricsPptxChange?: (blobId: string | null) => void;
-  onSectionVisibilityChange?: (sectionId: string, visible: boolean) => void;
-  onSaveVisibility?: () => void;
-  saving?: boolean;
 };
 
 function reorderToFinalIndex<T>(items: T[], from: number, toIndex: number): T[] {
@@ -54,9 +50,6 @@ export default function BulletinWorshipStep({
   onPlaylistReady,
   onPlaylistChanged,
   onLyricsPptxChange,
-  onSectionVisibilityChange,
-  onSaveVisibility,
-  saving,
 }: BulletinWorshipStepProps) {
   const { t } = useI18n();
   const lyricsFileInputRef = useRef<HTMLInputElement>(null);
@@ -289,27 +282,6 @@ export default function BulletinWorshipStep({
         <h3>{t('bulletin.steps.worshipTitle')}</h3>
         <p className="bulletin-step-intro">{t('bulletin.steps.worshipIntro')}</p>
       </header>
-
-      {onSectionVisibilityChange ? (
-        <div className="bulletin-cover-step-fields" style={{ marginBottom: '0.75rem' }}>
-          <BulletinSectionControls
-            sectionId="worship"
-            draft={draft}
-            canEdit={canManage}
-            onSectionVisibilityChange={onSectionVisibilityChange}
-          />
-          {canManage && onSaveVisibility ? (
-            <button
-              type="button"
-              className="btn-primary"
-              disabled={saving}
-              onClick={onSaveVisibility}
-            >
-              {saving ? t('bulletin.saving') : t('bulletin.save')}
-            </button>
-          ) : null}
-        </div>
-      ) : null}
 
       {(canManage || hasLyricsPptx) && (
         <section className="bulletin-worship-lyrics-pptx">

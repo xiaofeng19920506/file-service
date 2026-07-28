@@ -3,10 +3,8 @@ import { useI18n } from '../i18n';
 import { useBulletinSlideShow } from '../hooks/useBulletinSlideShow';
 import {
   readSlideShowSession,
-  removeSlideShowSession,
   type BulletinSlideShowSession,
 } from '../lib/bulletin-slideshow-session';
-import { createSlideShowBus } from '../lib/bulletin-slideshow-bus';
 
 type BulletinSlideShowPresenterPageProps = {
   sessionId: string;
@@ -94,21 +92,6 @@ export default function BulletinSlideShowPresenterPage({ sessionId }: BulletinSl
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [show]);
-
-  useEffect(() => {
-    const cleanupSession = () => {
-      removeSlideShowSession(sessionId);
-      const bus = createSlideShowBus(sessionId);
-      bus.publish({ type: 'close', from: 'presenter' });
-      bus.close();
-    };
-    window.addEventListener('beforeunload', cleanupSession);
-    window.addEventListener('pagehide', cleanupSession);
-    return () => {
-      window.removeEventListener('beforeunload', cleanupSession);
-      window.removeEventListener('pagehide', cleanupSession);
-    };
-  }, [sessionId]);
 
   if (!session) {
     return (

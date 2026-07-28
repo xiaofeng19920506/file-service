@@ -4,6 +4,7 @@ import {
   type BulletinSlidePreviewParams,
 } from '../api/bulletins';
 import { createSlideShowBus, type SlideShowRole } from '../lib/bulletin-slideshow-bus';
+import { removeSlideShowSession } from '../lib/bulletin-slideshow-session';
 
 const FALLBACK_TOTAL_SLIDES = 38;
 
@@ -143,6 +144,8 @@ export function useBulletinSlideShow(opts: {
     const bus = createSlideShowBus(sessionId);
     bus.publish({ type: 'close', from: role });
     bus.close();
+    // 显式结束才删 session；单窗刷新/pagehide 不删
+    removeSlideShowSession(sessionId);
     window.close();
   }, [sessionId, role]);
 

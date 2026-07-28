@@ -1,6 +1,6 @@
 /** 模块级预览 PNG blob 缓存，跨组件复用，避免无关页重复打 API */
 
-const MAX_ENTRIES = 64;
+const MAX_ENTRIES = 128;
 const cache = new Map<string, Blob>();
 
 export function getBulletinPreviewBlob(cacheKey: string): Blob | undefined {

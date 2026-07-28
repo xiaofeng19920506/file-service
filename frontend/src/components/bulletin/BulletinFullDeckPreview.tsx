@@ -35,8 +35,9 @@ type DeckSlideItemProps = {
   sectionId: string;
   patch: BulletinPreviewPatchFields;
   highlight: boolean;
+  /** 相邻分区预取：进入视口前也拉 PNG */
+  prefetch: boolean;
   label: string;
-  emptyLabel: string;
   bulletinId: string;
   worshipPlaylistId: string | null;
   worshipPlaylistTitle: string;
@@ -50,8 +51,8 @@ function deckSlidePropsEqual(prev: DeckSlideItemProps, next: DeckSlideItemProps)
     prev.slideNumber !== next.slideNumber ||
     prev.sectionId !== next.sectionId ||
     prev.highlight !== next.highlight ||
+    prev.prefetch !== next.prefetch ||
     prev.label !== next.label ||
-    prev.emptyLabel !== next.emptyLabel ||
     prev.bulletinId !== next.bulletinId ||
     prev.worshipPlaylistId !== next.worshipPlaylistId ||
     prev.worshipPlaylistTitle !== next.worshipPlaylistTitle ||
@@ -61,8 +62,16 @@ function deckSlidePropsEqual(prev: DeckSlideItemProps, next: DeckSlideItemProps)
   ) {
     return false;
   }
-  const prevKey = bulletinPreviewCacheKey(prev.slideNumber, previewPatchFull(prev.patch));
-  const nextKey = bulletinPreviewCacheKey(next.slideNumber, previewPatchFull(next.patch));
+  const prevKey = bulletinPreviewCacheKey(
+    prev.slideNumber,
+    previewPatchFull(prev.patch),
+    prev.sectionId,
+  );
+  const nextKey = bulletinPreviewCacheKey(
+    next.slideNumber,
+    previewPatchFull(next.patch),
+    next.sectionId,
+  );
   return prevKey === nextKey;
 }
 
@@ -71,8 +80,8 @@ const DeckSlideItem = memo(function DeckSlideItem({
   sectionId,
   patch,
   highlight,
+  prefetch,
   label,
-  emptyLabel,
   bulletinId,
   worshipPlaylistId,
   worshipPlaylistTitle,
@@ -88,8 +97,8 @@ const DeckSlideItem = memo(function DeckSlideItem({
     worshipPlaylistId &&
     hasBulletinWorshipPlayItems(worshipItems);
 
-  // 封面 + 会前祷告（前 3 页）以及当前高亮页立即拉 PNG，避免首屏一直转圈
-  const eager = highlight || slideNumber <= 3;
+  // 封面 + 会前（前 3 页）、当前高亮、相邻分区页立即拉 PNG
+  const eager = highlight || prefetch || slideNumber <= 3;
 
   return (
     <div
@@ -106,15 +115,13 @@ const DeckSlideItem = memo(function DeckSlideItem({
           slideNumber={slideNumber}
           patch={slidePatch}
           slideLabel={label}
-          emptyLabel={emptyLabel}
           lyricsPptxBlobId={worshipLyricsPptxBlobId}
         />
       ) : (
         <BulletinPptSlidePreview
           slideNumber={slideNumber}
           patch={slidePatch}
-          requireDate={false}
-          emptyLabel={emptyLabel}
+          sectionId={sectionId}
           slideLabel={label}
           lazy={!eager}
         />
@@ -191,6 +198,20 @@ export default function BulletinFullDeckPreview({
     () => (deckPlan ? composeDeckSectionsForPreview(deckPlan) : []),
     [deckPlan],
   );
+
+  const prefetchSectionIds = useMemo(() => {
+    const set = new Set<string>();
+    if (!highlightSectionId || !composedSections.length) return set;
+    const idx = composedSections.findIndex((s) => s.id === highlightSectionId);
+    if (idx < 0) {
+      set.add(highlightSectionId);
+      return set;
+    }
+    set.add(composedSections[idx]!.id);
+    if (idx > 0) set.add(composedSections[idx - 1]!.id);
+    if (idx < composedSections.length - 1) set.add(composedSections[idx + 1]!.id);
+    return set;
+  }, [composedSections, highlightSectionId]);
 
   const fullPatch = useMemo(
     (): BulletinPreviewPatchFields => ({
@@ -375,8 +396,8 @@ export default function BulletinFullDeckPreview({
                   sectionId={section.id}
                   patch={fullPatch}
                   highlight={highlightSet.has(page)}
+                  prefetch={prefetchSectionIds.has(section.id)}
                   label={t('bulletin.previewSlideSingle', { page })}
-                  emptyLabel={t('bulletin.previewSlideEmpty')}
                   bulletinId={bulletin.id}
                   worshipPlaylistId={bulletin.servicePlaylistId}
                   worshipPlaylistTitle={worshipPlaylistTitle}

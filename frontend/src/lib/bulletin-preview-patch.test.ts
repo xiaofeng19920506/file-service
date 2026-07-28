@@ -45,25 +45,38 @@ describe('previewPatchFull / previewPatchForSection', () => {
   });
 
   it('changes keys when chair or date changes (full patch is shared)', () => {
-    const a = bulletinPreviewCacheKey(2, previewPatchForSection('pre_service', full));
+    const a = bulletinPreviewCacheKey(2, previewPatchForSection('pre_service', full), 'pre_service');
     const b = bulletinPreviewCacheKey(
       2,
       previewPatchForSection('pre_service', {
         ...full,
         preServiceChairNames: '别人',
       }),
+      'pre_service',
     );
     expect(a).not.toBe(b);
 
-    const c = bulletinPreviewCacheKey(10, previewPatchForSection('worship', full));
+    const c = bulletinPreviewCacheKey(10, previewPatchForSection('worship', full), 'worship');
     const d = bulletinPreviewCacheKey(
       10,
       previewPatchForSection('worship', {
         ...full,
         serviceDate: '2026-08-01',
       }),
+      'worship',
     );
-    expect(c).not.toBe(d);
+    // 崇拜区不依赖封面日期：分区感知后应保持同一 contentRev
+    expect(c).toBe(d);
+  });
+
+  it('birthday change does not invalidate worship cache key', () => {
+    const a = bulletinPreviewCacheKey(10, previewPatchFull(full), 'worship');
+    const b = bulletinPreviewCacheKey(
+      10,
+      previewPatchFull({ ...full, birthdayNames: '丙,丁' }),
+      'worship',
+    );
+    expect(a).toBe(b);
   });
 
   it('changes keys when hidden sections change', () => {
