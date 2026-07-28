@@ -246,6 +246,9 @@ const en: MessageTree = {
     saveCover: 'Save cover',
     coverPreviewLabel: 'Cover preview (slide 1)',
     coverPreviewEmpty: 'Pick a service date to preview the cover',
+    previewSlideEmpty: 'Loading preview…',
+    sectionSyncing: 'Saving this section…',
+    sectionPreviewRefreshing: 'Updating preview…',
     editorPanel: 'Bulletin editor',
     previewTitle: 'PPT preview',
     previewHint:

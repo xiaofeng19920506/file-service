@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { WeeklyBulletin } from '../api/bulletins';
-import { fetchScripturePreference, saveScripturePreference } from '../api/bulletins';
+import { fetchScripturePreference } from '../api/bulletins';
 import {
   purgeExpiredLocalScripturePreferences,
   readLocalScripturePreference,
@@ -8,22 +8,19 @@ import {
 } from '../lib/bulletin-scripture-preference';
 
 type Options = {
-  canPersistRemote: boolean;
-  onPersistingChange?: (busy: boolean) => void;
+  canFetchRemote: boolean;
 };
 
+/**
+ * 仅负责「空经文时从 local / preference API 恢复」。
+ * 持久化改由 useBulletinLocalDraftSync 统一：localStorage → 防抖 PATCH。
+ */
 export function useBulletinScripturePersistence(
   draft: WeeklyBulletin | null,
   patchField: <K extends keyof WeeklyBulletin>(key: K, value: WeeklyBulletin[K]) => void,
-  { canPersistRemote, onPersistingChange }: Options,
+  { canFetchRemote }: Options,
 ) {
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const restoredForRef = useRef<string | null>(null);
-  // 记录已入队/已保存的内容指纹：内容没变时绝不重复 PUT。
-  // 否则「保存 → 服务端 bump updatedAt → SSE → 重拉 setDraft → 重渲染 → 再保存」会形成死循环。
-  const lastQueuedRef = useRef<string | null>(null);
-  const onPersistingChangeRef = useRef(onPersistingChange);
-  onPersistingChangeRef.current = onPersistingChange;
 
   useEffect(() => {
     purgeExpiredLocalScripturePreferences();
@@ -33,6 +30,7 @@ export function useBulletinScripturePersistence(
     if (!draft?.id) return;
     if (draft.scriptureBook.trim() && draft.scriptureReference.trim()) {
       restoredForRef.current = draft.id;
+      writeLocalScripturePreference(draft.id, draft.scriptureBook, draft.scriptureReference);
       return;
     }
     if (restoredForRef.current === draft.id) return;
@@ -41,7 +39,7 @@ export function useBulletinScripturePersistence(
     void (async () => {
       const local = readLocalScripturePreference(draft.id);
       let remote: { scriptureBook: string; scriptureReference: string } | null = null;
-      if (canPersistRemote) {
+      if (canFetchRemote) {
         try {
           const pref = await fetchScripturePreference(draft.id);
           if (pref) {
@@ -67,39 +65,10 @@ export function useBulletinScripturePersistence(
       cancelled = true;
     };
   }, [
-    canPersistRemote,
+    canFetchRemote,
     draft?.id,
     draft?.scriptureBook,
     draft?.scriptureReference,
     patchField,
   ]);
-
-  useEffect(() => {
-    if (!draft?.id) return;
-    const book = draft.scriptureBook.trim();
-    const reference = draft.scriptureReference.trim();
-    if (!book || !reference) return;
-
-    const fingerprint = `${draft.id}\u0000${book}\u0000${reference}`;
-    if (lastQueuedRef.current === fingerprint) return;
-
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
-      lastQueuedRef.current = fingerprint;
-      writeLocalScripturePreference(draft.id, book, reference);
-      if (!canPersistRemote) return;
-      onPersistingChangeRef.current?.(true);
-      void saveScripturePreference({
-        bulletinId: draft.id,
-        scriptureBook: book,
-        scriptureReference: reference,
-      })
-        .catch(() => undefined)
-        .finally(() => onPersistingChangeRef.current?.(false));
-    }, 600);
-
-    return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    };
-  }, [canPersistRemote, draft?.id, draft?.scriptureBook, draft?.scriptureReference]);
 }

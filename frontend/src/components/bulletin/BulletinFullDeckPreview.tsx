@@ -161,6 +161,8 @@ type BulletinFullDeckPreviewProps = {
   deckPlan: BulletinDeckPlan | null;
   highlightSlides?: number[];
   highlightSectionId?: string;
+  /** 仅该分区显示同步/刷新 loading，其它分区保持现有预览 */
+  busySectionId?: string | null;
   scrollRequest?: BulletinPreviewScrollRequest | null;
   worshipItems?: PlaylistItem[];
   worshipPlaylistTitle?: string;
@@ -172,6 +174,7 @@ export default function BulletinFullDeckPreview({
   deckPlan,
   highlightSlides = [],
   highlightSectionId = '',
+  busySectionId = null,
   scrollRequest = null,
   worshipItems = [],
   worshipPlaylistTitle = '',
@@ -342,16 +345,26 @@ export default function BulletinFullDeckPreview({
         const nav = navSectionById(section.id);
         const title = nav ? t(nav.labelKey) : section.id;
         const active = highlightSectionId === section.id;
+        const sectionBusy = busySectionId === section.id;
         return (
           <section
             key={section.id}
-            className={`bulletin-deck-section${active ? ' bulletin-deck-section--active' : ''}`}
+            className={`bulletin-deck-section${active ? ' bulletin-deck-section--active' : ''}${
+              sectionBusy ? ' bulletin-deck-section--busy' : ''
+            }`}
             data-section={section.id}
           >
             <header className="bulletin-deck-section-header">
               <h3 className="bulletin-deck-section-title">{title}</h3>
               <span className="bulletin-deck-section-pages">
-                {t('bulletin.previewSectionPages', { count: section.slides.length })}
+                {sectionBusy ? (
+                  <span className="bulletin-deck-section-busy-label">
+                    <span className="preview-spinner bulletin-section-syncing-spinner" />
+                    {t('bulletin.sectionPreviewRefreshing')}
+                  </span>
+                ) : (
+                  t('bulletin.previewSectionPages', { count: section.slides.length })
+                )}
               </span>
             </header>
             <div className="bulletin-deck-section-slides">
@@ -363,7 +376,7 @@ export default function BulletinFullDeckPreview({
                   patch={fullPatch}
                   highlight={highlightSet.has(page)}
                   label={t('bulletin.previewSlideSingle', { page })}
-                  emptyLabel={t('bulletin.coverPreviewEmpty')}
+                  emptyLabel={t('bulletin.previewSlideEmpty')}
                   bulletinId={bulletin.id}
                   worshipPlaylistId={bulletin.servicePlaylistId}
                   worshipPlaylistTitle={worshipPlaylistTitle}

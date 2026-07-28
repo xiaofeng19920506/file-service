@@ -24,6 +24,7 @@ import {
 import ProgressStepper from '../components/ProgressStepper';
 import BulletinSectionPptEditor from '../components/bulletin/BulletinSectionPptEditor';
 import BulletinSectionReplaceBanner from '../components/bulletin/BulletinSectionReplaceBanner';
+import { useBulletinLocalDraftSync } from '../hooks/useBulletinLocalDraftSync';
 import { useBulletinRealtime } from '../hooks/useBulletinRealtime';
 import { useBulletinScripturePersistence } from '../hooks/useBulletinScripturePersistence';
 import { useI18n } from '../i18n';
@@ -149,6 +150,7 @@ export default function BulletinPage() {
   const editSlidesHistoryPushedRef = useRef(false);
   const savingRef = useRef(false);
   const scripturePersistingRef = useRef(false);
+  const [busySectionId, setBusySectionId] = useState<string | null>(null);
   savingRef.current = saving || publishing;
 
   const openEditSlides = useCallback((sectionId: string) => {
@@ -447,49 +449,17 @@ export default function BulletinPage() {
   };
 
   useBulletinScripturePersistence(draft, patchField, {
-    canPersistRemote: canManage,
-    onPersistingChange: (busy) => {
-      scripturePersistingRef.current = busy;
-    },
+    canFetchRemote: canManage,
   });
 
-  // 生日月份/名单：预览即时更新，并防抖自动保存（同时持久化已清除的分区覆盖）
-  useEffect(() => {
-    if (!canManage || !draft) return;
-    const timer = window.setTimeout(() => {
-      const id = draft.id;
-      const birthdayMonth = draft.birthdayMonth;
-      const birthdayNames = draft.birthdayNames;
-      const sectionPptxOverrides = draft.sectionPptxOverrides ?? {};
-      savingRef.current = true;
-      void updateBulletin(id, {
-        birthdayMonth,
-        birthdayNames,
-        sectionPptxOverrides,
-      })
-        .then((updated) => {
-          setDraft((prev) =>
-            prev && prev.id === updated.id
-              ? {
-                  ...prev,
-                  updatedAt: updated.updatedAt,
-                  sectionPptxOverrides:
-                    updated.sectionPptxOverrides ?? prev.sectionPptxOverrides,
-                }
-              : prev,
-          );
-        })
-        .catch(() => {
-          /* 预览已即时；保存失败不打断编辑 */
-        })
-        .finally(() => {
-          savingRef.current = false;
-        });
-    }, 400);
-    return () => window.clearTimeout(timer);
-  }, [canManage, draft?.id, draft?.birthdayMonth, draft?.birthdayNames]);
-  // sectionPptxOverrides 不进依赖：改生日时已在 patchField 清掉 birthday 覆盖，随本次 debounce 一并保存即可
-
+  useBulletinLocalDraftSync(draft, setDraft, {
+    canPersistRemote: canManage,
+    onSectionBusyChange: setBusySectionId,
+    onPersistingChange: (busy) => {
+      scripturePersistingRef.current = busy;
+      savingRef.current = busy || saving || publishing;
+    },
+  });
 
   const handleServiceDateChange = (isoDate: string) => {
     const existing = bulletins.find((b) => b.serviceDate === isoDate);
@@ -874,6 +844,12 @@ export default function BulletinPage() {
                 }}
               />
               <div className="bulletin-step-panel">
+                {busySectionId === activeSectionId ? (
+                  <div className="bulletin-section-syncing" role="status">
+                    <span className="preview-spinner bulletin-section-syncing-spinner" />
+                    <span>{t('bulletin.sectionSyncing')}</span>
+                  </div>
+                ) : null}
                 {canManage &&
                 !activeSectionReadonly &&
                 (BULLETIN_SECTION_TEMPLATE_SLIDES[activeSectionId]?.length ?? 0) > 0 ? (
@@ -939,6 +915,7 @@ export default function BulletinPage() {
               scrollToSectionBump={previewScrollBump}
               scrollToPresentationSlide={previewScrollToSlide}
               highlightSectionId={previewSectionId}
+              busySectionId={busySectionId}
               bulletin={draft}
               worshipRefreshKey={worshipPreviewRevision}
               onVisibleSectionChange={handleVisibleSectionChange}

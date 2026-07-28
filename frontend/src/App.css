@@ -6393,6 +6393,37 @@
   letter-spacing: 0.01em;
 }
 
+.bulletin-deck-section--busy .bulletin-deck-section-header {
+  background: color-mix(in srgb, var(--surface) 78%, #0b5394 22%);
+}
+
+.bulletin-deck-section-busy-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #0b5394;
+  font-weight: 600;
+}
+
+.bulletin-section-syncing {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 0.65rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, #0b5394 10%, var(--surface));
+  color: #0b5394;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.bulletin-section-syncing-spinner {
+  width: 0.9rem;
+  height: 0.9rem;
+  border-width: 2px;
+}
+
 .bulletin-deck-section-pages {
   font-size: 0.75rem;
   color: var(--text-secondary);

@@ -36,6 +36,8 @@ type BulletinPreviewPanelProps = {
   scrollToPresentationSlide?: { slide: number; bump: number } | null;
   /** 预览高亮的分区 id */
   highlightSectionId: string;
+  /** 正在同步/刷新的分区（仅该区显示 loading，不影响整页） */
+  busySectionId?: string | null;
   bulletin: WeeklyBulletin;
   worshipRefreshKey?: number;
   onVisibleSectionChange?: (sectionId: string) => void;
@@ -46,12 +48,14 @@ export default function BulletinPreviewPanel({
   scrollToSectionBump = 0,
   scrollToPresentationSlide = null,
   highlightSectionId,
+  busySectionId = null,
   bulletin,
   worshipRefreshKey = 0,
   onVisibleSectionChange,
 }: BulletinPreviewPanelProps) {
   const { t } = useI18n();
   const [deckPlan, setDeckPlan] = useState<BulletinDeckPlan | null>(null);
+  const [planRefreshing, setPlanRefreshing] = useState(false);
   const [scrollRequest, setScrollRequest] = useState<BulletinPreviewScrollRequest>({
     slide: 1,
     id: 0,
@@ -75,12 +79,15 @@ export default function BulletinPreviewPanel({
     let debounceTimer = 0;
 
     const run = () => {
+      setPlanRefreshing(true);
       void (async () => {
         try {
           const plan = await buildBulletinDeckPlan(bulletin);
           if (!cancelled) setDeckPlan(plan);
         } catch {
           if (!cancelled) setDeckPlan(null);
+        } finally {
+          if (!cancelled) setPlanRefreshing(false);
         }
       })();
     };
@@ -238,6 +245,7 @@ export default function BulletinPreviewPanel({
         deckPlan={deckPlan}
         highlightSlides={highlightSlides}
         highlightSectionId={highlightSectionId}
+        busySectionId={busySectionId ?? (planRefreshing ? highlightSectionId : null)}
         scrollRequest={scrollRequest}
         worshipItems={worshipItems}
         worshipPlaylistTitle={worshipPlaylistTitle}
