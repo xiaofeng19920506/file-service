@@ -25,15 +25,15 @@ function longText(chars: number): string {
 }
 
 function englishPageVisualLines(page: string[]): number {
-  return page.length;
+  return page.reduce((sum, line) => sum + estimateEnglishLineVisualLines(line), 0);
 }
 
-/** 从英文页文本中提取节号（格式：`N text`） */
+/** 从英文页文本中提取节号（格式：`N text`；续页片段可能无节号） */
 function verseNumbersOnEnglishPage(page: string[]): number[] {
-  const text = ` ${page.join(' ')} `;
   const nums: number[] = [];
-  for (const m of text.matchAll(/\s(\d+)\s+(?=[A-Za-z“"‘'])/g)) {
-    nums.push(Number(m[1]));
+  for (const line of page) {
+    const m = line.match(/^(\d+)\s+(?=[A-Za-z“"‘'])/);
+    if (m) nums.push(Number(m[1]));
   }
   return nums;
 }
@@ -48,9 +48,11 @@ function assertChinesePageInRange(page: string, isLastPage: boolean) {
 
 function assertEnglishPageInRange(page: string[], isLastPage: boolean) {
   const lines = englishPageVisualLines(page);
+  expect(page.length).toBeLessThanOrEqual(SCRIPTURE_EN_PAGE_MAX_VERSES);
   expect(lines).toBeLessThanOrEqual(SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES);
   if (!isLastPage) {
-    expect(lines).toBeGreaterThanOrEqual(SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES);
+    // 非末页应尽量接近容量；至少有内容
+    expect(lines).toBeGreaterThan(0);
   }
 }
 
@@ -131,13 +133,12 @@ describe('buildScriptureSlideBodies', () => {
     expect(passage).not.toBeNull();
     expect(passage!.en.length).toBe(11);
     const bodies = buildScriptureSlideBodies(passage!);
-    // 11 节 → 至少两页（每页最多 10 节；单页过长时还可能再拆）
+    // 22pt 下一节约 2 行，11 节必然多页；且每页不超过 10 节
     expect(bodies.englishPages.length).toBeGreaterThanOrEqual(2);
 
-    bodies.englishPages.forEach((page) => {
-      expect(verseNumbersOnEnglishPage(page).length).toBeLessThanOrEqual(
-        SCRIPTURE_EN_PAGE_MAX_VERSES,
-      );
+    bodies.englishPages.forEach((page, i) => {
+      expect(page.length).toBeLessThanOrEqual(SCRIPTURE_EN_PAGE_MAX_VERSES);
+      assertEnglishPageInRange(page, i === bodies.englishPages.length - 1);
     });
 
     const allJoined = bodies.englishPages.flat().join(' ');
@@ -160,13 +161,16 @@ describe('buildScriptureSlideBodies', () => {
       zh: [verse(1, '一節')],
       en,
     });
-    // 40 节 → 至少 4 页（每页最多 10 节）
+    // 长节约 2 行/节，40 节在行数上限下远超 4 页
     expect(bodies.englishPages.length).toBeGreaterThanOrEqual(4);
     const joined = bodies.englishPages.flat().join(' ');
     for (const v of en) {
       expect(joined).toContain(String(v.verse));
     }
     expect(joined).not.toContain('…');
+    bodies.englishPages.forEach((page) => {
+      expect(page.length).toBeLessThanOrEqual(SCRIPTURE_EN_PAGE_MAX_VERSES);
+    });
   });
 
   it('never puts more than 10 English verses on one slide', () => {
@@ -178,12 +182,25 @@ describe('buildScriptureSlideBodies', () => {
       zh: [verse(1, '一節')],
       en,
     });
-    expect(bodies.englishPages.length).toBe(3);
+    // 短节约 1 行，受 9 行上限约束会拆成多页，且每页 ≤10 节
+    expect(bodies.englishPages.length).toBeGreaterThanOrEqual(3);
     bodies.englishPages.forEach((page) => {
+      expect(page.length).toBeLessThanOrEqual(SCRIPTURE_EN_PAGE_MAX_VERSES);
       expect(verseNumbersOnEnglishPage(page).length).toBeLessThanOrEqual(
         SCRIPTURE_EN_PAGE_MAX_VERSES,
       );
     });
+  });
+
+  it('keeps whole English verses together when they fit', async () => {
+    const passage = await loadScripturePassage('箴言 Proverbs', '15:1-4');
+    expect(passage).not.toBeNull();
+    const bodies = buildScriptureSlideBodies(passage!);
+    // 4 节 × ~2 行 = 8 行，应落在一页内（未超 9 行上限）
+    expect(bodies.englishPages.length).toBe(1);
+    expect(bodies.englishPages[0]!.length).toBe(4);
+    expect(bodies.englishPages[0]![0]).toMatch(/^1 /);
+    expect(bodies.englishPages[0]![3]).toMatch(/^4 /);
   });
 
   it('splits a single long English verse across pages', () => {
@@ -194,6 +211,7 @@ describe('buildScriptureSlideBodies', () => {
     });
     expect(bodies.englishPages.length).toBeGreaterThan(1);
     expect(bodies.englishPages.flat().join(' ')).toContain('word');
+    expect(bodies.englishPages[0]![0]).toMatch(/^1 /);
   });
 });
 

@@ -157,7 +157,7 @@ export function formatEnglishPassageText(verses: BibleVerse[]): string {
 export type ScriptureSlideBodies = {
   /** 中文经文页（slide 5 模板，可继续复制） */
   chinesePages: string[];
-  /** 英文经文页（slide 6 模板，每页多行） */
+  /** 英文经文页（slide 6 模板；每项为一节/片段，一节一段） */
   englishPages: string[][];
 };
 
@@ -174,18 +174,24 @@ export const SCRIPTURE_ZH_PAGE_MIN_CHARS =
 export const SCRIPTURE_ZH_PAGE_MAX_CHARS =
   SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES * SCRIPTURE_ZH_CHARS_PER_LINE;
 
-/** 英文 22pt 每行约容纳字符数（投影实测：字号加大后略收窄） */
-export const SCRIPTURE_EN_CHARS_PER_LINE = 52;
+/**
+ * 英文 22pt 每行约容纳字符数。
+ * 略保守：文本框约 689pt 宽，22pt 实测易比理论值更早换行，估松会导致裁切。
+ */
+export const SCRIPTURE_EN_CHARS_PER_LINE = 48;
 
 /**
  * 英文每页最多节数（用户规则：一页不超过 10 节）。
- * 视觉行数仅作超长单节的兜底裁切，不再作为主分页依据。
+ * 主分页按「整节」装箱；单节过长再按视觉行拆。
  */
 export const SCRIPTURE_EN_PAGE_MAX_VERSES = 10;
 
-/** 英文每页视觉行数上限（单节过长时拆页，避免文本框裁切） */
-export const SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES = 10;
-export const SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES = 11;
+/**
+ * 英文每页视觉行数上限（22pt + 一节一段）。
+ * 文本框内高约 381pt，按 ~28pt/行约可容 13 行；留余量避免 LibreOffice/投影裁切。
+ */
+export const SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES = 8;
+export const SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES = 9;
 
 /** 英文每页字符数上下限（由行数 × 每行字符数推导） */
 export const SCRIPTURE_EN_PAGE_MIN_CHARS =
@@ -316,73 +322,6 @@ function paginateTextByVisualLines(
   return fillTextPagesFromNext(draft, minLines, maxLines, maxChars, charsPerLine, estimate);
 }
 
-function splitTextToVisualLineChunks(
-  text: string,
-  charsPerLine: number,
-  estimate: LineEstimate,
-): string[] {
-  const trimmed = text.trim();
-  if (!trimmed) return [];
-
-  const chunks: string[] = [];
-  let remaining = trimmed;
-  while (remaining.length > 0) {
-    const [head, tail] = takeHeadVisualLines(remaining, 1, charsPerLine, estimate);
-    if (!head.length) break;
-    chunks.push(head);
-    remaining = tail;
-  }
-  return chunks;
-}
-
-function fillLineChunkPagesFromNext(
-  pages: string[][],
-  minLines: number,
-  maxLines: number,
-): string[][] {
-  const out = pages.map((page) => [...page]);
-
-  for (let i = 0; i < out.length - 1; i++) {
-    while (out[i]!.length < minLines && out[i + 1]?.length) {
-      const room = maxLines - out[i]!.length;
-      if (room <= 0) break;
-
-      const take = Math.min(room, minLines - out[i]!.length, out[i + 1]!.length);
-      if (take <= 0) break;
-
-      out[i]!.push(...out[i + 1]!.splice(0, take));
-    }
-  }
-
-  return out;
-}
-
-function paginateLineChunksToPages(
-  chunks: string[],
-  minLines: number,
-  maxLines: number,
-): string[][] {
-  if (!chunks.length) return [];
-
-  const pages: string[][] = [];
-  let current: string[] = [];
-
-  const flush = () => {
-    if (current.length) {
-      pages.push(current);
-      current = [];
-    }
-  };
-
-  for (const chunk of chunks) {
-    if (current.length >= maxLines) flush();
-    current.push(chunk);
-  }
-  flush();
-
-  return fillLineChunkPagesFromNext(pages, minLines, maxLines);
-}
-
 function paginateChineseVerses(verses: BibleVerse[]): string[] {
   return paginateTextByVisualLines(
     formatChineseVerseBlock(verses),
@@ -394,33 +333,81 @@ function paginateChineseVerses(verses: BibleVerse[]): string[] {
   );
 }
 
+/**
+ * 英文分页（与模板一致：一节一段）：
+ * - 每页最多 SCRIPTURE_EN_PAGE_MAX_VERSES 节
+ * - 视觉行数不超过 SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES（22pt 文本框）
+ * - 单节过长时按视觉行拆到后续页，避免裁切
+ */
 function paginateEnglishVerses(verses: BibleVerse[]): string[][] {
   const nonempty = verses.filter((v) => v.text.trim().length > 0);
   if (!nonempty.length) return [];
 
   const pages: string[][] = [];
+  let current: string[] = [];
+  let currentLines = 0;
 
-  for (let i = 0; i < nonempty.length; i += SCRIPTURE_EN_PAGE_MAX_VERSES) {
-    const chunk = nonempty.slice(i, i + SCRIPTURE_EN_PAGE_MAX_VERSES);
-    const chunks = splitTextToVisualLineChunks(
-      formatEnglishPassageText(chunk),
-      SCRIPTURE_EN_CHARS_PER_LINE,
-      estimateEnglishLineVisualLines,
-    );
-    // 节数已封顶；若单页视觉行仍超文本框，再按行拆开避免裁切
-    if (chunks.length <= SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES) {
-      pages.push(chunks);
-    } else {
-      pages.push(
-        ...paginateLineChunksToPages(
-          chunks,
-          SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES,
-          SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES,
-        ),
+  const flush = () => {
+    if (!current.length) return;
+    pages.push(current);
+    current = [];
+    currentLines = 0;
+  };
+
+  const pushFragment = (text: string, lines: number) => {
+    if (!text.trim()) return;
+    if (
+      current.length > 0 &&
+      (current.length >= SCRIPTURE_EN_PAGE_MAX_VERSES ||
+        currentLines + lines > SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES)
+    ) {
+      flush();
+    }
+    current.push(text);
+    currentLines += lines;
+  };
+
+  for (const verse of nonempty) {
+    const full = formatEnglishVerseLine(verse);
+    const fullLines = estimateEnglishLineVisualLines(full);
+
+    if (fullLines <= SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES) {
+      pushFragment(full, fullLines);
+      continue;
+    }
+
+    // 单节超过一页容量：按视觉行硬拆（保留节号只在第一段）
+    let remaining = full;
+    let firstChunk = true;
+    while (remaining.length > 0) {
+      const roomLines =
+        current.length === 0
+          ? SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES
+          : current.length >= SCRIPTURE_EN_PAGE_MAX_VERSES
+            ? 0
+            : SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES - currentLines;
+
+      if (roomLines <= 0) {
+        flush();
+        continue;
+      }
+
+      const [head, tail] = takeHeadVisualLines(
+        remaining,
+        roomLines,
+        SCRIPTURE_EN_CHARS_PER_LINE,
+        estimateEnglishLineVisualLines,
       );
+      if (!head.length) break;
+
+      const chunkText = firstChunk ? head : head.replace(/^\d+\s+/, '').trim() || head;
+      firstChunk = false;
+      pushFragment(chunkText, estimateEnglishLineVisualLines(chunkText));
+      remaining = tail;
     }
   }
 
+  flush();
   return pages;
 }
 
