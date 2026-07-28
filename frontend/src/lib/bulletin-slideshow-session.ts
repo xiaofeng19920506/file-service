@@ -14,6 +14,14 @@ function storageKey(sessionId: string): string {
   return `${STORAGE_PREFIX}${sessionId}`;
 }
 
+/**
+ * 必须用 localStorage：投影窗以 noopener 打开，不共享 opener 的 sessionStorage，
+ * 否则弹窗会读不到会话并显示「已过期」。
+ */
+function slideshowStorage(): Storage {
+  return localStorage;
+}
+
 export function createSlideShowSession(input: {
   patch: BulletinSlidePreviewParams;
   initialSlide: number;
@@ -26,12 +34,12 @@ export function createSlideShowSession(input: {
     totalSlides: input.totalSlides,
     createdAt: Date.now(),
   };
-  sessionStorage.setItem(storageKey(sessionId), JSON.stringify(session));
+  slideshowStorage().setItem(storageKey(sessionId), JSON.stringify(session));
   return sessionId;
 }
 
 export function readSlideShowSession(sessionId: string): BulletinSlideShowSession | null {
-  const raw = sessionStorage.getItem(storageKey(sessionId));
+  const raw = slideshowStorage().getItem(storageKey(sessionId));
   if (!raw) return null;
   try {
     const session = JSON.parse(raw) as BulletinSlideShowSession;
@@ -46,7 +54,7 @@ export function readSlideShowSession(sessionId: string): BulletinSlideShowSessio
 }
 
 export function removeSlideShowSession(sessionId: string): void {
-  sessionStorage.removeItem(storageKey(sessionId));
+  slideshowStorage().removeItem(storageKey(sessionId));
 }
 
 export function slideShowProjectorUrl(sessionId: string): string {
