@@ -32,8 +32,8 @@ const EN_SHAPE_ID = '299';
 
 /** 中文经文 29pt（投影可读） */
 const ZH_FONT_SZ = '2900';
-/** 英文经文 22pt（原模板 18.5pt，投影加大两号） */
-const EN_FONT_SZ = '2200';
+/** 英文经文 24pt（略大于原 22pt，配合更多行数铺满文本框） */
+const EN_FONT_SZ = '2400';
 
 function buildChineseTxBody(text: string): string {
   const paragraph = [

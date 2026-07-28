@@ -183,17 +183,17 @@ export const SCRIPTURE_ZH_PAGE_MAX_CHARS =
   SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES * SCRIPTURE_ZH_CHARS_PER_LINE;
 
 /**
- * 英文 22pt 每行约容纳字符数。
+ * 英文 24pt 每行约容纳字符数。
  * 文本框内宽约 689pt；过小会导致半页空白就翻页，过大则裁切。
  */
-export const SCRIPTURE_EN_CHARS_PER_LINE = 56;
+export const SCRIPTURE_EN_CHARS_PER_LINE = 52;
 
 /**
- * 英文每页视觉行数（与中文同一套「容量自适应 → 溢出加页」）。
- * 与中文同为 10–11 行，尽量铺满文本框。
+ * 英文每页视觉行数。
+ * 中文 29pt×11 行约占满文本框；英文 24pt 需约 13 行才能铺满，避免底下大块留白。
  */
-export const SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES = 10;
-export const SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES = 11;
+export const SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES = 12;
+export const SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES = 13;
 
 /** 英文每页字符数上下限（由行数 × 每行字符数推导） */
 export const SCRIPTURE_EN_PAGE_MIN_CHARS =
