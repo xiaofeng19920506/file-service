@@ -406,12 +406,16 @@ export default function BulletinPage() {
         offeringOtherAmount: 'offering',
       };
       const slidesForField: Partial<Record<keyof WeeklyBulletin, number[]>> = {
+        serviceDate: [1],
+        serviceTime: [1],
+        showPreServiceChairName: [2],
+        preServiceChairNames: [2],
         birthdayMonth: [24],
         birthdayNames: [24],
         verseOfWeek: [35],
-        lastWeekOfferingDate: [19],
-        offeringTitheAmount: [19],
-        offeringOtherAmount: [19],
+        lastWeekOfferingDate: [19, 20],
+        offeringTitheAmount: [19, 20],
+        offeringOtherAmount: [19, 20],
       };
       const sectionId = sectionForField[key];
       if (sectionId && next.sectionPptxOverrides?.[sectionId]) {
