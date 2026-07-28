@@ -6,8 +6,8 @@ const PRIORITY_WEIGHT: Record<BulletinPreviewPriority, number> = {
   low: 1,
 };
 
-/** 同时进行的预览请求上限（LO 串行，过高只会堆上传） */
-const MAX_CONCURRENT = 3;
+/** 同时进行的预览请求上限（双 LO 实例时可到 4） */
+const MAX_CONCURRENT = 4;
 
 type Waiter = {
   priority: number;

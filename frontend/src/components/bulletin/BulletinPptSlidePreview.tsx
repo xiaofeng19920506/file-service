@@ -11,7 +11,6 @@ import {
 } from '../../lib/bulletin-preview-blob-cache';
 import { upcomingSundayIso } from '../../lib/bulletin-date';
 import { bulletinPreviewCacheKey } from '../../lib/bulletin-preview-patch';
-import PreviewConversionGuide from '../PreviewConversionGuide';
 
 type BulletinPptSlidePreviewProps = {
   slideNumber: number;
@@ -43,6 +42,8 @@ function withPreviewDate(patch?: BulletinSlidePreviewParams): BulletinSlidePrevi
   return { ...base, serviceDate, serviceTime: base.serviceTime || '11:00' };
 }
 
+const AUTO_RETRIES = 2;
+
 export default function BulletinPptSlidePreview({
   slideNumber,
   patch,
@@ -62,6 +63,7 @@ export default function BulletinPptSlidePreview({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
+  const [retryTick, setRetryTick] = useState(0);
   const previewUrlRef = useRef<string | null>(null);
   previewUrlRef.current = previewUrl;
 
@@ -71,7 +73,6 @@ export default function BulletinPptSlidePreview({
 
   const cacheKey = bulletinPreviewCacheKey(slideNumber, effectivePatch, sectionId);
   const shouldFetch = !lazy || nearView || inView;
-  // 进入视口立刻升为 high；近距则用传入优先级（当前分区 high / 相邻 low）
   const schedulePriority: BulletinPreviewPriority = inView ? 'high' : priorityProp;
   const schedulePriorityRef = useRef(schedulePriority);
   schedulePriorityRef.current = schedulePriority;
@@ -82,7 +83,6 @@ export default function BulletinPptSlidePreview({
     if (!el) return;
     const root = el.closest('.bulletin-deck-preview') ?? null;
 
-    // 近距：开始拉；真正相交：标记 inView（升优先级，但不重开已在飞请求）
     const nearObs = new IntersectionObserver(
       (entries) => {
         if (entries.some((e) => e.isIntersecting)) setNearView(true);
@@ -108,6 +108,7 @@ export default function BulletinPptSlidePreview({
 
     let cancelled = false;
     let createdUrl: string | null = null;
+    let attempt = 0;
 
     const applyBlob = (blob: Blob) => {
       if (cancelled) return;
@@ -136,8 +137,10 @@ export default function BulletinPptSlidePreview({
     });
 
     const priority = schedulePriorityRef.current;
-    const delay = priority === 'high' ? 0 : priority === 'normal' ? 40 : 160;
-    const timer = window.setTimeout(() => {
+    const baseDelay = priority === 'high' ? 0 : priority === 'normal' ? 40 : 160;
+    let timer = 0;
+
+    const runFetch = () => {
       void fetchBulletinSlidePreviewPng(slideNumber, patchRef.current, { priority })
         .then((blob) => {
           setBulletinPreviewBlob(cacheKey, blob);
@@ -145,6 +148,11 @@ export default function BulletinPptSlidePreview({
         })
         .catch(() => {
           if (cancelled) return;
+          if (attempt < AUTO_RETRIES) {
+            attempt += 1;
+            timer = window.setTimeout(runFetch, 400 * attempt);
+            return;
+          }
           setPreviewUrl((prev) => {
             if (prev) URL.revokeObjectURL(prev);
             return null;
@@ -152,7 +160,9 @@ export default function BulletinPptSlidePreview({
           setUnavailable(true);
           setLoading(false);
         });
-    }, delay);
+    };
+
+    timer = window.setTimeout(runFetch, baseDelay);
 
     return () => {
       cancelled = true;
@@ -161,7 +171,7 @@ export default function BulletinPptSlidePreview({
         URL.revokeObjectURL(createdUrl);
       }
     };
-  }, [cacheKey, slideNumber, shouldFetch]);
+  }, [cacheKey, slideNumber, shouldFetch, retryTick]);
 
   useEffect(() => {
     return () => {
@@ -184,8 +194,19 @@ export default function BulletinPptSlidePreview({
     return (
       <figure ref={rootRef} className={rootClass}>
         {slideLabel && <figcaption className="bulletin-slide-preview-caption">{slideLabel}</figcaption>}
-        <PreviewConversionGuide fileName="06_14_2026.pptx" compact />
-        <p className="bulletin-slide-preview-fallback-note">{t('bulletin.previewUnavailableHint')}</p>
+        <div className="bulletin-slide-preview-retry">
+          <p className="bulletin-slide-preview-fallback-note">{t('bulletin.previewUnavailableHint')}</p>
+          <button
+            type="button"
+            className="bulletin-slide-preview-retry-btn"
+            onClick={() => {
+              setUnavailable(false);
+              setRetryTick((n) => n + 1);
+            }}
+          >
+            {t('common.retry')}
+          </button>
+        </div>
       </figure>
     );
   }

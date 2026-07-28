@@ -22,8 +22,12 @@ const apiFs = z.object({
   RATE_LIMIT_UPLOAD_MAX: z.coerce.number().int().positive().default(30),
   PUBLIC_BASE_URL: z.string().url().optional(),
   SOFFICE_PATH: z.string().default('soffice'),
-  /** Docker LibreOffice 预览服务，例如 http://localhost:3010 */
-  SOFFICE_PREVIEW_URL: z.string().url().optional(),
+  /**
+   * Docker LibreOffice 预览服务。
+   * 单个：http://localhost:3010
+   * 多个（逗号分隔，轮询）：http://localhost:3010,http://localhost:3011
+   */
+  SOFFICE_PREVIEW_URL: z.string().min(1).optional(),
   API_KEY: apiKeyField,
   AUTH_REQUIRED: z
     .enum(['true', 'false', '1', '0'])
@@ -76,8 +80,12 @@ const apiS3 = z.object({
   RATE_LIMIT_UPLOAD_MAX: z.coerce.number().int().positive().default(30),
   PUBLIC_BASE_URL: z.string().url().optional(),
   SOFFICE_PATH: z.string().default('soffice'),
-  /** Docker LibreOffice 预览服务，例如 http://localhost:3010 */
-  SOFFICE_PREVIEW_URL: z.string().url().optional(),
+  /**
+   * Docker LibreOffice 预览服务。
+   * 单个：http://localhost:3010
+   * 多个（逗号分隔，轮询）：http://localhost:3010,http://localhost:3011
+   */
+  SOFFICE_PREVIEW_URL: z.string().min(1).optional(),
   API_KEY: apiKeyField,
   AUTH_REQUIRED: z
     .enum(['true', 'false', '1', '0'])

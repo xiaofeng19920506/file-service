@@ -233,7 +233,7 @@ function previewPatchCacheSuffix(
 
 let previewRenderActive = 0;
 const previewRenderWaiters: Array<() => void> = [];
-const PREVIEW_RENDER_MAX = 6;
+const PREVIEW_RENDER_MAX = 4;
 
 async function withPreviewRenderSlot<T>(fn: () => Promise<T>): Promise<T> {
   if (previewRenderActive >= PREVIEW_RENDER_MAX) {

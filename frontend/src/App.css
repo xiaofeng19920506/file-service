@@ -8287,6 +8287,35 @@ body.bulletin-slideshow-window {
   text-align: center;
 }
 
+.bulletin-slide-preview-retry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 8rem;
+  padding: 1rem;
+}
+
+.bulletin-slide-preview-retry .bulletin-slide-preview-fallback-note {
+  margin: 0;
+}
+
+.bulletin-slide-preview-retry-btn {
+  appearance: none;
+  border: 1px solid var(--border-light);
+  background: var(--surface, #fff);
+  color: var(--text-primary);
+  border-radius: 8px;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.bulletin-slide-preview-retry-btn:hover {
+  border-color: var(--text-secondary);
+}
+
 .bulletin-slide-preview-edits {
   margin-top: 0.65rem;
   padding: 0.65rem 0.75rem;

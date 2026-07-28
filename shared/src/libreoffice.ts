@@ -1,7 +1,9 @@
 import { spawn } from 'node:child_process';
-import { access } from 'node:fs/promises';
+import { access, mkdtemp, rm } from 'node:fs/promises';
 import { readdir } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { basename, extname, join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const LIBREOFFICE_PRESENTATION_EXTS = [
   'ppt',
@@ -38,29 +40,37 @@ export async function convertWithLibreOffice(opts: {
   outDir: string;
   convertTo: string;
 }): Promise<string> {
-  const code = await new Promise<number>((resolve, reject) => {
-    const p = spawn(
-      opts.sofficePath,
-      [
-        '--headless',
-        '--nologo',
-        '--nofirststartwizard',
-        '--convert-to',
-        opts.convertTo,
-        '--outdir',
-        opts.outDir,
-        opts.inputPath,
-      ],
-      { stdio: 'ignore' },
-    );
-    p.on('error', reject);
-    p.on('close', (c) => resolve(c ?? 1));
-  });
-  if (code !== 0) {
-    throw new Error(`LibreOffice conversion failed (exit ${code})`);
+  // 每次独立 UserInstallation，避免并发/残留锁导致转换失败
+  const profileDir = await mkdtemp(join(tmpdir(), 'lo-profile-'));
+  const profileUrl = pathToFileURL(profileDir).href;
+  try {
+    const code = await new Promise<number>((resolve, reject) => {
+      const p = spawn(
+        opts.sofficePath,
+        [
+          '--headless',
+          '--nologo',
+          '--nofirststartwizard',
+          `-env:UserInstallation=${profileUrl}`,
+          '--convert-to',
+          opts.convertTo,
+          '--outdir',
+          opts.outDir,
+          opts.inputPath,
+        ],
+        { stdio: 'ignore' },
+      );
+      p.on('error', reject);
+      p.on('close', (c) => resolve(c ?? 1));
+    });
+    if (code !== 0) {
+      throw new Error(`LibreOffice conversion failed (exit ${code})`);
+    }
+    const base = basename(opts.inputPath, extname(opts.inputPath));
+    return join(opts.outDir, `${base}.${opts.convertTo}`);
+  } finally {
+    await rm(profileDir, { recursive: true, force: true }).catch(() => undefined);
   }
-  const base = basename(opts.inputPath, extname(opts.inputPath));
-  return join(opts.outDir, `${base}.${opts.convertTo}`);
 }
 
 export async function convertToPptx(opts: {
