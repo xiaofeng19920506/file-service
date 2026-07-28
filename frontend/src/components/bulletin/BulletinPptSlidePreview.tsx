@@ -100,8 +100,10 @@ export default function BulletinPptSlidePreview({
       };
     }
 
-    // 参数变了：立刻进入 loading，不要继续显示上一版 PNG
-    setLoading(true);
+    // 无图才转圈；已有上一版 PNG 时继续显示，后台刷新避免整卷 deck 空白
+    if (!previewUrlRef.current) {
+      setLoading(true);
+    }
     setUnavailable(false);
 
     const timer = window.setTimeout(() => {
@@ -112,11 +114,10 @@ export default function BulletinPptSlidePreview({
         })
         .catch(() => {
           if (cancelled) return;
-          setPreviewUrl((prev) => {
-            if (prev) URL.revokeObjectURL(prev);
-            return null;
-          });
-          setUnavailable(true);
+          // 已有旧图时保留，只标记失败态不强行清空
+          if (!previewUrlRef.current) {
+            setUnavailable(true);
+          }
           setLoading(false);
         });
     }, lazy ? 80 : 0);
@@ -139,8 +140,8 @@ export default function BulletinPptSlidePreview({
   const rootClass = `bulletin-slide-preview${large ? ' bulletin-slide-preview--large' : ''}`;
   const showLoading = externalLoading || loading || (lazy && !inView);
 
-  // 无图时一律转圈，绝不提示「请选择主日日期」
-  if ((showLoading || !previewUrl) && !unavailable) {
+  // 无图才转圈；有图时继续展示（可叠加 refreshing）
+  if (!previewUrl && !unavailable) {
     return (
       <div ref={rootRef} className={`${rootClass} bulletin-slide-preview--loading`}>
         <div className="preview-spinner" />
