@@ -100,9 +100,11 @@ export default function BulletinPptSlidePreview({
       };
     }
 
+    // 参数变了：立刻进入 loading，不要继续显示上一版 PNG
+    setLoading(true);
+    setUnavailable(false);
+
     const timer = window.setTimeout(() => {
-      if (!previewUrlRef.current) setLoading(true);
-      setUnavailable(false);
       void fetchBulletinSlidePreviewPng(slideNumber, patchRef.current)
         .then((blob) => {
           setBulletinPreviewBlob(cacheKey, blob);
@@ -110,10 +112,11 @@ export default function BulletinPptSlidePreview({
         })
         .catch(() => {
           if (cancelled) return;
-          if (!previewUrlRef.current) {
-            setPreviewUrl(null);
-            setUnavailable(true);
-          }
+          setPreviewUrl((prev) => {
+            if (prev) URL.revokeObjectURL(prev);
+            return null;
+          });
+          setUnavailable(true);
           setLoading(false);
         });
     }, lazy ? 80 : 0);
@@ -125,7 +128,7 @@ export default function BulletinPptSlidePreview({
         URL.revokeObjectURL(createdUrl);
       }
     };
-  }, [cacheKey, slideNumber, inView]);
+  }, [cacheKey, slideNumber, inView, lazy]);
 
   useEffect(() => {
     return () => {

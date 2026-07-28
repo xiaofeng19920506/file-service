@@ -390,13 +390,6 @@ export async function reapplyBulletinFormFieldsInPptx(
     }
   }
 
-  if (!options.skipBirthday) {
-    await applyBirthdayFieldsToZip(zip, input.birthdayMonth, input.birthdayNames);
-  }
-  if (!options.skipVerseOfWeek) {
-    await applyVerseOfWeekToZip(zip, input.verseOfWeek);
-  }
-
   const skipSlides = new Set(
     options.skipSlideNumbers instanceof Set
       ? options.skipSlideNumbers
@@ -407,6 +400,14 @@ export async function reapplyBulletinFormFieldsInPptx(
   );
   if (overrides.length) {
     await applySlideTextOverridesToZip(zip, overrides);
+  }
+
+  // 表单字段最后回写，确保生日/金句预览跟左侧输入一致
+  if (!options.skipBirthday) {
+    await applyBirthdayFieldsToZip(zip, input.birthdayMonth, input.birthdayNames);
+  }
+  if (!options.skipVerseOfWeek) {
+    await applyVerseOfWeekToZip(zip, input.verseOfWeek);
   }
 
   return zip.generateAsync({ type: 'uint8array' });
@@ -516,13 +517,14 @@ export async function patchBulletinPreviewInPptx(
     }
   }
 
-  await applyBirthdayFieldsToZip(zip, input.birthdayMonth, input.birthdayNames);
-  await applyVerseOfWeekToZip(zip, input.verseOfWeek);
-
+  // 先铺通用文字覆盖，再写表单语义字段（生日/金句），避免旧 slideTextOverrides 盖掉表单
   const overrides = normalizeSlideTextOverrides(input.slideTextOverrides);
   if (overrides.length) {
     await applySlideTextOverridesToZip(zip, overrides);
   }
+
+  await applyBirthdayFieldsToZip(zip, input.birthdayMonth, input.birthdayNames);
+  await applyVerseOfWeekToZip(zip, input.verseOfWeek);
 
   const removePaths = bulletinSlidePathsToDelete(input);
   if (removePaths.length) {

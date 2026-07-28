@@ -398,7 +398,7 @@ export default function BulletinPage() {
     setDraft((prev) => {
       if (!prev) return prev;
       let next: WeeklyBulletin = { ...prev, [key]: value };
-      // 表单驱动分区：改字段时清掉该区自定义 PPT，避免覆盖快照挡住预览更新
+      // 表单驱动分区：改字段时清掉该区自定义 PPT / 幻灯片文字覆盖，避免旧快照挡住预览
       const sectionForField: Partial<Record<keyof WeeklyBulletin, string>> = {
         birthdayMonth: 'birthday',
         birthdayNames: 'birthday',
@@ -411,11 +411,27 @@ export default function BulletinPage() {
         offeringTitheAmount: 'offering',
         offeringOtherAmount: 'offering',
       };
+      const slidesForField: Partial<Record<keyof WeeklyBulletin, number[]>> = {
+        birthdayMonth: [24],
+        birthdayNames: [24],
+        verseOfWeek: [35],
+        lastWeekOfferingDate: [19],
+        offeringTitheAmount: [19],
+        offeringOtherAmount: [19],
+      };
       const sectionId = sectionForField[key];
       if (sectionId && next.sectionPptxOverrides?.[sectionId]) {
         const overrides = { ...next.sectionPptxOverrides };
         delete overrides[sectionId];
         next = { ...next, sectionPptxOverrides: overrides };
+      }
+      const slides = slidesForField[key];
+      if (slides?.length && next.slideTextOverrides?.length) {
+        const drop = new Set(slides);
+        const filtered = next.slideTextOverrides.filter((o) => !drop.has(o.slide));
+        if (filtered.length !== next.slideTextOverrides.length) {
+          next = { ...next, slideTextOverrides: filtered };
+        }
       }
       return next;
     });
