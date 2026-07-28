@@ -81,6 +81,26 @@ describe('detectBusySection', () => {
     expect(detectBusySection(fingerprintOf(prev), next)).toBeNull();
   });
 
+  it('uses the same encoding as fingerprintOf for sectionPptxOverrides (no false dirty)', () => {
+    const draft = baseBulletin({
+      sectionPptxOverrides: { cover: 'blob-a', scripture: 'blob-b' },
+    });
+    const fp = fingerprintOf(draft);
+    // 同一草稿再比对：若误用 JSON.stringify，会与 fingerprint 中的 key 串不一致而假阳性
+    expect(detectBusySection(fp, draft)).toBeNull();
+  });
+
+  it('still attributes birthday when overrides also change', () => {
+    const prev = baseBulletin({
+      sectionPptxOverrides: { worship: 'blob-old' },
+    });
+    const next = baseBulletin({
+      birthdayNames: '甲',
+      sectionPptxOverrides: { worship: 'blob-new' },
+    });
+    expect(detectBusySection(fingerprintOf(prev), next)).toBe('birthday');
+  });
+
   it('uses local dirty fields when prev fingerprint is null', () => {
     writeLocalBulletinDraft('b1', {
       birthdayNames: '乙',

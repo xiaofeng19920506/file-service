@@ -65,9 +65,13 @@ export function detectBusySection(prevFp: string | null, next: WeeklyBulletin): 
     }),
   );
   for (const key of BULLETIN_LOCAL_SYNC_KEYS) {
+    // 必须与 fingerprintOf 使用同一套 valueFingerprint（含 sectionPptxOverridesKey），
+    // 否则 overrides 会永远对不上，误判为变更并回落到错误分区。
     const now = valueFingerprint(key, next);
     if (prevMap.get(key) !== now) {
-      return fieldToSectionId(key);
+      const section = fieldToSectionId(key);
+      // sectionPptxOverrides 等无法映射分区：跳过，继续找可归因字段
+      if (section) return section;
     }
   }
   return null;
