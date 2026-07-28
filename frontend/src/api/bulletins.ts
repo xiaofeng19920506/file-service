@@ -1,6 +1,6 @@
 import { apiFetch, parseJson } from './http';
 import type { PlaylistDetail } from './playlists';
-import { runBulletinPreviewTask } from '../lib/bulletin-preview-queue';
+import { runBulletinPreviewTask, type BulletinPreviewPriority } from '../lib/bulletin-preview-queue';
 
 export type BulletinAnnouncement = {
   id: string;
@@ -331,14 +331,16 @@ export async function fetchBulletinDeckPlan(
 export async function fetchBulletinSlidePreviewPng(
   slideNumber: number,
   params: BulletinSlidePreviewParams,
+  options?: { priority?: BulletinPreviewPriority },
 ): Promise<Blob> {
   const query = bulletinPreviewQuery(params);
   const path = `/v1/bulletins/template/slides/${slideNumber}/preview.png${query ? `?${query}` : ''}`;
+  const priority = options?.priority ?? 'normal';
 
   const maxAttempts = 3;
   let lastError = 'slide_preview_unavailable';
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const res = await runBulletinPreviewTask(() => apiFetch(path));
+    const res = await runBulletinPreviewTask(() => apiFetch(path), priority);
     if (res.ok) return res.blob();
 
     const data = await res.json().catch(() => ({}));

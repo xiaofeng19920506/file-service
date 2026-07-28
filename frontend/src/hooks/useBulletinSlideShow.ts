@@ -43,7 +43,9 @@ export function useBulletinSlideShow(opts: {
         return next;
       });
       try {
-        const blob = await fetchBulletinSlidePreviewPng(slideNumber, patch);
+        const blob = await fetchBulletinSlidePreviewPng(slideNumber, patch, {
+          priority: 'high',
+        });
         const url = URL.createObjectURL(blob);
         urlCacheRef.current.set(slideNumber, url);
         setSlideUrls((prev) => ({ ...prev, [slideNumber]: url }));

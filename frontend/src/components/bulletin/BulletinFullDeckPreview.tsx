@@ -35,7 +35,7 @@ type DeckSlideItemProps = {
   sectionId: string;
   patch: BulletinPreviewPatchFields;
   highlight: boolean;
-  /** 相邻分区预取：进入视口前也拉 PNG */
+  /** 相邻分区：低优先级提前一点点加载 */
   prefetch: boolean;
   label: string;
   bulletinId: string;
@@ -97,8 +97,9 @@ const DeckSlideItem = memo(function DeckSlideItem({
     worshipPlaylistId &&
     hasBulletinWorshipPlayItems(worshipItems);
 
-  // 封面 + 会前（前 3 页）、当前高亮、相邻分区页立即拉 PNG
-  const eager = highlight || prefetch || slideNumber <= 3;
+  // 一律懒加载：视口内升 high；当前分区近距也 high；相邻分区 low，避免抢带宽
+  const priority = highlight ? 'high' : prefetch ? 'low' : 'normal';
+  const rootMargin = highlight ? '280px 0px' : prefetch ? '420px 0px' : '140px 0px';
 
   return (
     <div
@@ -123,7 +124,9 @@ const DeckSlideItem = memo(function DeckSlideItem({
           patch={slidePatch}
           sectionId={sectionId}
           slideLabel={label}
-          lazy={!eager}
+          lazy
+          priority={priority}
+          rootMargin={rootMargin}
         />
       )}
     </div>

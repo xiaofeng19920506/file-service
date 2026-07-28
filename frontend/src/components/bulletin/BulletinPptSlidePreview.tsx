@@ -3,6 +3,7 @@ import {
   fetchBulletinSlidePreviewPng,
   type BulletinSlidePreviewParams,
 } from '../../api/bulletins';
+import type { BulletinPreviewPriority } from '../../lib/bulletin-preview-queue';
 import { useI18n } from '../../i18n';
 import {
   getBulletinPreviewBlob,
@@ -22,8 +23,18 @@ type BulletinPptSlidePreviewProps = {
   slideLabel?: string;
   large?: boolean;
   overlay?: ReactNode;
-  /** 进入视口后再拉 PNG；默认 true（整卷 deck 用）。单页场景可关 */
+  /**
+   * 进入视口（或 rootMargin）后再拉 PNG；默认 true。
+   * 单页场景可关。
+   */
   lazy?: boolean;
+  /**
+   * 预取优先级：high=视口内，normal=临近，low=后台。
+   * lazy 开启时，真正进入视口会自动升为 high。
+   */
+  priority?: BulletinPreviewPriority;
+  /** IntersectionObserver rootMargin，控制提前加载距离 */
+  rootMargin?: string;
 };
 
 function withPreviewDate(patch?: BulletinSlidePreviewParams): BulletinSlidePreviewParams {
@@ -41,10 +52,13 @@ export default function BulletinPptSlidePreview({
   large,
   overlay,
   lazy = true,
+  priority: priorityProp = 'normal',
+  rootMargin = '160px 0px',
 }: BulletinPptSlidePreviewProps) {
   const { t } = useI18n();
   const rootRef = useRef<HTMLDivElement>(null);
   const [inView, setInView] = useState(!lazy);
+  const [nearView, setNearView] = useState(!lazy);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
@@ -56,27 +70,41 @@ export default function BulletinPptSlidePreview({
   patchRef.current = effectivePatch;
 
   const cacheKey = bulletinPreviewCacheKey(slideNumber, effectivePatch, sectionId);
+  const shouldFetch = !lazy || nearView || inView;
+  // 进入视口立刻升为 high；近距则用传入优先级（当前分区 high / 相邻 low）
+  const schedulePriority: BulletinPreviewPriority = inView ? 'high' : priorityProp;
+  const schedulePriorityRef = useRef(schedulePriority);
+  schedulePriorityRef.current = schedulePriority;
 
   useEffect(() => {
-    if (!lazy || inView) return;
+    if (!lazy) return;
     const el = rootRef.current;
     if (!el) return;
     const root = el.closest('.bulletin-deck-preview') ?? null;
-    const obs = new IntersectionObserver(
+
+    // 近距：开始拉；真正相交：标记 inView（升优先级，但不重开已在飞请求）
+    const nearObs = new IntersectionObserver(
       (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
-          setInView(true);
-          obs.disconnect();
-        }
+        if (entries.some((e) => e.isIntersecting)) setNearView(true);
       },
-      { root, rootMargin: '280px 0px', threshold: 0.01 },
+      { root, rootMargin, threshold: 0.01 },
     );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [lazy, inView]);
+    const viewObs = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) setInView(true);
+      },
+      { root, rootMargin: '0px', threshold: 0.01 },
+    );
+    nearObs.observe(el);
+    viewObs.observe(el);
+    return () => {
+      nearObs.disconnect();
+      viewObs.disconnect();
+    };
+  }, [lazy, rootMargin]);
 
   useEffect(() => {
-    if (!inView) return;
+    if (!shouldFetch) return;
 
     let cancelled = false;
     let createdUrl: string | null = null;
@@ -100,7 +128,6 @@ export default function BulletinPptSlidePreview({
       };
     }
 
-    // 无缓存：立刻转圈，等新 PNG（靠 PDF 复用加速，不展示旧页）
     setLoading(true);
     setUnavailable(false);
     setPreviewUrl((prev) => {
@@ -108,8 +135,10 @@ export default function BulletinPptSlidePreview({
       return null;
     });
 
+    const priority = schedulePriorityRef.current;
+    const delay = priority === 'high' ? 0 : priority === 'normal' ? 40 : 160;
     const timer = window.setTimeout(() => {
-      void fetchBulletinSlidePreviewPng(slideNumber, patchRef.current)
+      void fetchBulletinSlidePreviewPng(slideNumber, patchRef.current, { priority })
         .then((blob) => {
           setBulletinPreviewBlob(cacheKey, blob);
           applyBlob(blob);
@@ -123,7 +152,7 @@ export default function BulletinPptSlidePreview({
           setUnavailable(true);
           setLoading(false);
         });
-    }, lazy ? 80 : 0);
+    }, delay);
 
     return () => {
       cancelled = true;
@@ -132,7 +161,7 @@ export default function BulletinPptSlidePreview({
         URL.revokeObjectURL(createdUrl);
       }
     };
-  }, [cacheKey, slideNumber, inView, lazy]);
+  }, [cacheKey, slideNumber, shouldFetch]);
 
   useEffect(() => {
     return () => {
@@ -141,13 +170,12 @@ export default function BulletinPptSlidePreview({
   }, []);
 
   const rootClass = `bulletin-slide-preview${large ? ' bulletin-slide-preview--large' : ''}`;
-  const showLoading = externalLoading || loading || (lazy && !inView);
+  const showLoading = externalLoading || loading || (lazy && !shouldFetch);
 
-  // 无图才转圈；有图时继续展示（可叠加 refreshing）
   if (!previewUrl && !unavailable) {
     return (
       <div ref={rootRef} className={`${rootClass} bulletin-slide-preview--loading`}>
-        <div className="preview-spinner" />
+        {(showLoading || shouldFetch) && <div className="preview-spinner" />}
       </div>
     );
   }
