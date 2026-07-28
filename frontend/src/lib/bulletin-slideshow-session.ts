@@ -15,8 +15,9 @@ function storageKey(sessionId: string): string {
 }
 
 /**
- * 必须用 localStorage：投影窗以 noopener 打开，不共享 opener 的 sessionStorage，
- * 否则弹窗会读不到会话并显示「已过期」。
+ * 必须用 localStorage（同源各窗口共享）。
+ * sessionStorage 不跨 noopener/独立浏览上下文；且历史上 open(features 含 noopener)
+ * 会返回 null，启动器误删会话后投影页就会「已过期」。
  */
 function slideshowStorage(): Storage {
   return localStorage;
@@ -73,11 +74,11 @@ export function openSlideShowWindows(sessionId: string): {
   const availLeft = screenInfo.availLeft ?? 0;
   const availTop = screenInfo.availTop ?? 0;
 
-  // 一键投影：只开投影全屏窗；演讲者窗改为可选，避免双弹窗被拦/页面变复杂
+  // 一键投影：只开投影全屏窗。
+  // 不要把 noopener/noreferrer 放进 features：浏览器会因此让 open() 恒返回 null，
+  // 启动器会误判弹窗被拦并删掉 localStorage 会话，投影页就显示「已过期」。
   const projectorFeatures = [
     'popup=yes',
-    'noopener',
-    'noreferrer',
     `width=${window.screen.availWidth}`,
     `height=${window.screen.availHeight}`,
     `left=${availLeft}`,
@@ -89,6 +90,13 @@ export function openSlideShowWindows(sessionId: string): {
     'bulletin-slideshow-projector',
     projectorFeatures,
   );
+  if (projector) {
+    try {
+      projector.opener = null;
+    } catch {
+      // ignore
+    }
+  }
   return { projector, presenter: null };
 }
 
@@ -99,12 +107,18 @@ export function openSlideShowPresenterWindow(sessionId: string): Window | null {
   const availTop = screenInfo.availTop ?? 0;
   const features = [
     'popup=yes',
-    'noopener',
-    'noreferrer',
     'width=980',
     'height=760',
     `left=${Math.max(0, availLeft + 40)}`,
     `top=${Math.max(0, availTop + 40)}`,
   ].join(',');
-  return window.open(slideShowPresenterUrl(sessionId), 'bulletin-slideshow-presenter', features);
+  const win = window.open(slideShowPresenterUrl(sessionId), 'bulletin-slideshow-presenter', features);
+  if (win) {
+    try {
+      win.opener = null;
+    } catch {
+      // ignore
+    }
+  }
+  return win;
 }
