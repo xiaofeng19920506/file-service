@@ -253,6 +253,8 @@ export type BulletinSlidePreviewParams = {
   birthdayMonth?: string;
   birthdayNames?: string;
   verseOfWeek?: string;
+  /** 特别公告：超出 2 条时在浸礼页前加页 */
+  announcements?: { title: string; body: string }[];
   hiddenSections?: string[];
   weeklyMeetingVariant?: number | null;
   /** 草稿文字覆盖（与预览/导出一致） */
@@ -287,6 +289,9 @@ function bulletinPreviewQuery(params: BulletinSlidePreviewParams): string {
   if (params.birthdayMonth) qs.set('birthdayMonth', params.birthdayMonth);
   if (params.birthdayNames) qs.set('birthdayNames', params.birthdayNames);
   if (params.verseOfWeek) qs.set('verseOfWeek', params.verseOfWeek);
+  if (params.announcements !== undefined) {
+    qs.set('announcements', JSON.stringify(params.announcements));
+  }
   if (params.hiddenSections?.length) qs.set('hiddenSections', params.hiddenSections.join(','));
   if (params.weeklyMeetingVariant != null) {
     qs.set('weeklyMeetingVariant', String(params.weeklyMeetingVariant));

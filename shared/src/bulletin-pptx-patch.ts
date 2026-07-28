@@ -1,7 +1,7 @@
 import JSZip from 'jszip';
 import { resolveScriptureSlideBodies } from './bible-text.js';
 import { applyScripturePagesToZip } from './bulletin-scripture-pptx.js';
-import { removeSlidesFromPptxZip } from './pptx-duplicate-slide.js';
+import { duplicateSlideInZip, removeSlidesFromPptxZip } from './pptx-duplicate-slide.js';
 import { bulletinSlidePathsToDelete } from './bulletin-section-visibility.js';
 
 /** PPT 封面日期格式：06/14/2026 */
@@ -251,6 +251,19 @@ export function patchPreServiceChairNamesInSlideXml(xml: string, namesRaw: strin
   return patchPreServiceChairNameOnSlide2Xml(xml, namesRaw.split(/[\n,，、]/)[0] ?? '');
 }
 
+export type SlideTextOverride = {
+  slide: number;
+  textIndex: number;
+  text: string;
+};
+
+export type AnnouncementPageInput = {
+  title?: string;
+  body?: string;
+};
+
+type PptxInputBytes = Buffer | Uint8Array;
+
 export type BulletinPreviewPatchInput = {
   serviceDate?: string;
   serviceTime?: string;
@@ -266,18 +279,14 @@ export type BulletinPreviewPatchInput = {
   birthdayNames?: string;
   /** 本週金句（P35 textIndex 18） */
   verseOfWeek?: string;
+  /** 特别公告（P25/P26；超出条数在 P27 前加页） */
+  announcements?: AnnouncementPageInput[];
   hiddenSections?: string[];
   skipTestimonyWeek?: boolean;
   skipDepartmentReports?: boolean;
   weeklyMeetingVariant?: number | null;
   /** 幻灯片文字覆盖（slide 文件号 + textIndex） */
   slideTextOverrides?: SlideTextOverride[];
-};
-
-export type SlideTextOverride = {
-  slide: number;
-  textIndex: number;
-  text: string;
 };
 
 export function normalizeSlideTextOverrides(raw: unknown): SlideTextOverride[] {
@@ -467,7 +476,59 @@ async function applyVerseOfWeekToZip(zip: JSZip, verseOfWeek: string | undefined
   );
 }
 
-type PptxInputBytes = Buffer | Uint8Array;
+function writeAnnouncementTitleBody(xml: string, item: AnnouncementPageInput): string {
+  return applyIndexedTextReplacementsToSlideXml(xml, [
+    { textIndex: 0, text: item.title?.trim() ? item.title.trim() : ' ' },
+    { textIndex: 1, text: item.body?.trim() ? item.body.trim() : ' ' },
+  ]);
+}
+
+/**
+ * 公告页：P25/P26 为 title+body 模板；第 3 条起复制 P25，插在最后一条公告之后、P27（浸礼）之前。
+ * 空列表不改动（保留模板原文）。
+ */
+export async function applyAnnouncementPagesToZip(
+  zip: JSZip,
+  items: readonly AnnouncementPageInput[],
+): Promise<void> {
+  const pages = [...items];
+  if (!pages.length) return;
+
+  const slide25Path = 'ppt/slides/slide25.xml';
+  const slide26Path = 'ppt/slides/slide26.xml';
+
+  const slide25 = zip.file(slide25Path);
+  if (slide25) {
+    const xml = await slide25.async('string');
+    zip.file(slide25Path, writeAnnouncementTitleBody(xml, pages[0]));
+  }
+
+  if (pages.length === 1) {
+    const slide26 = zip.file(slide26Path);
+    if (slide26) {
+      const xml = await slide26.async('string');
+      zip.file(slide26Path, writeAnnouncementTitleBody(xml, { title: ' ', body: ' ' }));
+    }
+    return;
+  }
+
+  const slide26 = zip.file(slide26Path);
+  if (slide26) {
+    const xml = await slide26.async('string');
+    zip.file(slide26Path, writeAnnouncementTitleBody(xml, pages[1]));
+  }
+
+  let lastPath = slide26Path;
+  for (let i = 2; i < pages.length; i++) {
+    lastPath = await duplicateSlideInZip(zip, slide25Path, {
+      insertAfterPath: lastPath,
+    });
+    const entry = zip.file(lastPath);
+    if (!entry) continue;
+    const xml = await entry.async('string');
+    zip.file(lastPath, writeAnnouncementTitleBody(xml, pages[i]));
+  }
+}
 
 /** 预览/导出用：封面 + 会前祷告 + 读经 + 生日/金句 + 按隐藏分区删页 */
 export async function patchBulletinPreviewInPptx(
@@ -517,7 +578,7 @@ export async function patchBulletinPreviewInPptx(
     }
   }
 
-  // 先铺通用文字覆盖，再写表单语义字段（生日/金句），避免旧 slideTextOverrides 盖掉表单
+  // 先铺通用文字覆盖，再写表单语义字段（生日/金句/公告），避免旧 slideTextOverrides 盖掉表单
   const overrides = normalizeSlideTextOverrides(input.slideTextOverrides);
   if (overrides.length) {
     await applySlideTextOverridesToZip(zip, overrides);
@@ -525,6 +586,13 @@ export async function patchBulletinPreviewInPptx(
 
   await applyBirthdayFieldsToZip(zip, input.birthdayMonth, input.birthdayNames);
   await applyVerseOfWeekToZip(zip, input.verseOfWeek);
+
+  const hideAnnouncements = bulletinSlidePathsToDelete(input).some((p) =>
+    p.includes('slide25.xml'),
+  );
+  if (!hideAnnouncements && input.announcements?.length) {
+    await applyAnnouncementPagesToZip(zip, input.announcements);
+  }
 
   const removePaths = bulletinSlidePathsToDelete(input);
   if (removePaths.length) {

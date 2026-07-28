@@ -11,6 +11,7 @@ export type BulletinPreviewPatchFields = {
   birthdayMonth?: string;
   birthdayNames?: string;
   verseOfWeek?: string;
+  announcements?: { title: string; body: string }[];
   hiddenSections?: string[];
   skipTestimonyWeek?: boolean;
   skipDepartmentReports?: boolean;
@@ -50,6 +51,7 @@ export function previewPatchFull(full: BulletinPreviewPatchFields): BulletinSlid
     birthdayMonth: full.birthdayMonth,
     birthdayNames: full.birthdayNames,
     verseOfWeek: full.verseOfWeek,
+    announcements: full.announcements,
     hiddenSections: hidden,
     weeklyMeetingVariant: full.weeklyMeetingVariant ?? null,
     slideTextOverrides: full.slideTextOverrides,
@@ -68,9 +70,10 @@ export function previewPatchForSection(
   return previewPatchFull(full);
 }
 
-/** 影响 deck 结构/页码的指纹（经文加页、隐藏分区、variant、分区 PPT） */
+/** 影响 deck 结构/页码的指纹（经文加页、公告加页、隐藏分区、variant、分区 PPT） */
 export function bulletinStructureRev(params: BulletinSlidePreviewParams): string {
   const hidden = (params.hiddenSections ?? []).slice().sort().join(',');
+  const announcementCount = (params.announcements ?? []).length;
   return [
     hidden,
     params.scriptureBook ?? '',
@@ -78,10 +81,15 @@ export function bulletinStructureRev(params: BulletinSlidePreviewParams): string
     params.weeklyMeetingVariant == null ? '' : String(params.weeklyMeetingVariant),
     params.bulletinId ?? '',
     params.sectionPptxKey ?? '',
+    // 第 3 条起才加页；条数变化会改总页数
+    String(Math.max(0, announcementCount)),
   ].join('\0');
 }
 
 function fullContentRev(params: BulletinSlidePreviewParams): string {
+  const announcementsKey = (params.announcements ?? [])
+    .map((a) => `${a.title}\u0002${a.body}`)
+    .join('\u0001');
   return [
     params.serviceDate ?? '',
     params.serviceTime ?? '',
@@ -90,6 +98,7 @@ function fullContentRev(params: BulletinSlidePreviewParams): string {
     params.birthdayMonth ?? '',
     params.birthdayNames ?? '',
     params.verseOfWeek ?? '',
+    announcementsKey,
   ].join('\0');
 }
 
@@ -113,12 +122,15 @@ export function bulletinSectionContentRev(
       return '';
     case 'birthday':
       return [params.birthdayMonth ?? '', params.birthdayNames ?? ''].join('\0');
+    case 'announcements':
+      return (params.announcements ?? [])
+        .map((a) => `${a.title}\u0002${a.body}`)
+        .join('\u0001');
     case 'verse':
     case 'verse_of_week':
       return params.verseOfWeek ?? '';
     case 'worship':
     case 'offering':
-    case 'announcements':
     case 'communion':
     case 'more':
       // 这些区主要靠 slideTextOverrides / 结构；内容字段不并入

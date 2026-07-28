@@ -191,6 +191,10 @@ export default function BulletinPreviewPanel({
         birthdayMonth: bulletin.birthdayMonth,
         birthdayNames: bulletin.birthdayNames,
         verseOfWeek: bulletin.verseOfWeek,
+        announcements: (bulletin.announcements ?? []).map((a) => ({
+          title: a.title ?? '',
+          body: a.body,
+        })),
         hiddenSections: bulletin.hiddenSections,
         skipTestimonyWeek: bulletin.skipTestimonyWeek,
         skipDepartmentReports: bulletin.skipDepartmentReports,
@@ -232,6 +236,7 @@ export default function BulletinPreviewPanel({
     planRefreshing &&
     (busySectionId == null ||
       busySectionId === 'scripture' ||
+      busySectionId === 'announcements' ||
       busySectionId === 'more' ||
       Boolean(bulletin.sectionPptxOverrides?.[busySectionId ?? '']));
 

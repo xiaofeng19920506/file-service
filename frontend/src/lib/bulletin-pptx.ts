@@ -54,7 +54,7 @@ export async function generateBulletinPptx(
   const { patches, scriptureBodies } = await patchesFromBulletin(bulletin);
   const filename = `bulletin-${bulletin.serviceDate}.pptx`;
 
-  let file = await applyBulletinPatches(templateBlob, patches, scriptureBodies, filename);
+  let file = await applyBulletinPatches(templateBlob, patches, scriptureBodies, filename, bulletin);
 
   const deletePaths = slidesToDelete(bulletin);
   if (deletePaths.length) {
@@ -135,5 +135,5 @@ export async function buildPatchedBulletinForSectionExtract(
 ): Promise<File> {
   const { patches, scriptureBodies } = await patchesFromBulletin(bulletin);
   const filename = `bulletin-section-source-${bulletin.serviceDate}.pptx`;
-  return applyBulletinPatches(templateBlob, patches, scriptureBodies, filename);
+  return applyBulletinPatches(templateBlob, patches, scriptureBodies, filename, bulletin);
 }

@@ -247,6 +247,23 @@ export function BulletinAnnouncementsStep({
     <StepShell titleKey="bulletin.steps.announcementsTitle" introKey="bulletin.steps.announcementsIntro">
       {announcements.map((item, index) => (
         <div key={item.key} className="bulletin-announcement-block">
+          <div className="bulletin-announcement-block-header">
+            <span className="bulletin-announcement-block-label">
+              {t('bulletin.announcementItem', { n: index + 1 })}
+            </span>
+            {canEdit && announcements.length > 1 ? (
+              <button
+                type="button"
+                className="btn-secondary btn-sm"
+                disabled={saving}
+                onClick={() => {
+                  onAnnouncementsChange(announcements.filter((_, i) => i !== index));
+                }}
+              >
+                {t('bulletin.removeAnnouncement')}
+              </button>
+            ) : null}
+          </div>
           <TextField
             label={t('bulletin.announcementTitle')}
             value={item.title ?? ''}
@@ -270,10 +287,27 @@ export function BulletinAnnouncementsStep({
           />
         </div>
       ))}
-      {canEdit && onSave ? (
-        <button type="button" className="btn-primary" disabled={saving} onClick={onSave}>
-          {saving ? t('bulletin.saving') : t('bulletin.save')}
-        </button>
+      {canEdit ? (
+        <div className="bulletin-announcement-actions">
+          <button
+            type="button"
+            className="btn-secondary btn-sm"
+            disabled={saving}
+            onClick={() => {
+              onAnnouncementsChange([
+                ...announcements,
+                { key: crypto.randomUUID(), category: 'general', title: '', body: '' },
+              ]);
+            }}
+          >
+            {t('bulletin.addAnnouncement')}
+          </button>
+          {onSave ? (
+            <button type="button" className="btn-primary" disabled={saving} onClick={onSave}>
+              {saving ? t('bulletin.saving') : t('bulletin.save')}
+            </button>
+          ) : null}
+        </div>
       ) : null}
     </StepShell>
   );

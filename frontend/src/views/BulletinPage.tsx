@@ -73,24 +73,18 @@ function emptyAnnouncement(): AnnouncementDraft {
 }
 
 function toDrafts(bulletin: WeeklyBulletin): AnnouncementDraft[] {
-  const slots = [
-    { category: 'thanks', title: '', body: '' },
-    { category: 'celebration', title: '', body: '' },
-    { category: 'baptism', title: '', body: '' },
-  ] as const;
   if (!bulletin.announcements.length) {
-    return slots.map((slot) => ({ key: crypto.randomUUID(), ...slot }));
+    return [
+      { key: crypto.randomUUID(), category: 'thanks', title: '', body: '' },
+      { key: crypto.randomUUID(), category: 'celebration', title: '', body: '' },
+    ];
   }
-  return slots.map((slot, index) => {
-    const item = bulletin.announcements[index];
-    if (!item) return { key: crypto.randomUUID(), ...slot };
-    return {
-      key: item.id,
-      category: item.category || slot.category,
-      title: item.title,
-      body: item.body,
-    };
-  });
+  return bulletin.announcements.map((item) => ({
+    key: item.id,
+    category: item.category || 'general',
+    title: item.title,
+    body: item.body,
+  }));
 }
 
 function withHiddenSections(bulletin: WeeklyBulletin): WeeklyBulletin {
@@ -653,20 +647,34 @@ export default function BulletinPage() {
             announcements={announcements}
             onAnnouncementsChange={(next) => {
               setAnnouncements(next);
-              setDraft((prev) =>
-                prev
-                  ? {
-                      ...prev,
-                      announcements: next.map((a, i) => ({
-                        id: a.key,
-                        sortOrder: i,
-                        category: a.category ?? 'general',
-                        title: a.title ?? '',
-                        body: a.body,
-                      })),
-                    }
-                  : prev,
-              );
+              setDraft((prev) => {
+                if (!prev) return prev;
+                let updated: WeeklyBulletin = {
+                  ...prev,
+                  announcements: next.map((a, i) => ({
+                    id: a.key,
+                    sortOrder: i,
+                    category: a.category ?? 'general',
+                    title: a.title ?? '',
+                    body: a.body,
+                  })),
+                };
+                // 改公告列表时清掉该区自定义 PPT / 第 25–26 页旧文字覆盖，避免挡住新页预览
+                if (updated.sectionPptxOverrides?.announcements) {
+                  const overrides = { ...updated.sectionPptxOverrides };
+                  delete overrides.announcements;
+                  updated = { ...updated, sectionPptxOverrides: overrides };
+                }
+                if (updated.slideTextOverrides?.length) {
+                  const filtered = updated.slideTextOverrides.filter(
+                    (o) => o.slide !== 25 && o.slide !== 26,
+                  );
+                  if (filtered.length !== updated.slideTextOverrides.length) {
+                    updated = { ...updated, slideTextOverrides: filtered };
+                  }
+                }
+                return updated;
+              });
             }}
             onSave={() => void handleSaveFields({}, true)}
           />

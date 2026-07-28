@@ -57,6 +57,7 @@ export async function previewStepPptxBlob(
     patches,
     stepId === 'scripture' ? scriptureBodies : null,
     'bulletin-preview.pptx',
+    bulletin,
   );
 }
 

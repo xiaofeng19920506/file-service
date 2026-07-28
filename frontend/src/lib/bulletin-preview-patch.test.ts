@@ -31,6 +31,7 @@ describe('previewPatchFull / previewPatchForSection', () => {
       birthdayMonth: '七月',
       birthdayNames: '甲,乙',
       verseOfWeek: '金句',
+      announcements: undefined,
       hiddenSections: [],
       weeklyMeetingVariant: 28,
       slideTextOverrides: undefined,

@@ -10,6 +10,7 @@ import {
   parsePptxSlidesDetailed,
 } from './pptx-preview';
 import { expandScriptureSlidesInPptx } from './bulletin-scripture-pptx-expand';
+import { expandAnnouncementSlidesInPptx } from './bulletin-announcement-pptx-expand';
 import JSZip from './jszip';
 
 /** 原版模板文件名（`06_14_2026.pptx`，背景与图片均以此为准） */
@@ -301,10 +302,11 @@ export function patchesForStep(stepId: string, bulletin: WeeklyBulletin): SlideT
       ];
     }
     case 'announcements': {
-      const announcementSlides = [25, 26, 27];
+      // 导出路径：前两页仍写补丁；第 3+ 条由 expandAnnouncementSlidesInPptx 加页写入
+      const announcementSlides = [25, 26];
       return bulletin.announcements.flatMap((item, index) => {
         const slideNum = announcementSlides[index];
-        if (!slideNum || slideNum === 27) return [];
+        if (!slideNum) return [];
         const replacements: SlideTextReplacement[] = [];
         if (item.title?.trim()) {
           replacements.push({ textIndex: 0, text: item.title.trim() });
@@ -364,14 +366,7 @@ export function bulletinDynamicTextOverrides(bulletin: WeeklyBulletin): Bulletin
   for (const rep of offeringReps) {
     out.push({ slide: 19, textIndex: rep.textIndex, text: rep.text });
   }
-  // 公告：announcements[0]→P25，[1]→P26（P27 留给浸礼）
-  const announcementSlides = [25, 26];
-  (bulletin.announcements ?? []).forEach((item, index) => {
-    const slide = announcementSlides[index];
-    if (!slide) return;
-    if (item.title?.trim()) out.push({ slide, textIndex: 0, text: item.title.trim() });
-    if (item.body?.trim()) out.push({ slide, textIndex: 1, text: item.body.trim() });
-  });
+  // 公告由 applyAnnouncementPagesToZip 专门处理（含加页），不走 slideTextOverrides
   const baptism = bulletin.baptismText?.trim() ?? '';
   if (baptism) out.push({ slide: 27, textIndex: 3, text: baptism });
   const testimony = bulletin.testimonyShareDate?.trim() ?? '';
@@ -504,16 +499,20 @@ export async function patchesFromBulletin(bulletin: WeeklyBulletin): Promise<{
   };
 }
 
-/** 应用文字补丁并在读经段按需复制额外幻灯片 */
+/** 应用文字补丁并在读经/公告段按需复制额外幻灯片 */
 export async function applyBulletinPatches(
   templateBlob: Blob,
   patches: SlideTextPatch[],
   scriptureBodies: ScriptureSlideBodies | null,
   filename: string,
+  bulletin?: WeeklyBulletin,
 ): Promise<File> {
   let file = await applySlidePatches(templateBlob, patches, filename);
   if (scriptureBodies) {
     file = await expandScriptureSlidesInPptx(file, scriptureBodies);
+  }
+  if (bulletin) {
+    file = await expandAnnouncementSlidesInPptx(file, bulletin);
   }
   return file;
 }

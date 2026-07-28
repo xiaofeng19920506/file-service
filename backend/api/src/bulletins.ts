@@ -79,7 +79,7 @@ const slidePreviewCache = new Map<string, Buffer>();
 /** 同一套补丁参数共享已补丁 PPTX，避免每页都重新 patch */
 const patchedPptxCache = new Map<string, Buffer>();
 /** 预览补丁版本；v35=分区 override 支持增删页（splice 变长） */
-const SLIDE_PREVIEW_PATCH_REV = 'v43';
+const SLIDE_PREVIEW_PATCH_REV = 'v44';
 
 async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   const chunks: Buffer[] = [];
@@ -160,9 +160,26 @@ type PreviewQueryFields = {
   birthdayMonth: string;
   birthdayNames: string;
   verseOfWeek: string;
+  announcements: { title: string; body: string }[];
   hiddenSections: string[];
   weeklyMeetingVariant: number | null;
 };
+
+function parseAnnouncementsQuery(raw: string | undefined): { title: string; body: string }[] {
+  if (!raw?.trim()) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((item): item is Record<string, unknown> => !!item && typeof item === 'object')
+      .map((item) => ({
+        title: typeof item.title === 'string' ? item.title : '',
+        body: typeof item.body === 'string' ? item.body : '',
+      }));
+  } catch {
+    return [];
+  }
+}
 
 function parsePreviewQuery(query: {
   serviceDate?: string;
@@ -174,6 +191,7 @@ function parsePreviewQuery(query: {
   birthdayMonth?: string;
   birthdayNames?: string;
   verseOfWeek?: string;
+  announcements?: string;
   hiddenSections?: string;
   weeklyMeetingVariant?: string;
 }): PreviewQueryFields {
@@ -189,6 +207,7 @@ function parsePreviewQuery(query: {
     birthdayMonth: query.birthdayMonth?.trim() ?? '',
     birthdayNames: query.birthdayNames?.trim() ?? '',
     verseOfWeek: query.verseOfWeek?.trim() ?? '',
+    announcements: parseAnnouncementsQuery(query.announcements),
     hiddenSections: normalizeHiddenSections(
       (query.hiddenSections ?? '')
         .split(',')
@@ -205,7 +224,10 @@ function previewPatchCacheSuffix(
   overridesKey: string,
 ): string {
   const hiddenKey = q.hiddenSections.slice().sort().join(',');
-  return `${q.serviceDate ?? ''}:${q.serviceTime}:${q.scriptureBook}:${q.scriptureReference}:${q.showPreServiceChairName}:${q.preServiceChairNames}:${q.birthdayMonth}:${q.birthdayNames}:${q.verseOfWeek}:${hiddenKey}:${q.weeklyMeetingVariant ?? ''}:${overridesKey}`;
+  const announcementsKey = q.announcements
+    .map((a) => `${a.title}\u0002${a.body}`)
+    .join('\u0001');
+  return `${q.serviceDate ?? ''}:${q.serviceTime}:${q.scriptureBook}:${q.scriptureReference}:${q.showPreServiceChairName}:${q.preServiceChairNames}:${q.birthdayMonth}:${q.birthdayNames}:${q.verseOfWeek}:${announcementsKey}:${hiddenKey}:${q.weeklyMeetingVariant ?? ''}:${overridesKey}`;
 }
 
 let previewRenderActive = 0;
@@ -531,6 +553,7 @@ async function buildPatchedBulletinPptxBuf(opts: {
         birthdayMonth: q.birthdayMonth,
         birthdayNames: q.birthdayNames,
         verseOfWeek: q.verseOfWeek,
+        announcements: q.announcements,
         hiddenSections: q.hiddenSections,
         weeklyMeetingVariant: q.weeklyMeetingVariant,
         slideTextOverrides,
@@ -769,6 +792,7 @@ export function registerBulletinRoutes(
       birthdayMonth?: string;
       birthdayNames?: string;
       verseOfWeek?: string;
+      announcements?: string;
       bulletinId?: string;
       slideTextOverrides?: string;
     };
@@ -832,6 +856,7 @@ export function registerBulletinRoutes(
       birthdayMonth?: string;
       birthdayNames?: string;
       verseOfWeek?: string;
+      announcements?: string;
       bulletinId?: string;
       slideTextOverrides?: string;
     };

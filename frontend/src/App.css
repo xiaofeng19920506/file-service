@@ -6282,6 +6282,27 @@
   border-bottom: none;
 }
 
+.bulletin-announcement-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.bulletin-announcement-block-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.bulletin-announcement-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 0.35rem;
+}
+
 .bulletin-fieldset-inline {
   border: 1px solid var(--border-light);
   border-radius: 10px;

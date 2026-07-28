@@ -224,11 +224,15 @@ export default function BulletinFullDeckPreview({
       birthdayMonth: bulletin.birthdayMonth,
       birthdayNames: bulletin.birthdayNames,
       verseOfWeek: bulletin.verseOfWeek,
+      announcements: (bulletin.announcements ?? []).map((a) => ({
+        title: a.title ?? '',
+        body: a.body,
+      })),
       hiddenSections: bulletin.hiddenSections,
       skipTestimonyWeek: bulletin.skipTestimonyWeek,
       skipDepartmentReports: bulletin.skipDepartmentReports,
       weeklyMeetingVariant: bulletin.weeklyMeetingVariant,
-      // 奉献/公告/浸礼/见证/名单等字段也并入覆盖，右侧预览才与最终 PPT 一致
+      // 奉献/浸礼/见证/名单等字段也并入覆盖；公告走 announcements 加页
       slideTextOverrides: mergeSlideTextOverrides(
         bulletinDynamicTextOverrides(bulletin),
         bulletin.slideTextOverrides,
@@ -247,6 +251,7 @@ export default function BulletinFullDeckPreview({
       bulletin.birthdayMonth,
       bulletin.birthdayNames,
       bulletin.verseOfWeek,
+      bulletin.announcements,
       bulletin.hiddenSections,
       bulletin.skipTestimonyWeek,
       bulletin.skipDepartmentReports,
@@ -254,7 +259,6 @@ export default function BulletinFullDeckPreview({
       bulletin.slideTextOverrides,
       bulletin.sectionPptxOverrides,
       bulletin.lastWeekOfferingDate,
-      bulletin.announcements,
       bulletin.baptismText,
       bulletin.testimonyShareDate,
       bulletin.serviceRosterText,

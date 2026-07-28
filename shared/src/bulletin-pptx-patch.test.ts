@@ -253,4 +253,37 @@ describe('patchScriptureSlideInSlideXml', () => {
     expect(slide2).toContain('自定义会前');
     expect(slide2).not.toContain('王凯弟兄');
   });
+
+  it('expands announcement slides before baptism page when more than 2 items', async () => {
+    const { listPptxSlidesInPresentationOrder } = await import('./pptx-presentation-order.js');
+    const tpl = await readFile(templatePath);
+    const patched = await patchBulletinPreviewInPptx(tpl, {
+      announcements: [
+        { title: '特别感谢', body: '感谢甲' },
+        { title: '家有喜事', body: '恭喜乙' },
+        { title: '新增公告', body: '第三条内容' },
+      ],
+    });
+    const zip = await JSZip.loadAsync(patched);
+    const order = await listPptxSlidesInPresentationOrder(patched);
+    const paths = order.map((s) => s.slidePath);
+    const i25 = paths.indexOf('ppt/slides/slide25.xml');
+    const i26 = paths.indexOf('ppt/slides/slide26.xml');
+    const i27 = paths.indexOf('ppt/slides/slide27.xml');
+    expect(i25).toBeGreaterThanOrEqual(0);
+    expect(i26).toBe(i25 + 1);
+    expect(i27).toBeGreaterThan(i26 + 1);
+    // 中间多出一页公告
+    const extraPath = paths[i26 + 1];
+    expect(extraPath).toBeTruthy();
+    expect(extraPath).not.toBe('ppt/slides/slide27.xml');
+    const slide25 = await zip.file('ppt/slides/slide25.xml')!.async('string');
+    const slide26 = await zip.file('ppt/slides/slide26.xml')!.async('string');
+    const extra = await zip.file(extraPath!)!.async('string');
+    expect(slide25).toContain('特别感谢');
+    expect(slide25).toContain('感谢甲');
+    expect(slide26).toContain('家有喜事');
+    expect(extra).toContain('新增公告');
+    expect(extra).toContain('第三条内容');
+  });
 });
