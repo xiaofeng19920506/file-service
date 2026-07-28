@@ -31,6 +31,8 @@ export default function BulletinSlideShowProjectorPage({ sessionId }: BulletinSl
   useEffect(() => {
     document.documentElement.classList.add('bulletin-slideshow-window');
     document.body.classList.add('bulletin-slideshow-window');
+    // 确保键盘翻页作用在投影舞台上
+    stageRef.current?.focus({ preventScroll: true });
     return () => {
       document.documentElement.classList.remove('bulletin-slideshow-window');
       document.body.classList.remove('bulletin-slideshow-window');

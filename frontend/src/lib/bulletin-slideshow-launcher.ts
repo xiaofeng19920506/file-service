@@ -9,8 +9,9 @@ const FALLBACK_TOTAL_SLIDES = 38;
 
 export async function startBulletinSlideShow(opts: {
   patch: BulletinSlidePreviewParams;
+  /** 起始演示页（1-based）；缺省从封面开始 */
   initialSlide?: number;
-  /** 当前 deck plan 的实际页数（隐藏分区/读经加页后会变化） */
+  /** 当前 deck 的实际总页数（隐藏分区/读经加页后会变化）；必须是整份周报，不是单分区 */
   totalSlides?: number;
 }): Promise<{ ok: true } | { ok: false; reason: 'popup_blocked' }> {
   let totalSlides = FALLBACK_TOTAL_SLIDES;
@@ -26,6 +27,7 @@ export async function startBulletinSlideShow(opts: {
     }
   }
 
+  // 整份周报放映：默认从第 1 页起，可翻到 totalSlides
   const initialSlide = Math.min(
     totalSlides,
     Math.max(1, opts.initialSlide ?? 1),

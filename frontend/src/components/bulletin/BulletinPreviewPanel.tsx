@@ -226,7 +226,7 @@ export default function BulletinPreviewPanel({
           </div>
           <BulletinSlideShowLauncher
             patch={previewPatch}
-            initialSlide={highlightSlides[0] ?? 1}
+            initialSlide={1}
             totalSlides={deckPlan?.totalSlides}
             className="btn-primary bulletin-slideshow-start"
           />
