@@ -184,16 +184,16 @@ export const SCRIPTURE_ZH_PAGE_MAX_CHARS =
 
 /**
  * 英文 22pt 每行约容纳字符数。
- * 略保守：文本框约 689pt 宽，22pt 实测易比理论值更早换行，估松会导致裁切。
+ * 文本框内宽约 689pt；过小会导致半页空白就翻页，过大则裁切。
  */
-export const SCRIPTURE_EN_CHARS_PER_LINE = 48;
+export const SCRIPTURE_EN_CHARS_PER_LINE = 56;
 
 /**
  * 英文每页视觉行数（与中文同一套「容量自适应 → 溢出加页」）。
- * 22pt 行高更大，故上限略低于中文 11 行。
+ * 与中文同为 10–11 行，尽量铺满文本框。
  */
-export const SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES = 8;
-export const SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES = 9;
+export const SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES = 10;
+export const SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES = 11;
 
 /** 英文每页字符数上下限（由行数 × 每行字符数推导） */
 export const SCRIPTURE_EN_PAGE_MIN_CHARS =
@@ -223,12 +223,13 @@ export function estimateChineseBlockVisualLines(text: string): number {
 
 type LineEstimate = (text: string) => number;
 
-/** 取文本头部，不超过指定视觉行数 */
+/** 取文本头部，不超过指定视觉行数；英文优先在节号前断页，避免半句起页 */
 function takeHeadVisualLines(
   text: string,
   maxVisualLines: number,
   charsPerLine: number,
   estimate: LineEstimate,
+  preferVerseBreak = false,
 ): [string, string] {
   const trimmed = text.trim();
   if (!trimmed) return ['', ''];
@@ -237,8 +238,23 @@ function takeHeadVisualLines(
   const maxChars = maxVisualLines * charsPerLine;
   let end = Math.min(maxChars, trimmed.length);
   if (end < trimmed.length) {
-    const lastSpace = trimmed.slice(0, end).lastIndexOf(' ');
-    if (lastSpace > end * 0.35) end = lastSpace;
+    if (preferVerseBreak) {
+      // 在容量 40%–100% 区间内，尽量落在「 N 」节号之前
+      const window = trimmed.slice(0, end);
+      let best = -1;
+      for (const m of window.matchAll(/(?:^|\s)(\d+)\s+(?=[A-Za-z“"‘'])/g)) {
+        const at = m.index! + (m[0].startsWith(' ') || m[0].startsWith('\n') ? 1 : 0);
+        if (at >= maxChars * 0.4 && at < end) best = at;
+      }
+      if (best > 0) end = best;
+      else {
+        const lastSpace = window.lastIndexOf(' ');
+        if (lastSpace > end * 0.35) end = lastSpace;
+      }
+    } else {
+      const lastSpace = trimmed.slice(0, end).lastIndexOf(' ');
+      if (lastSpace > end * 0.35) end = lastSpace;
+    }
   }
 
   let head = trimmed.slice(0, end).trim();
@@ -249,6 +265,15 @@ function takeHeadVisualLines(
 
   while (head.length > 0 && estimate(head) > maxVisualLines) {
     end = Math.max(1, Math.floor(end * 0.85));
+    if (preferVerseBreak) {
+      const window = trimmed.slice(0, end);
+      let best = -1;
+      for (const m of window.matchAll(/(?:^|\s)(\d+)\s+(?=[A-Za-z“"‘'])/g)) {
+        const at = m.index! + (m[0].startsWith(' ') || m[0].startsWith('\n') ? 1 : 0);
+        if (at >= maxChars * 0.35 && at < end) best = at;
+      }
+      if (best > 0) end = best;
+    }
     head = trimmed.slice(0, end).trim();
   }
 
@@ -260,6 +285,7 @@ function splitTextToMaxVisualLines(
   maxLines: number,
   charsPerLine: number,
   estimate: LineEstimate,
+  preferVerseBreak = false,
 ): string[] {
   const trimmed = text.trim();
   if (!trimmed) return [];
@@ -268,7 +294,13 @@ function splitTextToMaxVisualLines(
   const pages: string[] = [];
   let remaining = trimmed;
   while (remaining.length > 0) {
-    const [head, tail] = takeHeadVisualLines(remaining, maxLines, charsPerLine, estimate);
+    const [head, tail] = takeHeadVisualLines(
+      remaining,
+      maxLines,
+      charsPerLine,
+      estimate,
+      preferVerseBreak,
+    );
     if (!head.length) break;
     pages.push(head);
     remaining = tail;
@@ -283,6 +315,7 @@ function fillTextPagesFromNext(
   maxChars: number,
   charsPerLine: number,
   estimate: LineEstimate,
+  preferVerseBreak = false,
 ): string[] {
   const out = [...pages];
 
@@ -300,7 +333,13 @@ function fillTextPagesFromNext(
       const roomChars = maxChars - out[i]!.length - 1;
       if (roomLines <= 0 || roomChars <= 0) break;
 
-      const [head, tail] = takeHeadVisualLines(next, roomLines, charsPerLine, estimate);
+      const [head, tail] = takeHeadVisualLines(
+        next,
+        roomLines,
+        charsPerLine,
+        estimate,
+        preferVerseBreak,
+      );
       if (!head.length) break;
 
       out[i] = `${out[i]!} ${head}`.trim();
@@ -319,12 +358,27 @@ function paginateTextByVisualLines(
   maxChars: number,
   charsPerLine: number,
   estimate: LineEstimate,
+  preferVerseBreak = false,
 ): string[] {
   const trimmed = text.trim();
   if (!trimmed) return [];
 
-  const draft = splitTextToMaxVisualLines(trimmed, maxLines, charsPerLine, estimate);
-  return fillTextPagesFromNext(draft, minLines, maxLines, maxChars, charsPerLine, estimate);
+  const draft = splitTextToMaxVisualLines(
+    trimmed,
+    maxLines,
+    charsPerLine,
+    estimate,
+    preferVerseBreak,
+  );
+  return fillTextPagesFromNext(
+    draft,
+    minLines,
+    maxLines,
+    maxChars,
+    charsPerLine,
+    estimate,
+    preferVerseBreak,
+  );
 }
 
 function paginateChineseVerses(verses: BibleVerse[]): string[] {
@@ -347,7 +401,7 @@ export function estimateEnglishLineVisualLines(line: string): number {
 
 /**
  * 英文分页：与中文相同——连续正文按视觉行装箱，超出自动加页。
- * 返回 string[][] 时每页仅含一段连续文本，便于 PPT 单段落自动换行。
+ * 断页优先落在节号前，避免下一页从半句开始、上一页半框空白。
  */
 function paginateEnglishVerses(verses: BibleVerse[]): string[][] {
   const pages = paginateTextByVisualLines(
@@ -357,6 +411,7 @@ function paginateEnglishVerses(verses: BibleVerse[]): string[][] {
     SCRIPTURE_EN_PAGE_MAX_CHARS,
     SCRIPTURE_EN_CHARS_PER_LINE,
     estimateEnglishLineVisualLines,
+    true,
   );
   return pages.map((page) => [page]);
 }
