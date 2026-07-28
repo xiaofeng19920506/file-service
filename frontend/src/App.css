@@ -7114,50 +7114,78 @@ body.bulletin-slideshow-window {
   gap: 0.5rem;
 }
 
-.bulletin-worship-invite-members {
-  margin: 0;
-  padding: 0.65rem 0.75rem;
-  border: 1px solid var(--border-light);
-  border-radius: 10px;
-}
-
-.bulletin-worship-invite-members legend {
-  padding: 0 0.35rem;
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-}
-
-.bulletin-worship-invite-member-list {
-  list-style: none;
-  margin: 0.35rem 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  max-height: 12rem;
-  overflow: auto;
-}
-
-.bulletin-worship-invite-member {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.45rem 0.65rem;
-  cursor: pointer;
-}
-
-.bulletin-worship-invite-member-name {
-  font-weight: 500;
-}
-
-.bulletin-worship-invite-member-email {
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-}
-
 .bulletin-worship-invite-url {
   word-break: break-all;
   font-size: 0.8rem;
+}
+
+.bulletin-worship-invite-modal {
+  width: min(440px, 100%);
+}
+
+.bulletin-worship-invite-combobox-wrap {
+  position: relative;
+}
+
+.bulletin-worship-invite-options {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  margin: 0;
+  padding: 0.35rem 0;
+  list-style: none;
+  max-height: 240px;
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.14);
+}
+
+.bulletin-worship-invite-options > li {
+  margin: 0;
+}
+
+.bulletin-worship-invite-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 0.55rem 0.85rem;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.bulletin-worship-invite-option.is-empty {
+  cursor: default;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.bulletin-worship-invite-option.is-active,
+.bulletin-worship-invite-option:hover {
+  background: color-mix(in srgb, var(--accent, #2563eb) 10%, transparent);
+}
+
+.bulletin-worship-invite-option.is-selected {
+  background: color-mix(in srgb, var(--accent, #2563eb) 16%, transparent);
+}
+
+.bulletin-worship-invite-option-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.bulletin-worship-invite-option-email {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
 }
 
 .bulletin-worship-youtube-unavailable {
@@ -7594,13 +7622,6 @@ body.bulletin-slideshow-window {
 .bulletin-worship-meta {
   margin: 0.35rem 0;
   color: var(--text-secondary);
-}
-
-.bulletin-worship-invite-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin-top: 1rem;
 }
 
 .bulletin-published-hint {
