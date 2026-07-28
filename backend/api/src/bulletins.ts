@@ -20,7 +20,6 @@ import {
   patchBulletinPreviewInPptx,
   reapplyBulletinFormFieldsInPptx,
   buildBulletinDeckPlanFromPptxBytes,
-  extractPresentationSlideAsPptx,
   extractIndexedTextRunsFromPptx,
   playlistItems,
   playlists,
@@ -79,7 +78,7 @@ const slidePreviewCache = new Map<string, Buffer>();
 /** 同一套补丁参数共享已补丁 PPTX，避免每页都重新 patch */
 const patchedPptxCache = new Map<string, Buffer>();
 /** 预览补丁版本；v35=分区 override 支持增删页（splice 变长） */
-const SLIDE_PREVIEW_PATCH_REV = 'v44';
+const SLIDE_PREVIEW_PATCH_REV = 'v45';
 
 async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   const chunks: Buffer[] = [];
@@ -232,7 +231,7 @@ function previewPatchCacheSuffix(
 
 let previewRenderActive = 0;
 const previewRenderWaiters: Array<() => void> = [];
-const PREVIEW_RENDER_MAX = 4;
+const PREVIEW_RENDER_MAX = 6;
 
 async function withPreviewRenderSlot<T>(fn: () => Promise<T>): Promise<T> {
   if (previewRenderActive >= PREVIEW_RENDER_MAX) {
@@ -830,6 +829,15 @@ export function registerBulletinRoutes(
       });
 
       const plan = await buildBulletinDeckPlanFromPptxBytes(pptxBuf);
+      // 预热 LO：整份转 PDF 一次，后续页预览走 pdftoppm
+      if (sofficePreviewUrl && plan.totalSlides > 0) {
+        void withPreviewRenderSlot(() =>
+          renderSlidePngViaService(sofficePreviewUrl, pptxBuf, 1, {
+            timeoutMs: 120_000,
+            retries: 1,
+          }),
+        ).catch((err) => request.log.warn({ err }, 'bulletin preview pdf warm failed'));
+      }
       return reply.header('Cache-Control', 'private, no-store').send({
         rev: SLIDE_PREVIEW_PATCH_REV,
         totalSlides: plan.totalSlides,
@@ -916,16 +924,13 @@ export function registerBulletinRoutes(
       }
 
       const pptxPath = join(workRoot, 'preview.pptx');
-      // 按演示顺序抽出目标页，始终渲染第 1 页，避免 LO/PDF 在加页后按文件号错位
-      const singleSlidePptx = Buffer.from(
-        await extractPresentationSlideAsPptx(pptxBuf, slideNumber),
-      );
-      await writeFile(pptxPath, singleSlidePptx);
+      // 整份补丁 PPT 按演示页码渲染：LO 侧 PDF 缓存后，后续页只需 pdftoppm
+      await writeFile(pptxPath, pptxBuf);
 
       const pngBuf = await withPreviewRenderSlot(async () =>
         sofficePreviewUrl
-          ? await renderSlidePngViaService(sofficePreviewUrl, singleSlidePptx, 1, {
-              timeoutMs: 90_000,
+          ? await renderSlidePngViaService(sofficePreviewUrl, pptxBuf, slideNumber, {
+              timeoutMs: 120_000,
               retries: 2,
             })
           : await (async () => {
@@ -933,7 +938,7 @@ export function registerBulletinRoutes(
                 sofficePath,
                 inputPath: pptxPath,
                 outDir: workRoot,
-                slideNumber: 1,
+                slideNumber,
               });
               return readFile(pngPath);
             })(),

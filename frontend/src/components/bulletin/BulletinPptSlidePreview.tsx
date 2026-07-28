@@ -100,11 +100,13 @@ export default function BulletinPptSlidePreview({
       };
     }
 
-    // 无图才转圈；已有上一版 PNG 时继续显示，后台刷新避免整卷 deck 空白
-    if (!previewUrlRef.current) {
-      setLoading(true);
-    }
+    // 无缓存：立刻转圈，等新 PNG（靠 PDF 复用加速，不展示旧页）
+    setLoading(true);
     setUnavailable(false);
+    setPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
 
     const timer = window.setTimeout(() => {
       void fetchBulletinSlidePreviewPng(slideNumber, patchRef.current)
@@ -114,10 +116,11 @@ export default function BulletinPptSlidePreview({
         })
         .catch(() => {
           if (cancelled) return;
-          // 已有旧图时保留，只标记失败态不强行清空
-          if (!previewUrlRef.current) {
-            setUnavailable(true);
-          }
+          setPreviewUrl((prev) => {
+            if (prev) URL.revokeObjectURL(prev);
+            return null;
+          });
+          setUnavailable(true);
           setLoading(false);
         });
     }, lazy ? 80 : 0);
