@@ -41,6 +41,8 @@ import {
   spliceAllSectionOverridesIntoPptx,
   pptxBufferSlidesAreWellFormed,
   contentDisposition,
+  computeOfferingTotalAmount,
+  normalizeOfferingAmountInput,
   type ApiEnv,
   type Db,
   type SlideTextOverride,
@@ -249,6 +251,9 @@ export type WeeklyBulletinDto = {
   status: string;
   lastWeekOfferingDate: string;
   offeringQuarterLabel: string;
+  offeringTitheAmount: string;
+  offeringOtherAmount: string;
+  offeringTotalAmount: string;
   birthdayMonth: string;
   birthdayNames: string;
   showPreServiceChairName: boolean;
@@ -312,6 +317,9 @@ async function mapBulletin(
     status: row.status,
     lastWeekOfferingDate: row.lastWeekOfferingDate,
     offeringQuarterLabel: row.offeringQuarterLabel,
+    offeringTitheAmount: row.offeringTitheAmount,
+    offeringOtherAmount: row.offeringOtherAmount,
+    offeringTotalAmount: row.offeringTotalAmount,
     birthdayMonth: row.birthdayMonth,
     birthdayNames: row.birthdayNames,
     showPreServiceChairName: row.showPreServiceChairName,
@@ -345,6 +353,8 @@ type BulletinPatchBody = Partial<{
   status: string;
   lastWeekOfferingDate: string;
   offeringQuarterLabel: string;
+  offeringTitheAmount: string;
+  offeringOtherAmount: string;
   birthdayMonth: string;
   birthdayNames: string;
   showPreServiceChairName: boolean;
@@ -1042,6 +1052,20 @@ export function registerBulletinRoutes(
       assignText('status', 'status');
       assignText('lastWeekOfferingDate', 'lastWeekOfferingDate');
       assignText('offeringQuarterLabel', 'offeringQuarterLabel');
+      if (body.offeringTitheAmount !== undefined || body.offeringOtherAmount !== undefined) {
+        const tithe =
+          body.offeringTitheAmount !== undefined
+            ? normalizeOfferingAmountInput(body.offeringTitheAmount)
+            : existing.offeringTitheAmount;
+        const other =
+          body.offeringOtherAmount !== undefined
+            ? normalizeOfferingAmountInput(body.offeringOtherAmount)
+            : existing.offeringOtherAmount;
+        patch.offeringTitheAmount = tithe;
+        patch.offeringOtherAmount = other;
+        // 总数只由后端计算，忽略客户端传入的 offeringTotalAmount
+        patch.offeringTotalAmount = computeOfferingTotalAmount(tithe, other);
+      }
       assignText('birthdayMonth', 'birthdayMonth');
       assignText('birthdayNames', 'birthdayNames');
       if (body.showPreServiceChairName !== undefined) {

@@ -15,7 +15,8 @@ export const BULLETIN_LOCAL_SYNC_KEYS = [
   'birthdayNames',
   'verseOfWeek',
   'lastWeekOfferingDate',
-  'offeringQuarterLabel',
+  'offeringTitheAmount',
+  'offeringOtherAmount',
   'baptismText',
   'staffMeetingDate',
   'testimonyShareDate',
@@ -58,7 +59,8 @@ export function fieldToSectionId(key: BulletinLocalSyncKey | string): string | n
     case 'verseOfWeek':
       return 'verse_of_week';
     case 'lastWeekOfferingDate':
-    case 'offeringQuarterLabel':
+    case 'offeringTitheAmount':
+    case 'offeringOtherAmount':
       return 'offering';
     case 'baptismText':
       return 'announcements';

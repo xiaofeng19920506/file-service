@@ -225,6 +225,12 @@ export const weeklyBulletins = pgTable('weekly_bulletins', {
   status: text('status').notNull().default('ready'),
   lastWeekOfferingDate: text('last_week_offering_date').notNull().default(''),
   offeringQuarterLabel: text('offering_quarter_label').notNull().default(''),
+  /** 十一奉献金额（存两位小数字符串，如 3260.00） */
+  offeringTitheAmount: text('offering_tithe_amount').notNull().default(''),
+  /** 其他奉献金额 */
+  offeringOtherAmount: text('offering_other_amount').notNull().default(''),
+  /** 奉献总数 = 十一 + 其他（后端计算写入） */
+  offeringTotalAmount: text('offering_total_amount').notNull().default(''),
   birthdayMonth: text('birthday_month').notNull().default(''),
   birthdayNames: text('birthday_names').notNull().default(''),
   /** 会前祷告是否在第 2 页显示主席姓名 */

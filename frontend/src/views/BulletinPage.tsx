@@ -408,6 +408,8 @@ export default function BulletinPage() {
         showPreServiceChairName: 'pre_service',
         preServiceChairNames: 'pre_service',
         lastWeekOfferingDate: 'offering',
+        offeringTitheAmount: 'offering',
+        offeringOtherAmount: 'offering',
       };
       const sectionId = sectionForField[key];
       if (sectionId && next.sectionPptxOverrides?.[sectionId]) {
@@ -527,7 +529,8 @@ export default function BulletinPage() {
         serviceDate: draft.serviceDate,
         serviceTime: draft.serviceTime,
         lastWeekOfferingDate: draft.lastWeekOfferingDate,
-        offeringQuarterLabel: draft.offeringQuarterLabel,
+        offeringTitheAmount: draft.offeringTitheAmount,
+        offeringOtherAmount: draft.offeringOtherAmount,
         birthdayMonth: draft.birthdayMonth,
         birthdayNames: draft.birthdayNames,
         staffMeetingDate: draft.staffMeetingDate,

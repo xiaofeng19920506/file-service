@@ -197,6 +197,13 @@
       "when": 1753459200000,
       "tag": "0029_bulletin_section_pptx_overrides",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1753545600000,
+      "tag": "0030_bulletin_offering_amounts",
+      "breakpoints": true
     }
   ]
 }

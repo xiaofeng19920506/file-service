@@ -23,6 +23,10 @@ export type WeeklyBulletin = {
   status: string;
   lastWeekOfferingDate: string;
   offeringQuarterLabel: string;
+  offeringTitheAmount: string;
+  offeringOtherAmount: string;
+  /** 后端计算：十一奉献 + 其他奉献 */
+  offeringTotalAmount: string;
   birthdayMonth: string;
   birthdayNames: string;
   showPreServiceChairName: boolean;
@@ -59,6 +63,8 @@ export type BulletinPatch = Partial<{
   status: string;
   lastWeekOfferingDate: string;
   offeringQuarterLabel: string;
+  offeringTitheAmount: string;
+  offeringOtherAmount: string;
   birthdayMonth: string;
   birthdayNames: string;
   showPreServiceChairName: boolean;

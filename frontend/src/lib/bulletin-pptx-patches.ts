@@ -192,6 +192,46 @@ export function buildOfferingDateReplacements(
   ];
 }
 
+function formatUsdAmount(raw: string): string {
+  const cleaned = raw.replace(/[$,\s]/g, '').trim();
+  if (!cleaned) return '';
+  const n = Number.parseFloat(cleaned);
+  if (!Number.isFinite(n)) return '';
+  return `$${n.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+/** P19：十一 / 其他 / 总数金额 run */
+export function buildOfferingAmountReplacements(bulletin: {
+  offeringTitheAmount?: string;
+  offeringOtherAmount?: string;
+  offeringTotalAmount?: string;
+}): { textIndex: number; text: string }[] {
+  const tithe = formatUsdAmount(bulletin.offeringTitheAmount ?? '');
+  const other = formatUsdAmount(bulletin.offeringOtherAmount ?? '');
+  const totalRaw =
+    bulletin.offeringTotalAmount?.trim() ||
+    (() => {
+      const a = Number.parseFloat(String(bulletin.offeringTitheAmount ?? '').replace(/[$,\s]/g, '')) || 0;
+      const b = Number.parseFloat(String(bulletin.offeringOtherAmount ?? '').replace(/[$,\s]/g, '')) || 0;
+      if (
+        !String(bulletin.offeringTitheAmount ?? '').replace(/[$,\s]/g, '').trim() &&
+        !String(bulletin.offeringOtherAmount ?? '').replace(/[$,\s]/g, '').trim()
+      ) {
+        return '';
+      }
+      return (a + b).toFixed(2);
+    })();
+  const total = formatUsdAmount(totalRaw);
+  const reps: { textIndex: number; text: string }[] = [];
+  if (tithe) reps.push({ textIndex: 16, text: tithe });
+  if (other) reps.push({ textIndex: 21, text: other });
+  if (total) reps.push({ textIndex: 25, text: total });
+  return reps;
+}
+
 function formatScriptureBookRun(book: string): string {
   const trimmed = book.trim();
   if (!trimmed) return '';
@@ -239,8 +279,10 @@ export function patchesForStep(stepId: string, bulletin: WeeklyBulletin): SlideT
     case 'offering': {
       const patches: SlideTextPatch[] = [];
       const dateReps = buildOfferingDateReplacements(bulletin.lastWeekOfferingDate);
-      if (dateReps.length) {
-        patches.push({ slideNumber: 19, replacements: dateReps });
+      const amountReps = buildOfferingAmountReplacements(bulletin);
+      const replacements = [...dateReps, ...amountReps];
+      if (replacements.length) {
+        patches.push({ slideNumber: 19, replacements });
       }
       return patches;
     }
@@ -315,7 +357,10 @@ export type BulletinSlideTextOverride = { slide: number; textIndex: number; text
  */
 export function bulletinDynamicTextOverrides(bulletin: WeeklyBulletin): BulletinSlideTextOverride[] {
   const out: BulletinSlideTextOverride[] = [];
-  const offeringReps = buildOfferingDateReplacements(bulletin.lastWeekOfferingDate ?? '');
+  const offeringReps = [
+    ...buildOfferingDateReplacements(bulletin.lastWeekOfferingDate ?? ''),
+    ...buildOfferingAmountReplacements(bulletin),
+  ];
   for (const rep of offeringReps) {
     out.push({ slide: 19, textIndex: rep.textIndex, text: rep.text });
   }

@@ -125,6 +125,19 @@ export function BulletinOfferingStep({
   onPatch,
 }: BulletinStepPanelProps) {
   const { t } = useI18n();
+  const tithe = draft.offeringTitheAmount ?? '';
+  const other = draft.offeringOtherAmount ?? '';
+  const totalDisplay =
+    draft.offeringTotalAmount?.trim() ||
+    (() => {
+      const a = Number.parseFloat(String(tithe).replace(/[$,\s]/g, '')) || 0;
+      const b = Number.parseFloat(String(other).replace(/[$,\s]/g, '')) || 0;
+      if (!String(tithe).replace(/[$,\s]/g, '').trim() && !String(other).replace(/[$,\s]/g, '').trim()) {
+        return '';
+      }
+      return (a + b).toFixed(2);
+    })();
+
   return (
     <StepShell titleKey="bulletin.steps.offeringTitle" introKey="bulletin.steps.offeringIntro">
       <TextField
@@ -134,11 +147,22 @@ export function BulletinOfferingStep({
         onChange={(v) => onPatch('lastWeekOfferingDate', v)}
       />
       <TextField
-        label={t('bulletin.offeringQuarter')}
-        value={draft.offeringQuarterLabel}
+        label={t('bulletin.offeringTithe')}
+        value={tithe}
         disabled={!canEdit}
-        onChange={(v) => onPatch('offeringQuarterLabel', v)}
+        onChange={(v) => onPatch('offeringTitheAmount', v)}
       />
+      <TextField
+        label={t('bulletin.offeringOther')}
+        value={other}
+        disabled={!canEdit}
+        onChange={(v) => onPatch('offeringOtherAmount', v)}
+      />
+      <label className="bulletin-field">
+        {t('bulletin.offeringTotal')}
+        <input type="text" value={totalDisplay} disabled readOnly />
+      </label>
+      <p className="bulletin-field-hint">{t('bulletin.offeringTotalHint')}</p>
     </StepShell>
   );
 }
