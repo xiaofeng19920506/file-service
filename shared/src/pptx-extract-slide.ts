@@ -1,6 +1,7 @@
 import JSZip from 'jszip';
 import { removeSlidesFromPptxZip } from './pptx-duplicate-slide.js';
 import { listPptxSlidesInPresentationOrder } from './pptx-presentation-order.js';
+import { pruneUnusedPptxMedia } from './pptx-repack-presentation-order.js';
 
 type PptxBytes = Buffer | Uint8Array | ArrayBuffer;
 
@@ -39,7 +40,22 @@ export async function extractPresentationSlidesAsPptx(
   if (removePaths.length) {
     await removeSlidesFromPptxZip(zip, removePaths);
   }
-  return zip.generateAsync({ type: 'uint8array' });
+  // 预览用：去掉备注/图表等非必要部件，减小 LO 输入
+  for (const name of Object.keys(zip.files)) {
+    if (/^ppt\/(notesSlides|tags|embeddings|charts|diagrams)\//.test(name)) {
+      zip.remove(name);
+    }
+  }
+  for (const name of Object.keys(zip.files)) {
+    if (!/^ppt\/slides\/_rels\/slide\d+\.xml\.rels$/.test(name)) continue;
+    const entry = zip.file(name);
+    if (!entry) continue;
+    let rels = await entry.async('string');
+    rels = rels.replace(/<Relationship[^>]*(notesSlide|chart|diagram|tags)[^>]*\/>/gi, '');
+    zip.file(name, rels);
+  }
+  await pruneUnusedPptxMedia(zip);
+  return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
 }
 
 /**

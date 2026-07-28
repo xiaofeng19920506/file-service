@@ -84,8 +84,11 @@ async function exportSlidePngFromPdf(opts: {
   outDir: string;
   slideNumber: number;
   outBase: string;
+  /** 预览用较低 DPI 即可；默认 110 */
+  dpi?: number;
 }): Promise<string> {
   const outPrefix = join(opts.outDir, opts.outBase);
+  const dpi = opts.dpi ?? 110;
   const code = await new Promise<number>((resolve, reject) => {
     const p = spawn(
       'pdftoppm',
@@ -94,6 +97,8 @@ async function exportSlidePngFromPdf(opts: {
         String(opts.slideNumber),
         '-l',
         String(opts.slideNumber),
+        '-r',
+        String(dpi),
         '-png',
         '-singlefile',
         opts.pdfPath,
@@ -148,6 +153,8 @@ export async function exportPptxSlidePng(opts: {
   slideNumber: number;
   /** 若已生成 PDF，可复用以避免重复跑 LibreOffice */
   pdfPath?: string;
+  /** pdftoppm DPI；预览默认 110 */
+  dpi?: number;
 }): Promise<string> {
   if (opts.slideNumber < 1) {
     throw new Error(`invalid_slide:${opts.slideNumber}`);
@@ -180,6 +187,7 @@ export async function exportPptxSlidePng(opts: {
     outDir: opts.outDir,
     slideNumber: opts.slideNumber,
     outBase: `${base}-slide-${opts.slideNumber}`,
+    dpi: opts.dpi,
   });
 }
 

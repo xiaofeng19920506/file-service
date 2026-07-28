@@ -79,8 +79,8 @@ const slidePreviewCache = new Map<string, Buffer>();
 /** 同一套补丁参数共享已补丁 PPTX，避免每页都重新 patch */
 const patchedPptxCache = new Map<string, Buffer>();
 /** 预览补丁版本；v35=分区 override 支持增删页（splice 变长） */
-/** v46：恢复按演示顺序抽单页再渲染，避免 LO/PDF 按文件号错位 */
-const SLIDE_PREVIEW_PATCH_REV = 'v46';
+/** v47：抽单页预览改走 LO 直接 PNG（避免整包 PDF 丢页/偏慢） */
+const SLIDE_PREVIEW_PATCH_REV = 'v47';
 
 async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   const chunks: Buffer[] = [];
@@ -831,7 +831,7 @@ export function registerBulletinRoutes(
       });
 
       const plan = await buildBulletinDeckPlanFromPptxBytes(pptxBuf);
-      // 预热第 1 页（抽单页再渲染，与 preview.png 同路径，避免整份 PDF 页码错位）
+      // 预热第 1 页（抽单页 + 直接 PNG）
       if (sofficePreviewUrl && plan.totalSlides > 0) {
         void (async () => {
           try {
@@ -933,7 +933,7 @@ export function registerBulletinRoutes(
       }
 
       const pptxPath = join(workRoot, 'preview.pptx');
-      // 按演示顺序抽出目标页，始终渲染第 1 页，避免 LO/PDF 在加页后按文件号错位
+      // 按演示顺序抽单页，始终渲染第 1 页（LO 整包转 PDF 会丢页，不能用页码映射）
       const singleSlidePptx = Buffer.from(
         await extractPresentationSlideAsPptx(pptxBuf, slideNumber),
       );

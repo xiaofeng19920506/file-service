@@ -50,6 +50,7 @@ export * from './bulletin-section-visibility.js';
 export * from './bulletin-deck-plan.js';
 export * from './pptx-presentation-order.js';
 export * from './pptx-extract-slide.js';
+export * from './pptx-repack-presentation-order.js';
 export * from './pptx-splice-section.js';
 export * from './pptx-integrity.js';
 export * from './bulletin-section-pptx-overrides.js';
