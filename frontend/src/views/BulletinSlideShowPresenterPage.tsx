@@ -1,7 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useI18n } from '../i18n';
 import { useBulletinSlideShow } from '../hooks/useBulletinSlideShow';
-import { readSlideShowSession, removeSlideShowSession } from '../lib/bulletin-slideshow-session';
+import {
+  readSlideShowSession,
+  removeSlideShowSession,
+  type BulletinSlideShowSession,
+} from '../lib/bulletin-slideshow-session';
 import { createSlideShowBus } from '../lib/bulletin-slideshow-bus';
 
 type BulletinSlideShowPresenterPageProps = {
@@ -49,7 +53,10 @@ function SlideThumb({
 
 export default function BulletinSlideShowPresenterPage({ sessionId }: BulletinSlideShowPresenterPageProps) {
   const { t } = useI18n();
-  const session = readSlideShowSession(sessionId);
+  // 一次读入内存：StrictMode 卸载时不要清掉 localStorage 会话
+  const [session] = useState<BulletinSlideShowSession | null>(() =>
+    readSlideShowSession(sessionId),
+  );
 
   const show = useBulletinSlideShow({
     sessionId,
@@ -65,9 +72,8 @@ export default function BulletinSlideShowPresenterPage({ sessionId }: BulletinSl
     return () => {
       document.documentElement.classList.remove('bulletin-slideshow-window');
       document.body.classList.remove('bulletin-slideshow-window');
-      removeSlideShowSession(sessionId);
     };
-  }, [sessionId]);
+  }, []);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -90,13 +96,18 @@ export default function BulletinSlideShowPresenterPage({ sessionId }: BulletinSl
   }, [show]);
 
   useEffect(() => {
-    const onBeforeUnload = () => {
+    const cleanupSession = () => {
+      removeSlideShowSession(sessionId);
       const bus = createSlideShowBus(sessionId);
       bus.publish({ type: 'close', from: 'presenter' });
       bus.close();
     };
-    window.addEventListener('beforeunload', onBeforeUnload);
-    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+    window.addEventListener('beforeunload', cleanupSession);
+    window.addEventListener('pagehide', cleanupSession);
+    return () => {
+      window.removeEventListener('beforeunload', cleanupSession);
+      window.removeEventListener('pagehide', cleanupSession);
+    };
   }, [sessionId]);
 
   if (!session) {

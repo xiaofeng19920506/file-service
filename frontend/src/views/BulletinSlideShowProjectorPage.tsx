@@ -1,8 +1,12 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useI18n } from '../i18n';
 import { useBulletinSlideShow } from '../hooks/useBulletinSlideShow';
 import { createSlideShowBus } from '../lib/bulletin-slideshow-bus';
-import { readSlideShowSession, removeSlideShowSession } from '../lib/bulletin-slideshow-session';
+import {
+  readSlideShowSession,
+  removeSlideShowSession,
+  type BulletinSlideShowSession,
+} from '../lib/bulletin-slideshow-session';
 
 type BulletinSlideShowProjectorPageProps = {
   sessionId: string;
@@ -11,7 +15,10 @@ type BulletinSlideShowProjectorPageProps = {
 export default function BulletinSlideShowProjectorPage({ sessionId }: BulletinSlideShowProjectorPageProps) {
   const { t } = useI18n();
   const stageRef = useRef<HTMLDivElement>(null);
-  const session = readSlideShowSession(sessionId);
+  // 一次读入内存：StrictMode 会卸载再挂载，切勿在 effect cleanup 里删 localStorage
+  const [session] = useState<BulletinSlideShowSession | null>(() =>
+    readSlideShowSession(sessionId),
+  );
 
   const show = useBulletinSlideShow({
     sessionId,
@@ -27,9 +34,8 @@ export default function BulletinSlideShowProjectorPage({ sessionId }: BulletinSl
     return () => {
       document.documentElement.classList.remove('bulletin-slideshow-window');
       document.body.classList.remove('bulletin-slideshow-window');
-      removeSlideShowSession(sessionId);
     };
-  }, [sessionId]);
+  }, []);
 
   // 进入即尝试全屏，方便直接投影
   useEffect(() => {
@@ -117,13 +123,18 @@ export default function BulletinSlideShowProjectorPage({ sessionId }: BulletinSl
   }, [show.goNext, show.goPrev, show.goToSlide, show.endShow, show.totalSlides]);
 
   useEffect(() => {
-    const onBeforeUnload = () => {
+    const cleanupSession = () => {
+      removeSlideShowSession(sessionId);
       const bus = createSlideShowBus(sessionId);
       bus.publish({ type: 'close', from: 'projector' });
       bus.close();
     };
-    window.addEventListener('beforeunload', onBeforeUnload);
-    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+    window.addEventListener('beforeunload', cleanupSession);
+    window.addEventListener('pagehide', cleanupSession);
+    return () => {
+      window.removeEventListener('beforeunload', cleanupSession);
+      window.removeEventListener('pagehide', cleanupSession);
+    };
   }, [sessionId]);
 
   if (!session) {
