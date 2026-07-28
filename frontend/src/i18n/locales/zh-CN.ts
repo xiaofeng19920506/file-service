@@ -233,7 +233,8 @@ export default {
     pickServiceDate: '选择主日日期',
     saveCover: '保存封面',
     coverPreviewLabel: '封面预览（第 1 页）',
-    coverPreviewEmpty: '请选择主日日期以预览封面',
+    /** @deprecated 预览不再要求选日期；保留 key 以免旧缓存文案怪异 */
+    coverPreviewEmpty: '正在加载预览…',
     previewSlideEmpty: '正在加载预览…',
     sectionSyncing: '正在保存本分区…',
     sectionPreviewRefreshing: '正在更新预览…',

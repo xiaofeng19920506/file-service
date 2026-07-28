@@ -8,6 +8,7 @@ import {
   getBulletinPreviewBlob,
   setBulletinPreviewBlob,
 } from '../../lib/bulletin-preview-blob-cache';
+import { upcomingSundayIso } from '../../lib/bulletin-date';
 import { bulletinPreviewCacheKey } from '../../lib/bulletin-preview-patch';
 import PreviewConversionGuide from '../PreviewConversionGuide';
 
@@ -15,9 +16,11 @@ type BulletinPptSlidePreviewProps = {
   slideNumber: number;
   /** 由 previewPatchForSection 裁剪；经文参数须与 deck 结构一致 */
   patch?: BulletinSlidePreviewParams;
+  /** @deprecated 预览不再要求用户先选主日日期 */
   requireDate?: boolean;
   loading?: boolean;
-  emptyLabel: string;
+  /** @deprecated 无图时统一转圈，不再展示「请选择日期」类文案 */
+  emptyLabel?: string;
   slideLabel?: string;
   large?: boolean;
   overlay?: ReactNode;
@@ -25,12 +28,16 @@ type BulletinPptSlidePreviewProps = {
   lazy?: boolean;
 };
 
+function withPreviewDate(patch?: BulletinSlidePreviewParams): BulletinSlidePreviewParams {
+  const base = patch ?? {};
+  const serviceDate = base.serviceDate?.trim() || upcomingSundayIso();
+  return { ...base, serviceDate, serviceTime: base.serviceTime || '11:00' };
+}
+
 export default function BulletinPptSlidePreview({
   slideNumber,
   patch,
-  requireDate,
   loading: externalLoading,
-  emptyLabel,
   slideLabel,
   large,
   overlay,
@@ -44,10 +51,12 @@ export default function BulletinPptSlidePreview({
   const [unavailable, setUnavailable] = useState(false);
   const previewUrlRef = useRef<string | null>(null);
   previewUrlRef.current = previewUrl;
-  const patchRef = useRef(patch);
-  patchRef.current = patch;
 
-  const cacheKey = bulletinPreviewCacheKey(slideNumber, patch ?? {});
+  const effectivePatch = withPreviewDate(patch);
+  const patchRef = useRef(effectivePatch);
+  patchRef.current = effectivePatch;
+
+  const cacheKey = bulletinPreviewCacheKey(slideNumber, effectivePatch);
 
   useEffect(() => {
     if (!lazy || inView) return;
@@ -69,17 +78,6 @@ export default function BulletinPptSlidePreview({
 
   useEffect(() => {
     if (!inView) return;
-
-    const currentPatch = patchRef.current;
-    if (requireDate && !currentPatch?.serviceDate) {
-      setPreviewUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return null;
-      });
-      setUnavailable(false);
-      setLoading(false);
-      return;
-    }
 
     let cancelled = false;
     let createdUrl: string | null = null;
@@ -106,7 +104,7 @@ export default function BulletinPptSlidePreview({
     const timer = window.setTimeout(() => {
       if (!previewUrlRef.current) setLoading(true);
       setUnavailable(false);
-      void fetchBulletinSlidePreviewPng(slideNumber, patchRef.current ?? {})
+      void fetchBulletinSlidePreviewPng(slideNumber, patchRef.current)
         .then((blob) => {
           setBulletinPreviewBlob(cacheKey, blob);
           applyBlob(blob);
@@ -128,7 +126,7 @@ export default function BulletinPptSlidePreview({
         URL.revokeObjectURL(createdUrl);
       }
     };
-  }, [cacheKey, slideNumber, requireDate, inView]);
+  }, [cacheKey, slideNumber, inView]);
 
   useEffect(() => {
     return () => {
@@ -139,18 +137,11 @@ export default function BulletinPptSlidePreview({
   const rootClass = `bulletin-slide-preview${large ? ' bulletin-slide-preview--large' : ''}`;
   const showLoading = externalLoading || loading || (lazy && !inView);
 
-  if (showLoading && !previewUrl) {
+  // 无图时一律转圈，绝不提示「请选择主日日期」
+  if ((showLoading || !previewUrl) && !unavailable) {
     return (
       <div ref={rootRef} className={`${rootClass} bulletin-slide-preview--loading`}>
         <div className="preview-spinner" />
-      </div>
-    );
-  }
-
-  if (requireDate && !patch?.serviceDate) {
-    return (
-      <div ref={rootRef} className={`${rootClass} bulletin-slide-preview--empty`}>
-        <p>{emptyLabel}</p>
       </div>
     );
   }
@@ -165,14 +156,6 @@ export default function BulletinPptSlidePreview({
     );
   }
 
-  if (!previewUrl) {
-    return (
-      <div ref={rootRef} className={`${rootClass} bulletin-slide-preview--empty`}>
-        <p>{emptyLabel}</p>
-      </div>
-    );
-  }
-
   return (
     <figure
       ref={rootRef}
@@ -180,7 +163,7 @@ export default function BulletinPptSlidePreview({
     >
       {slideLabel && <figcaption className="bulletin-slide-preview-caption">{slideLabel}</figcaption>}
       <div className="bulletin-slide-preview-frame bulletin-slide-preview-frame--png">
-        <img className="bulletin-slide-preview-img" src={previewUrl} alt="" draggable={false} />
+        <img className="bulletin-slide-preview-img" src={previewUrl!} alt="" draggable={false} />
         {overlay}
       </div>
     </figure>

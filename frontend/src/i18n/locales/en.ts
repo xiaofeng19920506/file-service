@@ -245,7 +245,8 @@ const en: MessageTree = {
     pickServiceDate: 'Pick service date',
     saveCover: 'Save cover',
     coverPreviewLabel: 'Cover preview (slide 1)',
-    coverPreviewEmpty: 'Pick a service date to preview the cover',
+    /** @deprecated Preview no longer requires picking a date */
+    coverPreviewEmpty: 'Loading preview…',
     previewSlideEmpty: 'Loading preview…',
     sectionSyncing: 'Saving this section…',
     sectionPreviewRefreshing: 'Updating preview…',
