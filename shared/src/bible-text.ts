@@ -174,12 +174,12 @@ export const SCRIPTURE_ZH_PAGE_MIN_CHARS =
 export const SCRIPTURE_ZH_PAGE_MAX_CHARS =
   SCRIPTURE_ZH_PAGE_MAX_VISUAL_LINES * SCRIPTURE_ZH_CHARS_PER_LINE;
 
-/** 英文 22pt 每行约容纳字符数（按投影实测校准：~58 字符/行） */
-export const SCRIPTURE_EN_CHARS_PER_LINE = 58;
+/** 英文 22pt 每行约容纳字符数（投影实测：字号加大后略收窄） */
+export const SCRIPTURE_EN_CHARS_PER_LINE = 52;
 
-/** 英文每页视觉行数：最少 13 行、最多 14 行 */
-export const SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES = 13;
-export const SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES = 14;
+/** 英文每页视觉行数：最少 10 行、最多 11 行（14 行会超出文本框被裁切） */
+export const SCRIPTURE_EN_PAGE_MIN_VISUAL_LINES = 10;
+export const SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES = 11;
 
 /** 英文每页字符数上下限（由行数 × 每行字符数推导） */
 export const SCRIPTURE_EN_PAGE_MIN_CHARS =

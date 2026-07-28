@@ -115,7 +115,7 @@ describe('buildScriptureSlideBodies', () => {
     expect(firstPageLines).toBeLessThanOrEqual(SCRIPTURE_EN_PAGE_MAX_VISUAL_LINES);
   });
 
-  it('fills proverbs 15:1-11 english to 13-14 lines when content allows', async () => {
+  it('fills proverbs 15:1-11 english to 10-11 lines when content allows', async () => {
     const passage = await loadScripturePassage('箴言 Proverbs', '15:1-11');
     expect(passage).not.toBeNull();
     const bodies = buildScriptureSlideBodies(passage!);
@@ -150,7 +150,7 @@ describe('buildScriptureSlideBodies', () => {
     expect(joined).not.toContain('…');
   });
 
-  it('keeps English pages between 13 and 14 lines except the last', () => {
+  it('keeps English pages between 10 and 11 lines except the last', () => {
     const en: BibleVerse[] = [];
     for (let i = 1; i <= 30; i++) {
       en.push(
