@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, vi } from 'vitest';
 import {
   mergeLocalDraftIntoBulletin,
   readLocalBulletinDraft,
@@ -6,6 +6,24 @@ import {
   type BulletinLocalDraft,
 } from './bulletin-local-draft';
 import type { WeeklyBulletin } from '../api/bulletins';
+
+function memoryStorage() {
+  const map = new Map<string, string>();
+  return {
+    getItem: (k: string) => map.get(k) ?? null,
+    setItem: (k: string, v: string) => {
+      map.set(k, v);
+    },
+    removeItem: (k: string) => {
+      map.delete(k);
+    },
+    clear: () => map.clear(),
+    key: (i: number) => [...map.keys()][i] ?? null,
+    get length() {
+      return map.size;
+    },
+  };
+}
 
 function baseBulletin(over: Partial<WeeklyBulletin> = {}): WeeklyBulletin {
   return {
@@ -45,7 +63,7 @@ function baseBulletin(over: Partial<WeeklyBulletin> = {}): WeeklyBulletin {
 
 describe('bulletin-local-draft', () => {
   beforeEach(() => {
-    localStorage.clear();
+    vi.stubGlobal('localStorage', memoryStorage());
   });
 
   it('writes and reads local draft', () => {
