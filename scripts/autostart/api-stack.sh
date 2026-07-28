@@ -71,7 +71,7 @@ log "启动 Postgres + Redis"
 wait_for_postgres
 
 TSX="${ROOT}/node_modules/.bin/tsx"
-SUPERVISOR="${ROOT}/scripts/autostart/supervise-commands.sh"
+SUPERVISOR="${FILE_SERVICE_SUPERVISOR:-${ROOT}/scripts/autostart/supervise-commands.sh}"
 
 if [[ ! -x "$TSX" ]]; then
   log "缺少 node_modules/.bin/tsx，请在 ${ROOT} 执行 npm install"
