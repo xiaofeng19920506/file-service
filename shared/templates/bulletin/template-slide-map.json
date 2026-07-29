@@ -189,9 +189,9 @@
       "slide": 19,
       "fields": [
         { "key": "lastWeekOfferingDate", "textIndex": 7, "example": "06/07/2026" },
-        { "key": "offeringTitheAmount", "textIndex": 16, "example": "$3,260.00" },
-        { "key": "offeringOtherAmount", "textIndex": 21, "example": "$3,000.00" },
-        { "key": "offeringTotalAmount", "textIndex": 25, "example": "$6,260.00" }
+        { "key": "offeringTitheAmount", "textIndex": 14, "example": "$3,260.00" },
+        { "key": "offeringOtherAmount", "textIndex": 18, "example": "$3,000.00" },
+        { "key": "offeringTotalAmount", "textIndex": 22, "example": "$6,260.00" }
       ]
     },
     {

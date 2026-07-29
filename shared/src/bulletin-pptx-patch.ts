@@ -110,10 +110,10 @@ export function applyIndexedTextReplacementsToSlideXml(
     const rep = byIndex.get(current);
     if (!rep) return runXml;
 
-    let updated = runXml.replace(
-      /<a:t([^>]*)>[\s\S]*?<\/a:t>/,
-      `<a:t$1>${escapeXml(rep.text)}</a:t>`,
-    );
+    let updated = runXml.replace(/<a:t([^>]*)>[\s\S]*?<\/a:t>/, (_full, attrs: string) => {
+      // 必须用函数替换：金额含 `$1` 时字符串替换会把 `$1` 当成捕获组
+      return `<a:t${attrs}>${escapeXml(rep.text)}</a:t>`;
+    });
     if (rep.fontSizePt !== undefined) {
       const sz = String(Math.round(rep.fontSizePt * 100));
       updated = /<a:rPr[^>]*sz="/.test(updated)

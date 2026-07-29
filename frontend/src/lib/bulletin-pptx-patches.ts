@@ -227,9 +227,10 @@ export function buildOfferingAmountReplacements(bulletin: {
     })();
   const total = formatUsdAmount(totalRaw);
   const reps: { textIndex: number; text: string }[] = [];
-  if (tithe) reps.push({ textIndex: 16, text: tithe });
-  if (other) reps.push({ textIndex: 21, text: other });
-  if (total) reps.push({ textIndex: 25, text: total });
+  // P19 金额 run（跳过空 <a:t/> 后的序号）：十一 14 / 其他 18 / 总数 22
+  if (tithe) reps.push({ textIndex: 14, text: tithe });
+  if (other) reps.push({ textIndex: 18, text: other });
+  if (total) reps.push({ textIndex: 22, text: total });
   return reps;
 }
 

@@ -28,6 +28,7 @@ import { useBulletinLocalDraftSync } from '../hooks/useBulletinLocalDraftSync';
 import { useBulletinRealtime } from '../hooks/useBulletinRealtime';
 import { useBulletinScripturePersistence } from '../hooks/useBulletinScripturePersistence';
 import { useI18n } from '../i18n';
+import { computeOfferingTotalAmount } from '@file-service/shared';
 import { resolveAvailableSundayIso, upcomingSundayIso } from '../lib/bulletin-date';
 import {
   isBulletinSectionVisible,
@@ -430,6 +431,16 @@ export default function BulletinPage() {
         if (filtered.length !== next.slideTextOverrides.length) {
           next = { ...next, slideTextOverrides: filtered };
         }
+      }
+      // 十一 / 其他 / 总数联动：改任一金额时重算总数并写入草稿（预览与保存一致）
+      if (key === 'offeringTitheAmount' || key === 'offeringOtherAmount') {
+        next = {
+          ...next,
+          offeringTotalAmount: computeOfferingTotalAmount(
+            next.offeringTitheAmount,
+            next.offeringOtherAmount,
+          ),
+        };
       }
       return next;
     });

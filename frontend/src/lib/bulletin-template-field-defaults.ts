@@ -1,4 +1,5 @@
 import type { WeeklyBulletin, BulletinAnnouncement } from '../api/bulletins';
+import { computeOfferingTotalAmount } from '@file-service/shared';
 
 /**
  * 原版模板 `06_14_2026.pptx` 上对应表单字段的默认文字。
@@ -8,6 +9,10 @@ export const BULLETIN_TEMPLATE_FIELD_DEFAULTS = {
   birthdayMonth: '7月份生日的家人們',
   birthdayNames: '孫强\n邱春林\nAndrew Wang',
   lastWeekOfferingDate: '06/07/2026',
+  /** 与模板 P19 textIndex 14/18/22 一致（读自原版幻灯片） */
+  offeringTitheAmount: '3260.00',
+  offeringOtherAmount: '3000.00',
+  offeringTotalAmount: '6260.00',
   verseOfWeek:
     '(以弗所書 2:8)  你 们 得 救 是 本 乎 恩 ，也 因 着 信 ； 这 并 不 是 出 於 自 己 ， 乃 是 神 所 赐 的 ；',
   testimonyShareDate: '下主日8/30見證分享',
@@ -55,6 +60,27 @@ export function withTemplateFieldDefaults(bulletin: WeeklyBulletin): WeeklyBulle
       bulletin.lastWeekOfferingDate,
       BULLETIN_TEMPLATE_FIELD_DEFAULTS.lastWeekOfferingDate,
     ),
+    offeringTitheAmount: pickText(
+      bulletin.offeringTitheAmount,
+      BULLETIN_TEMPLATE_FIELD_DEFAULTS.offeringTitheAmount,
+    ),
+    offeringOtherAmount: pickText(
+      bulletin.offeringOtherAmount,
+      BULLETIN_TEMPLATE_FIELD_DEFAULTS.offeringOtherAmount,
+    ),
+    offeringTotalAmount: (() => {
+      const tithe = pickText(
+        bulletin.offeringTitheAmount,
+        BULLETIN_TEMPLATE_FIELD_DEFAULTS.offeringTitheAmount,
+      );
+      const other = pickText(
+        bulletin.offeringOtherAmount,
+        BULLETIN_TEMPLATE_FIELD_DEFAULTS.offeringOtherAmount,
+      );
+      // 总数与十一/其他联动；任一为空时用模板读出的关联值
+      const computed = computeOfferingTotalAmount(tithe, other);
+      return computed || BULLETIN_TEMPLATE_FIELD_DEFAULTS.offeringTotalAmount;
+    })(),
     verseOfWeek: pickText(bulletin.verseOfWeek, BULLETIN_TEMPLATE_FIELD_DEFAULTS.verseOfWeek),
     testimonyShareDate: pickText(
       bulletin.testimonyShareDate,

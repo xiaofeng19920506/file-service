@@ -143,7 +143,7 @@ export function bulletinSectionContentRev(
 /**
  * 前端 PNG 缓存代数：与后端 SLIDE_PREVIEW_PATCH_REV 对齐 bump，避免错页缓存残留。
  */
-export const BULLETIN_PREVIEW_BLOB_GEN = 'v49';
+export const BULLETIN_PREVIEW_BLOB_GEN = 'v50';
 
 /**
  * 前端 PNG 缓存 key：结构 + 本分区内容 + 本页文字覆盖。
