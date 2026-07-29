@@ -68,19 +68,14 @@ export function withTemplateFieldDefaults(bulletin: WeeklyBulletin): WeeklyBulle
       bulletin.offeringOtherAmount,
       BULLETIN_TEMPLATE_FIELD_DEFAULTS.offeringOtherAmount,
     ),
-    offeringTotalAmount: (() => {
-      const tithe = pickText(
-        bulletin.offeringTitheAmount,
-        BULLETIN_TEMPLATE_FIELD_DEFAULTS.offeringTitheAmount,
-      );
-      const other = pickText(
-        bulletin.offeringOtherAmount,
-        BULLETIN_TEMPLATE_FIELD_DEFAULTS.offeringOtherAmount,
-      );
-      // 总数与十一/其他联动；任一为空时用模板读出的关联值
-      const computed = computeOfferingTotalAmount(tithe, other);
-      return computed || BULLETIN_TEMPLATE_FIELD_DEFAULTS.offeringTotalAmount;
-    })(),
+    // 与 buildOfferingAmountReplacements 一致：已有总数优先，空时再按十一+其他推算
+    offeringTotalAmount: pickText(
+      bulletin.offeringTotalAmount,
+      computeOfferingTotalAmount(
+        pickText(bulletin.offeringTitheAmount, BULLETIN_TEMPLATE_FIELD_DEFAULTS.offeringTitheAmount),
+        pickText(bulletin.offeringOtherAmount, BULLETIN_TEMPLATE_FIELD_DEFAULTS.offeringOtherAmount),
+      ) || BULLETIN_TEMPLATE_FIELD_DEFAULTS.offeringTotalAmount,
+    ),
     verseOfWeek: pickText(bulletin.verseOfWeek, BULLETIN_TEMPLATE_FIELD_DEFAULTS.verseOfWeek),
     testimonyShareDate: pickText(
       bulletin.testimonyShareDate,
