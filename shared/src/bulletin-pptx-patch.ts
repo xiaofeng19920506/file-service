@@ -4,6 +4,35 @@ import { applyScripturePagesToZip } from './bulletin-scripture-pptx.js';
 import { duplicateSlideInZip, removeSlidesFromPptxZip } from './pptx-duplicate-slide.js';
 import { bulletinSlidePathsToDelete } from './bulletin-section-visibility.js';
 
+/** 圣餐英文正文页（模板文件号）；字号过大时 LO 预览会裁切 */
+const COMMUNION_ENGLISH_SLIDE_FILES = [12, 13] as const;
+/** 英文圣餐经文固定字号（pt×100），完整落入文本框且尽量铺满 */
+const COMMUNION_EN_FONT_SZ = '2400';
+
+/**
+ * 圣餐英文页：关闭 spAutoFit，统一缩小正文 sz，避免 LibreOffice 裁掉后半段经文。
+ */
+export function stabilizeCommunionEnglishSlideXml(xml: string): string {
+  let out = xml.replace(/<a:spAutoFit\s*\/>/g, '<a:noAutofit/>');
+  out = out.replace(/sz="(\d+)"/g, (full, raw) => {
+    const n = Number.parseInt(raw, 10);
+    // 仅下调偏大的正文（≥24pt），标题类小字不动
+    if (!Number.isFinite(n) || n < 2500) return full;
+    return `sz="${COMMUNION_EN_FONT_SZ}"`;
+  });
+  return out;
+}
+
+export async function stabilizeCommunionEnglishSlidesInZip(zip: JSZip): Promise<void> {
+  for (const fileNum of COMMUNION_ENGLISH_SLIDE_FILES) {
+    const path = `ppt/slides/slide${fileNum}.xml`;
+    const entry = zip.file(path);
+    if (!entry) continue;
+    const xml = await entry.async('string');
+    zip.file(path, stabilizeCommunionEnglishSlideXml(xml));
+  }
+}
+
 /** PPT 封面日期格式：06/14/2026 */
 export function formatBulletinCoverDate(isoDate: string): string {
   const [y, m, d] = isoDate.split('-');
@@ -577,6 +606,9 @@ export async function patchBulletinPreviewInPptx(
       await applyScripturePagesToZip(zip, bodies.chinesePages, bodies.englishPages);
     }
   }
+
+  // 圣餐英文页：模板约 28–31pt + spAutoFit；LibreOffice 不缩字会裁切经文
+  await stabilizeCommunionEnglishSlidesInZip(zip);
 
   // 先铺通用文字覆盖，再写表单语义字段（生日/金句/公告），避免旧 slideTextOverrides 盖掉表单
   const overrides = normalizeSlideTextOverrides(input.slideTextOverrides);

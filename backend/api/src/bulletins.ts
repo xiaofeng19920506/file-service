@@ -79,8 +79,8 @@ const slidePreviewCache = new Map<string, Buffer>();
 /** 同一套补丁参数共享已补丁 PPTX，避免每页都重新 patch */
 const patchedPptxCache = new Map<string, Buffer>();
 /** 预览补丁版本；v35=分区 override 支持增删页（splice 变长） */
-/** v48：英文经文 24pt + 每页 12–13 行，减少底部留白 */
-const SLIDE_PREVIEW_PATCH_REV = 'v48';
+/** v49：圣餐英文页缩小字号并关 spAutoFit，避免 LO 裁切经文 */
+const SLIDE_PREVIEW_PATCH_REV = 'v49';
 
 async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   const chunks: Buffer[] = [];

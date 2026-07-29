@@ -8,6 +8,7 @@ import {
   patchCoverDateLineInSlideXml,
   patchScriptureSlideInSlideXml,
   reapplyBulletinFormFieldsInPptx,
+  stabilizeCommunionEnglishSlideXml,
 } from './bulletin-pptx-patch.js';
 
 const templatePath = join(import.meta.dirname, '../templates/bulletin/06_14_2026.pptx');
@@ -285,5 +286,30 @@ describe('patchScriptureSlideInSlideXml', () => {
     expect(slide26).toContain('家有喜事');
     expect(extra).toContain('新增公告');
     expect(extra).toContain('第三条内容');
+  });
+});
+
+describe('stabilizeCommunionEnglishSlideXml', () => {
+  it('disables spAutoFit and caps body font at 24pt', () => {
+    const xml =
+      '<a:spAutoFit/><a:rPr sz="3100"/><a:rPr sz="1800"/><a:rPr sz="2400"/>';
+    const out = stabilizeCommunionEnglishSlideXml(xml);
+    expect(out).toContain('<a:noAutofit/>');
+    expect(out).not.toContain('spAutoFit');
+    expect(out).toContain('sz="2400"');
+    expect(out).toContain('sz="1800"');
+    expect(out).not.toContain('sz="3100"');
+  });
+
+  it('applies to communion English slides in preview patch', async () => {
+    const tpl = await readFile(templatePath);
+    const patched = await patchBulletinPreviewInPptx(tpl, {});
+    const zip = await JSZip.loadAsync(patched);
+    for (const n of [12, 13]) {
+      const xml = await zip.file(`ppt/slides/slide${n}.xml`)!.async('string');
+      expect(xml).not.toContain('spAutoFit');
+      expect(xml).toMatch(/sz="2400"/);
+      expect(xml).not.toMatch(/sz="(2[5-9]|[3-9]\d)\d{2}"/);
+    }
   });
 });
