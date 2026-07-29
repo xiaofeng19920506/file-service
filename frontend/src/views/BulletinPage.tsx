@@ -28,7 +28,7 @@ import { useBulletinLocalDraftSync } from '../hooks/useBulletinLocalDraftSync';
 import { useBulletinRealtime } from '../hooks/useBulletinRealtime';
 import { useBulletinScripturePersistence } from '../hooks/useBulletinScripturePersistence';
 import { useI18n } from '../i18n';
-import { computeOfferingTotalAmount } from '@file-service/shared';
+import { computeOfferingTotalAmount } from '../lib/bulletin-offering';
 import { resolveAvailableSundayIso, upcomingSundayIso } from '../lib/bulletin-date';
 import {
   isBulletinSectionVisible,
