@@ -17,6 +17,7 @@ export const BULLETIN_LOCAL_SYNC_KEYS = [
   'lastWeekOfferingDate',
   'offeringTitheAmount',
   'offeringOtherAmount',
+  'offeringTotalAmount',
   'baptismText',
   'staffMeetingDate',
   'testimonyShareDate',

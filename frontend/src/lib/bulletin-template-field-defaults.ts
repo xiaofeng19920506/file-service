@@ -1,5 +1,5 @@
 import type { WeeklyBulletin, BulletinAnnouncement } from '../api/bulletins';
-import { computeOfferingTotalAmount } from '@file-service/shared';
+import { computeOfferingTotalAmount } from './bulletin-offering';
 
 /**
  * 原版模板 `06_14_2026.pptx` 上对应表单字段的默认文字。
