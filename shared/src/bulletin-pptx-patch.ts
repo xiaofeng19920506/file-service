@@ -7,20 +7,31 @@ import { bulletinSlidePathsToDelete } from './bulletin-section-visibility.js';
 
 /** 圣餐英文正文页（模板文件号）；字号过大时 LO 预览会裁切 */
 const COMMUNION_ENGLISH_SLIDE_FILES = [12, 13] as const;
-/** 英文圣餐经文固定字号（pt×100），完整落入文本框且尽量铺满 */
-const COMMUNION_EN_FONT_SZ = '2400';
+/** 英文圣餐经文固定字号（pt×100）；28pt 铺满更多画面且实测不裁切 */
+const COMMUNION_EN_FONT_SZ = '2800';
+/** 名单文本框尽量贴满画幅高度（留底部分隔线） */
+const COMMUNION_EN_TEXT_BOX_CY = '5000000';
 
 /**
- * 圣餐英文页：关闭 spAutoFit，统一缩小正文 sz，避免 LibreOffice 裁掉后半段经文。
+ * 圣餐英文页：关闭 spAutoFit，统一字号并略增高文本框，减少底部空白。
  */
 export function stabilizeCommunionEnglishSlideXml(xml: string): string {
   let out = xml.replace(/<a:spAutoFit\s*\/>/g, '<a:noAutofit/>');
   out = out.replace(/sz="(\d+)"/g, (full, raw) => {
     const n = Number.parseInt(raw, 10);
-    // 仅下调偏大的正文（≥24pt），标题类小字不动
-    if (!Number.isFinite(n) || n < 2500) return full;
+    // 仅调整偏大的正文（≥24pt），标题类小字不动
+    if (!Number.isFinite(n) || n < 2400) return full;
     return `sz="${COMMUNION_EN_FONT_SZ}"`;
   });
+  // 加高正文文本框，让更大字号有垂直空间可用
+  out = out.replace(
+    /(<a:off x="0" y="0"\/>\s*<a:ext cx="9144000" )cy="\d+"/g,
+    `$1cy="${COMMUNION_EN_TEXT_BOX_CY}"`,
+  );
+  out = out.replace(
+    /(<a:ext cx="9144000" )cy="\d+"/g,
+    `$1cy="${COMMUNION_EN_TEXT_BOX_CY}"`,
+  );
   return out;
 }
 

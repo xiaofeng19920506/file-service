@@ -79,8 +79,8 @@ const slidePreviewCache = new Map<string, Buffer>();
 /** 同一套补丁参数共享已补丁 PPTX，避免每页都重新 patch */
 const patchedPptxCache = new Map<string, Buffer>();
 /** 预览补丁版本；v35=分区 override 支持增删页（splice 变长） */
-/** v51：生日名单多 input + 幻灯片多列 grid */
-const SLIDE_PREVIEW_PATCH_REV = 'v51';
+/** v52：圣餐英文经文略加大至 28pt，减少底部空白 */
+const SLIDE_PREVIEW_PATCH_REV = 'v52';
 
 async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   const chunks: Buffer[] = [];

@@ -290,15 +290,16 @@ describe('patchScriptureSlideInSlideXml', () => {
 });
 
 describe('stabilizeCommunionEnglishSlideXml', () => {
-  it('disables spAutoFit and caps body font at 24pt', () => {
+  it('disables spAutoFit and caps body font at 28pt', () => {
     const xml =
-      '<a:spAutoFit/><a:rPr sz="3100"/><a:rPr sz="1800"/><a:rPr sz="2400"/>';
+      '<a:spAutoFit/><a:rPr sz="3100"/><a:rPr sz="1800"/><a:rPr sz="2800"/><a:ext cx="9144000" cy="4740900"/>';
     const out = stabilizeCommunionEnglishSlideXml(xml);
     expect(out).toContain('<a:noAutofit/>');
     expect(out).not.toContain('spAutoFit');
-    expect(out).toContain('sz="2400"');
+    expect(out).toContain('sz="2800"');
     expect(out).toContain('sz="1800"');
     expect(out).not.toContain('sz="3100"');
+    expect(out).toContain('cy="5000000"');
   });
 
   it('applies to communion English slides in preview patch', async () => {
@@ -308,8 +309,8 @@ describe('stabilizeCommunionEnglishSlideXml', () => {
     for (const n of [12, 13]) {
       const xml = await zip.file(`ppt/slides/slide${n}.xml`)!.async('string');
       expect(xml).not.toContain('spAutoFit');
-      expect(xml).toMatch(/sz="2400"/);
-      expect(xml).not.toMatch(/sz="(2[5-9]|[3-9]\d)\d{2}"/);
+      expect(xml).toMatch(/sz="2800"/);
+      expect(xml).not.toMatch(/sz="(2[9]|[3-9]\d)\d{2}"/);
     }
   });
 });
