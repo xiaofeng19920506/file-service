@@ -5,6 +5,8 @@
   max-height: 100dvh;
   overflow: hidden;
   max-width: 100%;
+  /* 周报模板默认画幅；PPT 编辑器等非 bulletin-page 也可用 */
+  --bulletin-slide-aspect: 9144000 / 5143500;
 }
 
 .app-content {
@@ -3559,7 +3561,7 @@
 .ppt-slide-thumb-composite .bulletin-slide-preview--loading,
 .ppt-slide-thumb-composite .bulletin-slide-preview--empty {
   min-height: 0;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: var(--bulletin-slide-aspect, 9144000 / 5143500);
   border: 0;
   border-radius: 0;
   font-size: 0.75rem;
@@ -6162,6 +6164,8 @@
 }
 
 .bulletin-page {
+  /* 与 shared/templates/bulletin/06_14_2026.pptx 的 p:sldSz 一致 */
+  --bulletin-slide-aspect: 9144000 / 5143500;
   max-width: 1100px;
   margin: 0 auto;
   padding: 1.25rem 1rem 5rem;
@@ -6474,8 +6478,8 @@
 }
 
 .bulletin-slide-preview--placeholder {
-  min-height: min(52vw, 320px);
-  aspect-ratio: 16 / 9;
+  min-height: 0;
+  aspect-ratio: var(--bulletin-slide-aspect, 9144000 / 5143500);
 }
 
 .bulletin-preview-static-block {
@@ -6835,10 +6839,13 @@ body.bulletin-slideshow-window {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 10rem;
+  min-height: 0;
+  width: 100%;
+  aspect-ratio: var(--bulletin-slide-aspect, 9144000 / 5143500);
   border: 1px dashed var(--border-light);
   border-radius: 12px;
   color: var(--text-secondary);
+  box-sizing: border-box;
 }
 
 .bulletin-slide-preview--refreshing .bulletin-slide-preview-img {
@@ -6853,7 +6860,7 @@ body.bulletin-slideshow-window {
 .bulletin-slide-preview--large.bulletin-slide-preview--loading,
 .bulletin-slide-preview--large.bulletin-slide-preview--empty {
   width: 100%;
-  min-height: 10rem;
+  min-height: 0;
 }
 
 /* 仅窄屏改为上下堆叠；矮但够宽的 MacBook 等保持左右分栏，各栏内部滚动 */
@@ -8090,7 +8097,8 @@ body.bulletin-slideshow-window {
 .bulletin-slide-preview-frame {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  /* 与模板 ppt/presentation.xml 的 p:sldSz 一致（默认 9144000×5143500） */
+  aspect-ratio: var(--bulletin-slide-aspect, 9144000 / 5143500);
   border: 1px solid var(--border-light);
   border-radius: 12px;
   overflow: hidden;
@@ -8267,6 +8275,8 @@ body.bulletin-slideshow-window {
 }
 
 .bulletin-slide-preview-img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;

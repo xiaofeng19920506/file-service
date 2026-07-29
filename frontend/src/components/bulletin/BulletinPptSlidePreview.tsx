@@ -11,6 +11,7 @@ import {
 } from '../../lib/bulletin-preview-blob-cache';
 import { upcomingSundayIso } from '../../lib/bulletin-date';
 import { bulletinPreviewCacheKey } from '../../lib/bulletin-preview-patch';
+import { slideAspectRatioStyle } from '../../lib/bulletin-slide-aspect';
 
 type BulletinPptSlidePreviewProps = {
   slideNumber: number;
@@ -180,11 +181,16 @@ export default function BulletinPptSlidePreview({
   }, []);
 
   const rootClass = `bulletin-slide-preview${large ? ' bulletin-slide-preview--large' : ''}`;
+  const aspectStyle = slideAspectRatioStyle();
   const showLoading = externalLoading || loading || (lazy && !shouldFetch);
 
   if (!previewUrl && !unavailable) {
     return (
-      <div ref={rootRef} className={`${rootClass} bulletin-slide-preview--loading`}>
+      <div
+        ref={rootRef}
+        className={`${rootClass} bulletin-slide-preview--loading`}
+        style={aspectStyle}
+      >
         {(showLoading || shouldFetch) && <div className="preview-spinner" />}
       </div>
     );
@@ -194,7 +200,7 @@ export default function BulletinPptSlidePreview({
     return (
       <figure ref={rootRef} className={rootClass}>
         {slideLabel && <figcaption className="bulletin-slide-preview-caption">{slideLabel}</figcaption>}
-        <div className="bulletin-slide-preview-retry">
+        <div className="bulletin-slide-preview-retry" style={aspectStyle}>
           <p className="bulletin-slide-preview-fallback-note">{t('bulletin.previewUnavailableHint')}</p>
           <button
             type="button"
@@ -217,7 +223,10 @@ export default function BulletinPptSlidePreview({
       className={`${rootClass}${showLoading ? ' bulletin-slide-preview--refreshing' : ''}`}
     >
       {slideLabel && <figcaption className="bulletin-slide-preview-caption">{slideLabel}</figcaption>}
-      <div className="bulletin-slide-preview-frame bulletin-slide-preview-frame--png">
+      <div
+        className="bulletin-slide-preview-frame bulletin-slide-preview-frame--png"
+        style={aspectStyle}
+      >
         <img className="bulletin-slide-preview-img" src={previewUrl!} alt="" draggable={false} />
         {overlay}
       </div>

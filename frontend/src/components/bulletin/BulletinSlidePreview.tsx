@@ -1,4 +1,5 @@
 import type { EditableSlide } from '../../lib/pptx-preview';
+import { slideAspectRatioStyle } from '../../lib/bulletin-slide-aspect';
 
 type BulletinSlidePreviewProps = {
   slide: EditableSlide | null;
@@ -26,10 +27,11 @@ export default function BulletinSlidePreview({
   large,
 }: BulletinSlidePreviewProps) {
   const rootClass = `bulletin-slide-preview${large ? ' bulletin-slide-preview--large' : ''}`;
+  const aspectStyle = slideAspectRatioStyle();
 
   if (loading) {
     return (
-      <div className={`${rootClass} bulletin-slide-preview--loading`}>
+      <div className={`${rootClass} bulletin-slide-preview--loading`} style={aspectStyle}>
         <div className="preview-spinner" />
       </div>
     );
@@ -37,7 +39,7 @@ export default function BulletinSlidePreview({
 
   if (!slide) {
     return (
-      <div className={`${rootClass} bulletin-slide-preview--empty`}>
+      <div className={`${rootClass} bulletin-slide-preview--empty`} style={aspectStyle}>
         <p>{emptyLabel}</p>
       </div>
     );
@@ -49,7 +51,7 @@ export default function BulletinSlidePreview({
   return (
     <figure className={rootClass}>
       {slideLabel && <figcaption className="bulletin-slide-preview-caption">{slideLabel}</figcaption>}
-      <div className="bulletin-slide-preview-frame">
+      <div className="bulletin-slide-preview-frame" style={aspectStyle}>
         {thumb ? (
           <img className="bulletin-slide-preview-img" src={thumb} alt="" />
         ) : (

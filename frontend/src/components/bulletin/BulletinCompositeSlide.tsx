@@ -17,6 +17,7 @@ import {
   type ShapeTextStyle,
 } from '../../lib/pptx-shape-text';
 import type { EditableSlide } from '../../lib/pptx-preview';
+import { slideAspectRatioStyle } from '../../lib/bulletin-slide-aspect';
 
 type BulletinCompositeSlideProps = {
   slide: EditableSlide | null;
@@ -648,7 +649,10 @@ export default function BulletinCompositeSlide({
 
   if (loading || layersLoading) {
     return (
-      <div className={`${rootClass} bulletin-slide-preview--loading`}>
+      <div
+        className={`${rootClass} bulletin-slide-preview--loading`}
+        style={slideAspectRatioStyle(slideSize)}
+      >
         <div className="preview-spinner" />
       </div>
     );
@@ -656,7 +660,10 @@ export default function BulletinCompositeSlide({
 
   if (!slide || layers.length === 0) {
     return (
-      <div className={`${rootClass} bulletin-slide-preview--empty`}>
+      <div
+        className={`${rootClass} bulletin-slide-preview--empty`}
+        style={slideAspectRatioStyle(slideSize)}
+      >
         <p>{emptyLabel}</p>
       </div>
     );
@@ -699,7 +706,7 @@ export default function BulletinCompositeSlide({
         }${showGrid ? ' bulletin-composite-slide--grid' : ''}${
           showGuides ? ' bulletin-composite-slide--guides' : ''
         }`}
-        style={{ aspectRatio: `${slideSize.cx} / ${slideSize.cy}` }}
+        style={slideAspectRatioStyle(slideSize)}
         onMouseDown={(e) => {
           if (!editable) return;
           if ((e.target as HTMLElement).closest('.bulletin-composite-shape--editable')) return;

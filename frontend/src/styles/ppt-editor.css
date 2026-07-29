@@ -82,7 +82,7 @@
 
 .ppt-slide-frame {
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: var(--bulletin-slide-aspect, 9144000 / 5143500);
   background: #fff;
   overflow: hidden;
   position: relative;
