@@ -51,4 +51,12 @@ describe('bulletin-sections tree', () => {
     expect(leafIds).not.toContain('doxology_benediction');
     expect(BULLETIN_NAV_TREE.length).toBe(10);
   });
+
+  it('keeps testimony week as preview-only (no more form fields)', () => {
+    expect(findNavNode('testimony_week')?.editableStepId).toBeNull();
+    expect(findNavNode('staff_meeting')?.editableStepId).toBe('more');
+    expect(findNavNode('future_testimony')?.editableStepId).toBe('more');
+    expect(findNavNode('rotation')?.editableStepId).toBeNull();
+    expect(findNavNode('department_reports')?.editableStepId).toBeNull();
+  });
 });

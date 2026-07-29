@@ -59,7 +59,7 @@ export const WIZARD_STEP_SECTION_IDS: Record<string, readonly string[]> = {
   birthday: ['birthday'],
   announcements: ['announcements'],
   verse: ['verse_of_week'],
-  more: ['staff_meeting', 'rotation', 'future_testimony', 'service_roster', 'department_reports'],
+  more: ['weekly_meetings', 'staff_meeting', 'future_testimony', 'service_roster'],
 };
 
 export type BulletinDeckSlide = {

@@ -15,8 +15,8 @@ function StepShell({ titleKey, introKey, children }: StepShellProps) {
   return (
     <div className="bulletin-wizard-step">
       <header className="bulletin-step-header">
-        <h3>{t(titleKey as 'bulletin.steps.coverTitle')}</h3>
-        <p className="bulletin-step-intro">{t(introKey as 'bulletin.steps.coverIntro')}</p>
+        <h3>{t(titleKey as never)}</h3>
+        <p className="bulletin-step-intro">{t(introKey as never)}</p>
       </header>
       <div className="bulletin-cover-step-fields">{children}</div>
     </div>
@@ -236,10 +236,12 @@ type AnnouncementsProps = BulletinStepPanelProps & {
 };
 
 export function BulletinAnnouncementsStep({
+  draft,
   canEdit,
   saving,
   announcements,
   onAnnouncementsChange,
+  onPatch,
   onSave,
 }: AnnouncementsProps) {
   const { t } = useI18n();
@@ -287,6 +289,12 @@ export function BulletinAnnouncementsStep({
           />
         </div>
       ))}
+      <TextField
+        label={t('bulletin.baptism')}
+        value={draft.baptismText}
+        disabled={!canEdit}
+        onChange={(v) => onPatch('baptismText', v)}
+      />
       {canEdit ? (
         <div className="bulletin-announcement-actions">
           <button
@@ -336,50 +344,73 @@ export function BulletinMoreStep({
   draft,
   canEdit,
   onPatch,
-}: BulletinStepPanelProps) {
+  sectionId,
+}: BulletinStepPanelProps & { sectionId?: string }) {
   const { t } = useI18n();
+  const show = (id: string) => !sectionId || sectionId === id;
+
+  const titleKey =
+    sectionId === 'staff_meeting'
+      ? 'bulletin.sections.staff_meeting'
+      : sectionId === 'future_testimony'
+        ? 'bulletin.sections.future_testimony'
+        : sectionId === 'service_roster'
+          ? 'bulletin.sections.service_roster'
+          : sectionId === 'weekly_meetings'
+            ? 'bulletin.sections.weekly_meetings'
+            : 'bulletin.steps.moreTitle';
+  const introKey =
+    sectionId === 'staff_meeting' ||
+    sectionId === 'future_testimony' ||
+    sectionId === 'service_roster' ||
+    sectionId === 'weekly_meetings'
+      ? 'bulletin.steps.sectionFieldIntro'
+      : 'bulletin.steps.moreIntro';
+
   return (
-    <StepShell titleKey="bulletin.steps.moreTitle" introKey="bulletin.steps.moreIntro">
-      <TextField
-        label={t('bulletin.staffMeeting')}
-        value={draft.staffMeetingDate}
-        disabled={!canEdit}
-        onChange={(v) => onPatch('staffMeetingDate', v)}
-      />
-      <TextField
-        label={t('bulletin.testimonyShare')}
-        value={draft.testimonyShareDate}
-        disabled={!canEdit}
-        onChange={(v) => onPatch('testimonyShareDate', v)}
-      />
-      <TextField
-        label={t('bulletin.serviceRoster')}
-        value={draft.serviceRosterText}
-        disabled={!canEdit}
-        multiline
-        onChange={(v) => onPatch('serviceRosterText', v)}
-      />
-      <TextField
-        label={t('bulletin.baptism')}
-        value={draft.baptismText}
-        disabled={!canEdit}
-        onChange={(v) => onPatch('baptismText', v)}
-      />
-      <label className="bulletin-field">
-        {t('bulletin.meetingVariant')}
-        <select
-          value={draft.weeklyMeetingVariant ?? ''}
+    <StepShell titleKey={titleKey} introKey={introKey}>
+      {show('staff_meeting') ? (
+        <TextField
+          label={t('bulletin.staffMeeting')}
+          value={draft.staffMeetingDate}
           disabled={!canEdit}
-          onChange={(e) =>
-            onPatch('weeklyMeetingVariant', e.target.value ? Number(e.target.value) : null)
-          }
-        >
-          <option value="">{t('bulletin.meetingVariantDefault')}</option>
-          <option value="28">{t('bulletin.meetingVariant28')}</option>
-          <option value="29">{t('bulletin.meetingVariant29')}</option>
-          <option value="30">{t('bulletin.meetingVariant30')}</option>
-        </select>
-      </label>
+          onChange={(v) => onPatch('staffMeetingDate', v)}
+        />
+      ) : null}
+      {show('future_testimony') ? (
+        <TextField
+          label={t('bulletin.testimonyShare')}
+          value={draft.testimonyShareDate}
+          disabled={!canEdit}
+          onChange={(v) => onPatch('testimonyShareDate', v)}
+        />
+      ) : null}
+      {show('service_roster') ? (
+        <TextField
+          label={t('bulletin.serviceRoster')}
+          value={draft.serviceRosterText}
+          disabled={!canEdit}
+          multiline
+          onChange={(v) => onPatch('serviceRosterText', v)}
+        />
+      ) : null}
+      {show('weekly_meetings') ? (
+        <label className="bulletin-field">
+          {t('bulletin.meetingVariant')}
+          <select
+            value={draft.weeklyMeetingVariant ?? ''}
+            disabled={!canEdit}
+            onChange={(e) =>
+              onPatch('weeklyMeetingVariant', e.target.value ? Number(e.target.value) : null)
+            }
+          >
+            <option value="">{t('bulletin.meetingVariantDefault')}</option>
+            <option value="28">{t('bulletin.meetingVariant28')}</option>
+            <option value="29">{t('bulletin.meetingVariant29')}</option>
+            <option value="30">{t('bulletin.meetingVariant30')}</option>
+          </select>
+        </label>
+      ) : null}
     </StepShell>
   );
 }

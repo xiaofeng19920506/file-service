@@ -686,7 +686,7 @@ export default function BulletinPage() {
       case 'verse':
         return <BulletinVerseStep {...common} />;
       case 'more':
-        return <BulletinMoreStep {...common} />;
+        return <BulletinMoreStep {...common} sectionId={activeSectionId} />;
       default:
         return <p className="bulletin-step-placeholder">{t('bulletin.steps.comingSoon')}</p>;
     }

@@ -34,7 +34,8 @@ export const BULLETIN_NAV_TREE: BulletinNavNode[] = [
   { id: 'communion', labelKey: 'bulletin.sections.communion', editableStepId: null },
   { id: 'welcome', labelKey: 'bulletin.sections.welcome', editableStepId: null },
   { id: 'youth_prayer', labelKey: 'bulletin.sections.youth_prayer', editableStepId: null },
-  { id: 'testimony_week', labelKey: 'bulletin.sections.testimony_week', editableStepId: 'more' },
+  // P16 标题页，无可编辑表单字段；同工会/见证分享等属于公告区后续分区
+  { id: 'testimony_week', labelKey: 'bulletin.sections.testimony_week', editableStepId: null },
   { id: 'message', labelKey: 'bulletin.sections.message', editableStepId: null },
   {
     id: 'family_time',
@@ -58,7 +59,8 @@ export const BULLETIN_NAV_TREE: BulletinNavNode[] = [
             labelKey: 'bulletin.sections.staff_meeting',
             editableStepId: 'more',
           },
-          { id: 'rotation', labelKey: 'bulletin.sections.rotation', editableStepId: 'more' },
+          // 轮值表无独立表单字段，改幻灯片即可
+          { id: 'rotation', labelKey: 'bulletin.sections.rotation', editableStepId: null },
           {
             id: 'future_testimony',
             labelKey: 'bulletin.sections.future_testimony',
@@ -79,7 +81,7 @@ export const BULLETIN_NAV_TREE: BulletinNavNode[] = [
       {
         id: 'department_reports',
         labelKey: 'bulletin.sections.department_reports',
-        editableStepId: 'more',
+        editableStepId: null,
       },
       {
         id: 'doxology_benediction',
