@@ -3,6 +3,11 @@ import type { WeeklyBulletin } from '../../api/bulletins';
 import { BIBLE_BOOKS } from '../../lib/bible-books';
 import { useI18n } from '../../i18n';
 import BulletinScriptureReferenceFields from './BulletinScriptureReferenceFields';
+import {
+  BIRTHDAY_NAME_MAX,
+  joinBirthdayNames,
+  parseBirthdayNames,
+} from '../../lib/bulletin-birthday';
 
 type StepShellProps = {
   titleKey: string;
@@ -173,6 +178,13 @@ export function BulletinBirthdayStep({
   onPatch,
 }: BulletinStepPanelProps) {
   const { t } = useI18n();
+  const names = parseBirthdayNames(draft.birthdayNames);
+  const rows = names.length > 0 ? names : [''];
+
+  const commitNames = (next: string[]) => {
+    onPatch('birthdayNames', joinBirthdayNames(next));
+  };
+
   return (
     <StepShell titleKey="bulletin.steps.birthdayTitle" introKey="bulletin.steps.birthdayIntro">
       <TextField
@@ -181,13 +193,48 @@ export function BulletinBirthdayStep({
         disabled={!canEdit}
         onChange={(v) => onPatch('birthdayMonth', v)}
       />
-      <TextField
-        label={t('bulletin.birthdayNames')}
-        value={draft.birthdayNames}
-        disabled={!canEdit}
-        multiline
-        onChange={(v) => onPatch('birthdayNames', v)}
-      />
+      <div className="bulletin-birthday-names">
+        <span className="bulletin-birthday-names-label">{t('bulletin.birthdayNames')}</span>
+        <p className="bulletin-field-hint">{t('bulletin.birthdayNamesHint')}</p>
+        <div className="bulletin-birthday-names-list">
+          {rows.map((name, index) => (
+            <div key={`bday-${index}`} className="bulletin-birthday-name-row">
+              <input
+                type="text"
+                className="bulletin-birthday-name-input"
+                value={name}
+                disabled={!canEdit}
+                placeholder={t('bulletin.birthdayNamePlaceholder', { n: String(index + 1) })}
+                onChange={(e) => {
+                  const next = [...rows];
+                  next[index] = e.target.value;
+                  commitNames(next);
+                }}
+              />
+              {canEdit && rows.length > 1 ? (
+                <button
+                  type="button"
+                  className="btn-secondary btn-sm"
+                  onClick={() => {
+                    commitNames(rows.filter((_, i) => i !== index));
+                  }}
+                >
+                  {t('bulletin.removeBirthdayName')}
+                </button>
+              ) : null}
+            </div>
+          ))}
+        </div>
+        {canEdit && rows.length < BIRTHDAY_NAME_MAX ? (
+          <button
+            type="button"
+            className="btn-secondary btn-sm"
+            onClick={() => commitNames([...rows.filter((n) => n.trim()), ''])}
+          >
+            {t('bulletin.addBirthdayName')}
+          </button>
+        ) : null}
+      </div>
     </StepShell>
   );
 }

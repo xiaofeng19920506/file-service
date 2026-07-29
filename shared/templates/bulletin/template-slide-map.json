@@ -197,10 +197,8 @@
     {
       "slide": 24,
       "fields": [
-        { "key": "birthdayMonth", "textIndex": 1, "example": "7月份生日的家人們" },
-        { "key": "birthdayName1", "textIndex": 3, "example": "孫强" },
-        { "key": "birthdayName2", "textIndex": 4, "example": "邱春林" },
-        { "key": "birthdayName3", "textIndex": 5, "example": "Andrew Wang" }
+        { "key": "birthdayMonth", "textIndex": 2, "example": "7月份生日的家人們" },
+        { "key": "birthdayNames", "shapeId": "399", "layout": "grid", "example": "孫强\\n邱春林\\nAndrew Wang" }
       ]
     },
     {

@@ -1,5 +1,6 @@
 import JSZip from 'jszip';
 import { resolveScriptureSlideBodies } from './bible-text.js';
+import { applyBirthdayNameGridToSlideXml } from './bulletin-birthday.js';
 import { applyScripturePagesToZip } from './bulletin-scripture-pptx.js';
 import { duplicateSlideInZip, removeSlidesFromPptxZip } from './pptx-duplicate-slide.js';
 import { bulletinSlidePathsToDelete } from './bulletin-section-visibility.js';
@@ -451,25 +452,14 @@ export async function reapplyBulletinFormFieldsInPptx(
   return zip.generateAsync({ type: 'uint8array' });
 }
 
-function splitBirthdayNameLines(names: string, max = 3): string[] {
-  return names
-    .split(/[\n,，、]/)
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .slice(0, max);
-}
-
 export function buildBirthdaySlideReplacements(
   birthdayMonth: string,
-  birthdayNames: string,
+  _birthdayNames?: string,
 ): TextRunReplacement[] {
   const reps: TextRunReplacement[] = [];
   const month = birthdayMonth.trim();
+  // 名单改由 applyBirthdayNameGridToSlideXml 写入 shape 399（多列 grid）
   if (month) reps.push({ textIndex: 2, text: month });
-  const nameLines = splitBirthdayNameLines(birthdayNames, 3);
-  for (let i = 0; i < 3; i++) {
-    reps.push({ textIndex: 5 + i, text: nameLines[i] ?? ' ' });
-  }
   return reps;
 }
 
@@ -479,18 +469,21 @@ async function applyBirthdayFieldsToZip(
   birthdayNames: string | undefined,
 ): Promise<void> {
   const month = birthdayMonth?.trim() ?? '';
-  const names = birthdayNames?.trim() ?? '';
-  if (!month && !names) return;
+  const hasNamesField = birthdayNames !== undefined;
+  if (!month && !hasNamesField) return;
   const entry = zip.file('ppt/slides/slide24.xml');
   if (!entry) return;
-  const xml = await entry.async('string');
-  zip.file(
-    'ppt/slides/slide24.xml',
-    applyIndexedTextReplacementsToSlideXml(
+  let xml = await entry.async('string');
+  if (hasNamesField) {
+    xml = applyBirthdayNameGridToSlideXml(xml, birthdayNames ?? '');
+  }
+  if (month) {
+    xml = applyIndexedTextReplacementsToSlideXml(
       xml,
-      buildBirthdaySlideReplacements(birthdayMonth ?? '', birthdayNames ?? ''),
-    ),
-  );
+      buildBirthdaySlideReplacements(birthdayMonth ?? ''),
+    );
+  }
+  zip.file('ppt/slides/slide24.xml', xml);
 }
 
 async function applyVerseOfWeekToZip(zip: JSZip, verseOfWeek: string | undefined): Promise<void> {

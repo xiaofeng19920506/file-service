@@ -11,6 +11,7 @@ import {
 } from './pptx-preview';
 import { expandScriptureSlidesInPptx } from './bulletin-scripture-pptx-expand';
 import { expandAnnouncementSlidesInPptx } from './bulletin-announcement-pptx-expand';
+import { applyBirthdayNameGridToSlideXml } from './bulletin-birthday';
 import JSZip from './jszip';
 
 /** 原版模板文件名（`06_14_2026.pptx`，背景与图片均以此为准） */
@@ -34,6 +35,8 @@ export type SlideTextPatch = {
   coverLine?: { serviceDate: string; serviceTime: string };
   /** 会前祷告第 2 页主席姓名（勾选显示时） */
   preServiceChairName?: string;
+  /** 生日名单（P24 shape 399，多列 grid） */
+  birthdayNames?: string;
   /** 读经 slide 5 中文正文 */
   scriptureChineseBody?: string;
   /** 读经 slide 6：中文续页或英文正文 */
@@ -152,26 +155,14 @@ export function patchCoverDateLineInSlideXml(
   });
 }
 
-function splitNameLines(names: string, max = 3): string[] {
-  return names
-    .split(/[\n,，、]/)
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .slice(0, max);
-}
-
-/** 生日页 P24：月份标题 textIndex=2，名单 5/6/7 */
+/** 生日页 P24：仅月份标题 textIndex=2；名单走 birthdayNames → grid */
 export function buildBirthdaySlideReplacements(
   birthdayMonth: string,
-  birthdayNames: string,
+  _birthdayNames?: string,
 ): { textIndex: number; text: string }[] {
   const reps: { textIndex: number; text: string }[] = [];
   const month = birthdayMonth.trim();
   if (month) reps.push({ textIndex: 2, text: month });
-  const nameLines = splitNameLines(birthdayNames, 3);
-  for (let i = 0; i < 3; i++) {
-    reps.push({ textIndex: 5 + i, text: nameLines[i] ?? ' ' });
-  }
   return reps;
 }
 
@@ -295,10 +286,8 @@ export function patchesForStep(stepId: string, bulletin: WeeklyBulletin): SlideT
       return [
         {
           slideNumber: 24,
-          replacements: buildBirthdaySlideReplacements(
-            bulletin.birthdayMonth,
-            bulletin.birthdayNames,
-          ),
+          replacements: buildBirthdaySlideReplacements(bulletin.birthdayMonth),
+          birthdayNames: bulletin.birthdayNames,
         },
       ];
     }
@@ -548,6 +537,9 @@ export async function applySlidePatches(
     }
     if (patch.preServiceChairName) {
       nextXml = patchPreServiceChairNameOnSlide2Xml(nextXml, patch.preServiceChairName);
+    }
+    if (patch.birthdayNames !== undefined) {
+      nextXml = applyBirthdayNameGridToSlideXml(nextXml, patch.birthdayNames);
     }
     if (patch.replacements.length) {
       nextXml = applyIndexedTextReplacementsToSlideXml(nextXml, patch.replacements);

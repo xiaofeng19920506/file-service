@@ -95,10 +95,8 @@ export async function generateBulletinPptx(
     if (!skip.skipBirthday && (month || names)) {
       reapply.push({
         slideNumber: 24,
-        replacements: buildBirthdaySlideReplacements(
-          bulletin.birthdayMonth ?? '',
-          bulletin.birthdayNames ?? '',
-        ),
+        replacements: buildBirthdaySlideReplacements(bulletin.birthdayMonth ?? ''),
+        birthdayNames: bulletin.birthdayNames ?? '',
       });
     }
     if (!skip.skipVerse && bulletin.verseOfWeek?.trim()) {

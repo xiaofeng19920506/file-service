@@ -6274,6 +6274,42 @@
   width: 100%;
 }
 
+.bulletin-birthday-names {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.bulletin-birthday-names-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.bulletin-birthday-names-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.45rem;
+}
+
+.bulletin-birthday-name-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.bulletin-birthday-name-input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+}
+
 .bulletin-announcement-block {
   display: flex;
   flex-direction: column;
