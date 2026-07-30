@@ -1,15 +1,20 @@
 /** 与 shared/bulletin-birthday 同逻辑的前端副本（避免整包引入 shared）。 */
 
 export const BIRTHDAY_NAME_MAX = 12;
-/** 模板 P24 名单文本框 */
+/** 模板 P24 名单文本框（会被替换为同 id 的表格） */
 export const BIRTHDAY_NAMES_SHAPE_ID = '399';
 
-/** 名单框宽度（EMU）；与 applyBirthdayNameGridToSlideXml 中 cx 一致 */
-const BIRTHDAY_NAMES_BOX_CX = 8_546_400;
-const BIRTHDAY_NAMES_INSET = 91_425;
-/** 百分子号：44pt 起，最短不低于 26pt */
-const BIRTHDAY_FONT_SZ_MAX = 4400;
-const BIRTHDAY_FONT_SZ_MIN = 2600;
+/** 名单区位置/尺寸（EMU）；蛋糕在右侧，名单靠左铺满可用宽度 */
+const BIRTHDAY_NAMES_BOX = {
+  x: 298_800,
+  y: 892_800,
+  cx: 8_546_400,
+  cy: 2_816_700,
+} as const;
+
+/** 百分子号：40pt 起，最短不低于 24pt */
+const BIRTHDAY_FONT_SZ_MAX = 4000;
+const BIRTHDAY_FONT_SZ_MIN = 2400;
 
 export function parseBirthdayNames(raw: string | null | undefined): string[] {
   if (!raw) return [];
@@ -29,15 +34,14 @@ export function joinBirthdayNames(names: readonly string[]): string {
 }
 
 /**
- * 估计名字展示宽度（CJK≈1，西文≈0.55）。
- * 用于列数 / 字号 / 自动排列，避免单名在列内被折到下一行。
+ * 估计名字展示宽度。DFKai-SB 西文接近汉字宽，按偏保守估算，避免列内挤爆。
  */
 export function nameDisplayUnits(name: string): number {
   let units = 0;
   for (const ch of name) {
     if (/[\u2E80-\u9FFF\uF900-\uFAFF\uFF00-\uFFEF]/.test(ch)) units += 1;
-    else if (/\s/.test(ch)) units += 0.35;
-    else units += 0.55;
+    else if (/\s/.test(ch)) units += 0.4;
+    else units += 0.85;
   }
   return units || 1;
 }
@@ -79,11 +83,9 @@ export function moveBirthdayName(
 }
 
 function columnCapacityUnits(cols: number, fontSz: number): number {
-  const usable = BIRTHDAY_NAMES_BOX_CX - BIRTHDAY_NAMES_INSET * 2;
-  const colEmu = usable / Math.max(cols, 1);
-  // 约：1 CJK ≈ fontPt × 12700 EMU；sz 为百分之一 pt
+  const colEmu = BIRTHDAY_NAMES_BOX.cx / Math.max(cols, 1);
   const cjkEmu = (fontSz / 100) * 12_700;
-  return (colEmu * 0.9) / cjkEmu;
+  return (colEmu * 0.82) / cjkEmu;
 }
 
 export function pickBirthdayFontSize(names: readonly string[], cols: number): number {
@@ -99,7 +101,6 @@ export function birthdayGridColumns(count: number, names?: readonly string[]): n
   if (count <= 0) return 1;
   let cols = count <= 3 ? 1 : count <= 8 ? 2 : 3;
   if (!names || names.length === 0) return cols;
-  // 最长名在最小字号下仍超列宽 → 减列，避免姓名被挤折行
   const maxUnits = Math.max(...names.map((n) => nameDisplayUnits(n)));
   while (cols > 1 && maxUnits > columnCapacityUnits(cols, BIRTHDAY_FONT_SZ_MIN)) {
     cols -= 1;
@@ -116,83 +117,86 @@ function escapeXml(text: string): string {
     .replace(/'/g, '&apos;');
 }
 
+/** 普通空格改为 NBSP，避免渲染器在空格处折行 */
+function nonBreakingName(text: string): string {
+  return text.trim().replace(/ /g, '\u00A0');
+}
+
 function nameRunXml(text: string, color: string, fontSz: number): string {
-  const t = text.trim() ? escapeXml(text.trim()) : ' ';
+  const raw = nonBreakingName(text);
+  const t = raw ? escapeXml(raw) : ' ';
   return (
     `<a:r><a:rPr b="1" lang="en" sz="${fontSz}">` +
     `<a:solidFill><a:srgbClr val="${color}"/></a:solidFill>` +
     `<a:highlight><a:schemeClr val="dk1"/></a:highlight>` +
     `<a:latin typeface="DFKai-SB"/><a:ea typeface="DFKai-SB"/>` +
     `<a:cs typeface="DFKai-SB"/><a:sym typeface="DFKai-SB"/></a:rPr>` +
-    `<a:t>${t}</a:t></a:r>`
+    `<a:t xml:space="preserve">${t}</a:t></a:r>`
   );
 }
 
-function tabRunXml(fontSz: number): string {
+function emptyCellXml(): string {
   return (
-    `<a:r><a:rPr b="1" lang="en" sz="${fontSz}">` +
-    `<a:solidFill><a:srgbClr val="274E13"/></a:solidFill>` +
-    `<a:latin typeface="DFKai-SB"/><a:ea typeface="DFKai-SB"/>` +
-    `<a:cs typeface="DFKai-SB"/><a:sym typeface="DFKai-SB"/></a:rPr>` +
-    `<a:t xml:space="preserve">\t</a:t></a:r>`
+    `<a:tc>` +
+    `<a:txBody><a:bodyPr wrap="none" anchor="ctr" lIns="45720" rIns="45720" tIns="0" bIns="0"/>` +
+    `<a:lstStyle/><a:p><a:pPr algn="ctr"/><a:endParaRPr sz="1200"/></a:p></a:txBody>` +
+    `<a:tcPr marL="45720" marR="45720" marT="0" marB="0" anchor="ctr"><a:noFill/>` +
+    `<a:lnL><a:noFill/></a:lnL><a:lnR><a:noFill/></a:lnR>` +
+    `<a:lnT><a:noFill/></a:lnT><a:lnB><a:noFill/></a:lnB></a:tcPr>` +
+    `</a:tc>`
   );
 }
 
-function tabListXml(cols: number): string {
-  if (cols <= 1) return '';
-  const usable = BIRTHDAY_NAMES_BOX_CX - BIRTHDAY_NAMES_INSET * 2;
-  const colW = Math.floor(usable / cols);
-  const tabs: string[] = [];
-  for (let c = 0; c < cols; c++) {
-    const center = Math.floor(colW * (c + 0.5));
-    tabs.push(`<a:tab pos="${center}" algn="ctr"/>`);
-  }
-  return `<a:tabLst>${tabs.join('')}</a:tabLst>`;
-}
-
-function nameRowParagraphXml(rowNames: string[], cols: number, fontSz: number): string {
-  const colors = ['4C1130', '274E13', '1C4587'];
-  const runs: string[] = [];
-  if (cols <= 1) {
-    // 单列：一人一段，居中
-    const name = rowNames[0] ?? ' ';
-    runs.push(nameRunXml(name, colors[0]!, fontSz));
-  } else {
-    // 多列：制表位定列中心；每人一个 run，姓名本身不拆行（body wrap=none）
-    rowNames.forEach((name, i) => {
-      runs.push(tabRunXml(fontSz));
-      runs.push(nameRunXml(name, colors[i % colors.length]!, fontSz));
-    });
-  }
+function nameCellXml(name: string, color: string, fontSz: number): string {
   return (
-    `<a:p><a:pPr indent="0" lvl="0" marL="0" rtl="0" algn="${cols <= 1 ? 'ctr' : 'l'}">` +
-    tabListXml(cols) +
-    `<a:spcBef><a:spcPts val="600"/></a:spcBef>` +
-    `<a:spcAft><a:spcPts val="600"/></a:spcAft>` +
-    `<a:buNone/></a:pPr>${runs.join('')}` +
-    `<a:endParaRPr b="1" sz="${fontSz}"/></a:p>`
+    `<a:tc>` +
+    `<a:txBody><a:bodyPr wrap="none" anchor="ctr" lIns="45720" rIns="45720" tIns="0" bIns="0">` +
+    `<a:noAutofit/></a:bodyPr><a:lstStyle/>` +
+    `<a:p><a:pPr algn="ctr" fontAlgn="ctr"><a:buNone/></a:pPr>` +
+    nameRunXml(name, color, fontSz) +
+    `<a:endParaRPr b="1" sz="${fontSz}"/></a:p></a:txBody>` +
+    `<a:tcPr marL="45720" marR="45720" marT="22860" marB="22860" anchor="ctr"><a:noFill/>` +
+    `<a:lnL><a:noFill/></a:lnL><a:lnR><a:noFill/></a:lnR>` +
+    `<a:lnT><a:noFill/></a:lnT><a:lnB><a:noFill/></a:lnB></a:tcPr>` +
+    `</a:tc>`
   );
 }
 
-/** 将名单排成行列（每行最多 cols 个），写入幻灯片 grid；单名不跨行 */
-export function buildBirthdayNameGridTxBody(names: readonly string[]): string {
+/**
+ * 将名单排成无边框表格阵列：一人一格，单元格 wrap=none，姓名不跨行。
+ */
+export function buildBirthdayNameGridTableXml(names: readonly string[]): string {
   const list = names.map((s) => s.trim()).filter(Boolean).slice(0, BIRTHDAY_NAME_MAX);
   const cols = birthdayGridColumns(list.length, list);
+  const rowCount = Math.max(1, Math.ceil((list.length || 1) / cols));
   const fontSz = pickBirthdayFontSize(list.length ? list : [' '], cols);
-  const rows: string[] = [];
-  if (list.length === 0) {
-    rows.push(nameRowParagraphXml([' '], 1, fontSz));
-  } else {
-    for (let i = 0; i < list.length; i += cols) {
-      rows.push(nameRowParagraphXml(list.slice(i, i + cols), cols, fontSz));
+  const colors = ['4C1130', '274E13', '1C4587'];
+  const colW = Math.floor(BIRTHDAY_NAMES_BOX.cx / cols);
+  const rowH = Math.floor(BIRTHDAY_NAMES_BOX.cy / rowCount);
+  const grid = Array.from({ length: cols }, () => `<a:gridCol w="${colW}"/>`).join('');
+
+  const rowsXml: string[] = [];
+  for (let r = 0; r < rowCount; r++) {
+    const cells: string[] = [];
+    for (let c = 0; c < cols; c++) {
+      const name = list[r * cols + c];
+      if (name) cells.push(nameCellXml(name, colors[c % colors.length]!, fontSz));
+      else cells.push(emptyCellXml());
     }
+    rowsXml.push(`<a:tr h="${rowH}">${cells.join('')}</a:tr>`);
   }
-  // wrap=none：禁止 CJK/空格在框内折到下一行，保证一人姓名保持单行
+
+  const { x, y, cx, cy } = BIRTHDAY_NAMES_BOX;
   return (
-    `<p:txBody>` +
-    `<a:bodyPr anchorCtr="0" anchor="ctr" bIns="91425" lIns="91425" spcFirstLastPara="1" ` +
-    `rIns="91425" wrap="none" tIns="91425"><a:noAutofit/></a:bodyPr>` +
-    `<a:lstStyle/>${rows.join('')}</p:txBody>`
+    `<p:graphicFrame>` +
+    `<p:nvGraphicFramePr>` +
+    `<p:cNvPr id="${BIRTHDAY_NAMES_SHAPE_ID}" name="Birthday Names Grid"/>` +
+    `<p:cNvGraphicFramePr><a:graphicFrameLocks noGrp="1"/></p:cNvGraphicFramePr>` +
+    `<p:nvPr/></p:nvGraphicFramePr>` +
+    `<p:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${cx}" cy="${cy}"/></p:xfrm>` +
+    `<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">` +
+    `<a:tbl><a:tblPr/><a:tblGrid>${grid}</a:tblGrid>${rowsXml.join('')}</a:tbl>` +
+    `</a:graphicData></a:graphic></p:graphicFrame>`
   );
 }
 
@@ -200,38 +204,25 @@ function findShapeBlock(xml: string, shapeId: string): { start: number; end: num
   const marker = `<p:cNvPr id="${shapeId}"`;
   const idIdx = xml.indexOf(marker);
   if (idIdx < 0) return null;
-  const start = xml.lastIndexOf('<p:sp>', idIdx);
+  const spStart = xml.lastIndexOf('<p:sp>', idIdx);
+  const gfStart = xml.lastIndexOf('<p:graphicFrame>', idIdx);
+  if (gfStart >= 0 && gfStart > spStart) {
+    const endTag = xml.indexOf('</p:graphicFrame>', idIdx);
+    if (endTag < 0) return null;
+    return { start: gfStart, end: endTag + '</p:graphicFrame>'.length };
+  }
+  if (spStart < 0) return null;
   const endTag = xml.indexOf('</p:sp>', idIdx);
-  if (start < 0 || endTag < 0) return null;
-  return { start, end: endTag + '</p:sp>'.length };
+  if (endTag < 0) return null;
+  return { start: spStart, end: endTag + '</p:sp>'.length };
 }
 
 /**
- * 扩宽 P24 名单框并写入 grid 段落；保留原 shape 几何以外的结构。
+ * 将 P24 名单 shape 替换为同位置的无边框表格阵列。
  */
 export function applyBirthdayNameGridToSlideXml(xml: string, namesRaw: string): string {
   const names = parseBirthdayNames(namesRaw);
   const block = findShapeBlock(xml, BIRTHDAY_NAMES_SHAPE_ID);
   if (!block) return xml;
-  let shape = xml.slice(block.start, block.end);
-
-  // 名单区拉满可用宽度，便于多列 grid
-  shape = shape.replace(
-    /<a:off x="\d+" y="(\d+)"\/>/,
-    `<a:off x="298800" y="$1"/>`,
-  );
-  shape = shape.replace(
-    /<a:ext cx="\d+" cy="(\d+)"\/>/,
-    `<a:ext cx="${BIRTHDAY_NAMES_BOX_CX}" cy="$1"/>`,
-  );
-
-  const txStart = shape.indexOf('<p:txBody>');
-  const txEnd = shape.indexOf('</p:txBody>');
-  if (txStart < 0 || txEnd < 0) return xml;
-  shape =
-    shape.slice(0, txStart) +
-    buildBirthdayNameGridTxBody(names) +
-    shape.slice(txEnd + '</p:txBody>'.length);
-
-  return xml.slice(0, block.start) + shape + xml.slice(block.end);
+  return xml.slice(0, block.start) + buildBirthdayNameGridTableXml(names) + xml.slice(block.end);
 }

@@ -26,7 +26,6 @@ describe('bulletin-birthday', () => {
     expect(birthdayGridColumns(2)).toBe(1);
     expect(birthdayGridColumns(5)).toBe(2);
     expect(birthdayGridColumns(9)).toBe(3);
-    // 极长英文名时减列，避免列内折行
     const long = 'Christopher Montgomery Wellington';
     expect(birthdayGridColumns(6, [long, '甲', '乙', '丙', '丁', '戊'])).toBeLessThanOrEqual(2);
   });
@@ -41,27 +40,27 @@ describe('bulletin-birthday', () => {
     expect(moveBirthdayName(['甲', '乙', '丙'], 2, 0)).toEqual(['丙', '甲', '乙']);
   });
 
-  it('estimates CJK wider than latin and shrinks font for long names', () => {
-    expect(nameDisplayUnits('王伟')).toBeGreaterThan(nameDisplayUnits('Amy'));
+  it('estimates widths and shrinks font for long names', () => {
+    expect(nameDisplayUnits('Aaron Wong')).toBeGreaterThan(nameDisplayUnits('Amy'));
     const long = 'Christopher Montgomery';
-    expect(pickBirthdayFontSize([long, '甲'], 3)).toBeLessThan(4400);
+    expect(pickBirthdayFontSize([long, '甲'], 3)).toBeLessThan(4000);
   });
 
-  it('rewrites slide24 name shape into a wider no-wrap grid', async () => {
+  it('rewrites slide24 name shape into a no-wrap table grid', async () => {
     const zip = await JSZip.loadAsync(readFileSync(templatePath));
     const xml = await zip.file('ppt/slides/slide24.xml')!.async('string');
     const out = applyBirthdayNameGridToSlideXml(
       xml,
-      joinBirthdayNames(['甲', '乙', '丙', '丁', '戊', '己']),
+      joinBirthdayNames(['Aaron Wong', '王伟', '李明', 'Amy Chen']),
     );
-    expect(out).toContain('甲');
-    expect(out).toContain('己');
-    expect(out).toContain('cx="8546400"');
+    expect(out).toContain('<a:tbl>');
     expect(out).toContain('wrap="none"');
-    expect(out).toContain('<a:tabLst>');
+    expect(out).toContain('Aaron');
+    expect(out).toContain('\u00A0'); // NBSP between Aaron and Wong
+    expect(out).toContain('cx="8546400"');
     expect(out).not.toContain('孫强');
     const runs = extractIndexedTextRuns(out);
-    const texts = runs.map((r) => r.text.trim()).filter(Boolean);
-    expect(texts).toEqual(expect.arrayContaining(['甲', '乙', '丙', '丁', '戊', '己']));
+    const texts = runs.map((r) => r.text.replace(/\u00A0/g, ' ').trim()).filter(Boolean);
+    expect(texts).toEqual(expect.arrayContaining(['Aaron Wong', '王伟', '李明', 'Amy Chen']));
   });
 });
