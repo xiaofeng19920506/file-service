@@ -45,6 +45,76 @@ export async function stabilizeCommunionEnglishSlidesInZip(zip: JSZip): Promise<
   }
 }
 
+/** 奉献报告页（模板文件号 P19） */
+const OFFERING_REPORT_SLIDE_FILE = 19;
+/** 标题栏略加高，避免中英单行被裁切 */
+const OFFERING_TITLE_BOX_CY = '980000';
+/** 中文标题字号（pt×100）；原 48pt 过宽会导致英文换行 */
+const OFFERING_TITLE_ZH_SZ = '4000';
+/** 英文标题字号；原 30pt 与中文并排会把 Report 挤到下一行 */
+const OFFERING_TITLE_EN_SZ = '2400';
+
+/**
+ * 奉献报告 P19：标题中英单行、金额行不换行且居中对齐。
+ * 不增删 indexed text run，以免破坏金额/日期 textIndex。
+ */
+export function stabilizeOfferingReportSlideXml(xml: string): string {
+  if (!xml.includes('Church Tithes and Offering Report') || !xml.includes('十一奉獻')) {
+    return xml;
+  }
+
+  // 按 shape 拆开处理，避免误改背景等无关文本框
+  return xml.replace(/<p:sp\b[\s\S]*?<\/p:sp>/g, (shapeXml) => {
+    const isTitle =
+      shapeXml.includes('Church Tithes and Offering Report') && shapeXml.includes('奉獻');
+    const isBody = shapeXml.includes('十一奉獻') && shapeXml.includes('其他奉獻');
+    if (!isTitle && !isBody) return shapeXml;
+
+    let out = shapeXml;
+
+    if (isTitle) {
+      out = out.replace(/(<a:bodyPr\b[^>]*\bwrap=")square(")/, `$1none$2`);
+      out = out.replace(
+        /(<a:off\b[^/]*\/>\s*<a:ext\b[^>]*\bcx="9144000"\s+)cy="\d+"/,
+        `$1cy="${OFFERING_TITLE_BOX_CY}"`,
+      );
+      // 标题 shape 内仅有中文 48pt / 间隔 32pt / 英文 30pt
+      out = out.replace(/\bsz="4800"/g, `sz="${OFFERING_TITLE_ZH_SZ}"`);
+      out = out.replace(/\bsz="3200"/g, `sz="${OFFERING_TITLE_EN_SZ}"`);
+      out = out.replace(/\bsz="3000"/g, `sz="${OFFERING_TITLE_EN_SZ}"`);
+    }
+
+    if (isBody) {
+      out = out.replace(/(<a:bodyPr\b[^>]*\bwrap=")square(")/, `$1none$2`);
+      // 「其他奉獻」行原为左对齐 + 前导空格，金额易被挤到下一行
+      out = out.replace(/<a:pPr([^>]*?)\balgn="l"/g, '<a:pPr$1algn="ctr"');
+      // 保留空格 run（占 textIndex），缩成单个空格，避免顶开居中排版
+      out = out.replace(/<a:t>(\s{2,})<\/a:t>/g, '<a:t> </a:t>');
+      // 金额尾随空格去掉，减少行宽
+      out = out.replace(/<a:t>(\$[\d,]+\.\d{2}) <\/a:t>/g, '<a:t>$1</a:t>');
+      // 标签后空格统一为两个，视觉整齐
+      out = out.replace(/<a:t>\(Tithes\):\s*<\/a:t>/g, '<a:t>(Tithes):  </a:t>');
+      out = out.replace(/<a:t>\(Other\):\s*<\/a:t>/g, '<a:t>(Other):  </a:t>');
+      out = out.replace(/<a:t>\(Total\):\s*<\/a:t>/g, '<a:t>(Total):  </a:t>');
+      // 日期冒号后留空，避免「上週奉獻:06/07」挤在一起
+      out = out.replace(
+        /(<a:t>上週奉獻<\/a:t><\/a:r>\s*<a:r>[\s\S]*?<a:t>):(<\/a:t>)/,
+        '$1: $2',
+      );
+    }
+
+    return out;
+  });
+}
+
+export async function stabilizeOfferingReportSlideInZip(zip: JSZip): Promise<void> {
+  const path = `ppt/slides/slide${OFFERING_REPORT_SLIDE_FILE}.xml`;
+  const entry = zip.file(path);
+  if (!entry) return;
+  const xml = await entry.async('string');
+  zip.file(path, stabilizeOfferingReportSlideXml(xml));
+}
+
 /** PPT 封面日期格式：06/14/2026 */
 export function formatBulletinCoverDate(isoDate: string): string {
   const [y, m, d] = isoDate.split('-');
@@ -613,6 +683,8 @@ export async function patchBulletinPreviewInPptx(
 
   // 圣餐英文页：模板约 28–31pt + spAutoFit；LibreOffice 不缩字会裁切经文
   await stabilizeCommunionEnglishSlidesInZip(zip);
+  // 奉献报告：标题中英单行、十一/其他金额与 label 同行居中
+  await stabilizeOfferingReportSlideInZip(zip);
 
   // 先铺通用文字覆盖，再写表单语义字段（生日/金句/公告），避免旧 slideTextOverrides 盖掉表单
   const overrides = normalizeSlideTextOverrides(input.slideTextOverrides);

@@ -12,6 +12,7 @@ import {
 import { expandScriptureSlidesInPptx } from './bulletin-scripture-pptx-expand';
 import { expandAnnouncementSlidesInPptx } from './bulletin-announcement-pptx-expand';
 import { applyBirthdayNameGridToSlideXml } from './bulletin-birthday';
+import { stabilizeOfferingReportSlideXml } from '@file-service/shared';
 import JSZip from './jszip';
 
 /** 原版模板文件名（`06_14_2026.pptx`，背景与图片均以此为准） */
@@ -512,11 +513,6 @@ export async function applySlidePatches(
   patches: SlideTextPatch[],
   filename: string,
 ): Promise<File> {
-  if (!patches.length) {
-    const buf = await templateBlob.arrayBuffer();
-    return new File([buf], filename, { type: PPTX_MIME });
-  }
-
   const parsed = await parsePptxSlidesDetailed(templateBlob);
   const pathBySlide = new Map(parsed.map((s) => [s.slideInFile, s.slidePath]));
   const zip = await JSZip.loadAsync(templateBlob);
@@ -555,6 +551,15 @@ export async function applySlidePatches(
       );
     }
     zip.file(slidePath, nextXml);
+  }
+
+  // 奉献报告布局（标题单行、金额同行）在导出路径也套用
+  {
+    const offerPath = pathBySlide.get(19) ?? 'ppt/slides/slide19.xml';
+    const entry = zip.file(offerPath);
+    if (entry) {
+      zip.file(offerPath, stabilizeOfferingReportSlideXml(await entry.async('string')));
+    }
   }
 
   const buf = await zip.generateAsync({ type: 'arraybuffer' });

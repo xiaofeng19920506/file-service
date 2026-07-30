@@ -3,12 +3,14 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import JSZip from 'jszip';
 import {
+  extractIndexedTextRuns,
   patchBulletinPreviewInPptx,
   patchCoverSlideInPptx,
   patchCoverDateLineInSlideXml,
   patchScriptureSlideInSlideXml,
   reapplyBulletinFormFieldsInPptx,
   stabilizeCommunionEnglishSlideXml,
+  stabilizeOfferingReportSlideXml,
 } from './bulletin-pptx-patch.js';
 
 const templatePath = join(import.meta.dirname, '../templates/bulletin/06_14_2026.pptx');
@@ -312,5 +314,38 @@ describe('stabilizeCommunionEnglishSlideXml', () => {
       expect(xml).toMatch(/sz="2800"/);
       expect(xml).not.toMatch(/sz="(2[9]|[3-9]\d)\d{2}"/);
     }
+  });
+});
+
+describe('stabilizeOfferingReportSlideXml', () => {
+  it('keeps title on one line and centers amount rows without dropping text indices', async () => {
+    const tpl = await readFile(templatePath);
+    const zip = await JSZip.loadAsync(tpl);
+    const before = await zip.file('ppt/slides/slide19.xml')!.async('string');
+    const beforeRuns = extractIndexedTextRuns(before);
+    const out = stabilizeOfferingReportSlideXml(before);
+    const afterRuns = extractIndexedTextRuns(out);
+    expect(afterRuns.map((r) => r.textIndex)).toEqual(beforeRuns.map((r) => r.textIndex));
+    expect(out).toMatch(/wrap="none"/);
+    expect(out).toContain('sz="2400"');
+    expect(out).toContain('sz="4000"');
+    expect(out).toContain('cy="980000"');
+    expect(out).toContain('十一奉獻');
+    expect(out).toContain('其他奉獻');
+    expect(out).toContain('$3,000.00</a:t>');
+    expect(out).toContain('(Tithes):  ');
+    expect(out).toContain('(Other):  ');
+    // 金额正文框：其他奉献所在段落已居中
+    expect(out).toMatch(/algn="ctr"[^>]*>[\s\S]*?<a:t>其他奉獻<\/a:t>/);
+  });
+
+  it('applies in preview patch', async () => {
+    const tpl = await readFile(templatePath);
+    const patched = await patchBulletinPreviewInPptx(tpl, {});
+    const zip = await JSZip.loadAsync(patched);
+    const xml = await zip.file('ppt/slides/slide19.xml')!.async('string');
+    expect(xml).toContain('wrap="none"');
+    expect(xml).toContain('cy="980000"');
+    expect(xml).toContain('sz="2400"');
   });
 });
