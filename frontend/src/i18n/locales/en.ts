@@ -205,7 +205,7 @@ const en: MessageTree = {
     birthdayMonth: 'Birthday month',
     birthdayNames: 'Birthday names',
     birthdayNamesHint:
-      'Add each person separately; the slide shows a multi-column grid and keeps each name on one line. Reorder with arrows, or use Auto-arrange.',
+      'Add each person separately; the slide shows a multi-column grid and keeps each name on one line. Changes save on blur or Enter. Reorder with arrows, or use Auto-arrange.',
     birthdayNamePlaceholder: 'Name {n}',
     addBirthdayName: 'Add person',
     removeBirthdayName: 'Remove',

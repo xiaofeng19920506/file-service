@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { WeeklyBulletin } from '../../api/bulletins';
 import { BIBLE_BOOKS } from '../../lib/bible-books';
 import { useI18n } from '../../i18n';
@@ -36,17 +36,52 @@ type FieldProps = {
   disabled?: boolean;
   onChange: (value: string) => void;
   multiline?: boolean;
+  /** 输入过程只改本地；失焦 / 单行 Enter 再提交 */
+  commitOnBlur?: boolean;
 };
 
-function TextField({ label, value, disabled, onChange, multiline }: FieldProps) {
+function TextField({ label, value, disabled, onChange, multiline, commitOnBlur }: FieldProps) {
+  const [local, setLocal] = useState(value);
+  useEffect(() => {
+    setLocal(value);
+  }, [value]);
+
+  const commit = () => {
+    if (local !== value) onChange(local);
+  };
+
+  if (multiline) {
+    return (
+      <label className="bulletin-field">
+        {label}
+        <textarea
+          rows={4}
+          value={commitOnBlur ? local : value}
+          disabled={disabled}
+          onChange={(e) => (commitOnBlur ? setLocal(e.target.value) : onChange(e.target.value))}
+          onBlur={commitOnBlur ? commit : undefined}
+        />
+      </label>
+    );
+  }
+
   return (
     <label className="bulletin-field">
       {label}
-      {multiline ? (
-        <textarea rows={4} value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} />
-      ) : (
-        <input type="text" value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} />
-      )}
+      <input
+        type="text"
+        value={commitOnBlur ? local : value}
+        disabled={disabled}
+        onChange={(e) => (commitOnBlur ? setLocal(e.target.value) : onChange(e.target.value))}
+        onBlur={commitOnBlur ? commit : undefined}
+        onKeyDown={
+          commitOnBlur
+            ? (e) => {
+                if (e.key === 'Enter') e.currentTarget.blur();
+              }
+            : undefined
+        }
+      />
     </label>
   );
 }
@@ -151,18 +186,21 @@ export function BulletinOfferingStep({
         label={t('bulletin.lastWeekOffering')}
         value={draft.lastWeekOfferingDate}
         disabled={!canEdit}
+        commitOnBlur
         onChange={(v) => onPatch('lastWeekOfferingDate', v)}
       />
       <TextField
         label={t('bulletin.offeringTithe')}
         value={tithe}
         disabled={!canEdit}
+        commitOnBlur
         onChange={(v) => onPatch('offeringTitheAmount', v)}
       />
       <TextField
         label={t('bulletin.offeringOther')}
         value={other}
         disabled={!canEdit}
+        commitOnBlur
         onChange={(v) => onPatch('offeringOtherAmount', v)}
       />
       <label className="bulletin-field">
@@ -185,6 +223,8 @@ export function BulletinBirthdayStep({
   const [rows, setRows] = useState<string[]>(() =>
     namesFromDraft.length > 0 ? namesFromDraft : [''],
   );
+  const rowsRef = useRef(rows);
+  rowsRef.current = rows;
 
   useEffect(() => {
     const parsed = parseBirthdayNames(draft.birthdayNames);
@@ -192,7 +232,7 @@ export function BulletinBirthdayStep({
     setRows((prev) => {
       const prevFilled = prev.map((s) => s.trim()).filter(Boolean);
       const nextFilled = next.map((s) => s.trim()).filter(Boolean);
-      // 草稿名单未变时保留用户刚点「添加」产生的空 input
+      // 草稿名单未变时保留用户正在编辑的本地行（含空 input）
       if (
         prevFilled.join('\n') === nextFilled.join('\n') &&
         prev.length >= next.length
@@ -203,11 +243,29 @@ export function BulletinBirthdayStep({
     });
   }, [draft.birthdayNames]);
 
-  const commitNames = (next: string[]) => {
-    const uiRows = next.length > 0 ? next : [''];
+  const draftJoined = joinBirthdayNames(namesFromDraft);
+  const draftJoinedRef = useRef(draftJoined);
+  draftJoinedRef.current = draftJoined;
+  const onPatchRef = useRef(onPatch);
+  onPatchRef.current = onPatch;
+
+  const commitNames = (next?: string[]) => {
+    const uiRows = (next ?? rowsRef.current).length > 0 ? (next ?? rowsRef.current) : [''];
     setRows(uiRows);
-    onPatch('birthdayNames', joinBirthdayNames(uiRows));
+    rowsRef.current = uiRows;
+    const joined = joinBirthdayNames(uiRows);
+    if (joined !== draftJoinedRef.current) onPatch('birthdayNames', joined);
   };
+
+  // 切走步骤时若还有未 blur 的改动，补一次提交
+  useEffect(() => {
+    return () => {
+      const joined = joinBirthdayNames(rowsRef.current);
+      if (joined !== draftJoinedRef.current) {
+        onPatchRef.current('birthdayNames', joined);
+      }
+    };
+  }, []);
 
   const filledCount = rows.map((s) => s.trim()).filter(Boolean).length;
 
@@ -217,6 +275,7 @@ export function BulletinBirthdayStep({
         label={t('bulletin.birthdayMonth')}
         value={draft.birthdayMonth}
         disabled={!canEdit}
+        commitOnBlur
         onChange={(v) => onPatch('birthdayMonth', v)}
       />
       <div className="bulletin-birthday-names">
@@ -234,7 +293,12 @@ export function BulletinBirthdayStep({
                 onChange={(e) => {
                   const next = [...rows];
                   next[index] = e.target.value;
-                  commitNames(next);
+                  setRows(next);
+                  rowsRef.current = next;
+                }}
+                onBlur={() => commitNames()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
                 }}
               />
               {canEdit ? (
@@ -279,7 +343,11 @@ export function BulletinBirthdayStep({
               <button
                 type="button"
                 className="btn-secondary btn-sm"
-                onClick={() => commitNames([...rows, ''])}
+                onClick={() => {
+                  const next = [...rows, ''];
+                  setRows(next);
+                  rowsRef.current = next;
+                }}
               >
                 {t('bulletin.addBirthdayName')}
               </button>
@@ -290,7 +358,6 @@ export function BulletinBirthdayStep({
                 className="btn-secondary btn-sm"
                 onClick={() => {
                   const arranged = arrangeBirthdayNames(rows);
-                  // 保留尾部空行，方便继续添加
                   const emptyTail = rows.length - filledCount;
                   commitNames(
                     emptyTail > 0 ? [...arranged, ...Array(emptyTail).fill('')] : arranged,
@@ -330,6 +397,7 @@ export function BulletinPreServiceStep({
           label={t('bulletin.preServiceChairNames')}
           value={draft.preServiceChairNames ?? ''}
           disabled={!canEdit}
+          commitOnBlur
           onChange={(v) => onPatch('preServiceChairNames', v)}
         />
       ) : null}
@@ -385,6 +453,7 @@ export function BulletinAnnouncementsStep({
             label={t('bulletin.announcementTitle')}
             value={item.title ?? ''}
             disabled={!canEdit}
+            commitOnBlur
             onChange={(v) => {
               const next = [...announcements];
               next[index] = { ...item, title: v };
@@ -396,6 +465,7 @@ export function BulletinAnnouncementsStep({
             value={item.body}
             disabled={!canEdit}
             multiline
+            commitOnBlur
             onChange={(v) => {
               const next = [...announcements];
               next[index] = { ...item, body: v };
@@ -408,6 +478,7 @@ export function BulletinAnnouncementsStep({
         label={t('bulletin.baptism')}
         value={draft.baptismText}
         disabled={!canEdit}
+        commitOnBlur
         onChange={(v) => onPatch('baptismText', v)}
       />
       {canEdit ? (
@@ -449,6 +520,7 @@ export function BulletinVerseStep({
         value={draft.verseOfWeek}
         disabled={!canEdit}
         multiline
+        commitOnBlur
         onChange={(v) => onPatch('verseOfWeek', v)}
       />
     </StepShell>
@@ -489,6 +561,7 @@ export function BulletinMoreStep({
           label={t('bulletin.staffMeeting')}
           value={draft.staffMeetingDate}
           disabled={!canEdit}
+          commitOnBlur
           onChange={(v) => onPatch('staffMeetingDate', v)}
         />
       ) : null}
@@ -497,6 +570,7 @@ export function BulletinMoreStep({
           label={t('bulletin.testimonyShare')}
           value={draft.testimonyShareDate}
           disabled={!canEdit}
+          commitOnBlur
           onChange={(v) => onPatch('testimonyShareDate', v)}
         />
       ) : null}
@@ -506,6 +580,7 @@ export function BulletinMoreStep({
           value={draft.serviceRosterText}
           disabled={!canEdit}
           multiline
+          commitOnBlur
           onChange={(v) => onPatch('serviceRosterText', v)}
         />
       ) : null}

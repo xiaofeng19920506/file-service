@@ -197,7 +197,7 @@ export default {
     birthdayMonth: '生日月份',
     birthdayNames: '生日名单',
     birthdayNamesHint:
-      '每人单独填写；幻灯片按阵列多列显示，姓名不会折到下一行。可用上下箭头调整顺序，或点「自动排列」。',
+      '每人单独填写；幻灯片按阵列多列显示，姓名不会折到下一行。输入后点别处或按 Enter 再保存；可用上下箭头调整顺序，或点「自动排列」。',
     birthdayNamePlaceholder: '姓名 {n}',
     addBirthdayName: '添加一位',
     removeBirthdayName: '删除',
