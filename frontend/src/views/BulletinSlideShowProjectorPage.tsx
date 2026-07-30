@@ -34,10 +34,19 @@ export default function BulletinSlideShowProjectorPage({ sessionId }: BulletinSl
   });
 
   const enterFullscreen = async (): Promise<boolean> => {
-    const el = stageRef.current ?? document.documentElement;
+    // 优先全屏整个文档，保证幻灯片可用到完整屏幕
+    const el = document.documentElement;
     const ok = await requestElementFullscreen(el);
-    if (ok) setNeedsFullscreenGesture(false);
-    return ok;
+    if (!ok) {
+      const fallback = await requestElementFullscreen(stageRef.current);
+      if (fallback) {
+        setNeedsFullscreenGesture(false);
+        return true;
+      }
+      return false;
+    }
+    setNeedsFullscreenGesture(false);
+    return true;
   };
 
   useEffect(() => {
@@ -171,17 +180,24 @@ export default function BulletinSlideShowProjectorPage({ sessionId }: BulletinSl
 
   return (
     <div ref={stageRef} className="bulletin-slideshow-projector" tabIndex={0}>
-      {loading && (
-        <div className="bulletin-slideshow-projector-loading">
-          <div className="preview-spinner" />
-        </div>
-      )}
-      {!loading && failed && (
-        <p className="bulletin-slideshow-projector-error">{t('bulletin.previewUnavailableHint')}</p>
-      )}
-      {!loading && !failed && currentUrl && (
-        <img className="bulletin-slideshow-projector-img" src={currentUrl} alt="" draggable={false} />
-      )}
+      <div className="bulletin-slideshow-projector-stage">
+        {loading && (
+          <div className="bulletin-slideshow-projector-loading">
+            <div className="preview-spinner" />
+          </div>
+        )}
+        {!loading && failed && (
+          <p className="bulletin-slideshow-projector-error">{t('bulletin.previewUnavailableHint')}</p>
+        )}
+        {!loading && !failed && currentUrl && (
+          <img
+            className="bulletin-slideshow-projector-img"
+            src={currentUrl}
+            alt=""
+            draggable={false}
+          />
+        )}
+      </div>
       {needsFullscreenGesture && (
         <button
           type="button"
