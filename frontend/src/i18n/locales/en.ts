@@ -342,6 +342,8 @@ const en: MessageTree = {
     slideShowExit: 'Exit projection',
     slideShowFullscreen: 'Fullscreen',
     slideShowHint: '← → or Space · Esc end · F fullscreen',
+    slideShowEnterFullscreen: 'Click for fullscreen projection',
+    slideShowEnterFullscreenHint: 'Browsers require a click to enter fullscreen — or press any key',
     slideShowStarting: 'Opening projector…',
     slideShowPopupBlocked: 'Allow pop-ups to open the projector window.',
     slideShowSessionExpired: 'Projection session expired. Start again from the bulletin page.',

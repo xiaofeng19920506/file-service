@@ -1,4 +1,5 @@
 import type { BulletinSlidePreviewParams } from '../api/bulletins';
+import { maximizePopupWindow } from './fullscreen';
 
 const STORAGE_PREFIX = 'bulletin-slideshow:';
 const SESSION_TTL_MS = 6 * 60 * 60 * 1000;
@@ -73,14 +74,16 @@ export function openSlideShowWindows(sessionId: string): {
   const screenInfo = window.screen as Screen & { availLeft?: number; availTop?: number };
   const availLeft = screenInfo.availLeft ?? 0;
   const availTop = screenInfo.availTop ?? 0;
+  const width = screenInfo.availWidth || screenInfo.width;
+  const height = screenInfo.availHeight || screenInfo.height;
 
-  // 一键投影：只开投影全屏窗。
+  // 一键投影：打开铺满屏幕的投影窗，页内再进浏览器全屏。
   // 不要把 noopener/noreferrer 放进 features：浏览器会因此让 open() 恒返回 null，
   // 启动器会误判弹窗被拦并删掉 localStorage 会话，投影页就显示「已过期」。
   const projectorFeatures = [
     'popup=yes',
-    `width=${window.screen.availWidth}`,
-    `height=${window.screen.availHeight}`,
+    `width=${width}`,
+    `height=${height}`,
     `left=${availLeft}`,
     `top=${availTop}`,
   ].join(',');
@@ -96,6 +99,8 @@ export function openSlideShowWindows(sessionId: string): {
     } catch {
       // ignore
     }
+    maximizePopupWindow(projector);
+    window.setTimeout(() => maximizePopupWindow(projector), 120);
   }
   return { projector, presenter: null };
 }

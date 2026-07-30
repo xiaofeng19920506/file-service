@@ -327,6 +327,8 @@ export default {
     slideShowExit: '退出投影',
     slideShowFullscreen: '全屏',
     slideShowHint: '← → 或空格翻页 · Esc 结束 · F 全屏',
+    slideShowEnterFullscreen: '点击进入全屏投影',
+    slideShowEnterFullscreenHint: '浏览器需要一次点击才能全屏；也可按任意键',
     slideShowStarting: '正在打开投影…',
     slideShowPopupBlocked: '请允许弹出窗口以打开投影。',
     slideShowSessionExpired: '投影会话已过期，请从周报页重新启动。',
