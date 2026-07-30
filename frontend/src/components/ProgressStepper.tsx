@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useI18n } from '../i18n';
 
 export type ProgressStepperStep = {
@@ -7,13 +8,17 @@ export type ProgressStepperStep = {
   enabled?: boolean;
   /** 可点击导航但无编辑表单（模板固定页） */
   readonly?: boolean;
-  /** @deprecated 分区显隐 UI 已移除；保留字段以免调用方报错 */
+  /** 分区是否纳入本周 PPT；缺省视为显示 */
   visible?: boolean;
   /** 树形缩进深度 */
   depth?: number;
   /** 仅分组、无独立模板页 */
   groupOnly?: boolean;
   hasChildren?: boolean;
+  /** 本区是否有自定义 PPT 覆盖（用于「恢复原版」） */
+  hasPptxOverride?: boolean;
+  /** 本区是否有可编辑/替换的模板页 */
+  hasTemplateSlides?: boolean;
 };
 
 type ProgressStepperProps = {
@@ -22,13 +27,18 @@ type ProgressStepperProps = {
   /** 右侧预览可见分区；有值时驱动主高亮（可与 currentIndex 不同） */
   previewIndex?: number | null;
   onStepSelect?: (index: number) => void;
-  /** @deprecated 分区显隐 UI 已移除 */
-  onStepVisibilityChange?: (sectionId: string, visible: boolean) => void;
-  /** 每个分区旁的「修改幻灯片」 */
   onEditSlides?: (sectionId: string) => void;
-  canEditVisibility?: boolean;
-  canEditSlides?: boolean;
+  onReplacePptx?: (sectionId: string, file: File) => void | Promise<void>;
+  onResetPptx?: (sectionId: string) => void | Promise<void>;
+  onStepVisibilityChange?: (sectionId: string, visible: boolean) => void;
+  canManage?: boolean;
   orientation?: 'horizontal' | 'vertical';
+};
+
+type MenuState = {
+  sectionId: string;
+  x: number;
+  y: number;
 };
 
 function scrollItemIntoScroller(item: HTMLElement) {
@@ -43,17 +53,36 @@ function scrollItemIntoScroller(item: HTMLElement) {
   }
 }
 
+function clampMenuPosition(x: number, y: number, menu: HTMLElement) {
+  const pad = 8;
+  const { width, height } = menu.getBoundingClientRect();
+  const maxX = window.innerWidth - width - pad;
+  const maxY = window.innerHeight - height - pad;
+  return {
+    x: Math.max(pad, Math.min(x, maxX)),
+    y: Math.max(pad, Math.min(y, maxY)),
+  };
+}
+
 export default function ProgressStepper({
   steps,
   currentIndex,
   previewIndex = null,
   onStepSelect,
   onEditSlides,
-  canEditSlides = false,
+  onReplacePptx,
+  onResetPptx,
+  onStepVisibilityChange,
+  canManage = false,
   orientation = 'horizontal',
 }: ProgressStepperProps) {
   const { t } = useI18n();
   const listRef = useRef<HTMLOListElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const replaceTargetRef = useRef<string | null>(null);
+  const [menu, setMenu] = useState<MenuState | null>(null);
+  const [menuBusy, setMenuBusy] = useState(false);
   const focusIndex = previewIndex ?? currentIndex;
 
   useEffect(() => {
@@ -65,11 +94,78 @@ export default function ProgressStepper({
     if (item) scrollItemIntoScroller(item);
   }, [focusIndex]);
 
+  useLayoutEffect(() => {
+    if (!menu || !menuRef.current) return;
+    const clamped = clampMenuPosition(menu.x, menu.y, menuRef.current);
+    if (clamped.x !== menu.x || clamped.y !== menu.y) {
+      setMenu({ ...menu, ...clamped });
+    }
+  }, [menu]);
+
+  useEffect(() => {
+    if (!menu) return;
+    const close = () => setMenu(null);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close();
+    };
+    const onPointer = (e: MouseEvent) => {
+      if (menuRef.current?.contains(e.target as Node)) return;
+      close();
+    };
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('mousedown', onPointer);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('mousedown', onPointer);
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+    };
+  }, [menu]);
+
+  const openMenu = (sectionId: string, clientX: number, clientY: number) => {
+    if (!canManage) return;
+    const step = steps.find((s) => s.id === sectionId);
+    if (!step || step.groupOnly) return;
+    setMenu({ sectionId, x: clientX, y: clientY });
+  };
+
+  const activeStep = menu ? steps.find((s) => s.id === menu.sectionId) : null;
+  const canSlides = Boolean(activeStep?.hasTemplateSlides);
+  const isHidden = activeStep?.visible === false;
+  const hasOverride = Boolean(activeStep?.hasPptxOverride);
+
+  const runAction = async (fn: () => void | Promise<void>) => {
+    if (menuBusy) return;
+    setMenuBusy(true);
+    try {
+      await fn();
+      setMenu(null);
+    } finally {
+      setMenuBusy(false);
+    }
+  };
+
   return (
     <nav
       className={`progress-stepper progress-stepper--${orientation}`}
       aria-label={t('bulletin.stepperLabel')}
     >
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pptx,.ppt,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-powerpoint"
+        hidden
+        onChange={(e) => {
+          const file = e.target.files?.[0] ?? null;
+          const sectionId = replaceTargetRef.current;
+          replaceTargetRef.current = null;
+          if (fileInputRef.current) fileInputRef.current.value = '';
+          if (!file || !sectionId || !onReplacePptx) return;
+          void runAction(() => onReplacePptx(sectionId, file));
+        }}
+      />
       <ol ref={listRef} className="progress-stepper-list">
         {steps.map((step, index) => {
           const depth = step.depth ?? 0;
@@ -81,9 +177,8 @@ export default function ProgressStepper({
           const isReadonly = Boolean(step.readonly);
           const isGroup = Boolean(step.groupOnly);
           const canSelect = !isDisabled && Boolean(onStepSelect);
-          const isHidden = step.visible === false;
-          const showEditSlides =
-            Boolean(onEditSlides) && canEditSlides && !isGroup;
+          const isSectionHidden = step.visible === false;
+          const showMenuTrigger = canManage && !isGroup;
           const topLevelNumber =
             depth === 0
               ? steps.slice(0, index + 1).filter((s) => (s.depth ?? 0) === 0).length
@@ -94,8 +189,14 @@ export default function ProgressStepper({
               key={step.id}
               data-step-index={index}
               data-depth={depth}
-              className={`progress-stepper-item${isFocused ? ' is-current' : ''}${isEditing ? ' is-editing' : ''}${isComplete ? ' is-complete' : ''}${isDisabled ? ' is-disabled' : ''}${isReadonly ? ' is-readonly' : ''}${isHidden ? ' is-section-hidden' : ''}${isGroup ? ' is-group' : ''}${step.hasChildren ? ' has-children' : ''}${depth > 0 ? ' is-nested' : ''}`}
+              className={`progress-stepper-item${isFocused ? ' is-current' : ''}${isEditing ? ' is-editing' : ''}${isComplete ? ' is-complete' : ''}${isDisabled ? ' is-disabled' : ''}${isReadonly ? ' is-readonly' : ''}${isSectionHidden ? ' is-section-hidden' : ''}${isGroup ? ' is-group' : ''}${step.hasChildren ? ' has-children' : ''}${depth > 0 ? ' is-nested' : ''}`}
               style={depth > 0 ? { paddingLeft: `${depth * 0.85}rem` } : undefined}
+              onContextMenu={(e) => {
+                if (!showMenuTrigger || isDisabled) return;
+                e.preventDefault();
+                openMenu(step.id, e.clientX, e.clientY);
+              }}
+              title={showMenuTrigger ? t('bulletin.sectionContextMenuHint') : undefined}
             >
               {canSelect ? (
                 <button
@@ -113,24 +214,109 @@ export default function ProgressStepper({
                   <span className="progress-stepper-label">{step.label}</span>
                 </span>
               )}
-              {showEditSlides ? (
+              {showMenuTrigger ? (
                 <button
                   type="button"
-                  className="progress-stepper-edit-slides"
-                  title={t('bulletin.editSlides')}
+                  className="progress-stepper-menu-btn"
+                  title={t('bulletin.sectionContextMenu')}
+                  aria-label={t('bulletin.sectionContextMenu')}
                   disabled={isDisabled}
                   onClick={(e) => {
                     e.stopPropagation();
-                    onEditSlides?.(step.id);
+                    const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                    openMenu(step.id, rect.right, rect.top);
                   }}
                 >
-                  {t('bulletin.editSlidesShort')}
+                  ⋯
                 </button>
               ) : null}
             </li>
           );
         })}
       </ol>
+
+      {menu && activeStep
+        ? createPortal(
+            <div
+              ref={menuRef}
+              className="progress-stepper-context-menu"
+              role="menu"
+              style={{ left: menu.x, top: menu.y }}
+              aria-label={t('bulletin.sectionContextMenu')}
+            >
+              <p className="progress-stepper-context-menu-title">{activeStep.label}</p>
+              {canSlides && onEditSlides ? (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="progress-stepper-context-menu-item"
+                  disabled={menuBusy}
+                  onClick={() =>
+                    void runAction(() => {
+                      onEditSlides(menu.sectionId);
+                    })
+                  }
+                >
+                  {t('bulletin.editSlides')}
+                </button>
+              ) : null}
+              {canSlides && onReplacePptx ? (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="progress-stepper-context-menu-item"
+                  disabled={menuBusy}
+                  onClick={() => {
+                    replaceTargetRef.current = menu.sectionId;
+                    setMenu(null);
+                    fileInputRef.current?.click();
+                  }}
+                >
+                  {t('bulletin.editSlidesReplaceUpload')}
+                </button>
+              ) : null}
+              {canSlides && hasOverride && onResetPptx ? (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="progress-stepper-context-menu-item"
+                  disabled={menuBusy}
+                  onClick={() =>
+                    void runAction(() => onResetPptx(menu.sectionId))
+                  }
+                >
+                  {t('bulletin.editSlidesReset')}
+                </button>
+              ) : null}
+              {canSlides && onStepVisibilityChange ? (
+                <>
+                  <div className="progress-stepper-context-menu-sep" role="separator" />
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="progress-stepper-context-menu-item"
+                    disabled={menuBusy}
+                    onClick={() =>
+                      void runAction(() => {
+                        onStepVisibilityChange(menu.sectionId, isHidden);
+                      })
+                    }
+                  >
+                    {isHidden
+                      ? t('bulletin.sectionShow')
+                      : t('bulletin.sectionHide')}
+                  </button>
+                </>
+              ) : null}
+              {!canSlides ? (
+                <p className="progress-stepper-context-menu-empty">
+                  {t('bulletin.sectionContextMenuEmpty')}
+                </p>
+              ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
     </nav>
   );
 }

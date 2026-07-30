@@ -23,7 +23,6 @@ import {
 } from '../components/bulletin/BulletinWizardSteps';
 import ProgressStepper from '../components/ProgressStepper';
 import BulletinSectionPptEditor from '../components/bulletin/BulletinSectionPptEditor';
-import BulletinSectionReplaceBanner from '../components/bulletin/BulletinSectionReplaceBanner';
 import { useBulletinLocalDraftSync } from '../hooks/useBulletinLocalDraftSync';
 import { useBulletinRealtime } from '../hooks/useBulletinRealtime';
 import { useBulletinScripturePersistence } from '../hooks/useBulletinScripturePersistence';
@@ -33,8 +32,14 @@ import { resolveAvailableSundayIso, upcomingSundayIso } from '../lib/bulletin-da
 import {
   isBulletinSectionVisible,
   resolveHiddenSections,
+  setBulletinSectionVisible,
   BULLETIN_SECTION_TEMPLATE_SLIDES,
 } from '../lib/bulletin-section-visibility';
+import {
+  bulletinSectionLabel,
+  clearBulletinSectionPptx,
+  replaceBulletinSectionPptx,
+} from '../lib/bulletin-section-pptx';
 import { withTemplateFieldDefaults } from '../lib/bulletin-template-field-defaults';
 import {
   BULLETIN_NAV_SECTIONS,
@@ -215,6 +220,8 @@ export default function BulletinPage() {
         depth: section.depth,
         groupOnly: section.groupOnly,
         hasChildren: section.hasChildren,
+        hasTemplateSlides: (BULLETIN_SECTION_TEMPLATE_SLIDES[section.id]?.length ?? 0) > 0,
+        hasPptxOverride: Boolean(draft?.sectionPptxOverrides?.[section.id]),
       })),
     [t, draft],
   );
@@ -637,11 +644,72 @@ export default function BulletinPage() {
     setMessage(t('bulletin.editSlidesSaved'));
   };
 
+  const handleSectionVisibilityChange = useCallback(
+    (sectionId: string, visible: boolean) => {
+      if (!draft) return;
+      const hiddenSections = setBulletinSectionVisible(draft.hiddenSections, sectionId, visible);
+      const patch = {
+        hiddenSections,
+        skipTestimonyWeek: hiddenSections.includes('testimony_week'),
+        skipDepartmentReports: hiddenSections.includes('department_reports'),
+      };
+      setDraft((prev) => (prev ? { ...prev, ...patch } : prev));
+
+      if (visible) {
+        selectNavSection(sectionId);
+        window.setTimeout(() => setPreviewScrollBump((b) => b + 1), 280);
+      }
+
+      if (!canManage) return;
+      void updateBulletin(draft.id, patch)
+        .then((updated) => {
+          setDraft(withHiddenSections(updated));
+          setMessage(t('bulletin.saved'));
+        })
+        .catch((err) => {
+          setError(err instanceof Error ? err.message : String(err));
+        });
+    },
+    [canManage, draft, selectNavSection, t],
+  );
+
+  const handleReplaceSectionPptx = useCallback(
+    async (sectionId: string, file: File) => {
+      if (!draft || !canManage) return;
+      try {
+        setError(null);
+        const label = bulletinSectionLabel(sectionId, t);
+        const updated = await replaceBulletinSectionPptx(draft, sectionId, file, label);
+        handleSectionPptxSaved(updated);
+        selectNavSection(sectionId);
+      } catch (err) {
+        const code = err instanceof Error ? err.message : 'upload_failed';
+        setError(friendlyError(code === 'invalid_pptx' ? 'invalid_pptx' : code, t));
+      }
+    },
+    [canManage, draft, selectNavSection, t],
+  );
+
+  const handleResetSectionPptx = useCallback(
+    async (sectionId: string) => {
+      if (!draft || !canManage) return;
+      try {
+        setError(null);
+        const updated = await clearBulletinSectionPptx(draft, sectionId);
+        handleSectionPptxSaved(updated);
+        selectNavSection(sectionId);
+      } catch (err) {
+        setError(friendlyError(err instanceof Error ? err.message : 'update_failed', t));
+      }
+    },
+    [canManage, draft, selectNavSection, t],
+  );
+
   const renderStepPanel = () => {
     if (!draft) return null;
 
     if (activeSectionReadonly) {
-      // 模板固定页：中间无需表单/说明；显示与改幻灯片用左侧入口即可
+      // 模板固定页：中间无需表单；分区操作在左侧右键菜单
       return null;
     }
 
@@ -796,11 +864,14 @@ export default function BulletinPage() {
                 currentIndex={navCurrentIndex}
                 previewIndex={navPreviewIndex}
                 orientation="vertical"
-                canEditSlides={canManage}
+                canManage={canManage}
                 onEditSlides={(sectionId) => {
                   selectNavSection(sectionId);
                   openEditSlides(sectionId);
                 }}
+                onReplacePptx={handleReplaceSectionPptx}
+                onResetPptx={handleResetSectionPptx}
+                onStepVisibilityChange={handleSectionVisibilityChange}
                 onStepSelect={(index) => {
                   const section = BULLETIN_NAV_SECTIONS[index];
                   if (!section) return;
@@ -813,15 +884,6 @@ export default function BulletinPage() {
                     <span className="preview-spinner bulletin-section-syncing-spinner" />
                     <span>{t('bulletin.sectionSyncing')}</span>
                   </div>
-                ) : null}
-                {canManage &&
-                !activeSectionReadonly &&
-                (BULLETIN_SECTION_TEMPLATE_SLIDES[activeSectionId]?.length ?? 0) > 0 ? (
-                  <BulletinSectionReplaceBanner
-                    sectionId={activeSectionId}
-                    draft={draft}
-                    onSaved={handleSectionPptxSaved}
-                  />
                 ) : null}
                 {renderStepPanel()}
               </div>

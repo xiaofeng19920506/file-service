@@ -247,11 +247,17 @@ const en: MessageTree = {
     slideOptions: 'Slide options',
     sectionVisible: 'Show this section',
     sectionVisibleHint:
-      'Uncheck to omit this section from the preview and exported PPT. Checking updates the preview immediately and auto-saves.',
+      'When hidden, this section is omitted from the preview and exported PPT. Changes update the preview immediately and auto-save.',
+    sectionShow: 'Show section',
+    sectionHide: 'Hide section',
+    sectionContextMenu: 'Section actions',
+    sectionContextMenuHint:
+      'Right-click for section actions (edit slides, upload replace, show/hide, etc.)',
+    sectionContextMenuEmpty: 'No actions for this section',
     previewSectionHiddenHint:
-      'This section is hidden, so it has no slides in the preview. Check “Show” on the left — Communion is template slides 10–13; Welcome is slide 14. They are never mixed.',
+      'This section is hidden, so it has no slides in the preview. Right-click the section on the left and choose “Show section” — Communion is template slides 10–13; Welcome is slide 14. They are never mixed.',
     sectionVisibleNavHint:
-      'Each section has “Edit slides” on the left; you can also upload a PPTX above the form to replace the whole section.',
+      'Right-click a section on the left (or tap ⋯) to edit slides, upload a PPT to replace it, restore the template, or show/hide it.',
     editSlidesOpenEditor: 'Open slide editor',
     editSlidesOpenHint:
       'Edit text and images in the browser, or upload a PPTX to replace this whole section (page count may change).',
@@ -259,9 +265,9 @@ const en: MessageTree = {
     editSlidesReplaceUploadHint:
       'Pick a local .pptx to replace this section (preview and export update immediately)',
     editSlidesReplaceHint:
-      'Upload a PPTX to replace this section. For in-browser editing, use “Edit slides” on the left.',
+      'Upload a PPTX to replace this section. For in-browser editing, use “Edit slides” in the section menu.',
     editSlidesReplacedHint:
-      'This section uses a custom PPT. Keep editing via “Edit slides” on the left, or restore the template.',
+      'This section uses a custom PPT. Keep editing via the section menu, or restore the template.',
     skipTestimony: 'Skip testimony week slide (16)',
     skipDepartment: 'Skip department reports slide (36)',
     meetingVariant: 'Weekly meeting layout',
