@@ -5,7 +5,9 @@ import { useI18n } from '../../i18n';
 import BulletinScriptureReferenceFields from './BulletinScriptureReferenceFields';
 import {
   BIRTHDAY_NAME_MAX,
+  arrangeBirthdayNames,
   joinBirthdayNames,
+  moveBirthdayName,
   parseBirthdayNames,
 } from '../../lib/bulletin-birthday';
 
@@ -207,6 +209,8 @@ export function BulletinBirthdayStep({
     onPatch('birthdayNames', joinBirthdayNames(uiRows));
   };
 
+  const filledCount = rows.map((s) => s.trim()).filter(Boolean).length;
+
   return (
     <StepShell titleKey="bulletin.steps.birthdayTitle" introKey="bulletin.steps.birthdayIntro">
       <TextField
@@ -233,28 +237,70 @@ export function BulletinBirthdayStep({
                   commitNames(next);
                 }}
               />
-              {canEdit && rows.length > 1 ? (
-                <button
-                  type="button"
-                  className="btn-secondary btn-sm"
-                  onClick={() => {
-                    commitNames(rows.filter((_, i) => i !== index));
-                  }}
-                >
-                  {t('bulletin.removeBirthdayName')}
-                </button>
+              {canEdit ? (
+                <div className="bulletin-birthday-name-actions">
+                  <button
+                    type="button"
+                    className="btn-secondary btn-sm"
+                    disabled={index === 0}
+                    aria-label={t('bulletin.moveBirthdayNameUp')}
+                    onClick={() => commitNames(moveBirthdayName(rows, index, index - 1))}
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-secondary btn-sm"
+                    disabled={index >= rows.length - 1}
+                    aria-label={t('bulletin.moveBirthdayNameDown')}
+                    onClick={() => commitNames(moveBirthdayName(rows, index, index + 1))}
+                  >
+                    ↓
+                  </button>
+                  {rows.length > 1 ? (
+                    <button
+                      type="button"
+                      className="btn-secondary btn-sm"
+                      onClick={() => {
+                        commitNames(rows.filter((_, i) => i !== index));
+                      }}
+                    >
+                      {t('bulletin.removeBirthdayName')}
+                    </button>
+                  ) : null}
+                </div>
               ) : null}
             </div>
           ))}
         </div>
-        {canEdit && rows.length < BIRTHDAY_NAME_MAX ? (
-          <button
-            type="button"
-            className="btn-secondary btn-sm"
-            onClick={() => commitNames([...rows, ''])}
-          >
-            {t('bulletin.addBirthdayName')}
-          </button>
+        {canEdit ? (
+          <div className="bulletin-birthday-names-toolbar">
+            {rows.length < BIRTHDAY_NAME_MAX ? (
+              <button
+                type="button"
+                className="btn-secondary btn-sm"
+                onClick={() => commitNames([...rows, ''])}
+              >
+                {t('bulletin.addBirthdayName')}
+              </button>
+            ) : null}
+            {filledCount >= 2 ? (
+              <button
+                type="button"
+                className="btn-secondary btn-sm"
+                onClick={() => {
+                  const arranged = arrangeBirthdayNames(rows);
+                  // 保留尾部空行，方便继续添加
+                  const emptyTail = rows.length - filledCount;
+                  commitNames(
+                    emptyTail > 0 ? [...arranged, ...Array(emptyTail).fill('')] : arranged,
+                  );
+                }}
+              >
+                {t('bulletin.arrangeBirthdayNames')}
+              </button>
+            ) : null}
+          </div>
         ) : null}
       </div>
     </StepShell>

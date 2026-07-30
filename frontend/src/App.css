@@ -6310,6 +6310,20 @@
   font: inherit;
 }
 
+.bulletin-birthday-name-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.bulletin-birthday-names-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+
 .bulletin-announcement-block {
   display: flex;
   flex-direction: column;
