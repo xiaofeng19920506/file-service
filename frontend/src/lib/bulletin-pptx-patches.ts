@@ -168,6 +168,42 @@ export function buildBirthdaySlideReplacements(
 }
 
 /**
+ * 同工会 P31：
+ * - 页眉「2026年6」+「月份同工會」→ 写 index 0
+ * - 日期碎片「下主日(」「6」「/21/2026」」)於」→ 整段写入 3，清空 4/5，6 改为「於」
+ * - 时间「12:45 pm- 2:00 pm 」→ index 9
+ */
+export function buildStaffMeetingReplacements(bulletin: {
+  staffMeetingYear?: string;
+  staffMeetingMonth?: string;
+  staffMeetingDate?: string;
+  staffMeetingStartTime?: string;
+  staffMeetingEndTime?: string;
+}): { textIndex: number; text: string }[] {
+  const reps: { textIndex: number; text: string }[] = [];
+  const year = bulletin.staffMeetingYear?.trim() ?? '';
+  const month = bulletin.staffMeetingMonth?.trim() ?? '';
+  if (year && month) {
+    reps.push({ textIndex: 0, text: `${year}年${month}` });
+  }
+  const date = bulletin.staffMeetingDate?.trim() ?? '';
+  if (date) {
+    reps.push({ textIndex: 3, text: date });
+    reps.push({ textIndex: 4, text: '' });
+    reps.push({ textIndex: 5, text: '' });
+    reps.push({ textIndex: 6, text: '於' });
+  }
+  const start = bulletin.staffMeetingStartTime?.trim() ?? '';
+  const end = bulletin.staffMeetingEndTime?.trim() ?? '';
+  if (start || end) {
+    const time =
+      start && end ? `${start}- ${end} ` : start ? `${start} ` : `${end} `;
+    reps.push({ textIndex: 9, text: time });
+  }
+  return reps;
+}
+
+/**
  * 奉献页 P19 日期行被拆成多 run：`上週奉獻` `:` `0` `6/07` `/20` `2` `6`
  * 必须把完整日期写入碎片起始 run（7），并清空后续碎片，否则会拼成双日期。
  */
@@ -321,6 +357,10 @@ export function patchesForStep(stepId: string, bulletin: WeeklyBulletin): SlideT
           replacements: [{ textIndex: 3, text: bulletin.baptismText.trim() }],
         });
       }
+      const staffReps = buildStaffMeetingReplacements(bulletin);
+      if (staffReps.length) {
+        patches.push({ slideNumber: 31, replacements: staffReps });
+      }
       if (bulletin.testimonyShareDate.trim()) {
         patches.push({
           slideNumber: 33,
@@ -360,6 +400,9 @@ export function bulletinDynamicTextOverrides(bulletin: WeeklyBulletin): Bulletin
   // 公告由 applyAnnouncementPagesToZip 专门处理（含加页），不走 slideTextOverrides
   const baptism = bulletin.baptismText?.trim() ?? '';
   if (baptism) out.push({ slide: 27, textIndex: 3, text: baptism });
+  for (const rep of buildStaffMeetingReplacements(bulletin)) {
+    out.push({ slide: 31, textIndex: rep.textIndex, text: rep.text });
+  }
   const testimony = bulletin.testimonyShareDate?.trim() ?? '';
   if (testimony) out.push({ slide: 33, textIndex: 0, text: testimony });
   const roster = bulletin.serviceRosterText?.trim() ?? '';

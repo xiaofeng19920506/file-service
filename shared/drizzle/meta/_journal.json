@@ -204,6 +204,13 @@
       "when": 1753545600000,
       "tag": "0030_bulletin_offering_amounts",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1753833600000,
+      "tag": "0031_bulletin_staff_meeting_fields",
+      "breakpoints": true
     }
   ]
 }

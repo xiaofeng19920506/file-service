@@ -208,6 +208,13 @@ export default {
     showPreServiceChairName: '在幻灯片上显示主席姓名',
     preServiceChairNamesHint: '勾选后填写姓名，将显示在会前祷告页（仅 1 页）标题下方。',
     staffMeeting: '同工会日期',
+    staffMeetingYear: '标题年份',
+    staffMeetingMonth: '标题月份',
+    staffMeetingDate: '同工会日期',
+    staffMeetingStartTime: '开始时间',
+    staffMeetingEndTime: '结束时间',
+    staffMeetingHint:
+      '页眉显示为「年份年月份」+「月份同工會」；日期可填「下主日(6/21/2026)」；时间如 12:45 pm / 2:00 pm。',
     testimonyShare: '见证分享日期',
     serviceRoster: '下主日服事轮值',
     baptism: '受洗公告',

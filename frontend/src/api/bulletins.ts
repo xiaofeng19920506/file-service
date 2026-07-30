@@ -32,6 +32,10 @@ export type WeeklyBulletin = {
   showPreServiceChairName: boolean;
   preServiceChairNames: string;
   staffMeetingDate: string;
+  staffMeetingYear: string;
+  staffMeetingMonth: string;
+  staffMeetingStartTime: string;
+  staffMeetingEndTime: string;
   testimonyShareDate: string;
   serviceRosterText: string;
   baptismText: string;
@@ -70,6 +74,10 @@ export type BulletinPatch = Partial<{
   showPreServiceChairName: boolean;
   preServiceChairNames: string;
   staffMeetingDate: string;
+  staffMeetingYear: string;
+  staffMeetingMonth: string;
+  staffMeetingStartTime: string;
+  staffMeetingEndTime: string;
   testimonyShareDate: string;
   serviceRosterText: string;
   baptismText: string;

@@ -122,6 +122,9 @@ export function bulletinSectionContentRev(
       return '';
     case 'birthday':
       return [params.birthdayMonth ?? '', params.birthdayNames ?? ''].join('\0');
+    case 'staff_meeting':
+      // 同工会文字走 slideTextOverrides；结构指纹已含 overrides，此处占位避免误用 full
+      return '';
     case 'announcements':
       return (params.announcements ?? [])
         .map((a) => `${a.title}\u0002${a.body}`)
@@ -143,7 +146,7 @@ export function bulletinSectionContentRev(
 /**
  * 前端 PNG 缓存代数：与后端 SLIDE_PREVIEW_PATCH_REV 对齐 bump，避免错页缓存残留。
  */
-export const BULLETIN_PREVIEW_BLOB_GEN = 'v56';
+export const BULLETIN_PREVIEW_BLOB_GEN = 'v57';
 
 /**
  * 前端 PNG 缓存 key：结构 + 本分区内容 + 本页文字覆盖。

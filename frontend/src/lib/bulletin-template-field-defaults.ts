@@ -18,7 +18,11 @@ export const BULLETIN_TEMPLATE_FIELD_DEFAULTS = {
   testimonyShareDate: '下主日8/30見證分享',
   serviceRosterText: 'Michelle, 洪雪吟, 嘉文',
   baptismText: '7月5日主日',
+  staffMeetingYear: '2026',
+  staffMeetingMonth: '6',
   staffMeetingDate: '下主日(6/21/2026)',
+  staffMeetingStartTime: '12:45 pm',
+  staffMeetingEndTime: '2:00 pm',
 } as const;
 
 const TEMPLATE_ANNOUNCEMENTS: Omit<BulletinAnnouncement, 'id' | 'sortOrder'>[] = [
@@ -86,9 +90,25 @@ export function withTemplateFieldDefaults(bulletin: WeeklyBulletin): WeeklyBulle
       BULLETIN_TEMPLATE_FIELD_DEFAULTS.serviceRosterText,
     ),
     baptismText: pickText(bulletin.baptismText, BULLETIN_TEMPLATE_FIELD_DEFAULTS.baptismText),
+    staffMeetingYear: pickText(
+      bulletin.staffMeetingYear,
+      BULLETIN_TEMPLATE_FIELD_DEFAULTS.staffMeetingYear,
+    ),
+    staffMeetingMonth: pickText(
+      bulletin.staffMeetingMonth,
+      BULLETIN_TEMPLATE_FIELD_DEFAULTS.staffMeetingMonth,
+    ),
     staffMeetingDate: pickText(
       bulletin.staffMeetingDate,
       BULLETIN_TEMPLATE_FIELD_DEFAULTS.staffMeetingDate,
+    ),
+    staffMeetingStartTime: pickText(
+      bulletin.staffMeetingStartTime,
+      BULLETIN_TEMPLATE_FIELD_DEFAULTS.staffMeetingStartTime,
+    ),
+    staffMeetingEndTime: pickText(
+      bulletin.staffMeetingEndTime,
+      BULLETIN_TEMPLATE_FIELD_DEFAULTS.staffMeetingEndTime,
     ),
     announcements,
   };

@@ -216,6 +216,13 @@ const en: MessageTree = {
     showPreServiceChairName: 'Show chair name on slide',
     preServiceChairNamesHint: 'When checked, the name appears under the title on the single pre-service prayer slide.',
     staffMeeting: 'Staff meeting date',
+    staffMeetingYear: 'Title year',
+    staffMeetingMonth: 'Title month',
+    staffMeetingDate: 'Staff meeting date',
+    staffMeetingStartTime: 'Start time',
+    staffMeetingEndTime: 'End time',
+    staffMeetingHint:
+      'Header becomes “{year}年{month}月份同工會”. Date e.g. 下主日(6/21/2026); times e.g. 12:45 pm / 2:00 pm.',
     testimonyShare: 'Testimony share date',
     serviceRoster: 'Next Sunday roster',
     baptism: 'Baptism announcement',

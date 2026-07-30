@@ -80,7 +80,7 @@ const slidePreviewCache = new Map<string, Buffer>();
 const patchedPptxCache = new Map<string, Buffer>();
 /** 预览补丁版本；v35=分区 override 支持增删页（splice 变长） */
 /** v52：圣餐英文经文略加大至 28pt，减少底部空白 */
-const SLIDE_PREVIEW_PATCH_REV = 'v56';
+const SLIDE_PREVIEW_PATCH_REV = 'v57';
 
 async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   const chunks: Buffer[] = [];
@@ -293,6 +293,10 @@ export type WeeklyBulletinDto = {
   showPreServiceChairName: boolean;
   preServiceChairNames: string;
   staffMeetingDate: string;
+  staffMeetingYear: string;
+  staffMeetingMonth: string;
+  staffMeetingStartTime: string;
+  staffMeetingEndTime: string;
   testimonyShareDate: string;
   serviceRosterText: string;
   baptismText: string;
@@ -359,6 +363,10 @@ async function mapBulletin(
     showPreServiceChairName: row.showPreServiceChairName,
     preServiceChairNames: row.preServiceChairNames,
     staffMeetingDate: row.staffMeetingDate,
+    staffMeetingYear: row.staffMeetingYear,
+    staffMeetingMonth: row.staffMeetingMonth,
+    staffMeetingStartTime: row.staffMeetingStartTime,
+    staffMeetingEndTime: row.staffMeetingEndTime,
     testimonyShareDate: row.testimonyShareDate,
     serviceRosterText: row.serviceRosterText,
     baptismText: row.baptismText,
@@ -394,6 +402,10 @@ type BulletinPatchBody = Partial<{
   showPreServiceChairName: boolean;
   preServiceChairNames: string;
   staffMeetingDate: string;
+  staffMeetingYear: string;
+  staffMeetingMonth: string;
+  staffMeetingStartTime: string;
+  staffMeetingEndTime: string;
   testimonyShareDate: string;
   serviceRosterText: string;
   baptismText: string;
@@ -1146,6 +1158,10 @@ export function registerBulletinRoutes(
       }
       assignText('preServiceChairNames', 'preServiceChairNames');
       assignText('staffMeetingDate', 'staffMeetingDate');
+      assignText('staffMeetingYear', 'staffMeetingYear');
+      assignText('staffMeetingMonth', 'staffMeetingMonth');
+      assignText('staffMeetingStartTime', 'staffMeetingStartTime');
+      assignText('staffMeetingEndTime', 'staffMeetingEndTime');
       assignText('testimonyShareDate', 'testimonyShareDate');
       assignText('serviceRosterText', 'serviceRosterText');
       assignText('baptismText', 'baptismText');

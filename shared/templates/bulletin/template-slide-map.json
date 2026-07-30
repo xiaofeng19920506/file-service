@@ -220,6 +220,16 @@
       "fields": [{ "key": "baptismText", "textIndex": 3, "example": "7月5日主日" }]
     },
     {
+      "slide": 31,
+      "fields": [
+        { "key": "staffMeetingYear", "textIndex": 0, "example": "2026", "notes": "与 month 拼成「2026年6」" },
+        { "key": "staffMeetingMonth", "textIndex": 0, "example": "6" },
+        { "key": "staffMeetingDate", "textIndex": 3, "example": "下主日(6/21/2026)", "notes": "清空碎片 4–5，index 6 改为「於」" },
+        { "key": "staffMeetingStartTime", "textIndex": 9, "example": "12:45 pm" },
+        { "key": "staffMeetingEndTime", "textIndex": 9, "example": "2:00 pm" }
+      ]
+    },
+    {
       "slide": 33,
       "fields": [{ "key": "testimonyShareDate", "textIndex": 0, "example": "下主日8/30見證分享" }]
     },

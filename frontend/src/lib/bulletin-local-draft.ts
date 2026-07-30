@@ -19,6 +19,10 @@ export const BULLETIN_LOCAL_SYNC_KEYS = [
   'offeringOtherAmount',
   'baptismText',
   'staffMeetingDate',
+  'staffMeetingYear',
+  'staffMeetingMonth',
+  'staffMeetingStartTime',
+  'staffMeetingEndTime',
   'testimonyShareDate',
   'serviceRosterText',
   'weeklyMeetingVariant',
@@ -65,6 +69,10 @@ export function fieldToSectionId(key: BulletinLocalSyncKey | string): string | n
     case 'baptismText':
       return 'announcements';
     case 'staffMeetingDate':
+    case 'staffMeetingYear':
+    case 'staffMeetingMonth':
+    case 'staffMeetingStartTime':
+    case 'staffMeetingEndTime':
     case 'testimonyShareDate':
     case 'serviceRosterText':
     case 'weeklyMeetingVariant':

@@ -557,13 +557,44 @@ export function BulletinMoreStep({
   return (
     <StepShell titleKey={titleKey} introKey={introKey}>
       {show('staff_meeting') ? (
-        <TextField
-          label={t('bulletin.staffMeeting')}
-          value={draft.staffMeetingDate}
-          disabled={!canEdit}
-          commitOnBlur
-          onChange={(v) => onPatch('staffMeetingDate', v)}
-        />
+        <>
+          <TextField
+            label={t('bulletin.staffMeetingYear')}
+            value={draft.staffMeetingYear ?? ''}
+            disabled={!canEdit}
+            commitOnBlur
+            onChange={(v) => onPatch('staffMeetingYear', v)}
+          />
+          <TextField
+            label={t('bulletin.staffMeetingMonth')}
+            value={draft.staffMeetingMonth ?? ''}
+            disabled={!canEdit}
+            commitOnBlur
+            onChange={(v) => onPatch('staffMeetingMonth', v)}
+          />
+          <TextField
+            label={t('bulletin.staffMeetingDate')}
+            value={draft.staffMeetingDate}
+            disabled={!canEdit}
+            commitOnBlur
+            onChange={(v) => onPatch('staffMeetingDate', v)}
+          />
+          <TextField
+            label={t('bulletin.staffMeetingStartTime')}
+            value={draft.staffMeetingStartTime ?? ''}
+            disabled={!canEdit}
+            commitOnBlur
+            onChange={(v) => onPatch('staffMeetingStartTime', v)}
+          />
+          <TextField
+            label={t('bulletin.staffMeetingEndTime')}
+            value={draft.staffMeetingEndTime ?? ''}
+            disabled={!canEdit}
+            commitOnBlur
+            onChange={(v) => onPatch('staffMeetingEndTime', v)}
+          />
+          <p className="bulletin-field-hint">{t('bulletin.staffMeetingHint')}</p>
+        </>
       ) : null}
       {show('future_testimony') ? (
         <TextField

@@ -405,6 +405,11 @@ export default function BulletinPage() {
         lastWeekOfferingDate: 'offering',
         offeringTitheAmount: 'offering',
         offeringOtherAmount: 'offering',
+        staffMeetingYear: 'staff_meeting',
+        staffMeetingMonth: 'staff_meeting',
+        staffMeetingDate: 'staff_meeting',
+        staffMeetingStartTime: 'staff_meeting',
+        staffMeetingEndTime: 'staff_meeting',
       };
       const slidesForField: Partial<Record<keyof WeeklyBulletin, number[]>> = {
         serviceDate: [1],
@@ -417,6 +422,11 @@ export default function BulletinPage() {
         lastWeekOfferingDate: [19, 20],
         offeringTitheAmount: [19, 20],
         offeringOtherAmount: [19, 20],
+        staffMeetingYear: [31],
+        staffMeetingMonth: [31],
+        staffMeetingDate: [31],
+        staffMeetingStartTime: [31],
+        staffMeetingEndTime: [31],
       };
       const sectionId = sectionForField[key];
       if (sectionId && next.sectionPptxOverrides?.[sectionId]) {
@@ -559,6 +569,10 @@ export default function BulletinPage() {
         birthdayMonth: draft.birthdayMonth,
         birthdayNames: draft.birthdayNames,
         staffMeetingDate: draft.staffMeetingDate,
+        staffMeetingYear: draft.staffMeetingYear,
+        staffMeetingMonth: draft.staffMeetingMonth,
+        staffMeetingStartTime: draft.staffMeetingStartTime,
+        staffMeetingEndTime: draft.staffMeetingEndTime,
         testimonyShareDate: draft.testimonyShareDate,
         serviceRosterText: draft.serviceRosterText,
         baptismText: draft.baptismText,

@@ -238,6 +238,14 @@ export const weeklyBulletins = pgTable('weekly_bulletins', {
   /** 主席姓名（勾选显示时写入第 2 页；第 3 页名单页会从 deck 删除） */
   preServiceChairNames: text('pre_service_chair_names').notNull().default(''),
   staffMeetingDate: text('staff_meeting_date').notNull().default(''),
+  /** 同工会页眉：年份，如 2026 →「2026年6」 */
+  staffMeetingYear: text('staff_meeting_year').notNull().default(''),
+  /** 同工会页眉：月份数字，如 6 */
+  staffMeetingMonth: text('staff_meeting_month').notNull().default(''),
+  /** 同工会开始时间，如 12:45 pm */
+  staffMeetingStartTime: text('staff_meeting_start_time').notNull().default(''),
+  /** 同工会结束时间，如 2:00 pm */
+  staffMeetingEndTime: text('staff_meeting_end_time').notNull().default(''),
   testimonyShareDate: text('testimony_share_date').notNull().default(''),
   serviceRosterText: text('service_roster_text').notNull().default(''),
   baptismText: text('baptism_text').notNull().default(''),
