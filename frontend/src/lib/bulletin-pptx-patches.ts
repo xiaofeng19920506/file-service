@@ -12,7 +12,7 @@ import {
 import { expandScriptureSlidesInPptx } from './bulletin-scripture-pptx-expand';
 import { expandAnnouncementSlidesInPptx } from './bulletin-announcement-pptx-expand';
 import { applyBirthdayNameGridToSlideXml } from './bulletin-birthday';
-import { stabilizeOfferingReportSlideXml } from '@file-service/shared';
+import { stabilizeOfferingReportSlideXml } from './bulletin-offering-layout';
 import JSZip from './jszip';
 
 /** 原版模板文件名（`06_14_2026.pptx`，背景与图片均以此为准） */
