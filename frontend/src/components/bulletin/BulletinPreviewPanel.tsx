@@ -71,7 +71,6 @@ export default function BulletinPreviewPanel({
   // 用值指纹当依赖：draft 对象引用变化但内容没变时（如 SSE 刷新），不重建 deck，
   // 否则预览列表会被反复重置、后面的页一直停在加载中。
   const hiddenSectionsKey = (bulletin.hiddenSections ?? []).join(',');
-  const slideTextOverridesKey = JSON.stringify(bulletin.slideTextOverrides ?? []);
   const sectionPptxKey = sectionPptxOverridesKey(bulletin.sectionPptxOverrides);
 
   useEffect(() => {
@@ -92,29 +91,24 @@ export default function BulletinPreviewPanel({
       })();
     };
 
+    // 结构变更才重建 plan；生日名单等内容字段不在 deps 里（见下方）
     debounceTimer = window.setTimeout(run, 80);
 
     return () => {
       cancelled = true;
       window.clearTimeout(debounceTimer);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- bulletin 以下方值指纹为准
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅结构相关指纹；内容改动不触发 deck-plan/LO 预热
   }, [
     bulletin.id,
-    bulletin.serviceDate,
-    bulletin.serviceTime,
     bulletin.scriptureBook,
     bulletin.scriptureReference,
-    bulletin.showPreServiceChairName,
-    bulletin.preServiceChairNames,
-    bulletin.birthdayMonth,
-    bulletin.birthdayNames,
-    bulletin.verseOfWeek,
     hiddenSectionsKey,
     bulletin.skipTestimonyWeek,
     bulletin.skipDepartmentReports,
     bulletin.weeklyMeetingVariant,
-    slideTextOverridesKey,
+    // 仅条数影响加页结构；正文改动不重建 plan
+    (bulletin.announcements ?? []).length,
     sectionPptxKey,
   ]);
 

@@ -110,6 +110,7 @@ export default function BulletinPptSlidePreview({
     let cancelled = false;
     let createdUrl: string | null = null;
     let attempt = 0;
+    let timer = 0;
 
     const applyBlob = (blob: Blob) => {
       if (cancelled) return;
@@ -130,16 +131,20 @@ export default function BulletinPptSlidePreview({
       };
     }
 
+    // 缓存未命中：保留旧图，避免打字时整页转圈；停输入后再拉新 PNG
     setLoading(true);
     setUnavailable(false);
-    setPreviewUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return null;
-    });
 
     const priority = schedulePriorityRef.current;
-    const baseDelay = priority === 'high' ? 0 : priority === 'normal' ? 40 : 160;
-    let timer = 0;
+    const hasExistingImage = Boolean(previewUrlRef.current);
+    /** 已有预览时防抖，合并连打；首屏仍尽快拉 */
+    const baseDelay = hasExistingImage
+      ? 520
+      : priority === 'high'
+        ? 0
+        : priority === 'normal'
+          ? 40
+          : 160;
 
     const runFetch = () => {
       void fetchBulletinSlidePreviewPng(slideNumber, patchRef.current, { priority })
@@ -154,11 +159,10 @@ export default function BulletinPptSlidePreview({
             timer = window.setTimeout(runFetch, 400 * attempt);
             return;
           }
-          setPreviewUrl((prev) => {
-            if (prev) URL.revokeObjectURL(prev);
-            return null;
-          });
-          setUnavailable(true);
+          // 失败时若仍有旧图，继续显示旧图；无图才标不可用
+          if (!previewUrlRef.current) {
+            setUnavailable(true);
+          }
           setLoading(false);
         });
     };
@@ -183,8 +187,9 @@ export default function BulletinPptSlidePreview({
   const rootClass = `bulletin-slide-preview${large ? ' bulletin-slide-preview--large' : ''}`;
   const aspectStyle = slideAspectRatioStyle();
   const showLoading = externalLoading || loading || (lazy && !shouldFetch);
+  const showSpinnerOnly = !previewUrl && !unavailable;
 
-  if (!previewUrl && !unavailable) {
+  if (showSpinnerOnly) {
     return (
       <div
         ref={rootRef}
@@ -227,6 +232,11 @@ export default function BulletinPptSlidePreview({
         {/* 不强制 aspect-ratio：由 PNG 固有宽高比撑开，避免容器把画幅压扁/拉宽 */}
         <img className="bulletin-slide-preview-img" src={previewUrl!} alt="" draggable={false} />
         {overlay}
+        {showLoading ? (
+          <div className="bulletin-slide-preview-refresh-overlay" aria-hidden="true">
+            <div className="preview-spinner" />
+          </div>
+        ) : null}
       </div>
     </figure>
   );

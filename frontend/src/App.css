@@ -6970,6 +6970,15 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   transition: opacity 0.15s ease;
 }
 
+.bulletin-slide-preview-refresh-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.18);
+}
+
 .bulletin-slide-preview--large .bulletin-slide-preview-frame {
   width: 100%;
 }

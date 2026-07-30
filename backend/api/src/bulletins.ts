@@ -80,7 +80,7 @@ const slidePreviewCache = new Map<string, Buffer>();
 const patchedPptxCache = new Map<string, Buffer>();
 /** 预览补丁版本；v35=分区 override 支持增删页（splice 变长） */
 /** v52：圣餐英文经文略加大至 28pt，减少底部空白 */
-const SLIDE_PREVIEW_PATCH_REV = 'v55';
+const SLIDE_PREVIEW_PATCH_REV = 'v56';
 
 async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   const chunks: Buffer[] = [];
@@ -229,6 +229,17 @@ function previewPatchCacheSuffix(
     .map((a) => `${a.title}\u0002${a.body}`)
     .join('\u0001');
   return `${q.serviceDate ?? ''}:${q.serviceTime}:${q.scriptureBook}:${q.scriptureReference}:${q.showPreServiceChairName}:${q.preServiceChairNames}:${q.birthdayMonth}:${q.birthdayNames}:${q.verseOfWeek}:${announcementsKey}:${hiddenKey}:${q.weeklyMeetingVariant ?? ''}:${overridesKey}`;
+}
+
+/** 不含生日字段：改名单时可复用整卷补丁，只重写 slide24 */
+function previewPatchStableSuffix(
+  q: PreviewQueryFields,
+  overridesKey: string,
+): string {
+  return previewPatchCacheSuffix(
+    { ...q, birthdayMonth: '', birthdayNames: '' },
+    overridesKey,
+  );
 }
 
 let previewRenderActive = 0;
@@ -533,37 +544,51 @@ async function buildPatchedBulletinPptxBuf(opts: {
     .map(([k, v]) => `${k}:${v}`)
     .join('|');
   const patchKey = `${SLIDE_PREVIEW_PATCH_REV}:pptx:${previewPatchCacheSuffix(q, overridesKey)}:sec:${sectionKey}`;
+  const stableKey = `${SLIDE_PREVIEW_PATCH_REV}:pptx-stable:${previewPatchStableSuffix(q, overridesKey)}:sec:${sectionKey}`;
   let pptxBuf: Buffer | undefined = patchedPptxCache.get(patchKey);
   if (!pptxBuf) {
     const fromDisk = await readBulletinPreviewDiskCache(patchKey);
     if (fromDisk) {
       pptxBuf = fromDisk;
-      rememberLru(patchedPptxCache, patchKey, fromDisk, 24);
+      rememberLru(patchedPptxCache, patchKey, fromDisk, 48);
     }
   }
-  if (!pptxBuf) {
+  if (pptxBuf) {
+    return { pptxBuf, sectionKey, overridesKey };
+  }
+
+  // 生日名单连改时：复用「无生日」底稿，只重写 slide24（避免每次全量 patch）
+  let stableBuf: Buffer | undefined = patchedPptxCache.get(stableKey);
+  if (!stableBuf) {
+    const fromDisk = await readBulletinPreviewDiskCache(stableKey);
+    if (fromDisk) {
+      stableBuf = fromDisk;
+      rememberLru(patchedPptxCache, stableKey, fromDisk, 48);
+    }
+  }
+
+  const buildFull = async (query: PreviewQueryFields): Promise<Buffer> => {
     const templateBuf = await readFile(join(BULLETIN_TEMPLATE_DIR, BULLETIN_TEMPLATE_FILE));
     let built = Buffer.from(
       await patchBulletinPreviewInPptx(templateBuf, {
-        serviceDate: q.serviceDate,
-        serviceTime: q.serviceTime,
-        scriptureBook: q.scriptureBook,
-        scriptureReference: q.scriptureReference,
-        showPreServiceChairName: q.showPreServiceChairName,
-        preServiceChairNames: q.preServiceChairNames,
-        birthdayMonth: q.birthdayMonth,
-        birthdayNames: q.birthdayNames,
-        verseOfWeek: q.verseOfWeek,
-        announcements: q.announcements,
-        hiddenSections: q.hiddenSections,
-        weeklyMeetingVariant: q.weeklyMeetingVariant,
+        serviceDate: query.serviceDate,
+        serviceTime: query.serviceTime,
+        scriptureBook: query.scriptureBook,
+        scriptureReference: query.scriptureReference,
+        showPreServiceChairName: query.showPreServiceChairName,
+        preServiceChairNames: query.preServiceChairNames,
+        birthdayMonth: query.birthdayMonth,
+        birthdayNames: query.birthdayNames,
+        verseOfWeek: query.verseOfWeek,
+        announcements: query.announcements,
+        hiddenSections: query.hiddenSections,
+        weeklyMeetingVariant: query.weeklyMeetingVariant,
         slideTextOverrides,
       }),
     );
     built = Buffer.from(
       await applySectionPptxOverridesToBuf(db, storage, built, sectionOverrides).then(
         async ({ buf, skippedSectionIds }) => {
-          // 历史坏档会让 LibreOffice 整页无字：从 DB 清掉，避免前端一直带着无效 blobId
           if (bulletinId && skippedSectionIds.length) {
             const next = { ...sectionOverrides };
             for (const id of skippedSectionIds) delete next[id];
@@ -577,29 +602,50 @@ async function buildPatchedBulletinPptxBuf(opts: {
         },
       ),
     );
-    // 分区 splice 会整页替换：仅对「未自定义」的分区回写表单字段，避免盖掉上传 PPT。
     if (Object.keys(sectionOverrides).length) {
       built = Buffer.from(
         await reapplyBulletinFormFieldsInPptx(
           built,
           {
-            serviceDate: q.serviceDate,
-            serviceTime: q.serviceTime,
-            showPreServiceChairName: q.showPreServiceChairName,
-            preServiceChairNames: q.preServiceChairNames,
-            birthdayMonth: q.birthdayMonth,
-            birthdayNames: q.birthdayNames,
-            verseOfWeek: q.verseOfWeek,
+            serviceDate: query.serviceDate,
+            serviceTime: query.serviceTime,
+            showPreServiceChairName: query.showPreServiceChairName,
+            preServiceChairNames: query.preServiceChairNames,
+            birthdayMonth: query.birthdayMonth,
+            birthdayNames: query.birthdayNames,
+            verseOfWeek: query.verseOfWeek,
             slideTextOverrides,
           },
           formFieldReapplyOptionsForSectionOverrides(sectionOverrides),
         ),
       );
     }
-    pptxBuf = built;
-    rememberLru(patchedPptxCache, patchKey, built, 24);
-    void writeBulletinPreviewDiskCache(patchKey, built);
+    return built;
+  };
+
+  if (!stableBuf) {
+    // 底稿不含生日文字，供后续名单编辑增量复用
+    stableBuf = await buildFull({ ...q, birthdayMonth: '', birthdayNames: '' });
+    rememberLru(patchedPptxCache, stableKey, stableBuf, 48);
+    void writeBulletinPreviewDiskCache(stableKey, stableBuf);
   }
+
+  if (!q.birthdayMonth && !q.birthdayNames) {
+    pptxBuf = stableBuf;
+  } else {
+    pptxBuf = Buffer.from(
+      await reapplyBulletinFormFieldsInPptx(
+        stableBuf,
+        {
+          birthdayMonth: q.birthdayMonth,
+          birthdayNames: q.birthdayNames,
+        },
+        { skipCover: true, skipPreService: true, skipVerseOfWeek: true },
+      ),
+    );
+  }
+  rememberLru(patchedPptxCache, patchKey, pptxBuf, 48);
+  void writeBulletinPreviewDiskCache(patchKey, pptxBuf);
   return { pptxBuf, sectionKey, overridesKey };
 }
 
@@ -831,22 +877,7 @@ export function registerBulletinRoutes(
       });
 
       const plan = await buildBulletinDeckPlanFromPptxBytes(pptxBuf);
-      // 预热第 1 页（抽单页 + 直接 PNG）
-      if (sofficePreviewUrl && plan.totalSlides > 0) {
-        void (async () => {
-          try {
-            const single = Buffer.from(await extractPresentationSlideAsPptx(pptxBuf, 1));
-            await withPreviewRenderSlot(() =>
-              renderSlidePngViaService(sofficePreviewUrl, single, 1, {
-                timeoutMs: 90_000,
-                retries: 1,
-              }),
-            );
-          } catch (err) {
-            request.log.warn({ err }, 'bulletin preview slide1 warm failed');
-          }
-        })();
-      }
+      // 不再预热第 1 页：会与当前编辑页抢 LibreOffice 槽，拖慢生日等内容预览
       return reply.header('Cache-Control', 'private, no-store').send({
         rev: SLIDE_PREVIEW_PATCH_REV,
         totalSlides: plan.totalSlides,
