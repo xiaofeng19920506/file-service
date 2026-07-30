@@ -14,7 +14,16 @@ import { expandAnnouncementSlidesInPptx } from './bulletin-announcement-pptx-exp
 import { applyBirthdayNameGridToSlideXml } from './bulletin-birthday';
 import { buildServiceRosterReplacements } from './bulletin-roster';
 import { stabilizeOfferingReportSlideXml } from './bulletin-offering-layout';
+import {
+  stabilizeBirthdayTitleSlideXml,
+  stabilizeRotationSlideXml,
+  stabilizeServiceRosterSlideXml,
+  stabilizeStaffMeetingSlideXml,
+  stabilizeTestimonySlideXml,
+} from './bulletin-header-layout';
 import JSZip from './jszip';
+
+export { stabilizeRotationSlideXml } from './bulletin-header-layout';
 
 /** 原版模板文件名（`06_14_2026.pptx`，背景与图片均以此为准） */
 export const BULLETIN_TEMPLATE_FILENAME = '06_14_2026.pptx';
@@ -211,38 +220,6 @@ export function buildTestimonyShareReplacements(bulletin: {
     { textIndex: 0, text: `下主日${date}見證分享` },
     { textIndex: 2, text: date },
   ];
-}
-
-/**
- * P32 标题框原版 y 为负，顶部文字被裁切。
- * 标题带 lt2 浅色填充：y 须为 0 以盖住页顶；增高 + 去内边距 + 略缩字号避免 LO CJK 裁切。
- */
-export function stabilizeRotationSlideXml(xml: string): string {
-  if (!xml.includes('清潔服事輪值表') && !xml.includes('服事輪值表')) return xml;
-  return xml.replace(/<p:sp\b[\s\S]*?<\/p:sp>/g, (shapeXml) => {
-    const isTitle = shapeXml.includes('清潔服事輪值表');
-    const isBody =
-      shapeXml.includes('已張貼在各個佈告欄') || shapeXml.includes('請詢問振成');
-    if (!isTitle && !isBody) return shapeXml;
-    let out = shapeXml;
-    if (isTitle) {
-      out = out.replace(/<a:off x="0" y="-?\d+"\/>/, `<a:off x="0" y="0"/>`);
-      out = out.replace(
-        /(<a:ext cx="9144000" )cy="\d+"\/>/,
-        `$1cy="1100000"/>`,
-      );
-      out = out.replace(/\btIns="\d+"/, 'tIns="0"');
-      out = out.replace(/\bbIns="\d+"/, 'bIns="0"');
-      out = out.replace(/\bsz="4400"/g, 'sz="3600"');
-    }
-    if (isBody) {
-      out = out.replace(
-        /(<a:ext cx="8642700" )cy="\d+"\/>/,
-        `$1cy="3400000"/>`,
-      );
-    }
-    return out;
-  });
 }
 
 /**
@@ -679,20 +656,20 @@ export async function applySlidePatches(
     zip.file(slidePath, nextXml);
   }
 
-  // 奉献报告布局（标题单行、金额同行）在导出路径也套用
+  // 顶栏标题单行 / 防裁切（导出路径与预览 API 对齐）
   {
-    const offerPath = pathBySlide.get(19) ?? 'ppt/slides/slide19.xml';
-    const entry = zip.file(offerPath);
-    if (entry) {
-      zip.file(offerPath, stabilizeOfferingReportSlideXml(await entry.async('string')));
-    }
-  }
-  // 服事轮值表：修正标题框负 y 裁切
-  {
-    const rotPath = pathBySlide.get(32) ?? 'ppt/slides/slide32.xml';
-    const entry = zip.file(rotPath);
-    if (entry) {
-      zip.file(rotPath, stabilizeRotationSlideXml(await entry.async('string')));
+    const specs: { slide: number; fn: (xml: string) => string }[] = [
+      { slide: 19, fn: stabilizeOfferingReportSlideXml },
+      { slide: 24, fn: stabilizeBirthdayTitleSlideXml },
+      { slide: 31, fn: stabilizeStaffMeetingSlideXml },
+      { slide: 32, fn: stabilizeRotationSlideXml },
+      { slide: 33, fn: stabilizeTestimonySlideXml },
+      { slide: 34, fn: stabilizeServiceRosterSlideXml },
+    ];
+    for (const { slide, fn } of specs) {
+      const slidePath = pathBySlide.get(slide) ?? `ppt/slides/slide${slide}.xml`;
+      const entry = zip.file(slidePath);
+      if (entry) zip.file(slidePath, fn(await entry.async('string')));
     }
   }
 

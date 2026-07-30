@@ -22,7 +22,7 @@ describe('buildServiceRosterReplacements', () => {
         serviceRosterCleanNames: '惠美\n悅心\nHelen',
       }),
     ).toEqual([
-      { textIndex: 18, text: '今日(6/14)清潔輪值' },
+      { textIndex: 16, text: '今日(6/14)清潔輪值' },
       { textIndex: 1, text: 'Michelle, 洪雪吟, 嘉文' },
       { textIndex: 0, text: '下主日(6/21)服事輪值' },
       { textIndex: 4, text: '賴建平 ' },

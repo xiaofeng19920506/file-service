@@ -59,6 +59,31 @@ const ROTATION_TITLE_SZ = '3600';
 /** 标题框高度：盖住页顶浅色条，并给字形留足行高 */
 const ROTATION_TITLE_CY = '1100000';
 
+/** 顶栏标题：y=0、加高、去内边距、禁换行、缩字号（浅色填色条勿把 y 调太大） */
+function stabilizeWideHeaderTitleShape(
+  shapeXml: string,
+  opts: {
+    /** 不传则不改 y；传则强制（含负值修正） */
+    y?: string;
+    cy: string;
+    /** 原字号 → 新字号 */
+    szReplacements: ReadonlyArray<readonly [string, string]>;
+  },
+): string {
+  let out = shapeXml;
+  if (opts.y != null) {
+    out = out.replace(/<a:off x="(-?\d+)" y="-?\d+"\/>/, `<a:off x="$1" y="${opts.y}"/>`);
+  }
+  out = out.replace(/(<a:ext cx="9144000" )cy="\d+"\/>/, `$1cy="${opts.cy}"/>`);
+  out = out.replace(/\btIns="\d+"/, 'tIns="0"');
+  out = out.replace(/\bbIns="\d+"/, 'bIns="0"');
+  out = out.replace(/(<a:bodyPr\b[^>]*\bwrap=")square(")/, `$1none$2`);
+  for (const [from, to] of opts.szReplacements) {
+    out = out.split(`sz="${from}"`).join(`sz="${to}"`);
+  }
+  return out;
+}
+
 /**
  * 服事轮值表 P32：标题框原版 y 为负导致顶部裁切；改 y=0、增高、去内边距并略缩字号。
  * 注意：标题框带 lt2 浅色填充，y 过大顶部会露出深蓝底。
@@ -72,14 +97,11 @@ export function stabilizeRotationSlideXml(xml: string): string {
     if (!isTitle && !isBody) return shapeXml;
     let out = shapeXml;
     if (isTitle) {
-      out = out.replace(/<a:off x="0" y="-?\d+"\/>/, `<a:off x="0" y="0"/>`);
-      out = out.replace(
-        /(<a:ext cx="9144000" )cy="\d+"\/>/,
-        `$1cy="${ROTATION_TITLE_CY}"/>`,
-      );
-      out = out.replace(/\btIns="\d+"/, 'tIns="0"');
-      out = out.replace(/\bbIns="\d+"/, 'bIns="0"');
-      out = out.replace(/\bsz="4400"/g, `sz="${ROTATION_TITLE_SZ}"`);
+      out = stabilizeWideHeaderTitleShape(out, {
+        y: '0',
+        cy: ROTATION_TITLE_CY,
+        szReplacements: [['4400', ROTATION_TITLE_SZ]],
+      });
     }
     if (isBody) {
       out = out.replace(/(<a:ext cx="8642700" )cy="\d+"\/>/, `$1cy="3400000"/>`);
@@ -94,6 +116,114 @@ export async function stabilizeRotationSlideInZip(zip: JSZip): Promise<void> {
   if (!entry) return;
   const xml = await entry.async('string');
   zip.file(path, stabilizeRotationSlideXml(xml));
+}
+
+/** 同工会 P31 页眉 */
+const STAFF_MEETING_TITLE_CY = '1200000';
+
+/**
+ * 同工会 P31：负 y + 60pt 易裁切/换行；压到单行并留足行高。
+ */
+export function stabilizeStaffMeetingSlideXml(xml: string): string {
+  if (!xml.includes('同工會')) return xml;
+  return xml.replace(/<p:sp\b[\s\S]*?<\/p:sp>/g, (shapeXml) => {
+    if (!shapeXml.includes('同工會') || !shapeXml.includes('年')) return shapeXml;
+    return stabilizeWideHeaderTitleShape(shapeXml, {
+      y: '0',
+      cy: STAFF_MEETING_TITLE_CY,
+      szReplacements: [
+        ['6000', '4800'],
+        ['5700', '4600'],
+      ],
+    });
+  });
+}
+
+export async function stabilizeStaffMeetingSlideInZip(zip: JSZip): Promise<void> {
+  const path = 'ppt/slides/slide31.xml';
+  const entry = zip.file(path);
+  if (!entry) return;
+  zip.file(path, stabilizeStaffMeetingSlideXml(await entry.async('string')));
+}
+
+/** 下主日见证 P33 页眉 */
+const TESTIMONY_TITLE_CY = '1100000';
+const TESTIMONY_TITLE_SZ = '3600';
+
+/**
+ * 下主日见证 P33：负 y + 48pt 易裁切；单行显示。
+ */
+export function stabilizeTestimonySlideXml(xml: string): string {
+  if (!xml.includes('見證分享')) return xml;
+  return xml.replace(/<p:sp\b[\s\S]*?<\/p:sp>/g, (shapeXml) => {
+    if (!shapeXml.includes('下主日') || !shapeXml.includes('見證分享')) return shapeXml;
+    return stabilizeWideHeaderTitleShape(shapeXml, {
+      y: '0',
+      cy: TESTIMONY_TITLE_CY,
+      szReplacements: [['4800', TESTIMONY_TITLE_SZ]],
+    });
+  });
+}
+
+export async function stabilizeTestimonySlideInZip(zip: JSZip): Promise<void> {
+  const path = 'ppt/slides/slide33.xml';
+  const entry = zip.file(path);
+  if (!entry) return;
+  zip.file(path, stabilizeTestimonySlideXml(await entry.async('string')));
+}
+
+/** 下主日服事 P34 两处标题栏 */
+const ROSTER_TITLE_CY = '1100000';
+const ROSTER_TITLE_SZ = '3600';
+
+/**
+ * 下主日服事 P34：「今日清潔輪值」「下主日服事輪值」单行、不裁切。
+ */
+export function stabilizeServiceRosterSlideXml(xml: string): string {
+  if (!xml.includes('清潔輪值') && !xml.includes('服事輪值')) return xml;
+  return xml.replace(/<p:sp\b[\s\S]*?<\/p:sp>/g, (shapeXml) => {
+    const isToday = shapeXml.includes('今日') && shapeXml.includes('清潔輪值');
+    const isNext = shapeXml.includes('下主日') && shapeXml.includes('服事輪值');
+    if (!isToday && !isNext) return shapeXml;
+    return stabilizeWideHeaderTitleShape(shapeXml, {
+      // 今日 y=0；下主日保持原 y（约 1825000）
+      y: isToday ? '0' : undefined,
+      cy: ROSTER_TITLE_CY,
+      szReplacements: [['4400', ROSTER_TITLE_SZ]],
+    });
+  });
+}
+
+export async function stabilizeServiceRosterSlideInZip(zip: JSZip): Promise<void> {
+  const path = 'ppt/slides/slide34.xml';
+  const entry = zip.file(path);
+  if (!entry) return;
+  zip.file(path, stabilizeServiceRosterSlideXml(await entry.async('string')));
+}
+
+/**
+ * 生日 P24 页眉：禁换行，避免长月份标题折成两行。
+ */
+export function stabilizeBirthdayTitleSlideXml(xml: string): string {
+  if (!xml.includes('生日的家人')) return xml;
+  return xml.replace(/<p:sp\b[\s\S]*?<\/p:sp>/g, (shapeXml) => {
+    if (!shapeXml.includes('生日的家人')) return shapeXml;
+    let out = shapeXml;
+    out = out.replace(/(<a:bodyPr\b[^>]*\bwrap=")square(")/, `$1none$2`);
+    out = out.replace(/\btIns="\d+"/, 'tIns="0"');
+    out = out.replace(/\bbIns="\d+"/, 'bIns="0"');
+    // 月份标题 run 常见 3300；过长时略缩
+    out = out.replace(/\bsz="3300"/g, 'sz="3000"');
+    out = out.replace(/\bsz="4600"/g, 'sz="4000"'); // 心形装饰字号
+    return out;
+  });
+}
+
+export async function stabilizeBirthdayTitleSlideInZip(zip: JSZip): Promise<void> {
+  const path = 'ppt/slides/slide24.xml';
+  const entry = zip.file(path);
+  if (!entry) return;
+  zip.file(path, stabilizeBirthdayTitleSlideXml(await entry.async('string')));
 }
 
 /**
@@ -737,8 +867,12 @@ export async function patchBulletinPreviewInPptx(
   await applyBirthdayFieldsToZip(zip, input.birthdayMonth, input.birthdayNames);
   await applyVerseOfWeekToZip(zip, input.verseOfWeek);
 
-  // 服事轮值表标题裁切修复（须在文字覆盖之后，保留几何修正）
+  // 顶栏标题单行/防裁切（须在文字覆盖之后，保留几何修正）
+  await stabilizeBirthdayTitleSlideInZip(zip);
+  await stabilizeStaffMeetingSlideInZip(zip);
   await stabilizeRotationSlideInZip(zip);
+  await stabilizeTestimonySlideInZip(zip);
+  await stabilizeServiceRosterSlideInZip(zip);
 
   const hideAnnouncements = bulletinSlidePathsToDelete(input).some((p) =>
     p.includes('slide25.xml'),

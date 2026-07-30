@@ -25,7 +25,7 @@ describe('rotation month replacements', () => {
 });
 
 describe('stabilizeRotationSlideXml', () => {
-  it('fixes clipped title: y=0, taller box, no inset, smaller font', async () => {
+  it('fixes clipped title: y=0, taller box, no inset, smaller font, no wrap', async () => {
     const templatePath = join(process.cwd(), 'shared/templates/bulletin/06_14_2026.pptx');
     const zip = await JSZip.loadAsync(readFileSync(templatePath));
     const before = await zip.file('ppt/slides/slide32.xml')!.async('string');
@@ -34,6 +34,7 @@ describe('stabilizeRotationSlideXml', () => {
     expect(out).toContain('cy="1100000"');
     expect(out).toContain('tIns="0"');
     expect(out).toContain('sz="3600"');
+    expect(out).toContain('wrap="none"');
     expect(out).not.toMatch(/y="-\d+"/);
   });
 });

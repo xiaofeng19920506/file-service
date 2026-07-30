@@ -32,7 +32,7 @@ export function buildServiceRosterReplacements(bulletin: {
   const reps: { textIndex: number; text: string }[] = [];
   const todayDate = bulletin.serviceRosterTodayDate?.trim() ?? '';
   if (todayDate) {
-    reps.push({ textIndex: 18, text: `今日(${todayDate})清潔輪值` });
+    reps.push({ textIndex: 16, text: `今日(${todayDate})清潔輪值` });
   }
   const todayNames = joinRosterNamesForSlide(bulletin.serviceRosterText);
   if (todayNames) {

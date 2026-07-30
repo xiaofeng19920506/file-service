@@ -256,7 +256,7 @@
         { "key": "serviceRosterWorship", "textIndex": 8, "example": "李麗婷" },
         { "key": "serviceRosterUsher", "textIndex": 12, "example": "惠美" },
         { "key": "serviceRosterCleanNames", "textIndex": 15, "example": "惠美, 悅心, Helen" },
-        { "key": "serviceRosterTodayDate", "textIndex": 18, "example": "6/14", "notes": "今日(6/14)清潔輪值" }
+        { "key": "serviceRosterTodayDate", "textIndex": 16, "example": "6/14", "notes": "今日(6/14)清潔輪值" }
       ]
     },
     {
