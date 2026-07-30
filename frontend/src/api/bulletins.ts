@@ -38,6 +38,8 @@ export type WeeklyBulletin = {
   staffMeetingEndTime: string;
   testimonyShareDate: string;
   serviceRosterText: string;
+  rotationStartMonth: string;
+  rotationEndMonth: string;
   baptismText: string;
   scriptureBook: string;
   scriptureReference: string;
@@ -80,6 +82,8 @@ export type BulletinPatch = Partial<{
   staffMeetingEndTime: string;
   testimonyShareDate: string;
   serviceRosterText: string;
+  rotationStartMonth: string;
+  rotationEndMonth: string;
   baptismText: string;
   scriptureBook: string;
   scriptureReference: string;

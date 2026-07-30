@@ -215,6 +215,9 @@ export default {
     staffMeetingEndTime: '结束时间',
     staffMeetingHint:
       '页眉显示为「年份年月份」+「月份同工會」；日期可填「下主日(6/21/2026)」；时间如 12:45 pm / 2:00 pm。',
+    rotationStartMonth: '开始月份',
+    rotationEndMonth: '结束月份',
+    rotationMonthsHint: '将同步更新标题与正文里的「本季度(开始-结束 月)」。',
     testimonyShare: '见证分享日期',
     serviceRoster: '下主日服事轮值',
     baptism: '受洗公告',

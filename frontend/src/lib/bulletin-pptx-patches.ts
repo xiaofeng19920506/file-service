@@ -168,6 +168,58 @@ export function buildBirthdaySlideReplacements(
 }
 
 /**
+ * 服事轮值表 P32：标题/正文里的「(7-9 月)」由开始、结束月份生成。
+ */
+export function buildRotationMonthReplacements(bulletin: {
+  rotationStartMonth?: string;
+  rotationEndMonth?: string;
+}): { textIndex: number; text: string }[] {
+  const start = bulletin.rotationStartMonth?.trim() ?? '';
+  const end = bulletin.rotationEndMonth?.trim() ?? '';
+  if (!start || !end) return [];
+  const range = `(${start}-${end} 月)`;
+  return [
+    { textIndex: 0, text: `本季度${range}的清潔服事輪值表 ` },
+    {
+      textIndex: 1,
+      text: `本季度${range}的服事輪值表 已張貼在各個佈告欄與後堂冰箱上，請家人們前往查看！`,
+    },
+  ];
+}
+
+/**
+ * P32 标题框原版 y 为负，顶部文字被裁切。
+ * 标题带 lt2 浅色填充：y 须为 0 以盖住页顶；增高 + 去内边距 + 略缩字号避免 LO CJK 裁切。
+ */
+export function stabilizeRotationSlideXml(xml: string): string {
+  if (!xml.includes('清潔服事輪值表') && !xml.includes('服事輪值表')) return xml;
+  return xml.replace(/<p:sp\b[\s\S]*?<\/p:sp>/g, (shapeXml) => {
+    const isTitle = shapeXml.includes('清潔服事輪值表');
+    const isBody =
+      shapeXml.includes('已張貼在各個佈告欄') || shapeXml.includes('請詢問振成');
+    if (!isTitle && !isBody) return shapeXml;
+    let out = shapeXml;
+    if (isTitle) {
+      out = out.replace(/<a:off x="0" y="-?\d+"\/>/, `<a:off x="0" y="0"/>`);
+      out = out.replace(
+        /(<a:ext cx="9144000" )cy="\d+"\/>/,
+        `$1cy="1100000"/>`,
+      );
+      out = out.replace(/\btIns="\d+"/, 'tIns="0"');
+      out = out.replace(/\bbIns="\d+"/, 'bIns="0"');
+      out = out.replace(/\bsz="4400"/g, 'sz="3600"');
+    }
+    if (isBody) {
+      out = out.replace(
+        /(<a:ext cx="8642700" )cy="\d+"\/>/,
+        `$1cy="3400000"/>`,
+      );
+    }
+    return out;
+  });
+}
+
+/**
  * 同工会 P31：
  * - 页眉「2026年6」+「月份同工會」→ 写 index 0
  * - 日期碎片「下主日(」「6」「/21/2026」」)於」→ 整段写入 3，清空 4/5，6 改为「於」
@@ -361,6 +413,10 @@ export function patchesForStep(stepId: string, bulletin: WeeklyBulletin): SlideT
       if (staffReps.length) {
         patches.push({ slideNumber: 31, replacements: staffReps });
       }
+      const rotationReps = buildRotationMonthReplacements(bulletin);
+      if (rotationReps.length) {
+        patches.push({ slideNumber: 32, replacements: rotationReps });
+      }
       if (bulletin.testimonyShareDate.trim()) {
         patches.push({
           slideNumber: 33,
@@ -402,6 +458,9 @@ export function bulletinDynamicTextOverrides(bulletin: WeeklyBulletin): Bulletin
   if (baptism) out.push({ slide: 27, textIndex: 3, text: baptism });
   for (const rep of buildStaffMeetingReplacements(bulletin)) {
     out.push({ slide: 31, textIndex: rep.textIndex, text: rep.text });
+  }
+  for (const rep of buildRotationMonthReplacements(bulletin)) {
+    out.push({ slide: 32, textIndex: rep.textIndex, text: rep.text });
   }
   const testimony = bulletin.testimonyShareDate?.trim() ?? '';
   if (testimony) out.push({ slide: 33, textIndex: 0, text: testimony });
@@ -602,6 +661,14 @@ export async function applySlidePatches(
     const entry = zip.file(offerPath);
     if (entry) {
       zip.file(offerPath, stabilizeOfferingReportSlideXml(await entry.async('string')));
+    }
+  }
+  // 服事轮值表：修正标题框负 y 裁切
+  {
+    const rotPath = pathBySlide.get(32) ?? 'ppt/slides/slide32.xml';
+    const entry = zip.file(rotPath);
+    if (entry) {
+      zip.file(rotPath, stabilizeRotationSlideXml(await entry.async('string')));
     }
   }
 

@@ -56,7 +56,7 @@ describe('bulletin-sections tree', () => {
     expect(findNavNode('testimony_week')?.editableStepId).toBeNull();
     expect(findNavNode('staff_meeting')?.editableStepId).toBe('more');
     expect(findNavNode('future_testimony')?.editableStepId).toBe('more');
-    expect(findNavNode('rotation')?.editableStepId).toBeNull();
+    expect(findNavNode('rotation')?.editableStepId).toBe('more');
     expect(findNavNode('department_reports')?.editableStepId).toBeNull();
   });
 });

@@ -23,6 +23,8 @@ export const BULLETIN_TEMPLATE_FIELD_DEFAULTS = {
   staffMeetingDate: '下主日(6/21/2026)',
   staffMeetingStartTime: '12:45 pm',
   staffMeetingEndTime: '2:00 pm',
+  rotationStartMonth: '7',
+  rotationEndMonth: '9',
 } as const;
 
 const TEMPLATE_ANNOUNCEMENTS: Omit<BulletinAnnouncement, 'id' | 'sortOrder'>[] = [
@@ -109,6 +111,14 @@ export function withTemplateFieldDefaults(bulletin: WeeklyBulletin): WeeklyBulle
     staffMeetingEndTime: pickText(
       bulletin.staffMeetingEndTime,
       BULLETIN_TEMPLATE_FIELD_DEFAULTS.staffMeetingEndTime,
+    ),
+    rotationStartMonth: pickText(
+      bulletin.rotationStartMonth,
+      BULLETIN_TEMPLATE_FIELD_DEFAULTS.rotationStartMonth,
+    ),
+    rotationEndMonth: pickText(
+      bulletin.rotationEndMonth,
+      BULLETIN_TEMPLATE_FIELD_DEFAULTS.rotationEndMonth,
     ),
     announcements,
   };

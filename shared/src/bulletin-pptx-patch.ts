@@ -54,6 +54,48 @@ const OFFERING_TITLE_ZH_SZ = '4000';
 /** 英文标题字号；原 30pt 与中文并排会把 Report 挤到下一行 */
 const OFFERING_TITLE_EN_SZ = '2400';
 
+/** P32 标题字号：原 44pt 在 LO 下 CJK 回退字形过高，易裁切 */
+const ROTATION_TITLE_SZ = '3600';
+/** 标题框高度：盖住页顶浅色条，并给字形留足行高 */
+const ROTATION_TITLE_CY = '1100000';
+
+/**
+ * 服事轮值表 P32：标题框原版 y 为负导致顶部裁切；改 y=0、增高、去内边距并略缩字号。
+ * 注意：标题框带 lt2 浅色填充，y 过大顶部会露出深蓝底。
+ */
+export function stabilizeRotationSlideXml(xml: string): string {
+  if (!xml.includes('清潔服事輪值表') && !xml.includes('服事輪值表')) return xml;
+  return xml.replace(/<p:sp\b[\s\S]*?<\/p:sp>/g, (shapeXml) => {
+    const isTitle = shapeXml.includes('清潔服事輪值表');
+    const isBody =
+      shapeXml.includes('已張貼在各個佈告欄') || shapeXml.includes('請詢問振成');
+    if (!isTitle && !isBody) return shapeXml;
+    let out = shapeXml;
+    if (isTitle) {
+      out = out.replace(/<a:off x="0" y="-?\d+"\/>/, `<a:off x="0" y="0"/>`);
+      out = out.replace(
+        /(<a:ext cx="9144000" )cy="\d+"\/>/,
+        `$1cy="${ROTATION_TITLE_CY}"/>`,
+      );
+      out = out.replace(/\btIns="\d+"/, 'tIns="0"');
+      out = out.replace(/\bbIns="\d+"/, 'bIns="0"');
+      out = out.replace(/\bsz="4400"/g, `sz="${ROTATION_TITLE_SZ}"`);
+    }
+    if (isBody) {
+      out = out.replace(/(<a:ext cx="8642700" )cy="\d+"\/>/, `$1cy="3400000"/>`);
+    }
+    return out;
+  });
+}
+
+export async function stabilizeRotationSlideInZip(zip: JSZip): Promise<void> {
+  const path = 'ppt/slides/slide32.xml';
+  const entry = zip.file(path);
+  if (!entry) return;
+  const xml = await entry.async('string');
+  zip.file(path, stabilizeRotationSlideXml(xml));
+}
+
 /**
  * 奉献报告 P19：标题中英单行、金额行不换行且居中对齐。
  * 不增删 indexed text run，以免破坏金额/日期 textIndex。
@@ -694,6 +736,9 @@ export async function patchBulletinPreviewInPptx(
 
   await applyBirthdayFieldsToZip(zip, input.birthdayMonth, input.birthdayNames);
   await applyVerseOfWeekToZip(zip, input.verseOfWeek);
+
+  // 服事轮值表标题裁切修复（须在文字覆盖之后，保留几何修正）
+  await stabilizeRotationSlideInZip(zip);
 
   const hideAnnouncements = bulletinSlidePathsToDelete(input).some((p) =>
     p.includes('slide25.xml'),

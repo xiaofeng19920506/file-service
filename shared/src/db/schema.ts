@@ -248,6 +248,10 @@ export const weeklyBulletins = pgTable('weekly_bulletins', {
   staffMeetingEndTime: text('staff_meeting_end_time').notNull().default(''),
   testimonyShareDate: text('testimony_share_date').notNull().default(''),
   serviceRosterText: text('service_roster_text').notNull().default(''),
+  /** 服事轮值表 P32：季度开始月份，如 7 */
+  rotationStartMonth: text('rotation_start_month').notNull().default(''),
+  /** 服事轮值表 P32：季度结束月份，如 9 */
+  rotationEndMonth: text('rotation_end_month').notNull().default(''),
   baptismText: text('baptism_text').notNull().default(''),
   scriptureBook: text('scripture_book').notNull().default(''),
   scriptureReference: text('scripture_reference').notNull().default(''),

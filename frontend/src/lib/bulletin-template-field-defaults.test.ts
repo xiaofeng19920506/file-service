@@ -25,6 +25,8 @@ function baseBulletin(over: Partial<WeeklyBulletin> = {}): WeeklyBulletin {
     staffMeetingMonth: '',
     staffMeetingStartTime: '',
     staffMeetingEndTime: '',
+    rotationStartMonth: '',
+    rotationEndMonth: '',
     testimonyShareDate: '',
     serviceRosterText: '',
     baptismText: '',

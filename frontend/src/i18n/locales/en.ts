@@ -223,6 +223,9 @@ const en: MessageTree = {
     staffMeetingEndTime: 'End time',
     staffMeetingHint:
       'Header becomes “{year}年{month}月份同工會”. Date e.g. 下主日(6/21/2026); times e.g. 12:45 pm / 2:00 pm.',
+    rotationStartMonth: 'Start month',
+    rotationEndMonth: 'End month',
+    rotationMonthsHint: 'Updates “(start-end 月)” in both the title and body.',
     testimonyShare: 'Testimony share date',
     serviceRoster: 'Next Sunday roster',
     baptism: 'Baptism announcement',

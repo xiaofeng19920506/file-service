@@ -80,7 +80,7 @@ const slidePreviewCache = new Map<string, Buffer>();
 const patchedPptxCache = new Map<string, Buffer>();
 /** 预览补丁版本；v35=分区 override 支持增删页（splice 变长） */
 /** v52：圣餐英文经文略加大至 28pt，减少底部空白 */
-const SLIDE_PREVIEW_PATCH_REV = 'v57';
+const SLIDE_PREVIEW_PATCH_REV = 'v58';
 
 async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   const chunks: Buffer[] = [];
@@ -299,6 +299,8 @@ export type WeeklyBulletinDto = {
   staffMeetingEndTime: string;
   testimonyShareDate: string;
   serviceRosterText: string;
+  rotationStartMonth: string;
+  rotationEndMonth: string;
   baptismText: string;
   scriptureBook: string;
   scriptureReference: string;
@@ -369,6 +371,8 @@ async function mapBulletin(
     staffMeetingEndTime: row.staffMeetingEndTime,
     testimonyShareDate: row.testimonyShareDate,
     serviceRosterText: row.serviceRosterText,
+    rotationStartMonth: row.rotationStartMonth,
+    rotationEndMonth: row.rotationEndMonth,
     baptismText: row.baptismText,
     scriptureBook: row.scriptureBook,
     scriptureReference: row.scriptureReference,
@@ -408,6 +412,8 @@ type BulletinPatchBody = Partial<{
   staffMeetingEndTime: string;
   testimonyShareDate: string;
   serviceRosterText: string;
+  rotationStartMonth: string;
+  rotationEndMonth: string;
   baptismText: string;
   scriptureBook: string;
   scriptureReference: string;
@@ -1164,6 +1170,8 @@ export function registerBulletinRoutes(
       assignText('staffMeetingEndTime', 'staffMeetingEndTime');
       assignText('testimonyShareDate', 'testimonyShareDate');
       assignText('serviceRosterText', 'serviceRosterText');
+      assignText('rotationStartMonth', 'rotationStartMonth');
+      assignText('rotationEndMonth', 'rotationEndMonth');
       assignText('baptismText', 'baptismText');
       assignText('scriptureBook', 'scriptureBook');
       assignText('scriptureReference', 'scriptureReference');

@@ -282,6 +282,8 @@ export function useBulletinLocalDraftSync(
     draft?.staffMeetingMonth,
     draft?.staffMeetingStartTime,
     draft?.staffMeetingEndTime,
+    draft?.rotationStartMonth,
+    draft?.rotationEndMonth,
     draft?.testimonyShareDate,
     draft?.serviceRosterText,
     draft?.weeklyMeetingVariant,

@@ -545,12 +545,15 @@ export function BulletinMoreStep({
           ? 'bulletin.sections.service_roster'
           : sectionId === 'weekly_meetings'
             ? 'bulletin.sections.weekly_meetings'
-            : 'bulletin.steps.moreTitle';
+            : sectionId === 'rotation'
+              ? 'bulletin.sections.rotation'
+              : 'bulletin.steps.moreTitle';
   const introKey =
     sectionId === 'staff_meeting' ||
     sectionId === 'future_testimony' ||
     sectionId === 'service_roster' ||
-    sectionId === 'weekly_meetings'
+    sectionId === 'weekly_meetings' ||
+    sectionId === 'rotation'
       ? 'bulletin.steps.sectionFieldIntro'
       : 'bulletin.steps.moreIntro';
 
@@ -594,6 +597,25 @@ export function BulletinMoreStep({
             onChange={(v) => onPatch('staffMeetingEndTime', v)}
           />
           <p className="bulletin-field-hint">{t('bulletin.staffMeetingHint')}</p>
+        </>
+      ) : null}
+      {show('rotation') ? (
+        <>
+          <TextField
+            label={t('bulletin.rotationStartMonth')}
+            value={draft.rotationStartMonth ?? ''}
+            disabled={!canEdit}
+            commitOnBlur
+            onChange={(v) => onPatch('rotationStartMonth', v)}
+          />
+          <TextField
+            label={t('bulletin.rotationEndMonth')}
+            value={draft.rotationEndMonth ?? ''}
+            disabled={!canEdit}
+            commitOnBlur
+            onChange={(v) => onPatch('rotationEndMonth', v)}
+          />
+          <p className="bulletin-field-hint">{t('bulletin.rotationMonthsHint')}</p>
         </>
       ) : null}
       {show('future_testimony') ? (

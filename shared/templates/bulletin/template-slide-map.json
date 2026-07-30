@@ -230,6 +230,13 @@
       ]
     },
     {
+      "slide": 32,
+      "fields": [
+        { "key": "rotationStartMonth", "textIndex": 0, "example": "7", "notes": "与 end 写入标题/正文「(7-9 月)」" },
+        { "key": "rotationEndMonth", "textIndex": 0, "example": "9" }
+      ]
+    },
+    {
       "slide": 33,
       "fields": [{ "key": "testimonyShareDate", "textIndex": 0, "example": "下主日8/30見證分享" }]
     },

@@ -59,8 +59,8 @@ export const BULLETIN_NAV_TREE: BulletinNavNode[] = [
             labelKey: 'bulletin.sections.staff_meeting',
             editableStepId: 'more',
           },
-          // 轮值表无独立表单字段，改幻灯片即可
-          { id: 'rotation', labelKey: 'bulletin.sections.rotation', editableStepId: null },
+          // 轮值表：开始/结束月份
+          { id: 'rotation', labelKey: 'bulletin.sections.rotation', editableStepId: 'more' },
           {
             id: 'future_testimony',
             labelKey: 'bulletin.sections.future_testimony',
