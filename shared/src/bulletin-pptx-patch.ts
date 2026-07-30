@@ -147,21 +147,30 @@ export async function stabilizeStaffMeetingSlideInZip(zip: JSZip): Promise<void>
 }
 
 /** 下主日见证 P33 页眉 */
-const TESTIMONY_TITLE_CY = '1100000';
+const TESTIMONY_TITLE_CY = '1000000';
 const TESTIMONY_TITLE_SZ = '3600';
+const TESTIMONY_BODY_MIN_Y = 1_080_000;
 
 /**
- * 下主日见证 P33：负 y + 48pt 易裁切；单行显示。
+ * 下主日见证 P33：负 y + 48pt 易裁切；单行显示，并把正文下推避免压进页眉。
  */
 export function stabilizeTestimonySlideXml(xml: string): string {
   if (!xml.includes('見證分享')) return xml;
   return xml.replace(/<p:sp\b[\s\S]*?<\/p:sp>/g, (shapeXml) => {
-    if (!shapeXml.includes('下主日') || !shapeXml.includes('見證分享')) return shapeXml;
-    return stabilizeWideHeaderTitleShape(shapeXml, {
-      y: '0',
-      cy: TESTIMONY_TITLE_CY,
-      szReplacements: [['4800', TESTIMONY_TITLE_SZ]],
-    });
+    const isTitle = shapeXml.includes('下主日') && shapeXml.includes('見證分享');
+    const isBody = shapeXml.includes('是見證') || shapeXml.includes('讓我們一起來');
+    if (!isTitle && !isBody) return shapeXml;
+    if (isTitle) {
+      return stabilizeWideHeaderTitleShape(shapeXml, {
+        y: '0',
+        cy: TESTIMONY_TITLE_CY,
+        szReplacements: [['4800', TESTIMONY_TITLE_SZ]],
+      });
+    }
+    // 正文原 y≈781125，加高页眉后会叠进标题；下推并钳制底部
+    let out = bumpShapeMinY(shapeXml, TESTIMONY_BODY_MIN_Y);
+    out = clampShapeBottom(out, 5_060_000);
+    return out;
   });
 }
 
@@ -172,25 +181,45 @@ export async function stabilizeTestimonySlideInZip(zip: JSZip): Promise<void> {
   zip.file(path, stabilizeTestimonySlideXml(await entry.async('string')));
 }
 
-/** 下主日服事 P34 两处标题栏 */
-const ROSTER_TITLE_CY = '1100000';
+/** 下主日服事 P34 两处标题栏（略矮于 1.1M，给名单/岗位留空） */
+const ROSTER_TITLE_CY = '980000';
 const ROSTER_TITLE_SZ = '3600';
+const ROSTER_TODAY_NAMES_MIN_Y = 1_060_000;
+const ROSTER_ROLES_MIN_Y = 2_880_000;
 
 /**
- * 下主日服事 P34：「今日清潔輪值」「下主日服事輪值」单行、不裁切。
+ * 下主日服事 P34：「今日清潔輪值」「下主日服事輪值」单行，并把名单/岗位下推防叠字。
  */
 export function stabilizeServiceRosterSlideXml(xml: string): string {
   if (!xml.includes('清潔輪值') && !xml.includes('服事輪值')) return xml;
   return xml.replace(/<p:sp\b[\s\S]*?<\/p:sp>/g, (shapeXml) => {
     const isToday = shapeXml.includes('今日') && shapeXml.includes('清潔輪值');
     const isNext = shapeXml.includes('下主日') && shapeXml.includes('服事輪值');
-    if (!isToday && !isNext) return shapeXml;
-    return stabilizeWideHeaderTitleShape(shapeXml, {
-      // 今日 y=0；下主日保持原 y（约 1825000）
-      y: isToday ? '0' : undefined,
-      cy: ROSTER_TITLE_CY,
-      szReplacements: [['4400', ROSTER_TITLE_SZ]],
-    });
+    // 今日名单框：宽幅、原 y=982700、不含岗位
+    const isTodayNamesBox =
+      !isToday &&
+      !isNext &&
+      !shapeXml.includes('主席：') &&
+      /y="982700"/.test(shapeXml);
+    const isRoles = shapeXml.includes('主席：') && shapeXml.includes('敬拜：');
+    if (!isToday && !isNext && !isTodayNamesBox && !isRoles) return shapeXml;
+
+    if (isToday || isNext) {
+      return stabilizeWideHeaderTitleShape(shapeXml, {
+        y: isToday ? '0' : undefined,
+        cy: ROSTER_TITLE_CY,
+        szReplacements: [['4400', ROSTER_TITLE_SZ]],
+      });
+    }
+    if (isTodayNamesBox) {
+      return bumpShapeMinY(shapeXml, ROSTER_TODAY_NAMES_MIN_Y);
+    }
+    if (isRoles) {
+      let out = bumpShapeMinY(shapeXml, ROSTER_ROLES_MIN_Y);
+      out = clampShapeBottom(out, 5_060_000);
+      return out;
+    }
+    return shapeXml;
   });
 }
 
@@ -202,20 +231,29 @@ export async function stabilizeServiceRosterSlideInZip(zip: JSZip): Promise<void
 }
 
 /**
- * 生日 P24 页眉：禁换行，避免长月份标题折成两行。
+ * 生日 P24：页眉单行；页脚两行加行距防白底叠字。
  */
 export function stabilizeBirthdayTitleSlideXml(xml: string): string {
-  if (!xml.includes('生日的家人')) return xml;
+  if (!xml.includes('生日的家人') && !xml.includes('午餐聚會')) return xml;
   return xml.replace(/<p:sp\b[\s\S]*?<\/p:sp>/g, (shapeXml) => {
-    if (!shapeXml.includes('生日的家人')) return shapeXml;
-    let out = shapeXml;
-    out = out.replace(/(<a:bodyPr\b[^>]*\bwrap=")square(")/, `$1none$2`);
-    out = out.replace(/\btIns="\d+"/, 'tIns="0"');
-    out = out.replace(/\bbIns="\d+"/, 'bIns="0"');
-    // 月份标题 run 常见 3300；过长时略缩
-    out = out.replace(/\bsz="3300"/g, 'sz="3000"');
-    out = out.replace(/\bsz="4600"/g, 'sz="4000"'); // 心形装饰字号
-    return out;
+    if (shapeXml.includes('生日的家人')) {
+      let out = shapeXml;
+      out = out.replace(/(<a:bodyPr\b[^>]*\bwrap=")square(")/, `$1none$2`);
+      out = out.replace(/\btIns="\d+"/, 'tIns="0"');
+      out = out.replace(/\bbIns="\d+"/, 'bIns="0"');
+      out = out.replace(/\bsz="3300"/g, 'sz="3000"');
+      out = out.replace(/\bsz="4600"/g, 'sz="4000"');
+      return out;
+    }
+    if (shapeXml.includes('午餐聚會') || shapeXml.includes('生日蛋糕')) {
+      let out = shapeXml;
+      // 原 90% 行距导致两行高亮底互相压住
+      out = out.replace(/spcPct val="90000"/g, 'spcPct val="135000"');
+      out = out.replace(/(<a:ext cx="4893900" )cy="\d+"\/>/, `$1cy="1150000"/>`);
+      out = out.replace(/\bsz="2800"/g, 'sz="2600"');
+      return out;
+    }
+    return shapeXml;
   });
 }
 
@@ -224,6 +262,25 @@ export async function stabilizeBirthdayTitleSlideInZip(zip: JSZip): Promise<void
   const entry = zip.file(path);
   if (!entry) return;
   zip.file(path, stabilizeBirthdayTitleSlideXml(await entry.async('string')));
+}
+
+function bumpShapeMinY(shapeXml: string, minY: number): string {
+  return shapeXml.replace(/<a:off x="(-?\d+)" y="(-?\d+)"\/>/, (_full, x: string, y: string) => {
+    const nextY = Math.max(Number(y), minY);
+    return `<a:off x="${x}" y="${nextY}"/>`;
+  });
+}
+
+function clampShapeBottom(shapeXml: string, maxEnd: number): string {
+  return shapeXml.replace(
+    /<a:off x="(-?\d+)" y="(-?\d+)"\/>\s*<a:ext cx="(\d+)" cy="(\d+)"\/>/,
+    (_full, x: string, y: string, cx: string, cy: string) => {
+      const top = Number(y);
+      let h = Number(cy);
+      if (top + h > maxEnd) h = Math.max(200_000, maxEnd - top);
+      return `<a:off x="${x}" y="${y}"/><a:ext cx="${cx}" cy="${h}"/>`;
+    },
+  );
 }
 
 /**

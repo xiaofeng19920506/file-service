@@ -16,7 +16,7 @@ describe('buildTestimonyShareReplacements', () => {
   it('writes title and large body date', () => {
     expect(buildTestimonyShareReplacements({ testimonyShareDate: '9/6' })).toEqual([
       { textIndex: 0, text: '下主日9/6見證分享' },
-      { textIndex: 2, text: '9/6' },
+      { textIndex: 1, text: '9/6' },
     ]);
   });
 });

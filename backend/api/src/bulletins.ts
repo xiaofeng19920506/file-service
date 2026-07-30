@@ -80,7 +80,7 @@ const slidePreviewCache = new Map<string, Buffer>();
 const patchedPptxCache = new Map<string, Buffer>();
 /** 预览补丁版本；v35=分区 override 支持增删页（splice 变长） */
 /** v52：圣餐英文经文略加大至 28pt，减少底部空白 */
-const SLIDE_PREVIEW_PATCH_REV = 'v61';
+const SLIDE_PREVIEW_PATCH_REV = 'v62';
 
 async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   const chunks: Buffer[] = [];

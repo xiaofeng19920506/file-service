@@ -243,7 +243,7 @@
           "key": "testimonyShareDate",
           "textIndex": 0,
           "example": "8/30",
-          "notes": "日期；写入标题「下主日8/30見證分享」与正文 textIndex 2"
+          "notes": "日期；写入标题「下主日8/30見證分享」与正文大号日期 textIndex 1"
         }
       ]
     },

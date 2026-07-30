@@ -218,7 +218,7 @@ export function buildTestimonyShareReplacements(bulletin: {
   if (!date) return [];
   return [
     { textIndex: 0, text: `下主日${date}見證分享` },
-    { textIndex: 2, text: date },
+    { textIndex: 1, text: date },
   ];
 }
 

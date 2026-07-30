@@ -4,17 +4,17 @@ export const BIRTHDAY_NAME_MAX = 12;
 /** 模板 P24 名单文本框（会被替换为同 id 的表格） */
 export const BIRTHDAY_NAMES_SHAPE_ID = '399';
 
-/** 名单区位置/尺寸（EMU）；蛋糕在右侧，名单靠左铺满可用宽度 */
+/** 名单区位置/尺寸（EMU）；靠左半幅，底边避开页脚 */
 const BIRTHDAY_NAMES_BOX = {
   x: 298_800,
-  y: 892_800,
-  cx: 8_546_400,
-  cy: 2_816_700,
+  y: 980_000,
+  cx: 4_800_000,
+  cy: 2_550_000,
 } as const;
 
-/** 百分子号：40pt 起，最短不低于 24pt */
-const BIRTHDAY_FONT_SZ_MAX = 4000;
-const BIRTHDAY_FONT_SZ_MIN = 2400;
+/** 百分子号：36pt 起，名单多时再缩小 */
+const BIRTHDAY_FONT_SZ_MAX = 3600;
+const BIRTHDAY_FONT_SZ_MIN = 2200;
 
 export function parseBirthdayNames(raw: string | null | undefined): string[] {
   if (!raw) return [];
@@ -90,7 +90,11 @@ function columnCapacityUnits(cols: number, fontSz: number): number {
 
 export function pickBirthdayFontSize(names: readonly string[], cols: number): number {
   const maxUnits = Math.max(1, ...names.map((n) => nameDisplayUnits(n)));
-  let sz = BIRTHDAY_FONT_SZ_MAX;
+  const rowCount = Math.max(1, Math.ceil((names.length || 1) / Math.max(cols, 1)));
+  // 行高不够时再压字号，避免名单底边压进页脚
+  const rowEmu = BIRTHDAY_NAMES_BOX.cy / rowCount;
+  const maxByRow = Math.floor((rowEmu * 0.55) / 127);
+  let sz = Math.min(BIRTHDAY_FONT_SZ_MAX, Math.max(BIRTHDAY_FONT_SZ_MIN, maxByRow));
   while (sz > BIRTHDAY_FONT_SZ_MIN && maxUnits > columnCapacityUnits(cols, sz)) {
     sz -= 200;
   }

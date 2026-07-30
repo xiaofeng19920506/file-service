@@ -57,7 +57,9 @@ describe('bulletin-birthday', () => {
     expect(out).toContain('wrap="none"');
     expect(out).toContain('Aaron');
     expect(out).toContain('\u00A0'); // NBSP between Aaron and Wong
-    expect(out).toContain('cx="8546400"');
+    expect(out).toContain('cx="4800000"');
+    expect(out).toContain('y="980000"');
+    expect(out).toContain('cy="2550000"');
     expect(out).not.toContain('孫强');
     const runs = extractIndexedTextRuns(out);
     const texts = runs.map((r) => r.text.replace(/\u00A0/g, ' ').trim()).filter(Boolean);

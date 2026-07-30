@@ -25,6 +25,25 @@ function stabilizeWideHeaderTitleShape(
   return out;
 }
 
+function bumpShapeMinY(shapeXml: string, minY: number): string {
+  return shapeXml.replace(/<a:off x="(-?\d+)" y="(-?\d+)"\/>/, (_full, x: string, y: string) => {
+    const nextY = Math.max(Number(y), minY);
+    return `<a:off x="${x}" y="${nextY}"/>`;
+  });
+}
+
+function clampShapeBottom(shapeXml: string, maxEnd: number): string {
+  return shapeXml.replace(
+    /<a:off x="(-?\d+)" y="(-?\d+)"\/>\s*<a:ext cx="(\d+)" cy="(\d+)"\/>/,
+    (_full, x: string, y: string, cx: string, cy: string) => {
+      const top = Number(y);
+      let h = Number(cy);
+      if (top + h > maxEnd) h = Math.max(200_000, maxEnd - top);
+      return `<a:off x="${x}" y="${y}"/><a:ext cx="${cx}" cy="${h}"/>`;
+    },
+  );
+}
+
 /** P32 服事轮值表标题 */
 export function stabilizeRotationSlideXml(xml: string): string {
   if (!xml.includes('清潔服事輪值表') && !xml.includes('服事輪值表')) return xml;
@@ -64,45 +83,74 @@ export function stabilizeStaffMeetingSlideXml(xml: string): string {
   });
 }
 
-/** P33 下主日见证页眉 */
+/** P33 下主日见证：页眉单行 + 正文下推 */
 export function stabilizeTestimonySlideXml(xml: string): string {
   if (!xml.includes('見證分享')) return xml;
   return xml.replace(/<p:sp\b[\s\S]*?<\/p:sp>/g, (shapeXml) => {
-    if (!shapeXml.includes('下主日') || !shapeXml.includes('見證分享')) return shapeXml;
-    return stabilizeWideHeaderTitleShape(shapeXml, {
-      y: '0',
-      cy: '1100000',
-      szReplacements: [['4800', '3600']],
-    });
+    const isTitle = shapeXml.includes('下主日') && shapeXml.includes('見證分享');
+    const isBody = shapeXml.includes('是見證') || shapeXml.includes('讓我們一起來');
+    if (!isTitle && !isBody) return shapeXml;
+    if (isTitle) {
+      return stabilizeWideHeaderTitleShape(shapeXml, {
+        y: '0',
+        cy: '1000000',
+        szReplacements: [['4800', '3600']],
+      });
+    }
+    let out = bumpShapeMinY(shapeXml, 1_080_000);
+    out = clampShapeBottom(out, 5_060_000);
+    return out;
   });
 }
 
-/** P34 今日清洁 / 下主日服事 标题 */
+/** P34 今日清洁 / 下主日服事：标题单行 + 名单/岗位下推 */
 export function stabilizeServiceRosterSlideXml(xml: string): string {
   if (!xml.includes('清潔輪值') && !xml.includes('服事輪值')) return xml;
   return xml.replace(/<p:sp\b[\s\S]*?<\/p:sp>/g, (shapeXml) => {
     const isToday = shapeXml.includes('今日') && shapeXml.includes('清潔輪值');
     const isNext = shapeXml.includes('下主日') && shapeXml.includes('服事輪值');
-    if (!isToday && !isNext) return shapeXml;
-    return stabilizeWideHeaderTitleShape(shapeXml, {
-      y: isToday ? '0' : undefined,
-      cy: '1100000',
-      szReplacements: [['4400', '3600']],
-    });
+    const isTodayNamesBox =
+      !isToday && !isNext && !shapeXml.includes('主席：') && /y="982700"/.test(shapeXml);
+    const isRoles = shapeXml.includes('主席：') && shapeXml.includes('敬拜：');
+    if (!isToday && !isNext && !isTodayNamesBox && !isRoles) return shapeXml;
+
+    if (isToday || isNext) {
+      return stabilizeWideHeaderTitleShape(shapeXml, {
+        y: isToday ? '0' : undefined,
+        cy: '980000',
+        szReplacements: [['4400', '3600']],
+      });
+    }
+    if (isTodayNamesBox) return bumpShapeMinY(shapeXml, 1_060_000);
+    if (isRoles) {
+      let out = bumpShapeMinY(shapeXml, 2_880_000);
+      out = clampShapeBottom(out, 5_060_000);
+      return out;
+    }
+    return shapeXml;
   });
 }
 
-/** P24 生日页眉单行 */
+/** P24 生日页眉单行 + 页脚行距 */
 export function stabilizeBirthdayTitleSlideXml(xml: string): string {
-  if (!xml.includes('生日的家人')) return xml;
+  if (!xml.includes('生日的家人') && !xml.includes('午餐聚會')) return xml;
   return xml.replace(/<p:sp\b[\s\S]*?<\/p:sp>/g, (shapeXml) => {
-    if (!shapeXml.includes('生日的家人')) return shapeXml;
-    let out = shapeXml;
-    out = out.replace(/(<a:bodyPr\b[^>]*\bwrap=")square(")/, `$1none$2`);
-    out = out.replace(/\btIns="\d+"/, 'tIns="0"');
-    out = out.replace(/\bbIns="\d+"/, 'bIns="0"');
-    out = out.replace(/\bsz="3300"/g, 'sz="3000"');
-    out = out.replace(/\bsz="4600"/g, 'sz="4000"');
-    return out;
+    if (shapeXml.includes('生日的家人')) {
+      let out = shapeXml;
+      out = out.replace(/(<a:bodyPr\b[^>]*\bwrap=")square(")/, `$1none$2`);
+      out = out.replace(/\btIns="\d+"/, 'tIns="0"');
+      out = out.replace(/\bbIns="\d+"/, 'bIns="0"');
+      out = out.replace(/\bsz="3300"/g, 'sz="3000"');
+      out = out.replace(/\bsz="4600"/g, 'sz="4000"');
+      return out;
+    }
+    if (shapeXml.includes('午餐聚會') || shapeXml.includes('生日蛋糕')) {
+      let out = shapeXml;
+      out = out.replace(/spcPct val="90000"/g, 'spcPct val="135000"');
+      out = out.replace(/(<a:ext cx="4893900" )cy="\d+"\/>/, `$1cy="1150000"/>`);
+      out = out.replace(/\bsz="2800"/g, 'sz="2600"');
+      return out;
+    }
+    return shapeXml;
   });
 }

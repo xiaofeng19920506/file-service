@@ -25,24 +25,26 @@ describe('header title stabilize', () => {
     expect(out).not.toMatch(/y="-\d+"/);
   });
 
-  it('P33 testimony: y=0, wrap none, 36pt', async () => {
+  it('P33 testimony: y=0, wrap none, body below title', async () => {
     const out = stabilizeTestimonySlideXml(await slideXml(33));
     expect(out).toContain('y="0"');
     expect(out).toContain('wrap="none"');
     expect(out).toContain('sz="3600"');
+    expect(out).toContain('y="1080000"');
   });
 
-  it('P34 roster: both titles taller + wrap none', async () => {
+  it('P34 roster: titles + names/roles pushed below headers', async () => {
     const out = stabilizeServiceRosterSlideXml(await slideXml(34));
     expect(out).toContain('wrap="none"');
-    expect(out).toContain('cy="1100000"');
+    expect(out).toContain('cy="980000"');
     expect(out).toContain('sz="3600"');
-    expect(out).toContain('今日');
-    expect(out).toContain('下主日');
+    expect(out).toContain('y="1060000"');
+    expect(out).toContain('y="2880000"');
   });
 
-  it('P24 birthday: wrap none', async () => {
+  it('P24 birthday: wrap none and footer line spacing', async () => {
     const out = stabilizeBirthdayTitleSlideXml(await slideXml(24));
     expect(out).toContain('wrap="none"');
+    expect(out).toContain('spcPct val="135000"');
   });
 });
