@@ -470,6 +470,13 @@ export function bulletinDynamicTextOverrides(bulletin: WeeklyBulletin): Bulletin
   return out;
 }
 
+/** 预览 useMemo 依赖：任一动态字段变化都会改变此指纹，避免漏列 deps */
+export function bulletinDynamicTextOverridesKey(bulletin: WeeklyBulletin): string {
+  return bulletinDynamicTextOverrides(bulletin)
+    .map((o) => `${o.slide}:${o.textIndex}:${o.text}`)
+    .join('\n');
+}
+
 /** 合并字段派生覆盖与手动覆盖，同一 slide:textIndex 时手动覆盖优先（与导出一致） */
 export function mergeSlideTextOverrides(
   base: readonly BulletinSlideTextOverride[],

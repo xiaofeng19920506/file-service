@@ -17,6 +17,7 @@ import { navSectionById } from '../../lib/bulletin-sections';
 import { upcomingSundayIso } from '../../lib/bulletin-date';
 import {
   bulletinDynamicTextOverrides,
+  bulletinDynamicTextOverridesKey,
   mergeSlideTextOverrides,
 } from '../../lib/bulletin-pptx-patches';
 import BulletinPptSlidePreview from './BulletinPptSlidePreview';
@@ -216,6 +217,7 @@ export default function BulletinFullDeckPreview({
     return set;
   }, [composedSections, highlightSectionId]);
 
+  const dynamicOverridesKey = bulletinDynamicTextOverridesKey(bulletin);
   const fullPatch = useMemo(
     (): BulletinPreviewPatchFields => ({
       serviceDate: bulletin.serviceDate || upcomingSundayIso(),
@@ -261,16 +263,7 @@ export default function BulletinFullDeckPreview({
       bulletin.weeklyMeetingVariant,
       bulletin.slideTextOverrides,
       bulletin.sectionPptxOverrides,
-      bulletin.lastWeekOfferingDate,
-      bulletin.baptismText,
-      bulletin.testimonyShareDate,
-      bulletin.serviceRosterText,
-      bulletin.serviceRosterTodayDate,
-      bulletin.serviceRosterNextDate,
-      bulletin.serviceRosterChair,
-      bulletin.serviceRosterWorship,
-      bulletin.serviceRosterUsher,
-      bulletin.serviceRosterCleanNames,
+      dynamicOverridesKey,
     ],
   );
 

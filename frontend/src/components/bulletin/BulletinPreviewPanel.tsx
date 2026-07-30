@@ -20,6 +20,7 @@ import {
 } from '../../lib/bulletin-preview-patch';
 import {
   bulletinDynamicTextOverrides,
+  bulletinDynamicTextOverridesKey,
   mergeSlideTextOverrides,
 } from '../../lib/bulletin-pptx-patches';
 import BulletinFullDeckPreview, {
@@ -173,6 +174,7 @@ export default function BulletinPreviewPanel({
     [deckPlan, onVisibleSectionChange],
   );
 
+  const dynamicOverridesKey = bulletinDynamicTextOverridesKey(bulletin);
   const previewPatch = useMemo(
     (): BulletinSlidePreviewParams =>
       previewPatchFull({
@@ -217,17 +219,8 @@ export default function BulletinPreviewPanel({
       bulletin.weeklyMeetingVariant,
       bulletin.slideTextOverrides,
       bulletin.sectionPptxOverrides,
-      bulletin.lastWeekOfferingDate,
       bulletin.announcements,
-      bulletin.baptismText,
-      bulletin.testimonyShareDate,
-      bulletin.serviceRosterText,
-      bulletin.serviceRosterTodayDate,
-      bulletin.serviceRosterNextDate,
-      bulletin.serviceRosterChair,
-      bulletin.serviceRosterWorship,
-      bulletin.serviceRosterUsher,
-      bulletin.serviceRosterCleanNames,
+      dynamicOverridesKey,
     ],
   );
 
