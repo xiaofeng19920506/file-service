@@ -1,6 +1,7 @@
 import type { WeeklyBulletin, BulletinAnnouncement } from '../api/bulletins';
 import { computeOfferingTotalAmount } from './bulletin-offering';
 import { normalizeTestimonyShareDate } from './bulletin-pptx-patches';
+import { formatBulletinShortDate, sundayAfterIso } from './bulletin-date';
 
 /**
  * 原版模板 `06_14_2026.pptx` 上对应表单字段的默认文字。
@@ -18,7 +19,14 @@ export const BULLETIN_TEMPLATE_FIELD_DEFAULTS = {
     '(以弗所書 2:8)  你 们 得 救 是 本 乎 恩 ，也 因 着 信 ； 这 并 不 是 出 於 自 己 ， 乃 是 神 所 赐 的 ；',
   /** P33 日期，写入标题与正文大号「8/30」 */
   testimonyShareDate: '8/30',
-  serviceRosterText: 'Michelle, 洪雪吟, 嘉文',
+  /** 今日清洁人员（换行）；写入 P34 textIndex 1 */
+  serviceRosterText: 'Michelle\n洪雪吟\n嘉文',
+  serviceRosterTodayDate: '6/14',
+  serviceRosterNextDate: '6/21',
+  serviceRosterChair: '賴建平',
+  serviceRosterWorship: '李麗婷',
+  serviceRosterUsher: '惠美',
+  serviceRosterCleanNames: '惠美\n悅心\nHelen',
   baptismText: '7月5日主日',
   staffMeetingYear: '2026',
   staffMeetingMonth: '6',
@@ -45,6 +53,18 @@ const TEMPLATE_ANNOUNCEMENTS: Omit<BulletinAnnouncement, 'id' | 'sortOrder'>[] =
 function pickText(value: string | null | undefined, fallback: string): string {
   const trimmed = (value ?? '').trim();
   return trimmed ? value! : fallback;
+}
+
+function defaultTodayRosterDate(serviceDate: string): string {
+  const fromService = serviceDate.trim() ? formatBulletinShortDate(serviceDate.trim()) : '';
+  return fromService || BULLETIN_TEMPLATE_FIELD_DEFAULTS.serviceRosterTodayDate;
+}
+
+function defaultNextRosterDate(serviceDate: string): string {
+  if (serviceDate.trim()) {
+    return formatBulletinShortDate(sundayAfterIso(serviceDate.trim()));
+  }
+  return BULLETIN_TEMPLATE_FIELD_DEFAULTS.serviceRosterNextDate;
 }
 
 /** 空字段用模板原文填充，使左侧表单与右侧幻灯片一致 */
@@ -94,6 +114,30 @@ export function withTemplateFieldDefaults(bulletin: WeeklyBulletin): WeeklyBulle
     serviceRosterText: pickText(
       bulletin.serviceRosterText,
       BULLETIN_TEMPLATE_FIELD_DEFAULTS.serviceRosterText,
+    ),
+    serviceRosterTodayDate: pickText(
+      bulletin.serviceRosterTodayDate,
+      defaultTodayRosterDate(bulletin.serviceDate),
+    ),
+    serviceRosterNextDate: pickText(
+      bulletin.serviceRosterNextDate,
+      defaultNextRosterDate(bulletin.serviceDate),
+    ),
+    serviceRosterChair: pickText(
+      bulletin.serviceRosterChair,
+      BULLETIN_TEMPLATE_FIELD_DEFAULTS.serviceRosterChair,
+    ),
+    serviceRosterWorship: pickText(
+      bulletin.serviceRosterWorship,
+      BULLETIN_TEMPLATE_FIELD_DEFAULTS.serviceRosterWorship,
+    ),
+    serviceRosterUsher: pickText(
+      bulletin.serviceRosterUsher,
+      BULLETIN_TEMPLATE_FIELD_DEFAULTS.serviceRosterUsher,
+    ),
+    serviceRosterCleanNames: pickText(
+      bulletin.serviceRosterCleanNames,
+      BULLETIN_TEMPLATE_FIELD_DEFAULTS.serviceRosterCleanNames,
     ),
     baptismText: pickText(bulletin.baptismText, BULLETIN_TEMPLATE_FIELD_DEFAULTS.baptismText),
     staffMeetingYear: pickText(

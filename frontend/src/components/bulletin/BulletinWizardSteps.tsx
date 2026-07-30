@@ -10,6 +10,11 @@ import {
   moveBirthdayName,
   parseBirthdayNames,
 } from '../../lib/bulletin-birthday';
+import {
+  ROSTER_NAME_MAX,
+  joinRosterNames,
+  parseRosterNames,
+} from '../../lib/bulletin-roster';
 
 type StepShellProps = {
   titleKey: string;
@@ -26,6 +31,122 @@ function StepShell({ titleKey, introKey, children }: StepShellProps) {
         <p className="bulletin-step-intro">{t(introKey as never)}</p>
       </header>
       <div className="bulletin-cover-step-fields">{children}</div>
+    </div>
+  );
+}
+
+/** 多人名列表（服事轮值：可点添加） */
+function RosterNameListField({
+  label,
+  hint,
+  value,
+  canEdit,
+  onCommit,
+}: {
+  label: string;
+  hint?: string;
+  value: string;
+  canEdit: boolean;
+  onCommit: (joined: string) => void;
+}) {
+  const { t } = useI18n();
+  const namesFromValue = parseRosterNames(value);
+  const [rows, setRows] = useState<string[]>(() =>
+    namesFromValue.length > 0 ? namesFromValue : [''],
+  );
+  const rowsRef = useRef(rows);
+  rowsRef.current = rows;
+  const draftJoinedRef = useRef(joinRosterNames(namesFromValue));
+  draftJoinedRef.current = joinRosterNames(namesFromValue);
+  const onCommitRef = useRef(onCommit);
+  onCommitRef.current = onCommit;
+
+  useEffect(() => {
+    const parsed = parseRosterNames(value);
+    const next = parsed.length > 0 ? parsed : [''];
+    setRows((prev) => {
+      const prevFilled = prev.map((s) => s.trim()).filter(Boolean);
+      const nextFilled = next.map((s) => s.trim()).filter(Boolean);
+      if (
+        prevFilled.join('\n') === nextFilled.join('\n') &&
+        prev.length >= next.length
+      ) {
+        return prev;
+      }
+      return next;
+    });
+  }, [value]);
+
+  const commitNames = (next?: string[]) => {
+    const uiRows = (next ?? rowsRef.current).length > 0 ? (next ?? rowsRef.current) : [''];
+    setRows(uiRows);
+    rowsRef.current = uiRows;
+    const joined = joinRosterNames(uiRows);
+    if (joined !== draftJoinedRef.current) onCommit(joined);
+  };
+
+  useEffect(() => {
+    return () => {
+      const joined = joinRosterNames(rowsRef.current);
+      if (joined !== draftJoinedRef.current) onCommitRef.current(joined);
+    };
+  }, []);
+
+  return (
+    <div className="bulletin-birthday-names">
+      <span className="bulletin-birthday-names-label">{label}</span>
+      {hint ? <p className="bulletin-field-hint">{hint}</p> : null}
+      <div className="bulletin-birthday-names-list">
+        {rows.map((name, index) => (
+          <div key={`roster-${index}`} className="bulletin-birthday-name-row">
+            <input
+              type="text"
+              className="bulletin-birthday-name-input"
+              value={name}
+              disabled={!canEdit}
+              placeholder={t('bulletin.rosterNamePlaceholder', { n: String(index + 1) })}
+              onChange={(e) => {
+                const next = [...rows];
+                next[index] = e.target.value;
+                setRows(next);
+                rowsRef.current = next;
+              }}
+              onBlur={() => commitNames()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+              }}
+            />
+            {canEdit ? (
+              <div className="bulletin-birthday-name-actions">
+                {rows.length > 1 ? (
+                  <button
+                    type="button"
+                    className="btn-secondary btn-sm"
+                    onClick={() => commitNames(rows.filter((_, i) => i !== index))}
+                  >
+                    {t('bulletin.removeRosterName')}
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        ))}
+      </div>
+      {canEdit && rows.length < ROSTER_NAME_MAX ? (
+        <div className="bulletin-birthday-names-toolbar">
+          <button
+            type="button"
+            className="btn-secondary btn-sm"
+            onClick={() => {
+              const next = [...rows, ''];
+              setRows(next);
+              rowsRef.current = next;
+            }}
+          >
+            {t('bulletin.addRosterName')}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -631,14 +752,59 @@ export function BulletinMoreStep({
         </>
       ) : null}
       {show('service_roster') ? (
-        <TextField
-          label={t('bulletin.serviceRoster')}
-          value={draft.serviceRosterText}
-          disabled={!canEdit}
-          multiline
-          commitOnBlur
-          onChange={(v) => onPatch('serviceRosterText', v)}
-        />
+        <>
+          <TextField
+            label={t('bulletin.serviceRosterTodayDate')}
+            value={draft.serviceRosterTodayDate ?? ''}
+            disabled={!canEdit}
+            commitOnBlur
+            onChange={(v) => onPatch('serviceRosterTodayDate', v)}
+          />
+          <p className="bulletin-field-hint">{t('bulletin.serviceRosterTodayDateHint')}</p>
+          <RosterNameListField
+            label={t('bulletin.serviceRosterTodayNames')}
+            hint={t('bulletin.serviceRosterTodayNamesHint')}
+            value={draft.serviceRosterText ?? ''}
+            canEdit={canEdit}
+            onCommit={(joined) => onPatch('serviceRosterText', joined)}
+          />
+          <TextField
+            label={t('bulletin.serviceRosterNextDate')}
+            value={draft.serviceRosterNextDate ?? ''}
+            disabled={!canEdit}
+            commitOnBlur
+            onChange={(v) => onPatch('serviceRosterNextDate', v)}
+          />
+          <p className="bulletin-field-hint">{t('bulletin.serviceRosterNextDateHint')}</p>
+          <TextField
+            label={t('bulletin.serviceRosterChair')}
+            value={draft.serviceRosterChair ?? ''}
+            disabled={!canEdit}
+            commitOnBlur
+            onChange={(v) => onPatch('serviceRosterChair', v)}
+          />
+          <TextField
+            label={t('bulletin.serviceRosterWorship')}
+            value={draft.serviceRosterWorship ?? ''}
+            disabled={!canEdit}
+            commitOnBlur
+            onChange={(v) => onPatch('serviceRosterWorship', v)}
+          />
+          <TextField
+            label={t('bulletin.serviceRosterUsher')}
+            value={draft.serviceRosterUsher ?? ''}
+            disabled={!canEdit}
+            commitOnBlur
+            onChange={(v) => onPatch('serviceRosterUsher', v)}
+          />
+          <RosterNameListField
+            label={t('bulletin.serviceRosterCleanNames')}
+            hint={t('bulletin.serviceRosterCleanNamesHint')}
+            value={draft.serviceRosterCleanNames ?? ''}
+            canEdit={canEdit}
+            onCommit={(joined) => onPatch('serviceRosterCleanNames', joined)}
+          />
+        </>
       ) : null}
       {show('weekly_meetings') ? (
         <label className="bulletin-field">

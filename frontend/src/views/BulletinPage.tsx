@@ -413,6 +413,13 @@ export default function BulletinPage() {
         rotationStartMonth: 'rotation',
         rotationEndMonth: 'rotation',
         testimonyShareDate: 'future_testimony',
+        serviceRosterText: 'service_roster',
+        serviceRosterTodayDate: 'service_roster',
+        serviceRosterNextDate: 'service_roster',
+        serviceRosterChair: 'service_roster',
+        serviceRosterWorship: 'service_roster',
+        serviceRosterUsher: 'service_roster',
+        serviceRosterCleanNames: 'service_roster',
       };
       const slidesForField: Partial<Record<keyof WeeklyBulletin, number[]>> = {
         serviceDate: [1],
@@ -433,6 +440,13 @@ export default function BulletinPage() {
         rotationStartMonth: [32],
         rotationEndMonth: [32],
         testimonyShareDate: [33],
+        serviceRosterText: [34],
+        serviceRosterTodayDate: [34],
+        serviceRosterNextDate: [34],
+        serviceRosterChair: [34],
+        serviceRosterWorship: [34],
+        serviceRosterUsher: [34],
+        serviceRosterCleanNames: [34],
       };
       const sectionId = sectionForField[key];
       if (sectionId && next.sectionPptxOverrides?.[sectionId]) {
@@ -583,6 +597,12 @@ export default function BulletinPage() {
         rotationEndMonth: draft.rotationEndMonth,
         testimonyShareDate: draft.testimonyShareDate,
         serviceRosterText: draft.serviceRosterText,
+        serviceRosterTodayDate: draft.serviceRosterTodayDate,
+        serviceRosterNextDate: draft.serviceRosterNextDate,
+        serviceRosterChair: draft.serviceRosterChair,
+        serviceRosterWorship: draft.serviceRosterWorship,
+        serviceRosterUsher: draft.serviceRosterUsher,
+        serviceRosterCleanNames: draft.serviceRosterCleanNames,
         baptismText: draft.baptismText,
         scriptureBook: draft.scriptureBook,
         scriptureReference: draft.scriptureReference,

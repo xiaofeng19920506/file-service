@@ -25,6 +25,12 @@ export const BULLETIN_LOCAL_SYNC_KEYS = [
   'staffMeetingEndTime',
   'testimonyShareDate',
   'serviceRosterText',
+  'serviceRosterTodayDate',
+  'serviceRosterNextDate',
+  'serviceRosterChair',
+  'serviceRosterWorship',
+  'serviceRosterUsher',
+  'serviceRosterCleanNames',
   'rotationStartMonth',
   'rotationEndMonth',
   'weeklyMeetingVariant',
@@ -70,15 +76,25 @@ export function fieldToSectionId(key: BulletinLocalSyncKey | string): string | n
       return 'offering';
     case 'baptismText':
       return 'announcements';
+    case 'testimonyShareDate':
+      return 'future_testimony';
+    case 'serviceRosterText':
+    case 'serviceRosterTodayDate':
+    case 'serviceRosterNextDate':
+    case 'serviceRosterChair':
+    case 'serviceRosterWorship':
+    case 'serviceRosterUsher':
+    case 'serviceRosterCleanNames':
+      return 'service_roster';
+    case 'rotationStartMonth':
+    case 'rotationEndMonth':
+      return 'rotation';
     case 'staffMeetingDate':
     case 'staffMeetingYear':
     case 'staffMeetingMonth':
     case 'staffMeetingStartTime':
     case 'staffMeetingEndTime':
-    case 'testimonyShareDate':
-    case 'serviceRosterText':
-    case 'rotationStartMonth':
-    case 'rotationEndMonth':
+      return 'staff_meeting';
     case 'weeklyMeetingVariant':
     case 'hiddenSections':
       return 'more';

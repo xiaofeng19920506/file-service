@@ -222,6 +222,12 @@ export default function BulletinPreviewPanel({
       bulletin.baptismText,
       bulletin.testimonyShareDate,
       bulletin.serviceRosterText,
+      bulletin.serviceRosterTodayDate,
+      bulletin.serviceRosterNextDate,
+      bulletin.serviceRosterChair,
+      bulletin.serviceRosterWorship,
+      bulletin.serviceRosterUsher,
+      bulletin.serviceRosterCleanNames,
     ],
   );
 

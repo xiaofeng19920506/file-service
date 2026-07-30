@@ -12,6 +12,7 @@ import {
 import { expandScriptureSlidesInPptx } from './bulletin-scripture-pptx-expand';
 import { expandAnnouncementSlidesInPptx } from './bulletin-announcement-pptx-expand';
 import { applyBirthdayNameGridToSlideXml } from './bulletin-birthday';
+import { buildServiceRosterReplacements } from './bulletin-roster';
 import { stabilizeOfferingReportSlideXml } from './bulletin-offering-layout';
 import JSZip from './jszip';
 
@@ -446,11 +447,9 @@ export function patchesForStep(stepId: string, bulletin: WeeklyBulletin): SlideT
       if (testimonyReps.length) {
         patches.push({ slideNumber: 33, replacements: testimonyReps });
       }
-      if (bulletin.serviceRosterText.trim()) {
-        patches.push({
-          slideNumber: 34,
-          replacements: [{ textIndex: 1, text: bulletin.serviceRosterText.trim() }],
-        });
+      const rosterReps = buildServiceRosterReplacements(bulletin);
+      if (rosterReps.length) {
+        patches.push({ slideNumber: 34, replacements: rosterReps });
       }
       return patches;
     }
@@ -488,8 +487,9 @@ export function bulletinDynamicTextOverrides(bulletin: WeeklyBulletin): Bulletin
   for (const rep of buildTestimonyShareReplacements(bulletin)) {
     out.push({ slide: 33, textIndex: rep.textIndex, text: rep.text });
   }
-  const roster = bulletin.serviceRosterText?.trim() ?? '';
-  if (roster) out.push({ slide: 34, textIndex: 1, text: roster });
+  for (const rep of buildServiceRosterReplacements(bulletin)) {
+    out.push({ slide: 34, textIndex: rep.textIndex, text: rep.text });
+  }
   return out;
 }
 

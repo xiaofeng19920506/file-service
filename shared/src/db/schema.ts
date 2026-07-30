@@ -247,7 +247,17 @@ export const weeklyBulletins = pgTable('weekly_bulletins', {
   /** 同工会结束时间，如 2:00 pm */
   staffMeetingEndTime: text('staff_meeting_end_time').notNull().default(''),
   testimonyShareDate: text('testimony_share_date').notNull().default(''),
+  /** 今日清洁人员（换行分隔）；写入 P34 textIndex 1 */
   serviceRosterText: text('service_roster_text').notNull().default(''),
+  /** 今日清洁标题日期，如 6/14 →「今日(6/14)清潔輪值」 */
+  serviceRosterTodayDate: text('service_roster_today_date').notNull().default(''),
+  /** 下主日服事标题日期，如 6/21 →「下主日(6/21)服事輪值」 */
+  serviceRosterNextDate: text('service_roster_next_date').notNull().default(''),
+  serviceRosterChair: text('service_roster_chair').notNull().default(''),
+  serviceRosterWorship: text('service_roster_worship').notNull().default(''),
+  serviceRosterUsher: text('service_roster_usher').notNull().default(''),
+  /** 下主日清洁人员（换行分隔） */
+  serviceRosterCleanNames: text('service_roster_clean_names').notNull().default(''),
   /** 服事轮值表 P32：季度开始月份，如 7 */
   rotationStartMonth: text('rotation_start_month').notNull().default(''),
   /** 服事轮值表 P32：季度结束月份，如 9 */

@@ -249,7 +249,15 @@
     },
     {
       "slide": 34,
-      "fields": [{ "key": "serviceRosterText", "textIndex": 1, "example": "Michelle, 洪雪吟, 嘉文" }]
+      "fields": [
+        { "key": "serviceRosterNextDate", "textIndex": 0, "example": "6/21", "notes": "下主日(6/21)服事輪值" },
+        { "key": "serviceRosterText", "textIndex": 1, "example": "Michelle, 洪雪吟, 嘉文", "notes": "今日清洁多人" },
+        { "key": "serviceRosterChair", "textIndex": 4, "example": "賴建平" },
+        { "key": "serviceRosterWorship", "textIndex": 8, "example": "李麗婷" },
+        { "key": "serviceRosterUsher", "textIndex": 12, "example": "惠美" },
+        { "key": "serviceRosterCleanNames", "textIndex": 15, "example": "惠美, 悅心, Helen" },
+        { "key": "serviceRosterTodayDate", "textIndex": 18, "example": "6/14", "notes": "今日(6/14)清潔輪值" }
+      ]
     },
     {
       "slide": 35,

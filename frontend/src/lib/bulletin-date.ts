@@ -5,6 +5,16 @@ export function formatBulletinCoverDate(isoDate: string): string {
   return `${m}/${d}/${y}`;
 }
 
+/** PPT 短日期：6/14（去前导零，贴近模板） */
+export function formatBulletinShortDate(isoDate: string): string {
+  const [y, m, d] = isoDate.split('-');
+  if (!y || !m || !d) return isoDate;
+  const month = Number.parseInt(m, 10);
+  const day = Number.parseInt(d, 10);
+  if (!month || !day) return isoDate;
+  return `${month}/${day}`;
+}
+
 /** 本地日历日 → YYYY-MM-DD（避免 toISOString 的 UTC 偏移） */
 export function toLocalIsoDate(d: Date): string {
   const y = d.getFullYear();

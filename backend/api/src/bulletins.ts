@@ -80,7 +80,7 @@ const slidePreviewCache = new Map<string, Buffer>();
 const patchedPptxCache = new Map<string, Buffer>();
 /** 预览补丁版本；v35=分区 override 支持增删页（splice 变长） */
 /** v52：圣餐英文经文略加大至 28pt，减少底部空白 */
-const SLIDE_PREVIEW_PATCH_REV = 'v59';
+const SLIDE_PREVIEW_PATCH_REV = 'v60';
 
 async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   const chunks: Buffer[] = [];
@@ -299,6 +299,12 @@ export type WeeklyBulletinDto = {
   staffMeetingEndTime: string;
   testimonyShareDate: string;
   serviceRosterText: string;
+  serviceRosterTodayDate: string;
+  serviceRosterNextDate: string;
+  serviceRosterChair: string;
+  serviceRosterWorship: string;
+  serviceRosterUsher: string;
+  serviceRosterCleanNames: string;
   rotationStartMonth: string;
   rotationEndMonth: string;
   baptismText: string;
@@ -371,6 +377,12 @@ async function mapBulletin(
     staffMeetingEndTime: row.staffMeetingEndTime,
     testimonyShareDate: row.testimonyShareDate,
     serviceRosterText: row.serviceRosterText,
+    serviceRosterTodayDate: row.serviceRosterTodayDate,
+    serviceRosterNextDate: row.serviceRosterNextDate,
+    serviceRosterChair: row.serviceRosterChair,
+    serviceRosterWorship: row.serviceRosterWorship,
+    serviceRosterUsher: row.serviceRosterUsher,
+    serviceRosterCleanNames: row.serviceRosterCleanNames,
     rotationStartMonth: row.rotationStartMonth,
     rotationEndMonth: row.rotationEndMonth,
     baptismText: row.baptismText,
@@ -412,6 +424,12 @@ type BulletinPatchBody = Partial<{
   staffMeetingEndTime: string;
   testimonyShareDate: string;
   serviceRosterText: string;
+  serviceRosterTodayDate: string;
+  serviceRosterNextDate: string;
+  serviceRosterChair: string;
+  serviceRosterWorship: string;
+  serviceRosterUsher: string;
+  serviceRosterCleanNames: string;
   rotationStartMonth: string;
   rotationEndMonth: string;
   baptismText: string;
@@ -1170,6 +1188,12 @@ export function registerBulletinRoutes(
       assignText('staffMeetingEndTime', 'staffMeetingEndTime');
       assignText('testimonyShareDate', 'testimonyShareDate');
       assignText('serviceRosterText', 'serviceRosterText');
+      assignText('serviceRosterTodayDate', 'serviceRosterTodayDate');
+      assignText('serviceRosterNextDate', 'serviceRosterNextDate');
+      assignText('serviceRosterChair', 'serviceRosterChair');
+      assignText('serviceRosterWorship', 'serviceRosterWorship');
+      assignText('serviceRosterUsher', 'serviceRosterUsher');
+      assignText('serviceRosterCleanNames', 'serviceRosterCleanNames');
       assignText('rotationStartMonth', 'rotationStartMonth');
       assignText('rotationEndMonth', 'rotationEndMonth');
       assignText('baptismText', 'baptismText');
