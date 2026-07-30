@@ -1,5 +1,6 @@
 import type { WeeklyBulletin, BulletinAnnouncement } from '../api/bulletins';
 import { computeOfferingTotalAmount } from './bulletin-offering';
+import { normalizeTestimonyShareDate } from './bulletin-pptx-patches';
 
 /**
  * 原版模板 `06_14_2026.pptx` 上对应表单字段的默认文字。
@@ -15,7 +16,8 @@ export const BULLETIN_TEMPLATE_FIELD_DEFAULTS = {
   offeringTotalAmount: '6260.00',
   verseOfWeek:
     '(以弗所書 2:8)  你 们 得 救 是 本 乎 恩 ，也 因 着 信 ； 这 并 不 是 出 於 自 己 ， 乃 是 神 所 赐 的 ；',
-  testimonyShareDate: '下主日8/30見證分享',
+  /** P33 日期，写入标题与正文大号「8/30」 */
+  testimonyShareDate: '8/30',
   serviceRosterText: 'Michelle, 洪雪吟, 嘉文',
   baptismText: '7月5日主日',
   staffMeetingYear: '2026',
@@ -83,9 +85,11 @@ export function withTemplateFieldDefaults(bulletin: WeeklyBulletin): WeeklyBulle
       ) || BULLETIN_TEMPLATE_FIELD_DEFAULTS.offeringTotalAmount,
     ),
     verseOfWeek: pickText(bulletin.verseOfWeek, BULLETIN_TEMPLATE_FIELD_DEFAULTS.verseOfWeek),
-    testimonyShareDate: pickText(
-      bulletin.testimonyShareDate,
-      BULLETIN_TEMPLATE_FIELD_DEFAULTS.testimonyShareDate,
+    testimonyShareDate: normalizeTestimonyShareDate(
+      pickText(
+        bulletin.testimonyShareDate,
+        BULLETIN_TEMPLATE_FIELD_DEFAULTS.testimonyShareDate,
+      ),
     ),
     serviceRosterText: pickText(
       bulletin.serviceRosterText,

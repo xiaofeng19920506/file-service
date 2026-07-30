@@ -188,6 +188,31 @@ export function buildRotationMonthReplacements(bulletin: {
 }
 
 /**
+ * 从「8/30」或旧版整句「下主日8/30見證分享」取出日期。
+ */
+export function normalizeTestimonyShareDate(raw: string | null | undefined): string {
+  const t = (raw ?? '').trim();
+  if (!t) return '';
+  if (/^\d{1,2}\/\d{1,2}(\/\d{2,4})?$/.test(t)) return t;
+  const m = t.match(/(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)/);
+  return m?.[1] ?? t;
+}
+
+/**
+ * 下主日见证 P33：日期写入标题「下主日{date}見證分享」与正文大号日期。
+ */
+export function buildTestimonyShareReplacements(bulletin: {
+  testimonyShareDate?: string;
+}): { textIndex: number; text: string }[] {
+  const date = normalizeTestimonyShareDate(bulletin.testimonyShareDate);
+  if (!date) return [];
+  return [
+    { textIndex: 0, text: `下主日${date}見證分享` },
+    { textIndex: 2, text: date },
+  ];
+}
+
+/**
  * P32 标题框原版 y 为负，顶部文字被裁切。
  * 标题带 lt2 浅色填充：y 须为 0 以盖住页顶；增高 + 去内边距 + 略缩字号避免 LO CJK 裁切。
  */
@@ -417,11 +442,9 @@ export function patchesForStep(stepId: string, bulletin: WeeklyBulletin): SlideT
       if (rotationReps.length) {
         patches.push({ slideNumber: 32, replacements: rotationReps });
       }
-      if (bulletin.testimonyShareDate.trim()) {
-        patches.push({
-          slideNumber: 33,
-          replacements: [{ textIndex: 0, text: bulletin.testimonyShareDate.trim() }],
-        });
+      const testimonyReps = buildTestimonyShareReplacements(bulletin);
+      if (testimonyReps.length) {
+        patches.push({ slideNumber: 33, replacements: testimonyReps });
       }
       if (bulletin.serviceRosterText.trim()) {
         patches.push({
@@ -462,8 +485,9 @@ export function bulletinDynamicTextOverrides(bulletin: WeeklyBulletin): Bulletin
   for (const rep of buildRotationMonthReplacements(bulletin)) {
     out.push({ slide: 32, textIndex: rep.textIndex, text: rep.text });
   }
-  const testimony = bulletin.testimonyShareDate?.trim() ?? '';
-  if (testimony) out.push({ slide: 33, textIndex: 0, text: testimony });
+  for (const rep of buildTestimonyShareReplacements(bulletin)) {
+    out.push({ slide: 33, textIndex: rep.textIndex, text: rep.text });
+  }
   const roster = bulletin.serviceRosterText?.trim() ?? '';
   if (roster) out.push({ slide: 34, textIndex: 1, text: roster });
   return out;

@@ -619,13 +619,16 @@ export function BulletinMoreStep({
         </>
       ) : null}
       {show('future_testimony') ? (
-        <TextField
-          label={t('bulletin.testimonyShare')}
-          value={draft.testimonyShareDate}
-          disabled={!canEdit}
-          commitOnBlur
-          onChange={(v) => onPatch('testimonyShareDate', v)}
-        />
+        <>
+          <TextField
+            label={t('bulletin.testimonyShare')}
+            value={draft.testimonyShareDate ?? ''}
+            disabled={!canEdit}
+            commitOnBlur
+            onChange={(v) => onPatch('testimonyShareDate', v)}
+          />
+          <p className="bulletin-field-hint">{t('bulletin.testimonyShareHint')}</p>
+        </>
       ) : null}
       {show('service_roster') ? (
         <TextField

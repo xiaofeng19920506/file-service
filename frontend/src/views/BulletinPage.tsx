@@ -412,6 +412,7 @@ export default function BulletinPage() {
         staffMeetingEndTime: 'staff_meeting',
         rotationStartMonth: 'rotation',
         rotationEndMonth: 'rotation',
+        testimonyShareDate: 'future_testimony',
       };
       const slidesForField: Partial<Record<keyof WeeklyBulletin, number[]>> = {
         serviceDate: [1],
@@ -431,6 +432,7 @@ export default function BulletinPage() {
         staffMeetingEndTime: [31],
         rotationStartMonth: [32],
         rotationEndMonth: [32],
+        testimonyShareDate: [33],
       };
       const sectionId = sectionForField[key];
       if (sectionId && next.sectionPptxOverrides?.[sectionId]) {

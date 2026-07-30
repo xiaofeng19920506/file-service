@@ -238,7 +238,14 @@
     },
     {
       "slide": 33,
-      "fields": [{ "key": "testimonyShareDate", "textIndex": 0, "example": "下主日8/30見證分享" }]
+      "fields": [
+        {
+          "key": "testimonyShareDate",
+          "textIndex": 0,
+          "example": "8/30",
+          "notes": "日期；写入标题「下主日8/30見證分享」与正文 textIndex 2"
+        }
+      ]
     },
     {
       "slide": 34,
