@@ -5,8 +5,8 @@
   max-height: 100dvh;
   overflow: hidden;
   max-width: 100%;
-  /* 周报模板默认画幅；PPT 编辑器等非 bulletin-page 也可用 */
-  --bulletin-slide-aspect: 9144000 / 5143500;
+  /* 周报模板 sldSz 9144000×5143500 = 16:9 */
+  --bulletin-slide-aspect: 16 / 9;
 }
 
 .app-content {
@@ -3561,7 +3561,7 @@
 .ppt-slide-thumb-composite .bulletin-slide-preview--loading,
 .ppt-slide-thumb-composite .bulletin-slide-preview--empty {
   min-height: 0;
-  aspect-ratio: var(--bulletin-slide-aspect, 9144000 / 5143500);
+  aspect-ratio: var(--bulletin-slide-aspect, 16 / 9);
   border: 0;
   border-radius: 0;
   font-size: 0.75rem;
@@ -6164,8 +6164,8 @@
 }
 
 .bulletin-page {
-  /* 与 shared/templates/bulletin/06_14_2026.pptx 的 p:sldSz 一致 */
-  --bulletin-slide-aspect: 9144000 / 5143500;
+  /* 与 shared/templates/bulletin/06_14_2026.pptx 的 p:sldSz（16:9）一致 */
+  --bulletin-slide-aspect: 16 / 9;
   max-width: 1100px;
   margin: 0 auto;
   padding: 1.25rem 1rem 5rem;
@@ -6515,7 +6515,7 @@
 
 .bulletin-slide-preview--placeholder {
   min-height: 0;
-  aspect-ratio: var(--bulletin-slide-aspect, 9144000 / 5143500);
+  aspect-ratio: var(--bulletin-slide-aspect, 16 / 9);
 }
 
 .bulletin-preview-static-block {
@@ -6877,9 +6877,9 @@ body.bulletin-slideshow-window {
   justify-content: center;
   min-height: 0;
   width: 100%;
-  aspect-ratio: var(--bulletin-slide-aspect, 9144000 / 5143500);
+  aspect-ratio: var(--bulletin-slide-aspect, 16 / 9);
   border: 1px dashed var(--border-light);
-  border-radius: 12px;
+  border-radius: 4px;
   color: var(--text-secondary);
   box-sizing: border-box;
 }
@@ -8133,16 +8133,33 @@ body.bulletin-slideshow-window {
 .bulletin-slide-preview-frame {
   position: relative;
   width: 100%;
-  /* 与模板 ppt/presentation.xml 的 p:sldSz 一致（默认 9144000×5143500） */
-  aspect-ratio: var(--bulletin-slide-aspect, 9144000 / 5143500);
+  /* 占位 / 合成预览：与模板 16:9 一致；PNG 见 --png 覆盖 */
+  aspect-ratio: var(--bulletin-slide-aspect, 16 / 9);
+  height: auto;
+  max-height: none;
+  flex-shrink: 0;
   border: 1px solid var(--border-light);
-  border-radius: 12px;
+  border-radius: 2px;
   overflow: hidden;
   background: #1a1a1a;
+  box-sizing: border-box;
 }
 
 .bulletin-slide-preview-frame--png {
+  /* 由 LibreOffice PNG 固有比例决定高度，避免外层把画幅压扁成超宽条 */
+  aspect-ratio: auto;
   background: #000;
+  line-height: 0;
+}
+
+.bulletin-slide-preview-frame--png .bulletin-slide-preview-img {
+  position: static;
+  inset: auto;
+  width: 100%;
+  height: auto;
+  object-fit: fill;
+  display: block;
+  vertical-align: top;
 }
 
 .bulletin-composite-slide {
