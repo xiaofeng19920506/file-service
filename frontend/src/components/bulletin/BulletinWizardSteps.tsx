@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { WeeklyBulletin } from '../../api/bulletins';
 import { BIBLE_BOOKS } from '../../lib/bible-books';
 import { useI18n } from '../../i18n';
@@ -178,11 +178,33 @@ export function BulletinBirthdayStep({
   onPatch,
 }: BulletinStepPanelProps) {
   const { t } = useI18n();
-  const names = parseBirthdayNames(draft.birthdayNames);
-  const rows = names.length > 0 ? names : [''];
+  const namesFromDraft = parseBirthdayNames(draft.birthdayNames);
+  // 本地保留空行：joinBirthdayNames 会滤掉空字符串，不能只用 draft 驱动 UI
+  const [rows, setRows] = useState<string[]>(() =>
+    namesFromDraft.length > 0 ? namesFromDraft : [''],
+  );
+
+  useEffect(() => {
+    const parsed = parseBirthdayNames(draft.birthdayNames);
+    const next = parsed.length > 0 ? parsed : [''];
+    setRows((prev) => {
+      const prevFilled = prev.map((s) => s.trim()).filter(Boolean);
+      const nextFilled = next.map((s) => s.trim()).filter(Boolean);
+      // 草稿名单未变时保留用户刚点「添加」产生的空 input
+      if (
+        prevFilled.join('\n') === nextFilled.join('\n') &&
+        prev.length >= next.length
+      ) {
+        return prev;
+      }
+      return next;
+    });
+  }, [draft.birthdayNames]);
 
   const commitNames = (next: string[]) => {
-    onPatch('birthdayNames', joinBirthdayNames(next));
+    const uiRows = next.length > 0 ? next : [''];
+    setRows(uiRows);
+    onPatch('birthdayNames', joinBirthdayNames(uiRows));
   };
 
   return (
@@ -229,7 +251,7 @@ export function BulletinBirthdayStep({
           <button
             type="button"
             className="btn-secondary btn-sm"
-            onClick={() => commitNames([...rows.filter((n) => n.trim()), ''])}
+            onClick={() => commitNames([...rows, ''])}
           >
             {t('bulletin.addBirthdayName')}
           </button>
