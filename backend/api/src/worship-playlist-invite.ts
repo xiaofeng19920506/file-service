@@ -16,6 +16,7 @@ import {
 } from '@file-service/shared';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { appendVideosToPlaylist, buildPlaylistDetail } from './playlists.js';
+import { notifyBulletinPlaylistUpdated } from './bulletin-realtime.js';
 import { parseWorshipInviteRest } from './worship-invite-path.js';
 
 async function resolvePlaylistEditInvite(
@@ -59,9 +60,15 @@ function inviteError(reply: FastifyReply, error: 'invalid_invite_token' | 'not_f
  */
 export function registerWorshipPlaylistInviteRoutes(
   app: FastifyInstance,
-  opts: { db: Db; env: ApiEnv; audioQueue: Queue },
+  opts: { db: Db; env: ApiEnv; audioQueue: Queue; redisUrl: string },
 ) {
-  const { db, env, audioQueue } = opts;
+  const { db, env, audioQueue, redisUrl } = opts;
+
+  const notifyPlaylist = (bulletinId: string) => {
+    void notifyBulletinPlaylistUpdated(redisUrl, bulletinId).catch((err) => {
+      app.log.error(err, 'bulletin playlist realtime notify failed');
+    });
+  };
 
   app.get<{ Params: { '*': string }; Querystring: Record<string, string | undefined> }>(
     '/v1/playlists/invite/*',
@@ -197,6 +204,7 @@ export function registerWorshipPlaylistInviteRoutes(
           skipped: result.skippedCount,
         });
       }
+      notifyPlaylist(resolved.bulletin.id);
       return { ...result.detail, addedCount: result.addedCount, skippedCount: result.skippedCount };
     }
 
@@ -231,6 +239,7 @@ export function registerWorshipPlaylistInviteRoutes(
         skipped: result.skippedCount,
       });
     }
+    notifyPlaylist(resolved.bulletin.id);
     return { ...result.detail, addedCount: result.addedCount, skippedCount: result.skippedCount };
   });
 
@@ -278,6 +287,7 @@ export function registerWorshipPlaylistInviteRoutes(
         .where(eq(playlists.id, playlistId));
 
       const [updated] = await db.select().from(playlists).where(eq(playlists.id, playlistId));
+      notifyPlaylist(resolved.bulletin.id);
       return buildPlaylistDetail(db, updated!, audioQueue);
     },
   );
@@ -309,6 +319,7 @@ export function registerWorshipPlaylistInviteRoutes(
       .set({ updatedAt: new Date() })
       .where(eq(playlists.id, playlistId));
 
+    notifyPlaylist(resolved.bulletin.id);
     return { ok: true };
   });
 }

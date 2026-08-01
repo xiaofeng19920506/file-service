@@ -33,6 +33,23 @@ export async function notifyBulletinUpdated(
   );
 }
 
+/** 敬拜歌单增删改序：打开中的周报编辑/预览应刷新曲目，不覆盖其它草稿字段 */
+export async function notifyBulletinPlaylistUpdated(
+  redisUrl: string,
+  bulletinId: string,
+  updatedAt: Date | string = new Date(),
+): Promise<void> {
+  const event: BulletinRealtimeEvent = {
+    type: 'playlist_updated',
+    bulletinId,
+    updatedAt: typeof updatedAt === 'string' ? updatedAt : updatedAt.toISOString(),
+  };
+  await getPublisher(redisUrl).publish(
+    bulletinRealtimeChannel(bulletinId),
+    JSON.stringify(event),
+  );
+}
+
 export function registerBulletinRealtimeRoutes(
   app: FastifyInstance,
   { redisUrl }: { redisUrl: string },

@@ -109,7 +109,12 @@ async function buildApp() {
   registerAuthRoutes(app, { db, env, apiKeyConfig });
   registerAdminUserRoutes(app, { db });
   registerPlaylistRoutes(app, { db, env, audioQueue });
-  registerWorshipPlaylistInviteRoutes(app, { db, env, audioQueue });
+  registerWorshipPlaylistInviteRoutes(app, {
+    db,
+    env,
+    audioQueue,
+    redisUrl: env.REDIS_URL,
+  });
   registerYoutubeCaptionRoutes(app);
   registerYoutubeAudioRoutes(app, { db, env, storage, audioQueue });
   registerYoutubeVideoRoutes(app, { db, env, storage, videoQueue });

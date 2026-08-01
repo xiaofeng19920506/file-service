@@ -1,11 +1,17 @@
 import { useEffect, useRef } from 'react';
 import { getAuthToken } from '../lib/auth-session';
 
-export type BulletinRealtimeEvent = {
-  type: 'updated';
-  bulletinId: string;
-  updatedAt: string;
-};
+export type BulletinRealtimeEvent =
+  | {
+      type: 'updated';
+      bulletinId: string;
+      updatedAt: string;
+    }
+  | {
+      type: 'playlist_updated';
+      bulletinId: string;
+      updatedAt: string;
+    };
 
 const base = process.env.NEXT_PUBLIC_API_URL ?? '';
 
@@ -33,7 +39,10 @@ export function useBulletinRealtime(
     const onBulletin = (event: MessageEvent<string>) => {
       try {
         const data = JSON.parse(event.data) as BulletinRealtimeEvent;
-        if (data?.type === 'updated' && data.bulletinId === bulletinId) {
+        if (
+          (data?.type === 'updated' || data?.type === 'playlist_updated')
+          && data.bulletinId === bulletinId
+        ) {
           handlerRef.current(data);
         }
       } catch {

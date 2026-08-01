@@ -298,7 +298,13 @@ export default function BulletinPage() {
   useBulletinRealtime(
     selectedId,
     (event) => {
-      if (!selectedId || savingRef.current || scripturePersistingRef.current) return;
+      if (!selectedId) return;
+      if (event.type === 'playlist_updated') {
+        // 邀请链接 / 其它端加歌：只刷新歌单与预览，不覆盖本地公告草稿
+        setWorshipPreviewRevision((v) => v + 1);
+        return;
+      }
+      if (savingRef.current || scripturePersistingRef.current) return;
       if (isLocalBulletinDraftDirty(selectedId)) {
         // 本地未同步：只对齐 updatedAt，避免整表覆盖盖掉编辑
         setDraft((prev) =>
@@ -750,6 +756,7 @@ export default function BulletinPage() {
             oauthJustConnected={worshipYoutubeOauthReady}
             oauthError={worshipOauthError}
             onClearOauthError={() => setWorshipOauthError(null)}
+            playlistRefreshKey={worshipPreviewRevision}
             onPlaylistReady={(playlistId) => {
               setDraft((prev) => (prev ? { ...prev, servicePlaylistId: playlistId } : prev));
               setWorshipPreviewRevision((v) => v + 1);

@@ -22,6 +22,8 @@ type BulletinWorshipStepProps = {
   oauthJustConnected?: boolean;
   oauthError?: string | null;
   onClearOauthError?: () => void;
+  /** SSE / 预览刷新：远端歌单变更时递增，触发重新拉取 */
+  playlistRefreshKey?: number;
   onPlaylistReady: (playlistId: string) => void;
   onPlaylistChanged?: () => void;
   onLyricsPptxChange?: (blobId: string | null) => void;
@@ -42,6 +44,7 @@ export default function BulletinWorshipStep({
   oauthJustConnected = false,
   oauthError = null,
   onClearOauthError,
+  playlistRefreshKey = 0,
   onPlaylistReady,
   onPlaylistChanged,
   onLyricsPptxChange,
@@ -83,7 +86,7 @@ export default function BulletinWorshipStep({
 
   useEffect(() => {
     void refreshPlaylist().catch(() => undefined);
-  }, [refreshPlaylist, draft.servicePlaylistId]);
+  }, [refreshPlaylist, draft.servicePlaylistId, playlistRefreshKey]);
 
   useEffect(() => {
     if (oauthJustConnected || oauthError) setYoutubeModalOpen(true);

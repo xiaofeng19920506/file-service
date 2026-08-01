@@ -50,7 +50,7 @@ import {
 } from '@file-service/shared';
 import type { FastifyInstance } from 'fastify';
 import { getValidYoutubeAccessToken, resolveOAuthConfig } from './youtube-oauth-token.js';
-import { notifyBulletinUpdated } from './bulletin-realtime.js';
+import { notifyBulletinPlaylistUpdated, notifyBulletinUpdated } from './bulletin-realtime.js';
 import { resolveMailConfig, resolveWebAppUrl, sendMail } from './mail.js';
 import { appendVideosToPlaylist, buildPlaylistDetail } from './playlists.js';
 import {
@@ -708,6 +708,11 @@ export function registerBulletinRoutes(
   void purgeExpiredScripturePreferences(db).catch((err) =>
     app.log.error(err, 'scripture preference purge failed'),
   );
+  const notifyPlaylist = (bulletinId: string) => {
+    void notifyBulletinPlaylistUpdated(redisUrl, bulletinId).catch((err) => {
+      app.log.error(err, 'bulletin playlist realtime notify failed');
+    });
+  };
   setInterval(() => {
     void purgeExpiredScripturePreferences(db).catch((err) =>
       app.log.error(err, 'scripture preference purge failed'),
@@ -1583,6 +1588,7 @@ export function registerBulletinRoutes(
           skipped: result.skippedCount,
         });
       }
+      notifyPlaylist(bulletin.id);
       return { ...result.detail, addedCount: result.addedCount, skippedCount: result.skippedCount };
     }
 
@@ -1617,6 +1623,7 @@ export function registerBulletinRoutes(
         skipped: result.skippedCount,
       });
     }
+    notifyPlaylist(bulletin.id);
     return { ...result.detail, addedCount: result.addedCount, skippedCount: result.skippedCount };
   });
 
@@ -1675,6 +1682,7 @@ export function registerBulletinRoutes(
         skipped: result.skippedCount,
       });
     }
+    notifyPlaylist(bulletin.id);
     return { ...result.detail, addedCount: result.addedCount, skippedCount: result.skippedCount };
   });
 
@@ -1721,6 +1729,7 @@ export function registerBulletinRoutes(
         .where(eq(playlists.id, playlistId));
 
       const [updated] = await db.select().from(playlists).where(eq(playlists.id, playlistId));
+      notifyPlaylist(bulletin.id);
       return buildPlaylistDetail(db, updated!, audioQueue);
     },
   );
@@ -1753,6 +1762,7 @@ export function registerBulletinRoutes(
         .set({ updatedAt: new Date() })
         .where(eq(playlists.id, playlistId));
 
+      notifyPlaylist(bulletin.id);
       return { ok: true };
     },
   );
