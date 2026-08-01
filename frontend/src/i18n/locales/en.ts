@@ -1301,6 +1301,8 @@ const en: MessageTree = {
     ffmpeg_not_installed: 'ffmpeg is not installed on the server — cannot convert to MP3',
     email_not_configured: 'Email is not configured — ask an admin to set up SMTP',
     email_send_failed: 'Failed to send email — try again later',
+    smtp_ip_unauthorized:
+      'Brevo rejected this IP. Add your public IP under Brevo → SMTP & API → Authorized IPs, then retry',
     invalid_share_token: 'Share link is invalid or expired',
     invalid_invite_token: 'Invite link is invalid or expired',
     share_playlist_failed: 'Failed to share list — try again later',

@@ -1446,7 +1446,11 @@ export function registerBulletinRoutes(
         }
       } catch (e) {
         request.log.error(e, 'worship playlist invite email failed');
-        return reply.code(502).send({ error: 'email_send_failed' });
+        const code =
+          e instanceof Error && e.message === 'smtp_ip_unauthorized'
+            ? 'smtp_ip_unauthorized'
+            : 'email_send_failed';
+        return reply.code(502).send({ error: code });
       }
     }
 

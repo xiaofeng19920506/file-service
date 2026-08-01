@@ -1275,6 +1275,8 @@ export default {
     ffmpeg_not_installed: '服务器未安装 ffmpeg，无法将音频转为 MP3',
     email_not_configured: '邮件服务未配置，请联系管理员设置 SMTP',
     email_send_failed: '邮件发送失败，请稍后重试',
+    smtp_ip_unauthorized:
+      'Brevo 拒绝了本机 IP。请到 Brevo → SMTP & API → Authorized IPs 添加当前出口 IP 后再试',
     invalid_share_token: '分享链接无效或已过期',
     invalid_invite_token: '邀请链接无效或已过期',
     share_playlist_failed: '分享失败，请稍后重试',
