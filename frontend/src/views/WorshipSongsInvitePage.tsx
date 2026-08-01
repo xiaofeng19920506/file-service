@@ -9,5 +9,9 @@ export default function WorshipSongsInvitePage({
   inviteToken,
   bulletinId,
 }: WorshipSongsInvitePageProps) {
-  return <WorshipSongsEditor inviteToken={inviteToken} bulletinId={bulletinId} />;
+  return (
+    <main className="worship-songs-invite-shell">
+      <WorshipSongsEditor inviteToken={inviteToken} bulletinId={bulletinId} />
+    </main>
+  );
 }

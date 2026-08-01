@@ -491,6 +491,8 @@ export default {
     title: '敬拜赞美',
     intro: '为 {date} {time} 崇拜「{title}」添加歌曲。可从 YouTube 播放列表导入，或逐首粘贴链接。',
     loading: '正在加载歌单…',
+    inviteGuestHint:
+      '你正在通过邀请链接编辑本周敬拜歌单，无需登录。链接仅对本周歌单有效，过期后将无法使用。',
     addSection: '添加歌曲',
     urlHint: '支持单首视频或整个 YouTube 播放列表链接；重复曲目会自动跳过。',
     listSection: '歌单曲目（{count}）',

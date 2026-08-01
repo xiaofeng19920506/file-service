@@ -378,6 +378,15 @@ export default function App() {
   const libraryUpload = useLibraryUpload();
   const { t } = useI18n();
 
+  // 敬拜邀请链接：仅凭 HMAC token，无需登录（避免跳转 #/login 丢掉 invite）
+  if (page === 'worship-songs' && worshipSongsInviteToken) {
+    return (
+      <WorshipSongsInvitePage
+        inviteToken={worshipSongsInviteToken}
+      />
+    );
+  }
+
   if (loading) {
     return (
       <div className="auth-page">
@@ -435,20 +444,12 @@ export default function App() {
     return <BulletinSlideShowPresenterPage sessionId={slideshowSessionId} />;
   }
 
-  if (page === 'worship-songs' && (worshipSongsInviteToken || worshipSongsBulletinId)) {
+  if (page === 'worship-songs' && worshipSongsBulletinId) {
     if (!user) {
       window.location.hash = '#/login';
       return <AuthPage />;
     }
-    if (worshipSongsInviteToken && !permissions.canAccessPlaylists) {
-      window.location.hash = '#/playlists';
-      return (
-        <div className="auth-page">
-          <p className="auth-loading">{t('auth.checkingSession')}</p>
-        </div>
-      );
-    }
-    if (worshipSongsBulletinId && !permissions.canViewBulletin) {
+    if (!permissions.canViewBulletin) {
       window.location.hash = '#/bulletin';
       return (
         <div className="auth-page">
@@ -456,12 +457,7 @@ export default function App() {
         </div>
       );
     }
-    return (
-      <WorshipSongsInvitePage
-        inviteToken={worshipSongsInviteToken}
-        bulletinId={worshipSongsBulletinId}
-      />
-    );
+    return <WorshipSongsInvitePage bulletinId={worshipSongsBulletinId} />;
   }
 
   if (!user && page !== 'login') {

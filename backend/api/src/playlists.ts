@@ -834,9 +834,6 @@ export function registerPlaylistRoutes(
   );
 
   app.get<{ Params: { token: string } }>('/v1/playlists/invite/:token', async (request, reply) => {
-    const user = request.authUser;
-    if (!user) return reply.code(401).send({ error: 'unauthorized' });
-
     const resolved = await resolvePlaylistEditInvite(db, env.DOWNLOAD_HMAC_SECRET, request.params.token);
     if ('error' in resolved) {
       if (resolved.error === 'invalid_invite_token') {
@@ -861,9 +858,6 @@ export function registerPlaylistRoutes(
     Params: { token: string };
     Body: { url?: string; items?: { videoId?: string; title?: string }[] };
   }>('/v1/playlists/invite/:token/items', async (request, reply) => {
-    const user = request.authUser;
-    if (!user) return reply.code(401).send({ error: 'unauthorized' });
-
     const resolved = await resolvePlaylistEditInvite(db, env.DOWNLOAD_HMAC_SECRET, request.params.token);
     if ('error' in resolved) {
       if (resolved.error === 'invalid_invite_token') {
@@ -930,9 +924,6 @@ export function registerPlaylistRoutes(
   app.put<{ Params: { token: string }; Body: { itemIds?: string[] } }>(
     '/v1/playlists/invite/:token/items/order',
     async (request, reply) => {
-      const user = request.authUser;
-      if (!user) return reply.code(401).send({ error: 'unauthorized' });
-
       const resolved = await resolvePlaylistEditInvite(db, env.DOWNLOAD_HMAC_SECRET, request.params.token);
       if ('error' in resolved) {
         if (resolved.error === 'invalid_invite_token') {
@@ -977,9 +968,6 @@ export function registerPlaylistRoutes(
   app.delete<{ Params: { token: string; itemId: string } }>(
     '/v1/playlists/invite/:token/items/:itemId',
     async (request, reply) => {
-      const user = request.authUser;
-      if (!user) return reply.code(401).send({ error: 'unauthorized' });
-
       const resolved = await resolvePlaylistEditInvite(db, env.DOWNLOAD_HMAC_SECRET, request.params.token);
       if ('error' in resolved) {
         if (resolved.error === 'invalid_invite_token') {

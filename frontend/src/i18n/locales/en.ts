@@ -514,6 +514,8 @@ const en: MessageTree = {
     title: 'Praise & worship',
     intro: 'Add songs for {date} {time} — “{title}”. Import a YouTube playlist or paste links.',
     loading: 'Loading playlist…',
+    inviteGuestHint:
+      'You are editing this week’s worship playlist via invite link — no login required. The link only works for this playlist and expires after its validity period.',
     addSection: 'Add songs',
     urlHint: 'Single videos or full YouTube playlist URLs; duplicates are skipped.',
     listSection: 'Tracks ({count})',

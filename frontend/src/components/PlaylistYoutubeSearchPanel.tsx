@@ -83,6 +83,7 @@ export default function PlaylistYoutubeSearchPanel({
     resetSearch,
   } = useDebouncedYoutubeSearch({
     debounceEnabled: searchOnSubmit ? false : !isMobileViewport,
+    inviteToken,
   });
 
   const resultsListRef = useRef<HTMLUListElement>(null);
@@ -162,9 +163,11 @@ export default function PlaylistYoutubeSearchPanel({
   const isInAnyPlaylist = (videoId: string, inLibrary?: boolean) =>
     inLibrary === true || libraryVideoIds.has(videoId);
 
-  const showTrending = searchOnSubmit
-    ? !hasSearched && !isSearchBusy
-    : searchResults.length === 0 && !isSearchBusy && !searchQuery.trim();
+  const showTrending = Boolean(inviteToken)
+    ? false
+    : searchOnSubmit
+      ? !hasSearched && !isSearchBusy
+      : searchResults.length === 0 && !isSearchBusy && !searchQuery.trim();
   const relocateSearchToHeader = Boolean(searchHeaderEl) && !isMobileViewport;
   const showSearchButton = searchOnSubmit || !isMobileViewport;
 

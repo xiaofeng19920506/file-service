@@ -20,6 +20,27 @@ describe('resolvePathAccessLevel', () => {
     expect(resolvePathAccessLevel('POST', '/v1/auth/register')).toBe('public');
   });
 
+  it('marks worship playlist invite token routes as public', () => {
+    const token = 'pe.abc.def.123.sig';
+    expect(resolvePathAccessLevel('GET', `/v1/playlists/invite/${token}`)).toBe('public');
+    expect(resolvePathAccessLevel('POST', `/v1/playlists/invite/${token}/items`)).toBe('public');
+    expect(resolvePathAccessLevel('PUT', `/v1/playlists/invite/${token}/items/order`)).toBe(
+      'public',
+    );
+    expect(resolvePathAccessLevel('DELETE', `/v1/playlists/invite/${token}/items/item-1`)).toBe(
+      'public',
+    );
+    expect(resolvePathAccessLevel('GET', `/v1/playlists/invite/${token}/youtube/search`)).toBe(
+      'public',
+    );
+    expect(
+      resolvePathAccessLevel('GET', `/v1/playlists/invite/${token}/youtube/search/suggest`),
+    ).toBe('public');
+    // 普通歌单接口仍需登录
+    expect(resolvePathAccessLevel('GET', '/v1/playlists')).toBe('playlist');
+    expect(resolvePathAccessLevel('GET', '/v1/youtube/search')).toBe('youtube_browse');
+  });
+
   it('marks blob search as search (login + worship team)', () => {
     expect(resolvePathAccessLevel('GET', '/v1/blobs')).toBe('search');
   });

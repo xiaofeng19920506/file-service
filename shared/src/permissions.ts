@@ -91,11 +91,27 @@ export function isSearchPath(method: string, path: string): boolean {
 }
 
 export function isPlaylistPath(method: string, path: string): boolean {
+  // 邀请令牌接口单独走 public（HMAC 即凭证），勿按 playlist 角色拦截
+  if (path.startsWith('/v1/playlists/invite/')) return false;
   if (path.startsWith('/v1/playlists')) return true;
   if (method === 'POST' && path === '/v1/youtube/plays') return true;
   if (method === 'GET' && /^\/v1\/youtube\/videos\/[^/]+\/captions$/.test(path)) return true;
   if (method === 'POST' && path === '/v1/youtube/audio/prioritize') return true;
   if (/^\/v1\/youtube\/videos\/[^/]+\/audio/.test(path)) return true;
+  return false;
+}
+
+/** 周报敬拜邀请链接：仅凭 HMAC token 访问，无需登录 */
+export function isWorshipPlaylistInvitePath(method: string, path: string): boolean {
+  if (!path.startsWith('/v1/playlists/invite/')) return false;
+  if (method === 'GET' && /^\/v1\/playlists\/invite\/[^/]+$/.test(path)) return true;
+  if (method === 'POST' && /^\/v1\/playlists\/invite\/[^/]+\/items$/.test(path)) return true;
+  if (method === 'PUT' && /^\/v1\/playlists\/invite\/[^/]+\/items\/order$/.test(path)) return true;
+  if (method === 'DELETE' && /^\/v1\/playlists\/invite\/[^/]+\/items\/[^/]+$/.test(path)) return true;
+  if (method === 'GET' && /^\/v1\/playlists\/invite\/[^/]+\/youtube\/search$/.test(path)) return true;
+  if (method === 'GET' && /^\/v1\/playlists\/invite\/[^/]+\/youtube\/search\/suggest$/.test(path)) {
+    return true;
+  }
   return false;
 }
 
@@ -256,6 +272,7 @@ export function resolvePathAccessLevel(method: string, path: string): PathAccess
   if (isYoutubeThumbnailPath(method, path)) return 'public';
   if (isAuthEntryPath(method, path)) return 'public';
   if (isYoutubeOAuthCallbackPath(method, path)) return 'public';
+  if (isWorshipPlaylistInvitePath(method, path)) return 'public';
   if (isVipVideoPath(method, path)) return 'vip_video';
   if (isYoutubeBrowsePath(method, path)) return 'youtube_browse';
   if (isYoutubeExportPath(method, path)) return 'youtube_export';

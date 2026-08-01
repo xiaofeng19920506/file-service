@@ -205,6 +205,11 @@ export default function WorshipSongsEditor({
               title: meta.title,
             })}
           </p>
+          {inviteToken ? (
+            <p className="worship-songs-invite-banner" role="status">
+              {t('worshipSongs.inviteGuestHint')}
+            </p>
+          ) : null}
         </header>
       )}
 
