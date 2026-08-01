@@ -49,6 +49,7 @@ import { registerOpenApi } from './openapi.js';
 import { registerAuthRoutes } from './auth.js';
 import { registerAdminUserRoutes } from './admin-users.js';
 import { registerPlaylistRoutes } from './playlists.js';
+import { registerWorshipPlaylistInviteRoutes } from './worship-playlist-invite.js';
 import { registerYoutubeCaptionRoutes } from './youtube-captions.js';
 import { registerYoutubeAudioRoutes } from './youtube-audio.js';
 import { registerYoutubeVideoRoutes } from './youtube-video.js';
@@ -108,6 +109,7 @@ async function buildApp() {
   registerAuthRoutes(app, { db, env, apiKeyConfig });
   registerAdminUserRoutes(app, { db });
   registerPlaylistRoutes(app, { db, env, audioQueue });
+  registerWorshipPlaylistInviteRoutes(app, { db, env, audioQueue });
   registerYoutubeCaptionRoutes(app);
   registerYoutubeAudioRoutes(app, { db, env, storage, audioQueue });
   registerYoutubeVideoRoutes(app, { db, env, storage, videoQueue });
