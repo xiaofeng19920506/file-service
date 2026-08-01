@@ -390,6 +390,7 @@ export type WorshipPlaylistInvite = {
   expiresAtUnix: number;
   emailed?: boolean;
   emailedCount?: number;
+  emailError?: string;
 };
 
 export type WorshipTeamMember = {

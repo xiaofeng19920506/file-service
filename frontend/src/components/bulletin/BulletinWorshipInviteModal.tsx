@@ -93,6 +93,16 @@ export default function BulletinWorshipInviteModal({
       const result = await inviteBulletinWorshipLeader(bulletinId, {
         userIds: [selected.id],
       });
+      if (result.emailError) {
+        setError(friendlyError(result.emailError, t));
+        // 仍把邀请链接交给外层，方便手动复制
+        onInvited({
+          inviteUrl: result.inviteUrl,
+          playlistId: result.playlist.id,
+          emailedCount: result.emailedCount ?? 0,
+        });
+        return;
+      }
       onInvited({
         inviteUrl: result.inviteUrl,
         playlistId: result.playlist.id,

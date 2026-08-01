@@ -1302,7 +1302,7 @@ const en: MessageTree = {
     email_not_configured: 'Email is not configured — ask an admin to set up SMTP',
     email_send_failed: 'Failed to send email — try again later',
     smtp_ip_unauthorized:
-      'Brevo rejected this IP. Add your public IP under Brevo → SMTP & API → Authorized IPs, then retry',
+      'Brevo rejected this machine IP (98.115.143.29). Add it under Brevo → Security → Authorized IPs, or turn off “Block unknown IPs”, then retry',
     invalid_share_token: 'Share link is invalid or expired',
     invalid_invite_token: 'Invite link is invalid or expired',
     share_playlist_failed: 'Failed to share list — try again later',

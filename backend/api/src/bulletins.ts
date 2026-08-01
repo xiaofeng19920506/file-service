@@ -1419,6 +1419,9 @@ export function registerBulletinRoutes(
       }
     }
 
+    let emailedCount = 0;
+    let emailError: string | null = null;
+
     if (recipientEmails.size > 0) {
       const mailConfig = resolveMailConfig(env);
       if (!mailConfig) {
@@ -1443,14 +1446,14 @@ export function registerBulletinRoutes(
             optionalMessage,
             ttlDays,
           });
+          emailedCount += 1;
         }
       } catch (e) {
         request.log.error(e, 'worship playlist invite email failed');
-        const code =
+        emailError =
           e instanceof Error && e.message === 'smtp_ip_unauthorized'
             ? 'smtp_ip_unauthorized'
             : 'email_send_failed';
-        return reply.code(502).send({ error: code });
       }
     }
 
@@ -1468,8 +1471,9 @@ export function registerBulletinRoutes(
       inviteToken,
       inviteUrl,
       expiresAtUnix,
-      emailed: recipientEmails.size > 0,
-      emailedCount: recipientEmails.size,
+      emailed: emailedCount > 0 && !emailError,
+      emailedCount,
+      ...(emailError ? { emailError } : {}),
     });
   });
 

@@ -43,6 +43,9 @@ const MESSAGES: Record<string, string> = {
   cannot_change_own_role: '不能修改自己的角色',
   cannot_delete_self: '不能删除当前登录账号',
   delete_user_failed: '删除用户失败',
+  email_send_failed: '邮件发送失败，请稍后重试',
+  smtp_ip_unauthorized:
+    'Brevo 拒绝了本机 IP（98.115.143.29）。请到 Brevo → Security → Authorized IPs 添加该 IP，或关闭「阻止未知 IP」后再试',
   no_changes: '没有可保存的更改',
 };
 
