@@ -420,7 +420,8 @@ const en: MessageTree = {
       more: 'More',
       worship: 'Praise & worship',
       worshipTitle: 'Praise & worship',
-      worshipIntro: 'Add songs for this Sunday.',
+      worshipIntro:
+        'Organize this week’s worship playlist. Play from the right-hand preview — video covers the whole slide while playing.',
       comingSoon: 'This step is coming soon',
     },
     worshipServiceLabel: '{date} {time} service',

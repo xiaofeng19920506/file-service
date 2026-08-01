@@ -403,7 +403,7 @@ export default {
       more: '更多',
       worship: '敬拜赞美',
       worshipTitle: '敬拜赞美',
-      worshipIntro: '添加本周敬拜歌曲。',
+      worshipIntro: '整理本周敬拜歌单；右侧预览可直接播放，播放时视频会盖住整页幻灯片。',
       comingSoon: '此步骤即将开放',
     },
     worshipServiceLabel: '{date} {time} 崇拜',

@@ -10,13 +10,10 @@ import {
 import { uploadFile } from '../../api/client';
 import type { PlaylistDetail, PlaylistItem } from '../../api/playlists';
 import AddPlaylistItemsModal from '../AddPlaylistItemsModal';
-import MobileSegmentedControl from '../MobileSegmentedControl';
 import BulletinWorshipYoutubeImportPanel from './BulletinWorshipYoutubeImportPanel';
 import BulletinWorshipInviteModal from './BulletinWorshipInviteModal';
 import { friendlyError } from '../../lib/error-messages';
 import { useI18n } from '../../i18n';
-
-type WorshipSourceTab = 'youtube' | 'search';
 
 type BulletinWorshipStepProps = {
   draft: WeeklyBulletin;
@@ -57,10 +54,10 @@ export default function BulletinWorshipStep({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [lyricsUploading, setLyricsUploading] = useState(false);
-  const [sourceTab, setSourceTab] = useState<WorshipSourceTab>(
-    oauthJustConnected || oauthError ? 'youtube' : 'youtube',
-  );
   const [searchModalOpen, setSearchModalOpen] = useState(false);
+  const [youtubeModalOpen, setYoutubeModalOpen] = useState(
+    Boolean(oauthJustConnected || oauthError),
+  );
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
 
@@ -89,16 +86,8 @@ export default function BulletinWorshipStep({
   }, [refreshPlaylist, draft.servicePlaylistId]);
 
   useEffect(() => {
-    if (oauthJustConnected || oauthError) setSourceTab('youtube');
+    if (oauthJustConnected || oauthError) setYoutubeModalOpen(true);
   }, [oauthJustConnected, oauthError]);
-
-  const handleSourceTabChange = (id: string) => {
-    const next = id as WorshipSourceTab;
-    setSourceTab(next);
-    if (next === 'search' && canAddSongs) {
-      setSearchModalOpen(true);
-    }
-  };
 
   const handleImported = (
     detail: PlaylistDetail,
@@ -225,11 +214,31 @@ export default function BulletinWorshipStep({
         <p className="bulletin-step-intro">{t('bulletin.steps.worshipIntro')}</p>
       </header>
 
-      {(canManage || hasLyricsPptx) && (
-        <section className="bulletin-worship-lyrics-pptx">
-          <h4 className="bulletin-worship-playlist-heading">{t('bulletin.worshipLyricsPptxTitle')}</h4>
-          <p className="bulletin-worship-search-hint">{t('bulletin.worshipLyricsPptxHint')}</p>
-          <div className="bulletin-worship-lyrics-pptx-actions">
+      <section className="bulletin-worship-playlist-preview">
+        <div className="bulletin-worship-playlist-heading-row">
+          <h4 className="bulletin-worship-playlist-heading">
+            {items.length > 0
+              ? t('bulletin.worshipTrackCount', { count: items.length })
+              : t('bulletin.worshipNoPlaylist')}
+          </h4>
+        </div>
+
+        {canAddSongs ? (
+          <div className="bulletin-worship-toolbar" role="group" aria-label={t('bulletin.worshipSourceTabs')}>
+            <button
+              type="button"
+              className="btn-primary btn-sm"
+              onClick={() => setSearchModalOpen(true)}
+            >
+              {t('bulletin.worshipOpenSearchModal')}
+            </button>
+            <button
+              type="button"
+              className="btn-secondary btn-sm"
+              onClick={() => setYoutubeModalOpen(true)}
+            >
+              {t('bulletin.worshipImportYoutubeBtn')}
+            </button>
             {canManage ? (
               <>
                 <input
@@ -241,7 +250,7 @@ export default function BulletinWorshipStep({
                 />
                 <button
                   type="button"
-                  className="btn-primary btn-sm"
+                  className="btn-secondary btn-sm"
                   disabled={lyricsUploading}
                   onClick={() => lyricsFileInputRef.current?.click()}
                 >
@@ -261,77 +270,35 @@ export default function BulletinWorshipStep({
                     {t('bulletin.worshipLyricsPptxClear')}
                   </button>
                 ) : null}
-              </>
-            ) : null}
-            {hasLyricsPptx ? (
-              <span className="bulletin-worship-lyrics-pptx-ready">
-                {t('bulletin.worshipLyricsPptxReady')}
-              </span>
-            ) : (
-              <span className="playlists-muted">{t('bulletin.worshipLyricsPptxEmpty')}</span>
-            )}
-          </div>
-        </section>
-      )}
-
-      {canAddSongs && (
-        <>
-          <MobileSegmentedControl
-            className="bulletin-worship-tabs"
-            ariaLabel={t('bulletin.worshipSourceTabs')}
-            value={sourceTab}
-            onChange={handleSourceTabChange}
-            segments={[
-              { id: 'youtube', label: t('bulletin.worshipTabYoutube') },
-              { id: 'search', label: t('bulletin.worshipTabSearch') },
-            ]}
-          />
-
-          <div className="bulletin-worship-tab-panel" role="tabpanel">
-            {sourceTab === 'youtube' ? (
-              <BulletinWorshipYoutubeImportPanel
-                bulletinId={draft.id}
-                oauthJustConnected={oauthJustConnected}
-                oauthError={oauthError}
-                onClearOauthError={onClearOauthError}
-                onImported={handleImported}
-              />
-            ) : (
-              <div className="bulletin-worship-search-panel">
-                <p className="bulletin-worship-search-hint">{t('bulletin.worshipSearchModalHint')}</p>
                 <button
                   type="button"
-                  className="btn-primary"
-                  onClick={() => setSearchModalOpen(true)}
+                  className="btn-secondary btn-sm"
+                  disabled={busy}
+                  onClick={() => setInviteModalOpen(true)}
                 >
-                  {t('bulletin.worshipOpenSearchModal')}
+                  {t('bulletin.worshipOpenInviteModal')}
                 </button>
-              </div>
-            )}
+                <button
+                  type="button"
+                  className="btn-secondary btn-sm"
+                  disabled={busy}
+                  onClick={() => void copyInviteLink()}
+                >
+                  {t('bulletin.worshipCopyInvite')}
+                </button>
+              </>
+            ) : null}
           </div>
-        </>
-      )}
+        ) : null}
 
-      <section className="bulletin-worship-playlist-preview">
-        <div className="bulletin-worship-playlist-heading-row">
-          <h4 className="bulletin-worship-playlist-heading">
-            {items.length > 0
-              ? t('bulletin.worshipTrackCount', { count: items.length })
-              : t('bulletin.worshipNoPlaylist')}
-          </h4>
-          {canAddSongs ? (
-            <button
-              type="button"
-              className="btn-secondary btn-sm"
-              onClick={() => {
-                setSourceTab('search');
-                setSearchModalOpen(true);
-              }}
-            >
-              {t('bulletin.worshipOpenSearchModal')}
-            </button>
-          ) : null}
-        </div>
+        {(canManage || hasLyricsPptx) && (
+          <p className="bulletin-worship-meta-line">
+            {hasLyricsPptx
+              ? t('bulletin.worshipLyricsPptxReady')
+              : t('bulletin.worshipLyricsPptxEmpty')}
+          </p>
+        )}
+
         {items.length > 0 ? (
           <ol className="bulletin-worship-track-preview">
             {items.map((item, index) => (
@@ -375,40 +342,45 @@ export default function BulletinWorshipStep({
         ) : null}
       </section>
 
-      {canManage && (
-        <section className="bulletin-worship-invite-section">
-          <h4 className="bulletin-worship-playlist-heading">{t('bulletin.worshipInviteSectionTitle')}</h4>
-          <p className="bulletin-worship-search-hint">{t('bulletin.worshipInviteSectionHint')}</p>
-
-          <div className="bulletin-worship-invite-actions">
-            <button
-              type="button"
-              className="btn-primary btn-sm"
-              disabled={busy}
-              onClick={() => setInviteModalOpen(true)}
-            >
-              {t('bulletin.worshipOpenInviteModal')}
-            </button>
-            <button
-              type="button"
-              className="btn-secondary btn-sm"
-              disabled={busy}
-              onClick={() => void copyInviteLink()}
-            >
-              {t('bulletin.worshipCopyInvite')}
-            </button>
-          </div>
-
-          {inviteUrl ? (
-            <p className="playlists-muted bulletin-worship-invite-url" title={inviteUrl}>
-              {t('bulletin.worshipInviteLink')}: {inviteUrl}
-            </p>
-          ) : null}
-        </section>
-      )}
-
       {status && <p className="success-msg">{status}</p>}
       {error && <p className="error-msg">{error}</p>}
+
+      {youtubeModalOpen && canAddSongs ? (
+        <div
+          className="metadata-modal-overlay"
+          role="presentation"
+          onClick={() => setYoutubeModalOpen(false)}
+        >
+          <div
+            className="metadata-modal bulletin-worship-youtube-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('bulletin.worshipImportYoutubeBtn')}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="metadata-modal-header">
+              <h3>{t('bulletin.worshipImportYoutubeTitle')}</h3>
+              <button
+                type="button"
+                className="btn-secondary btn-sm"
+                onClick={() => setYoutubeModalOpen(false)}
+              >
+                {t('common.close')}
+              </button>
+            </div>
+            <BulletinWorshipYoutubeImportPanel
+              bulletinId={draft.id}
+              oauthJustConnected={oauthJustConnected}
+              oauthError={oauthError}
+              onClearOauthError={onClearOauthError}
+              onImported={(detail, meta) => {
+                handleImported(detail, meta);
+                setYoutubeModalOpen(false);
+              }}
+            />
+          </div>
+        </div>
+      ) : null}
 
       {inviteModalOpen && canManage ? (
         <BulletinWorshipInviteModal

@@ -62,6 +62,11 @@ export default function BulletinWorshipEmbeddedPlayer({
     transport.setPlaying(true);
   };
 
+  const stopPlayback = () => {
+    transport.setPlaying(false);
+    setStarted(false);
+  };
+
   const openMaximize = (mode: WorshipLiveMode) => {
     setMaximizeMode(mode);
     setMaximized(true);
@@ -72,7 +77,9 @@ export default function BulletinWorshipEmbeddedPlayer({
   };
 
   return (
-    <figure className="bulletin-slide-preview bulletin-worship-embedded">
+    <figure
+      className={`bulletin-slide-preview bulletin-worship-embedded${started ? ' is-playing' : ''}`}
+    >
       <figcaption className="bulletin-slide-preview-caption">{slideLabel}</figcaption>
 
       <div className="bulletin-worship-embedded-stage">
@@ -86,12 +93,18 @@ export default function BulletinWorshipEmbeddedPlayer({
         <div className="bulletin-worship-embedded-layer">
           {!started ? (
             <button type="button" className="bulletin-worship-embedded-idle" onClick={startPlayback}>
-              <span className="bulletin-worship-embedded-idle-icon" aria-hidden>
-                <ListPlayIcon />
-              </span>
-              <span className="bulletin-worship-embedded-idle-title">{t('bulletin.worshipSlideTapPlay')}</span>
-              <span className="bulletin-worship-embedded-idle-meta">
-                {t('bulletin.worshipSlideTrackCount', { count: playerItems.length })}
+              <span className="bulletin-worship-embedded-idle-card">
+                <span className="bulletin-worship-embedded-idle-icon" aria-hidden>
+                  <ListPlayIcon />
+                </span>
+                <span className="bulletin-worship-embedded-idle-copy">
+                  <span className="bulletin-worship-embedded-idle-title">
+                    {t('bulletin.worshipSlideTapPlay')}
+                  </span>
+                  <span className="bulletin-worship-embedded-idle-meta">
+                    {t('bulletin.worshipSlideTrackCount', { count: playerItems.length })}
+                  </span>
+                </span>
               </span>
             </button>
           ) : !maximized ? (
@@ -113,30 +126,42 @@ export default function BulletinWorshipEmbeddedPlayer({
           ) : null}
         </div>
 
-        <div className="bulletin-worship-embedded-toolbar">
-          <button
-            type="button"
-            className="bulletin-worship-embedded-tool"
-            onClick={() => openMaximize('youtube')}
-          >
-            {t('bulletin.worshipSlideModeVideo')}
-          </button>
-          <button
-            type="button"
-            className="bulletin-worship-embedded-tool"
-            onClick={() => openMaximize('ppt')}
-          >
-            {t('bulletin.worshipSlideModePpt')}
-          </button>
-          <button
-            type="button"
-            className="bulletin-worship-embedded-tool bulletin-worship-embedded-tool--primary"
-            onClick={() => openMaximize(maximizeMode)}
-            title={t('bulletin.worshipSlideMaximize')}
-          >
-            {t('bulletin.worshipSlideMaximize')}
-          </button>
-        </div>
+        {started && !maximized ? (
+          <div className="bulletin-worship-embedded-toolbar">
+            <button
+              type="button"
+              className="bulletin-worship-embedded-tool"
+              onClick={() => openMaximize('ppt')}
+            >
+              {t('bulletin.worshipSlideModePpt')}
+            </button>
+            <button
+              type="button"
+              className="bulletin-worship-embedded-tool bulletin-worship-embedded-tool--primary"
+              onClick={() => openMaximize('youtube')}
+              title={t('bulletin.worshipSlideMaximize')}
+            >
+              {t('bulletin.worshipSlideMaximize')}
+            </button>
+            <button
+              type="button"
+              className="bulletin-worship-embedded-tool"
+              onClick={stopPlayback}
+            >
+              {t('bulletin.worshipSlideHidePlayer')}
+            </button>
+          </div>
+        ) : !started ? (
+          <div className="bulletin-worship-embedded-toolbar">
+            <button
+              type="button"
+              className="bulletin-worship-embedded-tool bulletin-worship-embedded-tool--primary"
+              onClick={() => openMaximize('youtube')}
+            >
+              {t('bulletin.worshipSlideOpenLive')}
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {maximized && (
