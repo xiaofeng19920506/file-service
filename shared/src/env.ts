@@ -138,7 +138,33 @@ export const apiSchema = z.discriminatedUnion('STORAGE_BACKEND', [
 export type ApiEnv = z.infer<typeof apiSchema>;
 
 export function loadApiEnv(processEnv: NodeJS.ProcessEnv = process.env): ApiEnv {
-  const parsed = apiSchema.safeParse(processEnv);
+  const merged: NodeJS.ProcessEnv = { ...processEnv };
+  // Brevo-style aliases → 项目 SMTP_*（兼容 BREVO_SMTP_* / FROM_EMAIL）
+  if (!merged.SMTP_HOST && merged.BREVO_SMTP_HOST) {
+    merged.SMTP_HOST = merged.BREVO_SMTP_HOST;
+  }
+  if (!merged.SMTP_PORT && merged.BREVO_SMTP_PORT) {
+    merged.SMTP_PORT = merged.BREVO_SMTP_PORT;
+  }
+  if (merged.SMTP_SECURE == null && merged.BREVO_SMTP_SECURE != null) {
+    merged.SMTP_SECURE = merged.BREVO_SMTP_SECURE;
+  }
+  if (!merged.SMTP_USER && merged.BREVO_SMTP_USER) {
+    merged.SMTP_USER = merged.BREVO_SMTP_USER;
+  }
+  if (!merged.SMTP_PASS && merged.BREVO_SMTP_PASSWORD) {
+    merged.SMTP_PASS = merged.BREVO_SMTP_PASSWORD;
+  }
+  if (!merged.SMTP_FROM) {
+    const fromEmail = merged.FROM_EMAIL?.trim();
+    const senderName = merged.BREVO_SENDER_NAME?.trim();
+    if (fromEmail && senderName) {
+      merged.SMTP_FROM = `${senderName} <${fromEmail}>`;
+    } else if (fromEmail) {
+      merged.SMTP_FROM = fromEmail;
+    }
+  }
+  const parsed = apiSchema.safeParse(merged);
   if (!parsed.success) {
     throw new Error(`Invalid env: ${parsed.error.message}`);
   }
