@@ -1274,8 +1274,8 @@ export default {
     ytdlp_not_installed: '服务器未安装 yt-dlp，无法缓存 MP3',
     ffmpeg_not_installed: '服务器未安装 ffmpeg，无法将音频转为 MP3',
     email_not_configured: '邮件服务未配置，请联系管理员设置 SMTP',
-  email_send_failed: '邮件发送失败，请稍后重试',
-  smtp_ip_unauthorized:
+    email_send_failed: '邮件发送失败，请稍后重试',
+    smtp_ip_unauthorized:
       'Brevo 拒绝了本机 IP（98.115.143.29）。请到 Brevo → Security → Authorized IPs 添加该 IP，或关闭「阻止未知 IP」后再试',
     invalid_share_token: '分享链接无效或已过期',
     invalid_invite_token: '邀请链接无效或已过期',
