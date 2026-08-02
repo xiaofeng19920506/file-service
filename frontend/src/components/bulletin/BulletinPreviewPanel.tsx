@@ -1,9 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  getBulletinWorshipPlaylist,
-  type BulletinSlidePreviewParams,
-  type WeeklyBulletin,
-} from '../../api/bulletins';
+import { getBulletinWorshipPlaylist, type WeeklyBulletin } from '../../api/bulletins';
 import type { PlaylistItem } from '../../api/playlists';
 import { useI18n } from '../../i18n';
 import {
@@ -13,20 +9,10 @@ import {
   slidesForSection,
   type BulletinDeckPlan,
 } from '../../lib/bulletin-deck-plan';
-import { upcomingSundayIso } from '../../lib/bulletin-date';
-import {
-  previewPatchFull,
-  sectionPptxOverridesKey,
-} from '../../lib/bulletin-preview-patch';
-import {
-  bulletinDynamicTextOverrides,
-  bulletinDynamicTextOverridesKey,
-  mergeSlideTextOverrides,
-} from '../../lib/bulletin-pptx-patches';
+import { sectionPptxOverridesKey } from '../../lib/bulletin-preview-patch';
 import BulletinFullDeckPreview, {
   type BulletinPreviewScrollRequest,
 } from './BulletinFullDeckPreview';
-import BulletinSlideShowLauncher from './BulletinSlideShowLauncher';
 
 type BulletinPreviewPanelProps = {
   /** 左侧选中的模板分区 id；滚动目标从本面板 deckPlan 解析 */
@@ -42,6 +28,8 @@ type BulletinPreviewPanelProps = {
   bulletin: WeeklyBulletin;
   worshipRefreshKey?: number;
   onVisibleSectionChange?: (sectionId: string) => void;
+  /** 供左侧「投影」使用实际页数 */
+  onDeckMetaChange?: (meta: { totalSlides: number } | null) => void;
 };
 
 export default function BulletinPreviewPanel({
@@ -53,6 +41,7 @@ export default function BulletinPreviewPanel({
   bulletin,
   worshipRefreshKey = 0,
   onVisibleSectionChange,
+  onDeckMetaChange,
 }: BulletinPreviewPanelProps) {
   const { t } = useI18n();
   const [deckPlan, setDeckPlan] = useState<BulletinDeckPlan | null>(null);
@@ -113,6 +102,12 @@ export default function BulletinPreviewPanel({
     sectionPptxKey,
   ]);
 
+  useEffect(() => {
+    if (!onDeckMetaChange) return;
+    if (deckPlan) onDeckMetaChange({ totalSlides: deckPlan.totalSlides });
+    else onDeckMetaChange(null);
+  }, [deckPlan, onDeckMetaChange]);
+
   // 区分「点击左侧分区」与「预览滚动跟随」：后者也会改 scrollToSectionId，
   // 若照样回滚预览，用户手动下滚会被不断拽回当前分区，永远滚不到后面的页。
   const lastVisibleSectionRef = useRef<string>('');
@@ -131,7 +126,6 @@ export default function BulletinPreviewPanel({
     if (!deckPlan || !scrollToPresentationSlide) return;
     requestScroll(scrollToPresentationSlide.slide);
   }, [scrollToPresentationSlide?.bump, deckPlan, requestScroll, scrollToPresentationSlide]);
-
 
   useEffect(() => {
     if (!bulletin.servicePlaylistId) {
@@ -190,56 +184,6 @@ export default function BulletinPreviewPanel({
     [deckPlan, onVisibleSectionChange],
   );
 
-  const dynamicOverridesKey = bulletinDynamicTextOverridesKey(bulletin);
-  const previewPatch = useMemo(
-    (): BulletinSlidePreviewParams =>
-      previewPatchFull({
-        serviceDate: bulletin.serviceDate || upcomingSundayIso(),
-        serviceTime: bulletin.serviceTime || '11:00',
-        scriptureBook: bulletin.scriptureBook,
-        scriptureReference: bulletin.scriptureReference,
-        showPreServiceChairName: bulletin.showPreServiceChairName,
-        preServiceChairNames: bulletin.preServiceChairNames,
-        birthdayMonth: bulletin.birthdayMonth,
-        birthdayNames: bulletin.birthdayNames,
-        verseOfWeek: bulletin.verseOfWeek,
-        announcements: (bulletin.announcements ?? []).map((a) => ({
-          title: a.title ?? '',
-          body: a.body,
-        })),
-        hiddenSections: bulletin.hiddenSections,
-        skipTestimonyWeek: bulletin.skipTestimonyWeek,
-        skipDepartmentReports: bulletin.skipDepartmentReports,
-        weeklyMeetingVariant: bulletin.weeklyMeetingVariant,
-        slideTextOverrides: mergeSlideTextOverrides(
-          bulletinDynamicTextOverrides(bulletin),
-          bulletin.slideTextOverrides,
-        ),
-        bulletinId: bulletin.id,
-        sectionPptxKey: sectionPptxOverridesKey(bulletin.sectionPptxOverrides),
-      }),
-    [
-      bulletin.id,
-      bulletin.serviceDate,
-      bulletin.serviceTime,
-      bulletin.scriptureBook,
-      bulletin.scriptureReference,
-      bulletin.showPreServiceChairName,
-      bulletin.preServiceChairNames,
-      bulletin.birthdayMonth,
-      bulletin.birthdayNames,
-      bulletin.verseOfWeek,
-      bulletin.hiddenSections,
-      bulletin.skipTestimonyWeek,
-      bulletin.skipDepartmentReports,
-      bulletin.weeklyMeetingVariant,
-      bulletin.slideTextOverrides,
-      bulletin.sectionPptxOverrides,
-      bulletin.announcements,
-      dynamicOverridesKey,
-    ],
-  );
-
   // 结构变化才整卷 planRefreshing；否则仅 busySectionId 标分区
   const structureRefreshing =
     planRefreshing &&
@@ -252,18 +196,8 @@ export default function BulletinPreviewPanel({
   return (
     <div className="bulletin-preview-panel">
       <header className="bulletin-preview-panel-header">
-        <div className="bulletin-preview-panel-header-row">
-          <div>
-            <h2>{t('bulletin.previewTitle')}</h2>
-            <p className="bulletin-preview-panel-hint">{t('bulletin.previewHint')}</p>
-          </div>
-          <BulletinSlideShowLauncher
-            patch={previewPatch}
-            initialSlide={1}
-            totalSlides={deckPlan?.totalSlides}
-            className="btn-primary bulletin-slideshow-start"
-          />
-        </div>
+        <h2>{t('bulletin.previewTitle')}</h2>
+        <p className="bulletin-preview-panel-hint">{t('bulletin.previewHint')}</p>
       </header>
 
       <BulletinFullDeckPreview

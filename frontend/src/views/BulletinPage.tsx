@@ -12,6 +12,7 @@ import { useAuth } from '../auth/AuthContext';
 import BulletinCoverStep from '../components/bulletin/BulletinCoverStep';
 import BulletinWorshipStep from '../components/bulletin/BulletinWorshipStep';
 import BulletinPreviewPanel from '../components/bulletin/BulletinPreviewPanel';
+import BulletinSlideShowLauncher from '../components/bulletin/BulletinSlideShowLauncher';
 import {
   BulletinAnnouncementsStep,
   BulletinBirthdayStep,
@@ -141,6 +142,7 @@ export default function BulletinPage() {
     bump: number;
   } | null>(null);
   const [worshipPreviewRevision, setWorshipPreviewRevision] = useState(0);
+  const [previewTotalSlides, setPreviewTotalSlides] = useState<number | undefined>();
   const [worshipYoutubeOauthReady, setWorshipYoutubeOauthReady] = useState(false);
   const [worshipOauthError, setWorshipOauthError] = useState<string | null>(null);
   const [editSlidesSectionId, setEditSlidesSectionId] = useState<string | null>(() =>
@@ -913,6 +915,12 @@ export default function BulletinPage() {
                   {publishing ? t('bulletin.publishing') : t('bulletin.publishToLibrary')}
                 </button>
               )}
+              <BulletinSlideShowLauncher
+                bulletin={draft}
+                totalSlides={previewTotalSlides}
+                className="btn-secondary bulletin-slideshow-start"
+                disabled={!permissions.canViewBulletin}
+              />
               <button
                 type="button"
                 className="btn-secondary"
@@ -949,6 +957,9 @@ export default function BulletinPage() {
               bulletin={draft}
               worshipRefreshKey={worshipPreviewRevision}
               onVisibleSectionChange={handleVisibleSectionChange}
+              onDeckMetaChange={(meta) => {
+                setPreviewTotalSlides(meta?.totalSlides);
+              }}
             />
           </aside>
         </div>
