@@ -158,6 +158,22 @@ export default function BulletinPreviewPanel({
     };
   }, [bulletin.id, bulletin.servicePlaylistId, worshipRefreshKey]);
 
+  // 歌单刷新会改敬拜页高度（嵌入播放器），把预览重新对齐到左侧当前分区
+  const prevWorshipRefreshKeyRef = useRef(worshipRefreshKey);
+  useEffect(() => {
+    if (prevWorshipRefreshKeyRef.current === worshipRefreshKey) return;
+    prevWorshipRefreshKeyRef.current = worshipRefreshKey;
+    if (!deckPlan || worshipRefreshKey <= 0) return;
+    const slide = firstSlideForSection(scrollToSectionId, deckPlan);
+    if (slide != null) {
+      // 等嵌入播放器挂上后再滚，避免高度尚未稳定
+      const timers = [0, 120, 320].map((delay) =>
+        window.setTimeout(() => requestScroll(slide, scrollToSectionId), delay),
+      );
+      return () => timers.forEach((timer) => window.clearTimeout(timer));
+    }
+  }, [worshipRefreshKey, deckPlan, scrollToSectionId, requestScroll]);
+
   const highlightSlides = useMemo(
     () => slidesForSection(highlightSectionId, deckPlan),
     [highlightSectionId, deckPlan],

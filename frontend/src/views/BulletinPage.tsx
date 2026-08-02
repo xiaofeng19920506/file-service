@@ -248,19 +248,16 @@ export default function BulletinPage() {
     const section = navSectionById(targetId);
     if (!section) return;
 
-    if (targetId === activeSectionId) {
-      setPreviewScrollBump((b) => b + 1);
-      return;
-    }
-
     setActiveSectionId(targetId);
     setPreviewSectionId(targetId);
+    // 每次点左侧都 bump，确保右侧预览滚到对应分区（含重复点击）
+    setPreviewScrollBump((b) => b + 1);
 
     if (section.editableStepId) {
       const stepIdx = BULLETIN_WIZARD_STEPS.findIndex((s) => s.id === section.editableStepId);
       if (stepIdx >= 0) setWizardStep(stepIdx);
     }
-  }, [activeSectionId]);
+  }, []);
 
   useEffect(() => {
     const hash = window.location.hash;
