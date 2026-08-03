@@ -179,6 +179,20 @@ export default function BulletinPreviewPanel({
     [deckPlan, onVisibleSectionChange],
   );
 
+  const handleRequestSlide = useCallback(
+    (slide: number) => {
+      if (!deckPlan || slide < 1) return;
+      const sectionId = sectionIdForSlide(slide, deckPlan);
+      if (sectionId) {
+        // 先标记，避免 scrollToSectionId 变化时又滚回分区首页
+        lastVisibleSectionRef.current = sectionId;
+        onVisibleSectionChange?.(sectionId);
+      }
+      requestScroll(slide, sectionId ?? undefined);
+    },
+    [deckPlan, onVisibleSectionChange, requestScroll],
+  );
+
   // 结构变化才整卷 planRefreshing；否则仅当前分区标 loading
   const structureRefreshing =
     planRefreshing &&
@@ -200,6 +214,7 @@ export default function BulletinPreviewPanel({
         worshipItems={worshipItems}
         worshipPlaylistTitle={worshipPlaylistTitle}
         onVisibleSlideChange={handleVisibleSlide}
+        onRequestSlide={handleRequestSlide}
       />
     </div>
   );

@@ -175,6 +175,8 @@ type BulletinFullDeckPreviewProps = {
   worshipItems?: PlaylistItem[];
   worshipPlaylistTitle?: string;
   onVisibleSlideChange?: (slideNumber: number) => void;
+  /** 箭头翻页：可跨分区，由外层切换选中分区并滚动到目标页 */
+  onRequestSlide?: (slideNumber: number) => void;
 };
 
 export default function BulletinFullDeckPreview({
@@ -187,6 +189,7 @@ export default function BulletinFullDeckPreview({
   worshipItems = [],
   worshipPlaylistTitle = '',
   onVisibleSlideChange,
+  onRequestSlide,
 }: BulletinFullDeckPreviewProps) {
   const { t } = useI18n();
   const scrollRootRef = useRef<HTMLDivElement>(null);
@@ -208,6 +211,12 @@ export default function BulletinFullDeckPreview({
   const sectionSlides = useMemo(
     () => composedSections.flatMap((section) => section.slides),
     [composedSections],
+  );
+
+  /** 整卷可翻页顺序（箭头跨分区）；禁用仅在整卷首尾 */
+  const deckSlides = useMemo(
+    () => allComposedSections.flatMap((section) => section.slides),
+    [allComposedSections],
   );
 
   const [visibleSlide, setVisibleSlide] = useState(1);
@@ -347,8 +356,12 @@ export default function BulletinFullDeckPreview({
   const goToSlide = useCallback(
     (slide: number) => {
       if (!deckPlan || slide < 1) return;
-      scrollSyncUntilRef.current = Date.now() + 700;
       setVisibleSlide(slide);
+      if (onRequestSlide) {
+        onRequestSlide(slide);
+        return;
+      }
+      scrollSyncUntilRef.current = Date.now() + 700;
       onVisibleSlideChange?.(slide);
       const root = scrollRootRef.current;
       if (!root) return;
@@ -360,13 +373,13 @@ export default function BulletinFullDeckPreview({
         scrollSyncUntilRef.current = Date.now() + 120;
       }, 500);
     },
-    [deckPlan, highlightSectionId, onVisibleSlideChange],
+    [deckPlan, highlightSectionId, onRequestSlide, onVisibleSlideChange],
   );
 
-  const slideIndex = sectionSlides.indexOf(visibleSlide);
+  const slideIndex = deckSlides.indexOf(visibleSlide);
   const effectiveIndex = slideIndex >= 0 ? slideIndex : 0;
-  const canPrev = sectionSlides.length > 0 && effectiveIndex > 0;
-  const canNext = sectionSlides.length > 0 && effectiveIndex < sectionSlides.length - 1;
+  const canPrev = deckSlides.length > 0 && effectiveIndex > 0;
+  const canNext = deckSlides.length > 0 && effectiveIndex < deckSlides.length - 1;
 
   useEffect(() => {
     const root = scrollRootRef.current;
@@ -454,7 +467,7 @@ export default function BulletinFullDeckPreview({
         ) : null}
       </div>
 
-      {sectionSlides.length > 0 ? (
+      {deckSlides.length > 0 ? (
         <>
           <button
             type="button"
@@ -463,7 +476,7 @@ export default function BulletinFullDeckPreview({
             aria-label={t('bulletin.previewPrev')}
             onClick={() => {
               if (!canPrev) return;
-              goToSlide(sectionSlides[effectiveIndex - 1]!);
+              goToSlide(deckSlides[effectiveIndex - 1]!);
             }}
           >
             <ChevronLeftIcon />
@@ -475,7 +488,7 @@ export default function BulletinFullDeckPreview({
             aria-label={t('bulletin.previewNext')}
             onClick={() => {
               if (!canNext) return;
-              goToSlide(sectionSlides[effectiveIndex + 1]!);
+              goToSlide(deckSlides[effectiveIndex + 1]!);
             }}
           >
             <ChevronRightIcon />
