@@ -8255,9 +8255,7 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
 }
 
 .bulletin-step-intro {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 0.9rem;
+  display: none;
 }
 
 .bulletin-cover-step-fields {
