@@ -20,8 +20,6 @@ type BulletinPreviewPanelProps = {
   scrollToSectionBump?: number;
   /** 显式滚到某一预览页（如封面聚焦） */
   scrollToPresentationSlide?: { slide: number; bump: number } | null;
-  /** 预览高亮的分区 id */
-  highlightSectionId: string;
   /** 正在同步/刷新的分区（仅该区显示 loading，不影响整页） */
   busySectionId?: string | null;
   bulletin: WeeklyBulletin;
@@ -35,7 +33,6 @@ export default function BulletinPreviewPanel({
   scrollToSectionId,
   scrollToSectionBump = 0,
   scrollToPresentationSlide = null,
-  highlightSectionId,
   busySectionId = null,
   bulletin,
   worshipRefreshKey = 0,
@@ -167,8 +164,8 @@ export default function BulletinPreviewPanel({
   }, [worshipRefreshKey, deckPlan, scrollToSectionId, requestScroll]);
 
   const highlightSlides = useMemo(
-    () => slidesForSection(highlightSectionId, deckPlan),
-    [highlightSectionId, deckPlan],
+    () => slidesForSection(scrollToSectionId, deckPlan),
+    [scrollToSectionId, deckPlan],
   );
 
   const handleVisibleSlide = useCallback(
@@ -182,7 +179,7 @@ export default function BulletinPreviewPanel({
     [deckPlan, onVisibleSectionChange],
   );
 
-  // 结构变化才整卷 planRefreshing；否则仅 busySectionId 标分区
+  // 结构变化才整卷 planRefreshing；否则仅当前分区标 loading
   const structureRefreshing =
     planRefreshing &&
     (busySectionId == null ||
@@ -197,8 +194,8 @@ export default function BulletinPreviewPanel({
         bulletin={bulletin}
         deckPlan={deckPlan}
         highlightSlides={highlightSlides}
-        highlightSectionId={highlightSectionId}
-        busySectionId={busySectionId ?? (structureRefreshing ? highlightSectionId : null)}
+        highlightSectionId={scrollToSectionId}
+        busySectionId={busySectionId ?? (structureRefreshing ? scrollToSectionId : null)}
         scrollRequest={scrollRequest}
         worshipItems={worshipItems}
         worshipPlaylistTitle={worshipPlaylistTitle}

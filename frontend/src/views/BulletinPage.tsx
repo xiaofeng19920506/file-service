@@ -954,7 +954,6 @@ export default function BulletinPage() {
               scrollToSectionId={activeSectionId}
               scrollToSectionBump={previewScrollBump}
               scrollToPresentationSlide={previewScrollToSlide}
-              highlightSectionId={previewSectionId}
               busySectionId={busySectionId}
               bulletin={draft}
               worshipRefreshKey={worshipPreviewRevision}

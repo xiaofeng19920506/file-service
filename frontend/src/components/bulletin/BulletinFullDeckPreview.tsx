@@ -166,6 +166,7 @@ type BulletinFullDeckPreviewProps = {
   bulletin: WeeklyBulletin;
   deckPlan: BulletinDeckPlan | null;
   highlightSlides?: number[];
+  /** 当前编辑/选中的分区：预览只显示该分区幻灯片 */
   highlightSectionId?: string;
   /** 仅该分区显示同步/刷新 loading，其它分区保持现有预览 */
   busySectionId?: string | null;
@@ -193,22 +194,20 @@ export default function BulletinFullDeckPreview({
 
   const worshipFirstSlide = worshipFirstPresentationSlide(deckPlan);
 
-  const composedSections = useMemo(
+  const allComposedSections = useMemo(
     () => (deckPlan ? composeDeckSectionsForPreview(deckPlan) : []),
     [deckPlan],
   );
 
+  const composedSections = useMemo(() => {
+    if (!highlightSectionId) return allComposedSections.slice(0, 1);
+    return allComposedSections.filter((section) => section.id === highlightSectionId);
+  }, [allComposedSections, highlightSectionId]);
+
   const prefetchSectionIds = useMemo(() => {
     const set = new Set<string>();
-    if (!highlightSectionId || !composedSections.length) return set;
-    const idx = composedSections.findIndex((s) => s.id === highlightSectionId);
-    if (idx < 0) {
-      set.add(highlightSectionId);
-      return set;
-    }
-    set.add(composedSections[idx]!.id);
-    if (idx > 0) set.add(composedSections[idx - 1]!.id);
-    if (idx < composedSections.length - 1) set.add(composedSections[idx + 1]!.id);
+    if (highlightSectionId) set.add(highlightSectionId);
+    else if (composedSections[0]) set.add(composedSections[0].id);
     return set;
   }, [composedSections, highlightSectionId]);
 
@@ -261,6 +260,13 @@ export default function BulletinFullDeckPreview({
       dynamicOverridesKey,
     ],
   );
+
+  // 切换分区时先回到顶部，避免上一分区的 scrollTop 落在空内容上
+  useEffect(() => {
+    const root = scrollRootRef.current;
+    if (!root || !highlightSectionId) return;
+    root.scrollTop = 0;
+  }, [highlightSectionId]);
 
   useEffect(() => {
     if (!scrollRequest || !deckPlan) return;
@@ -357,31 +363,23 @@ export default function BulletinFullDeckPreview({
   }
 
   return (
-    <div ref={scrollRootRef} className="bulletin-deck-preview">
+    <div ref={scrollRootRef} className="bulletin-deck-preview bulletin-deck-preview--current-section">
       {composedSections.map((section) => {
-        const nav = navSectionById(section.id);
-        const title = nav ? t(nav.labelKey) : section.id;
-        const active = highlightSectionId === section.id;
         const sectionBusy = busySectionId === section.id;
         return (
           <section
             key={section.id}
-            className={`bulletin-deck-section${active ? ' bulletin-deck-section--active' : ''}${
+            className={`bulletin-deck-section bulletin-deck-section--active${
               sectionBusy ? ' bulletin-deck-section--busy' : ''
             }`}
             data-section={section.id}
           >
-            <header className="bulletin-deck-section-header">
-              <h3 className="bulletin-deck-section-title">{title}</h3>
-              {sectionBusy ? (
-                <span className="bulletin-deck-section-pages">
-                  <span className="bulletin-deck-section-busy-label">
-                    <span className="preview-spinner bulletin-section-syncing-spinner" />
-                    {t('bulletin.sectionPreviewRefreshing')}
-                  </span>
-                </span>
-              ) : null}
-            </header>
+            {sectionBusy ? (
+              <div className="bulletin-deck-section-busy-banner" role="status">
+                <span className="preview-spinner bulletin-section-syncing-spinner" />
+                {t('bulletin.sectionPreviewRefreshing')}
+              </div>
+            ) : null}
             <div className="bulletin-deck-section-slides">
               {section.slides.map((page) => (
                 <DeckSlideItem
@@ -404,17 +402,12 @@ export default function BulletinFullDeckPreview({
         );
       })}
       {highlightSectionId &&
-      !composedSections.some((s) => s.id === highlightSectionId) &&
+      !allComposedSections.some((s) => s.id === highlightSectionId) &&
       navSectionById(highlightSectionId) ? (
         <section
           className="bulletin-deck-section bulletin-deck-section--hidden-placeholder"
           data-section={highlightSectionId}
         >
-          <header className="bulletin-deck-section-header">
-            <h3 className="bulletin-deck-section-title">
-              {t(navSectionById(highlightSectionId)!.labelKey)}
-            </h3>
-          </header>
           <p className="bulletin-deck-section-hidden-hint">{t('bulletin.previewSectionHiddenHint')}</p>
         </section>
       ) : null}

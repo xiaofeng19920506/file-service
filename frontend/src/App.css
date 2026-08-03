@@ -6478,6 +6478,23 @@
   background: color-mix(in srgb, var(--surface) 78%, #0b5394 22%);
 }
 
+.bulletin-deck-preview--current-section {
+  gap: 0.65rem;
+}
+
+.bulletin-deck-section-busy-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 0.35rem;
+  padding: 0.4rem 0.65rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, #0b5394 10%, var(--surface));
+  color: #0b5394;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
 .bulletin-deck-section-busy-label {
   display: inline-flex;
   align-items: center;
