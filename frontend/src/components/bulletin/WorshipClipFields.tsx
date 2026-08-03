@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { PlaylistItem } from '../../api/playlists';
 import { friendlyError } from '../../lib/error-messages';
 import {
   formatClipSummary,
   formatClipTime,
+  isClipTimeInputValid,
   parseClipTimeInput,
   resolvePlayClips,
   type PlayClip,
@@ -23,6 +24,21 @@ function clipsToDraft(clips: PlayClip[]): DraftClip[] {
     endText: formatClipTime(c.endSec),
     label: c.label ?? '',
   }));
+}
+
+function validateRows(rows: DraftClip[]): string | null {
+  for (const row of rows) {
+    const blank = !row.startText.trim() && !row.endText.trim() && !row.label.trim();
+    if (blank) continue;
+    if (!isClipTimeInputValid(row.startText) || !isClipTimeInputValid(row.endText)) {
+      return 'invalid';
+    }
+    const start = parseClipTimeInput(row.startText.trim() ? row.startText : '0');
+    const end = parseClipTimeInput(row.endText);
+    if (start === 'invalid' || end === 'invalid') return 'invalid';
+    if (start != null && end != null && end <= start) return 'range';
+  }
+  return null;
 }
 
 type WorshipClipFieldsProps = {
@@ -46,27 +62,55 @@ export default function WorshipClipFields({
     setClipError(null);
   }, [item.id, item.playClips, item.playStartSec, item.playEndSec]);
 
+  const rowValidity = useMemo(
+    () =>
+      rows.map((row) => ({
+        startOk: isClipTimeInputValid(row.startText),
+        endOk: isClipTimeInputValid(row.endText),
+        rangeOk: (() => {
+          const start = parseClipTimeInput(row.startText.trim() ? row.startText : '0');
+          const end = parseClipTimeInput(row.endText);
+          if (start === 'invalid' || end === 'invalid') return true;
+          if (start == null || end == null) return true;
+          return end > start;
+        })(),
+      })),
+    [rows],
+  );
+
   const commit = async (nextRows: DraftClip[]) => {
+    const issue = validateRows(nextRows);
+    if (issue === 'invalid') {
+      setClipError(t('bulletin.worshipClipInvalid'));
+      return;
+    }
+    if (issue === 'range') {
+      setClipError(t('bulletin.worshipClipRangeInvalid'));
+      return;
+    }
+
     const parsed: PlayClip[] = [];
-    for (const row of nextRows) {
-      const startEmpty = !row.startText.trim() && !row.endText.trim() && !row.label.trim();
-      if (startEmpty) continue;
+    const normalized = nextRows.map((row) => ({ ...row }));
+    for (let i = 0; i < nextRows.length; i++) {
+      const row = nextRows[i]!;
+      const blank = !row.startText.trim() && !row.endText.trim() && !row.label.trim();
+      if (blank) continue;
       const start = parseClipTimeInput(row.startText.trim() ? row.startText : '0');
       const end = parseClipTimeInput(row.endText);
-      if (start === 'invalid' || end === 'invalid') {
-        setClipError(t('bulletin.worshipClipInvalid'));
-        return;
-      }
-      if (start != null && end != null && end <= start) {
-        setClipError(t('bulletin.worshipClipRangeInvalid'));
-        return;
-      }
+      if (start === 'invalid' || end === 'invalid') return;
+      const startSec = start ?? 0;
+      normalized[i] = {
+        ...row,
+        startText: formatClipTime(startSec),
+        endText: end == null ? '' : formatClipTime(end),
+      };
       parsed.push({
-        startSec: start ?? 0,
+        startSec,
         endSec: end,
         label: row.label.trim() || null,
       });
     }
+    setRows(normalized);
 
     const prev = resolvePlayClips(item);
     const same =
@@ -102,12 +146,16 @@ export default function WorshipClipFields({
 
   const updateRow = (index: number, patch: Partial<DraftClip>) => {
     setRows((prev) => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+    setClipError(null);
   };
 
   return (
     <div className="bulletin-worship-clip-editor">
       <div className="bulletin-worship-clip-editor-head">
-        <span className="bulletin-worship-clip-editor-label">{t('bulletin.worshipClipSegments')}</span>
+        <div className="bulletin-worship-clip-editor-title-block">
+          <span className="bulletin-worship-clip-editor-label">{t('bulletin.worshipClipSegments')}</span>
+          <span className="bulletin-worship-clip-format-hint">{t('bulletin.worshipClipFormatHint')}</span>
+        </div>
         <button
           type="button"
           className="btn-secondary btn-sm"
@@ -118,59 +166,81 @@ export default function WorshipClipFields({
         </button>
       </div>
       <ul className="bulletin-worship-clip-rows">
-        {rows.map((row, index) => (
-          <li key={index} className="bulletin-worship-clip-row">
-            <input
-              type="text"
-              className="bulletin-worship-clip-label-input"
-              placeholder={t('bulletin.worshipClipLabelPlaceholder')}
-              value={row.label}
-              disabled={disabled || saving}
-              onChange={(e) => updateRow(index, { label: e.target.value })}
-              onBlur={blurCommit}
-            />
-            <label className="bulletin-worship-clip-field">
-              <span>{t('bulletin.worshipClipStart')}</span>
-              <input
-                type="text"
-                inputMode="numeric"
-                placeholder="0:00"
-                value={row.startText}
-                disabled={disabled || saving}
-                onChange={(e) => updateRow(index, { startText: e.target.value })}
-                onBlur={blurCommit}
-              />
-            </label>
-            <label className="bulletin-worship-clip-field">
-              <span>{t('bulletin.worshipClipEnd')}</span>
-              <input
-                type="text"
-                inputMode="numeric"
-                placeholder={t('bulletin.worshipClipEndPlaceholder')}
-                value={row.endText}
-                disabled={disabled || saving}
-                onChange={(e) => updateRow(index, { endText: e.target.value })}
-                onBlur={blurCommit}
-              />
-            </label>
-            {rows.length > 1 ? (
-              <button
-                type="button"
-                className="btn-secondary btn-sm"
-                disabled={disabled || saving}
-                onClick={() => {
-                  const next = rows.filter((_, i) => i !== index);
-                  setRows(next.length ? next : [{ startText: '', endText: '', label: '' }]);
-                  void commit(next);
-                }}
-              >
-                {t('bulletin.worshipClipRemoveSegment')}
-              </button>
-            ) : null}
-          </li>
-        ))}
+        {rows.map((row, index) => {
+          const validity = rowValidity[index]!;
+          return (
+            <li key={index} className="bulletin-worship-clip-row">
+              <label className="bulletin-worship-clip-field bulletin-worship-clip-field--label">
+                <span>{t('bulletin.worshipClipLabel')}</span>
+                <input
+                  type="text"
+                  className="bulletin-worship-clip-label-input"
+                  placeholder={t('bulletin.worshipClipLabelPlaceholder')}
+                  value={row.label}
+                  disabled={disabled || saving}
+                  onChange={(e) => updateRow(index, { label: e.target.value })}
+                  onBlur={blurCommit}
+                />
+              </label>
+              <label className="bulletin-worship-clip-field">
+                <span>{t('bulletin.worshipClipStart')}</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder={t('bulletin.worshipClipStartPlaceholder')}
+                  aria-invalid={!validity.startOk || !validity.rangeOk}
+                  className={
+                    !validity.startOk || !validity.rangeOk
+                      ? 'bulletin-worship-clip-input is-invalid'
+                      : 'bulletin-worship-clip-input'
+                  }
+                  value={row.startText}
+                  disabled={disabled || saving}
+                  onChange={(e) => updateRow(index, { startText: e.target.value })}
+                  onBlur={blurCommit}
+                />
+              </label>
+              <label className="bulletin-worship-clip-field">
+                <span>{t('bulletin.worshipClipEnd')}</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder={t('bulletin.worshipClipEndPlaceholder')}
+                  aria-invalid={!validity.endOk || !validity.rangeOk}
+                  className={
+                    !validity.endOk || !validity.rangeOk
+                      ? 'bulletin-worship-clip-input is-invalid'
+                      : 'bulletin-worship-clip-input'
+                  }
+                  value={row.endText}
+                  disabled={disabled || saving}
+                  onChange={(e) => updateRow(index, { endText: e.target.value })}
+                  onBlur={blurCommit}
+                />
+              </label>
+              {rows.length > 1 ? (
+                <button
+                  type="button"
+                  className="btn-secondary btn-sm"
+                  disabled={disabled || saving}
+                  onClick={() => {
+                    const next = rows.filter((_, i) => i !== index);
+                    setRows(next.length ? next : [{ startText: '', endText: '', label: '' }]);
+                    void commit(next);
+                  }}
+                >
+                  {t('bulletin.worshipClipRemoveSegment')}
+                </button>
+              ) : null}
+            </li>
+          );
+        })}
       </ul>
-      {resolvePlayClips(item).length > 1 ? (
+      {resolvePlayClips(item).length > 0 ? (
         <p className="bulletin-worship-clip-summary-line">
           {resolvePlayClips(item).map((c) => formatClipSummary(c)).join(' · ')}
         </p>

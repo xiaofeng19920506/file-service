@@ -13,6 +13,8 @@ type AddPlaylistItemsModalProps = {
   /** 周报敬拜歌单：按 bulletinId 添加（与 playlistId 二选一） */
   bulletinId?: string;
   existingVideoIds: Set<string>;
+  /** 嵌在外层 modal 内时不渲染自己的 overlay/标题 */
+  embedded?: boolean;
   onClose: () => void;
   onAdded: (detail: PlaylistDetail, meta: { addedCount: number; skippedCount: number }) => void;
 };
@@ -21,6 +23,7 @@ export default function AddPlaylistItemsModal({
   playlistId,
   bulletinId,
   existingVideoIds,
+  embedded = false,
   onClose,
   onAdded,
 }: AddPlaylistItemsModalProps) {
@@ -36,12 +39,13 @@ export default function AddPlaylistItemsModal({
   };
 
   useEffect(() => {
+    if (embedded) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !addingUrl) onClose();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [addingUrl, onClose]);
+  }, [addingUrl, onClose, embedded]);
 
   const handleUrlConfirm = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,15 +98,55 @@ export default function AddPlaylistItemsModal({
       {error && <p className="error-msg">{error}</p>}
 
       <div className="metadata-modal-actions add-playlist-items-url-actions">
-        <button type="button" className="btn-secondary" onClick={handleCancel} disabled={addingUrl}>
-          {t('common.cancel')}
-        </button>
+        {!embedded ? (
+          <button type="button" className="btn-secondary" onClick={handleCancel} disabled={addingUrl}>
+            {t('common.cancel')}
+          </button>
+        ) : null}
         <button type="submit" className="btn-primary" disabled={addingUrl || !url.trim()}>
           {addingUrl ? t('playlists.adding') : t('playlists.addConfirm')}
         </button>
       </div>
     </form>
   );
+
+  const body = (
+    <div className="add-playlist-items-layout">
+      <section
+        className="add-playlist-items-col add-playlist-items-col--search"
+        aria-label={t('playlists.searchSection')}
+      >
+        {!isMobileViewport && (
+          <h4 className="add-playlist-items-col-title">{t('playlists.searchSection')}</h4>
+        )}
+        <PlaylistYoutubeSearchPanel
+          className="add-playlist-items-search"
+          playlistId={bulletinId ? undefined : playlistId}
+          bulletinId={bulletinId}
+          existingVideoIds={existingVideoIds}
+          onAdded={onAdded}
+          resultLayout={bulletinId ? 'video' : 'list'}
+        />
+      </section>
+
+      <section
+        className="add-playlist-items-col add-playlist-items-col--url"
+        aria-label={t('playlists.addUrlLabel')}
+      >
+        {urlPanel}
+      </section>
+    </div>
+  );
+
+  if (embedded) {
+    return (
+      <div
+        className={`add-playlist-items-modal add-playlist-items-modal--embedded${isMobileViewport ? '' : ' add-playlist-items-modal--split'}`}
+      >
+        {body}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -128,32 +172,7 @@ export default function AddPlaylistItemsModal({
             ×
           </button>
         </div>
-
-        <div className="add-playlist-items-layout">
-          <section
-            className="add-playlist-items-col add-playlist-items-col--search"
-            aria-label={t('playlists.searchSection')}
-          >
-            {!isMobileViewport && (
-              <h4 className="add-playlist-items-col-title">{t('playlists.searchSection')}</h4>
-            )}
-            <PlaylistYoutubeSearchPanel
-              className="add-playlist-items-search"
-              playlistId={bulletinId ? undefined : playlistId}
-              bulletinId={bulletinId}
-              existingVideoIds={existingVideoIds}
-              onAdded={onAdded}
-              resultLayout={bulletinId ? 'video' : 'list'}
-            />
-          </section>
-
-          <section
-            className="add-playlist-items-col add-playlist-items-col--url"
-            aria-label={t('playlists.addUrlLabel')}
-          >
-            {urlPanel}
-          </section>
-        </div>
+        {body}
       </div>
     </div>
   );
