@@ -53,6 +53,10 @@ import { BULLETIN_WIZARD_STEPS } from '../lib/bulletin-template-steps';
 import { buildBulletinPptxFile, publishBulletinPptx } from '../lib/bulletin-publish';
 import { friendlyError } from '../lib/error-messages';
 import { isLocalBulletinDraftDirty } from '../lib/bulletin-local-draft';
+import {
+  normalizeWorshipPresentationMode,
+  type WorshipPresentationMode,
+} from '../lib/worship-presentation-mode';
 type AnnouncementDraft = AnnouncementInput & { key: string };
 
 const EDIT_SLIDES_PARAM = 'editSlides';
@@ -678,6 +682,35 @@ export default function BulletinPage() {
     [canManage, draft, selectNavSection, t],
   );
 
+  const persistWorshipPresentationMode = useCallback(
+    async (mode: WorshipPresentationMode) => {
+      if (!draft) return;
+      const previous = normalizeWorshipPresentationMode(draft.worshipPresentationMode);
+      if (mode === previous) return;
+      setDraft((prev) => (prev ? { ...prev, worshipPresentationMode: mode } : prev));
+      try {
+        const updated = await updateBulletin(draft.id, { worshipPresentationMode: mode });
+        const confirmed = normalizeWorshipPresentationMode(
+          updated.worshipPresentationMode,
+          mode,
+        );
+        setDraft((prev) =>
+          prev
+            ? {
+                ...prev,
+                worshipPresentationMode: confirmed,
+                updatedAt: updated.updatedAt,
+              }
+            : prev,
+        );
+      } catch (err) {
+        setDraft((prev) => (prev ? { ...prev, worshipPresentationMode: previous } : prev));
+        throw err;
+      }
+    },
+    [draft],
+  );
+
   const handleReplaceSectionPptx = useCallback(
     async (sectionId: string, file: File) => {
       if (!draft || !canManage) return;
@@ -765,17 +798,7 @@ export default function BulletinPage() {
               setDraft((prev) => (prev ? { ...prev, worshipLyricsPptxBlobId: blobId } : prev));
               setWorshipPreviewRevision((v) => v + 1);
             }}
-            onPresentationModeChange={(mode, meta) => {
-              setDraft((prev) =>
-                prev
-                  ? {
-                      ...prev,
-                      worshipPresentationMode: mode,
-                      ...(meta?.updatedAt !== undefined ? { updatedAt: meta.updatedAt } : {}),
-                    }
-                  : prev,
-              );
-            }}
+            onPersistPresentationMode={persistWorshipPresentationMode}
           />
         );
       case 'offering':
@@ -963,6 +986,11 @@ export default function BulletinPage() {
               onVisibleSectionChange={handleVisibleSectionChange}
               onDeckMetaChange={(meta) => {
                 setPreviewTotalSlides(meta?.totalSlides);
+              }}
+              onWorshipPresentationModeChange={(mode) => {
+                void persistWorshipPresentationMode(mode).catch((err) => {
+                  setError(friendlyError(err instanceof Error ? err.message : 'update_failed', t));
+                });
               }}
             />
           </aside>

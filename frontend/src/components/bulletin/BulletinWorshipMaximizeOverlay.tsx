@@ -35,6 +35,8 @@ type BulletinWorshipMaximizeOverlayProps = {
   lyricsPptxBlobId?: string | null;
   allowYoutube?: boolean;
   allowPpt?: boolean;
+  /** true 时不回退整卷周报幻灯片，无歌词 PPT 则明确空态 */
+  requireLyricsPptx?: boolean;
 };
 
 function toYoutubeItems(items: PlaylistItem[]): YoutubePlayerItem[] {
@@ -84,6 +86,7 @@ export default function BulletinWorshipMaximizeOverlay({
   lyricsPptxBlobId = null,
   allowYoutube = true,
   allowPpt = true,
+  requireLyricsPptx = true,
 }: BulletinWorshipMaximizeOverlayProps) {
   const { t } = useI18n();
   const stageRef = useRef<HTMLDivElement>(null);
@@ -125,6 +128,15 @@ export default function BulletinWorshipMaximizeOverlay({
         return;
       }
 
+      // 敬拜「仅 PPT / PPT+歌单」应使用上传的歌词 PPT，不再误显示整卷周报
+      if (requireLyricsPptx) {
+        if (cancelled) return;
+        setSlides([]);
+        setSlideIndex(0);
+        setUsingLyricsUpload(false);
+        return;
+      }
+
       const bulletin = await getBulletin(bulletinId);
       const parsed = await rebuildBulletinSlides(bulletin);
       if (cancelled) return;
@@ -148,7 +160,7 @@ export default function BulletinWorshipMaximizeOverlay({
     return () => {
       cancelled = true;
     };
-  }, [bulletinId, mode, lyricsPptxBlobId]);
+  }, [bulletinId, mode, lyricsPptxBlobId, requireLyricsPptx]);
 
   const { setPlaying } = transport;
 

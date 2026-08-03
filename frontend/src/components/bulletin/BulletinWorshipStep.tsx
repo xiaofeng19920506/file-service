@@ -37,10 +37,8 @@ type BulletinWorshipStepProps = {
   onPlaylistReady: (playlistId: string) => void;
   onPlaylistChanged?: () => void;
   onLyricsPptxChange?: (blobId: string | null) => void;
-  onPresentationModeChange?: (
-    mode: WorshipPresentationMode,
-    meta?: { updatedAt?: string | null; worshipPresentationMode?: WorshipPresentationMode },
-  ) => void;
+  /** 乐观更新 + 持久化敬拜播放格式（中间栏与预览共用） */
+  onPersistPresentationMode?: (mode: WorshipPresentationMode) => Promise<void>;
 };
 
 function reorderToFinalIndex<T>(items: T[], from: number, toIndex: number): T[] {
@@ -62,7 +60,7 @@ export default function BulletinWorshipStep({
   onPlaylistReady,
   onPlaylistChanged,
   onLyricsPptxChange,
-  onPresentationModeChange,
+  onPersistPresentationMode,
 }: BulletinWorshipStepProps) {
   const { t } = useI18n();
   const lyricsFileInputRef = useRef<HTMLInputElement>(null);
@@ -135,25 +133,13 @@ export default function BulletinWorshipStep({
   };
 
   const changeMode = async (next: WorshipPresentationMode) => {
-    if (next === mode || modeSaving) return;
-    const previous = mode;
+    if (next === mode || modeSaving || !onPersistPresentationMode) return;
     setModeSaving(true);
     setError(null);
-    // 先本地切过去，避免受控 radio 在请求期间弹回 youtube
-    onPresentationModeChange?.(next);
     try {
-      const updated = await updateBulletin(draft.id, { worshipPresentationMode: next });
-      const confirmed = normalizeWorshipPresentationMode(
-        updated.worshipPresentationMode,
-        next,
-      );
-      onPresentationModeChange?.(confirmed, {
-        updatedAt: updated.updatedAt,
-        worshipPresentationMode: confirmed,
-      });
+      await onPersistPresentationMode(next);
       setStatus(t('bulletin.worshipModeUpdated'));
     } catch (err) {
-      onPresentationModeChange?.(previous);
       setError(friendlyError(err instanceof Error ? err.message : 'update_failed', t));
     } finally {
       setModeSaving(false);

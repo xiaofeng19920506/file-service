@@ -22,10 +22,8 @@ import {
 } from '../../lib/bulletin-pptx-patches';
 import { ChevronLeftIcon, ChevronRightIcon } from '../icons';
 import BulletinPptSlidePreview from './BulletinPptSlidePreview';
-import BulletinWorshipEmbeddedPlayer, {
-  shouldShowBulletinWorshipEmbedded,
-} from './BulletinWorshipEmbeddedPlayer';
-import { normalizeWorshipPresentationMode } from '../../lib/worship-presentation-mode';
+import BulletinWorshipEmbeddedPlayer from './BulletinWorshipEmbeddedPlayer';
+import { normalizeWorshipPresentationMode, type WorshipPresentationMode } from '../../lib/worship-presentation-mode';
 
 export type BulletinPreviewScrollRequest = {
   slide: number;
@@ -47,6 +45,7 @@ type DeckSlideItemProps = {
   worshipFirstSlide: number | null;
   worshipLyricsPptxBlobId: string | null;
   worshipPresentationMode: string;
+  onWorshipPresentationModeChange?: (mode: WorshipPresentationMode) => void;
 };
 
 function deckSlidePropsEqual(prev: DeckSlideItemProps, next: DeckSlideItemProps): boolean {
@@ -61,6 +60,7 @@ function deckSlidePropsEqual(prev: DeckSlideItemProps, next: DeckSlideItemProps)
     prev.worshipFirstSlide !== next.worshipFirstSlide ||
     prev.worshipLyricsPptxBlobId !== next.worshipLyricsPptxBlobId ||
     prev.worshipPresentationMode !== next.worshipPresentationMode ||
+    prev.onWorshipPresentationModeChange !== next.onWorshipPresentationModeChange ||
     prev.worshipItems !== next.worshipItems
   ) {
     return false;
@@ -91,18 +91,13 @@ const DeckSlideItem = memo(function DeckSlideItem({
   worshipFirstSlide,
   worshipLyricsPptxBlobId,
   worshipPresentationMode,
+  onWorshipPresentationModeChange,
 }: DeckSlideItemProps) {
   const slidePatch = useMemo(() => previewPatchFull(patch), [patch]);
   const presentationMode = normalizeWorshipPresentationMode(worshipPresentationMode);
 
   const showWorshipDock =
-    worshipFirstSlide != null &&
-    slideNumber === worshipFirstSlide &&
-    shouldShowBulletinWorshipEmbedded({
-      items: worshipItems,
-      lyricsPptxBlobId: worshipLyricsPptxBlobId,
-      playlistId: worshipPlaylistId,
-    });
+    worshipFirstSlide != null && slideNumber === worshipFirstSlide;
 
   // 一律懒加载：视口内升 high；当前分区近距也 high；相邻分区 low，避免抢带宽
   const priority = highlight ? 'high' : prefetch ? 'low' : 'normal';
@@ -130,6 +125,7 @@ const DeckSlideItem = memo(function DeckSlideItem({
           items={worshipItems}
           lyricsPptxBlobId={worshipLyricsPptxBlobId}
           presentationMode={presentationMode}
+          onPresentationModeChange={onWorshipPresentationModeChange}
         />
       ) : null}
     </div>
@@ -183,6 +179,7 @@ type BulletinFullDeckPreviewProps = {
   onVisibleSlideChange?: (slideNumber: number) => void;
   /** 箭头翻页：可跨分区，由外层切换选中分区并滚动到目标页 */
   onRequestSlide?: (slideNumber: number) => void;
+  onWorshipPresentationModeChange?: (mode: WorshipPresentationMode) => void;
 };
 
 export default function BulletinFullDeckPreview({
@@ -196,6 +193,7 @@ export default function BulletinFullDeckPreview({
   worshipPlaylistTitle = '',
   onVisibleSlideChange,
   onRequestSlide,
+  onWorshipPresentationModeChange,
 }: BulletinFullDeckPreviewProps) {
   const { t } = useI18n();
   const scrollRootRef = useRef<HTMLDivElement>(null);
@@ -456,6 +454,7 @@ export default function BulletinFullDeckPreview({
                     worshipFirstSlide={worshipFirstSlide}
                     worshipLyricsPptxBlobId={bulletin.worshipLyricsPptxBlobId}
                     worshipPresentationMode={bulletin.worshipPresentationMode}
+                    onWorshipPresentationModeChange={onWorshipPresentationModeChange}
                   />
                 ))}
               </div>

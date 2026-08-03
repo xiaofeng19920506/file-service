@@ -12,6 +12,7 @@ import { sectionPptxOverridesKey } from '../../lib/bulletin-preview-patch';
 import BulletinFullDeckPreview, {
   type BulletinPreviewScrollRequest,
 } from './BulletinFullDeckPreview';
+import type { WorshipPresentationMode } from '../../lib/worship-presentation-mode';
 
 type BulletinPreviewPanelProps = {
   /** 左侧选中的模板分区 id；滚动目标从本面板 deckPlan 解析 */
@@ -27,6 +28,7 @@ type BulletinPreviewPanelProps = {
   onVisibleSectionChange?: (sectionId: string) => void;
   /** 供左侧「投影」使用实际页数 */
   onDeckMetaChange?: (meta: { totalSlides: number } | null) => void;
+  onWorshipPresentationModeChange?: (mode: WorshipPresentationMode) => void;
 };
 
 export default function BulletinPreviewPanel({
@@ -38,6 +40,7 @@ export default function BulletinPreviewPanel({
   worshipRefreshKey = 0,
   onVisibleSectionChange,
   onDeckMetaChange,
+  onWorshipPresentationModeChange,
 }: BulletinPreviewPanelProps) {
   const [deckPlan, setDeckPlan] = useState<BulletinDeckPlan | null>(null);
   const [planRefreshing, setPlanRefreshing] = useState(false);
@@ -215,6 +218,7 @@ export default function BulletinPreviewPanel({
         worshipPlaylistTitle={worshipPlaylistTitle}
         onVisibleSlideChange={handleVisibleSlide}
         onRequestSlide={handleRequestSlide}
+        onWorshipPresentationModeChange={onWorshipPresentationModeChange}
       />
     </div>
   );

@@ -18,6 +18,7 @@ type BulletinWorshipEmbeddedPlayerProps = {
   items: PlaylistItem[];
   lyricsPptxBlobId?: string | null;
   presentationMode?: WorshipPresentationMode | string | null;
+  onPresentationModeChange?: (mode: WorshipPresentationMode) => void;
 };
 
 /** 把歌单项展开为播放队列：多段剪切 = 多条连续播放项 */
@@ -54,17 +55,13 @@ export function hasBulletinWorshipPlayItems(items: PlaylistItem[]): boolean {
   return toWorshipPlayerItems(items).length > 0;
 }
 
-/** 敬拜首屏是否挂操作条（不替换原 slide） */
-export function shouldShowBulletinWorshipEmbedded(opts: {
-  items: PlaylistItem[];
+/** 敬拜首屏是否挂操作条（由外层按页码 gating；此处始终允许显示控件） */
+export function shouldShowBulletinWorshipEmbedded(_opts?: {
+  items?: PlaylistItem[];
   lyricsPptxBlobId?: string | null;
   playlistId?: string | null;
 }): boolean {
-  return (
-    Boolean(opts.playlistId) ||
-    hasBulletinWorshipPlayItems(opts.items) ||
-    Boolean(opts.lyricsPptxBlobId)
-  );
+  return true;
 }
 
 function liveModeFor(mode: WorshipPresentationMode, hasTracks: boolean): WorshipLiveMode {
@@ -79,17 +76,15 @@ export default function BulletinWorshipEmbeddedPlayer({
   items,
   lyricsPptxBlobId = null,
   presentationMode = 'youtube',
+  onPresentationModeChange,
 }: BulletinWorshipEmbeddedPlayerProps) {
   const { t } = useI18n();
-  const savedMode = normalizeWorshipPresentationMode(presentationMode);
+  const mode = normalizeWorshipPresentationMode(presentationMode);
   const playerItems = useMemo(() => toWorshipPlayerItems(items), [items]);
   const hasTracks = playerItems.length > 0;
   const hasPpt = Boolean(lyricsPptxBlobId);
 
-  const [viewMode, setViewMode] = useState<WorshipPresentationMode>(savedMode);
-  const [liveMode, setLiveMode] = useState<WorshipLiveMode>(() =>
-    liveModeFor(savedMode, hasTracks),
-  );
+  const [liveMode, setLiveMode] = useState<WorshipLiveMode>(() => liveModeFor(mode, hasTracks));
   const [started, setStarted] = useState(false);
   const [maximized, setMaximized] = useState(false);
 
@@ -99,45 +94,41 @@ export default function BulletinWorshipEmbeddedPlayer({
     repeatMode: 'all',
   });
 
-  if (!shouldShowBulletinWorshipEmbedded({ items, lyricsPptxBlobId, playlistId })) {
-    return null;
-  }
-
   const stopPlayback = () => {
     transport.setPlaying(false);
     setStarted(false);
   };
 
-  const openLive = (mode: WorshipLiveMode) => {
-    setLiveMode(mode);
+  const openLive = (nextLive: WorshipLiveMode) => {
+    setLiveMode(nextLive);
     setMaximized(true);
-    if (hasTracks && (mode === 'youtube' || viewMode === 'ppt_youtube')) {
+    if (hasTracks && (nextLive === 'youtube' || mode === 'ppt_youtube')) {
       setStarted(true);
       transport.setPlaying(true);
     }
   };
 
-  const selectViewMode = (mode: WorshipPresentationMode) => {
-    setViewMode(mode);
-    // 仅本地选中；写回周报默认由中间栏单选负责，避免异步 PATCH 把选中态抢回 youtube
+  const selectMode = (next: WorshipPresentationMode) => {
+    if (next === mode) return;
+    if (next === 'youtube' && !hasTracks) return;
+    if (next === 'ppt_youtube' && !hasTracks && !hasPpt) return;
+    onPresentationModeChange?.(next);
   };
 
-  const startLiveFromViewMode = () => {
-    if (viewMode === 'youtube') {
+  const startLiveFromMode = () => {
+    if (mode === 'youtube') {
       if (!hasTracks) return;
       openLive('youtube');
       return;
     }
-    if (viewMode === 'ppt_youtube') {
+    if (mode === 'ppt_youtube') {
       openLive('ppt');
-      if (hasTracks) {
-        setStarted(true);
-        transport.setPlaying(true);
-      }
       return;
     }
     openLive('ppt');
   };
+
+  const bgAudio = started && hasTracks && !maximized && mode === 'ppt_youtube';
 
   return (
     <>
@@ -145,33 +136,34 @@ export default function BulletinWorshipEmbeddedPlayer({
         <div className="bulletin-worship-dock-modes" role="group">
           <button
             type="button"
-            className={`bulletin-worship-dock-mode${viewMode === 'ppt' ? ' is-active' : ''}`}
-            onClick={() => selectViewMode('ppt')}
+            className={`bulletin-worship-dock-mode${mode === 'ppt' ? ' is-active' : ''}`}
+            aria-pressed={mode === 'ppt'}
+            onClick={() => selectMode('ppt')}
           >
             {t('bulletin.worshipModePpt')}
           </button>
           <button
             type="button"
-            className={`bulletin-worship-dock-mode${viewMode === 'youtube' ? ' is-active' : ''}`}
+            className={`bulletin-worship-dock-mode${mode === 'youtube' ? ' is-active' : ''}`}
+            aria-pressed={mode === 'youtube'}
             disabled={!hasTracks}
-            onClick={() => selectViewMode('youtube')}
+            onClick={() => selectMode('youtube')}
           >
             {t('bulletin.worshipModeYoutube')}
           </button>
           <button
             type="button"
-            className={`bulletin-worship-dock-mode${viewMode === 'ppt_youtube' ? ' is-active' : ''}`}
+            className={`bulletin-worship-dock-mode${mode === 'ppt_youtube' ? ' is-active' : ''}`}
+            aria-pressed={mode === 'ppt_youtube'}
             disabled={!hasTracks && !hasPpt}
-            onClick={() => selectViewMode('ppt_youtube')}
+            onClick={() => selectMode('ppt_youtube')}
           >
             {t('bulletin.worshipModePptYoutube')}
           </button>
         </div>
         <div className="bulletin-worship-dock-actions">
-          {started && hasTracks && !maximized ? (
-            <span className="bulletin-worship-dock-status">
-              {t('bulletin.worshipSlidePlayingBg')}
-            </span>
+          {bgAudio ? (
+            <span className="bulletin-worship-dock-status">{t('bulletin.worshipSlidePlayingBg')}</span>
           ) : null}
           {started ? (
             <button type="button" className="bulletin-worship-dock-btn" onClick={stopPlayback}>
@@ -181,14 +173,15 @@ export default function BulletinWorshipEmbeddedPlayer({
           <button
             type="button"
             className="bulletin-worship-dock-btn bulletin-worship-dock-btn--primary"
-            onClick={startLiveFromViewMode}
+            onClick={startLiveFromMode}
+            disabled={mode === 'youtube' ? !hasTracks : mode === 'ppt' ? !hasPpt : !hasTracks && !hasPpt}
           >
             {t('bulletin.worshipSlideOpenLive')}
           </button>
         </div>
       </div>
 
-      {started && hasTracks && !maximized && viewMode === 'ppt_youtube' ? (
+      {bgAudio ? (
         <div className="bulletin-worship-embedded-player--audio-only" aria-hidden>
           <YoutubePlaylistPlayer
             items={playerItems}
@@ -206,7 +199,7 @@ export default function BulletinWorshipEmbeddedPlayer({
         </div>
       ) : null}
 
-      {maximized && (
+      {maximized ? (
         <BulletinWorshipMaximizeOverlay
           mode={liveMode}
           onModeChange={setLiveMode}
@@ -218,9 +211,10 @@ export default function BulletinWorshipEmbeddedPlayer({
           transport={transport}
           lyricsPptxBlobId={lyricsPptxBlobId}
           allowYoutube={hasTracks}
-          allowPpt
+          allowPpt={hasPpt || mode !== 'youtube'}
+          requireLyricsPptx={mode === 'ppt' || mode === 'ppt_youtube'}
         />
-      )}
+      ) : null}
     </>
   );
 }
