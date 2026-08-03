@@ -6261,7 +6261,7 @@
 }
 
 .bulletin-workspace-preview {
-  padding: 0.75rem;
+  padding: 0.45rem;
 }
 
 .bulletin-preview-panel {
@@ -6271,7 +6271,8 @@
   flex-direction: column;
   align-items: stretch;
   overflow: hidden;
-  container-type: inline-size;
+  /* 同时提供 cqi/cqh，便于幻灯片按预览视口比例放大 */
+  container-type: size;
   container-name: bulletin-preview;
 }
 
@@ -6403,14 +6404,14 @@
   flex: 1;
   min-height: calc(100cqi * 9 / 16);
   max-height: none;
-  overflow-x: hidden;
+  overflow-x: clip;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
-  padding-right: 0.35rem;
+  padding-right: 0.15rem;
   scroll-behavior: smooth;
 }
 
@@ -6485,13 +6486,26 @@
 }
 
 .bulletin-deck-slide {
+  /* 按预览视口比例略放大：宽屏略超出版心，矮屏按高度收敛 */
+  --bulletin-preview-slide-width: min(106cqi, calc(90cqh * 16 / 9));
+  width: var(--bulletin-preview-slide-width);
+  max-width: none;
+  margin-inline: auto;
+  min-height: calc(var(--bulletin-preview-slide-width) * 9 / 16);
+  flex-shrink: 0;
+}
+
+.bulletin-deck-slide .bulletin-slide-preview,
+.bulletin-deck-slide .bulletin-slide-preview--loading,
+.bulletin-deck-slide .bulletin-slide-preview--empty {
   width: 100%;
-  /* 每张幻灯片槽位至少占满一张 16:9，避免 PNG 未撑开前塌缩 */
-  min-height: calc(100cqi * 9 / 16);
 }
 
 .bulletin-deck-section--hidden-placeholder {
-  min-height: calc(100cqi * 9 / 16);
+  --bulletin-preview-slide-width: min(106cqi, calc(90cqh * 16 / 9));
+  width: var(--bulletin-preview-slide-width);
+  margin-inline: auto;
+  min-height: calc(var(--bulletin-preview-slide-width) * 9 / 16);
   justify-content: center;
 }
 
