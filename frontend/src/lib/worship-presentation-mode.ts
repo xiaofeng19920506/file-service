@@ -1,5 +1,11 @@
 export type WorshipPresentationMode = 'ppt' | 'youtube' | 'ppt_youtube';
 
+export type PlayClip = {
+  startSec: number;
+  endSec: number | null;
+  label?: string | null;
+};
+
 export const WORSHIP_PRESENTATION_MODES: WorshipPresentationMode[] = [
   'ppt',
   'youtube',
@@ -43,4 +49,33 @@ export function formatClipTime(seconds: number | null | undefined): string {
   const m = Math.floor(whole / 60);
   const s = whole % 60;
   return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+export function resolvePlayClips(item: {
+  playClips?: PlayClip[] | null;
+  playStartSec?: number | null;
+  playEndSec?: number | null;
+}): PlayClip[] {
+  if (Array.isArray(item.playClips) && item.playClips.length > 0) {
+    return item.playClips.filter(
+      (c) =>
+        typeof c?.startSec === 'number' &&
+        Number.isFinite(c.startSec) &&
+        c.startSec >= 0 &&
+        (c.endSec == null || (typeof c.endSec === 'number' && c.endSec > c.startSec)),
+    );
+  }
+  if (item.playStartSec != null || item.playEndSec != null) {
+    const startSec = item.playStartSec ?? 0;
+    const endSec = item.playEndSec ?? null;
+    if (endSec != null && endSec <= startSec) return [];
+    return [{ startSec, endSec, label: null }];
+  }
+  return [];
+}
+
+export function formatClipSummary(clip: PlayClip): string {
+  const start = formatClipTime(clip.startSec) || '0:00';
+  const end = clip.endSec == null ? '—' : formatClipTime(clip.endSec) || '—';
+  return clip.label ? `${clip.label} ${start}–${end}` : `${start}–${end}`;
 }

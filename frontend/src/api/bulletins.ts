@@ -533,6 +533,11 @@ export async function patchBulletinWorshipPlaylistItem(
     title?: string;
     playStartSec?: number | null;
     playEndSec?: number | null;
+    playClips?: Array<{
+      startSec: number;
+      endSec: number | null;
+      label?: string | null;
+    }> | null;
   },
 ): Promise<PlaylistDetail> {
   const res = await apiFetch(

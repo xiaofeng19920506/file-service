@@ -95,13 +95,13 @@ const DeckSlideItem = memo(function DeckSlideItem({
   const slidePatch = useMemo(() => previewPatchFull(patch), [patch]);
   const presentationMode = normalizeWorshipPresentationMode(worshipPresentationMode);
 
-  const showWorshipPlayer =
+  const showWorshipDock =
     worshipFirstSlide != null &&
     slideNumber === worshipFirstSlide &&
     shouldShowBulletinWorshipEmbedded({
-      mode: presentationMode,
       items: worshipItems,
       lyricsPptxBlobId: worshipLyricsPptxBlobId,
+      playlistId: worshipPlaylistId,
     });
 
   // 一律懒加载：视口内升 high；当前分区近距也 high；相邻分区 low，避免抢带宽
@@ -110,31 +110,28 @@ const DeckSlideItem = memo(function DeckSlideItem({
 
   return (
     <div
-      className={`bulletin-deck-slide${highlight ? ' bulletin-deck-slide--highlight' : ''}${showWorshipPlayer ? ' bulletin-deck-slide--worship' : ''}`}
+      className={`bulletin-deck-slide${highlight ? ' bulletin-deck-slide--highlight' : ''}${showWorshipDock ? ' bulletin-deck-slide--worship' : ''}`}
       data-slide={slideNumber}
       data-section-slide={sectionId}
     >
-      {showWorshipPlayer ? (
+      <BulletinPptSlidePreview
+        slideNumber={slideNumber}
+        patch={slidePatch}
+        sectionId={sectionId}
+        lazy
+        priority={priority}
+        rootMargin={rootMargin}
+      />
+      {showWorshipDock ? (
         <BulletinWorshipEmbeddedPlayer
           bulletinId={bulletinId}
           playlistId={worshipPlaylistId}
           playlistTitle={worshipPlaylistTitle}
           items={worshipItems}
-          slideNumber={slideNumber}
-          patch={slidePatch}
           lyricsPptxBlobId={worshipLyricsPptxBlobId}
           presentationMode={presentationMode}
         />
-      ) : (
-        <BulletinPptSlidePreview
-          slideNumber={slideNumber}
-          patch={slidePatch}
-          sectionId={sectionId}
-          lazy
-          priority={priority}
-          rootMargin={rootMargin}
-        />
-      )}
+      ) : null}
     </div>
   );
 }, deckSlidePropsEqual);

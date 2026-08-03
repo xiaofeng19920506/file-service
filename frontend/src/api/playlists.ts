@@ -39,6 +39,12 @@ export type PlaylistItem = {
   blobId: string | null;
   playStartSec?: number | null;
   playEndSec?: number | null;
+  /** 多段剪切；空/null 表示整首 */
+  playClips?: Array<{
+    startSec: number;
+    endSec: number | null;
+    label?: string | null;
+  }> | null;
   audio?: PlaylistAudioRef;
   blob: PlaylistBlobRef | null;
 };
@@ -245,6 +251,11 @@ export async function patchInvitePlaylistItem(
     title?: string;
     playStartSec?: number | null;
     playEndSec?: number | null;
+    playClips?: Array<{
+      startSec: number;
+      endSec: number | null;
+      label?: string | null;
+    }> | null;
   },
 ): Promise<PlaylistDetail> {
   const res = await apiFetch(

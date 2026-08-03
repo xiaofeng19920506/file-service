@@ -524,6 +524,13 @@ const en: MessageTree = {
     worshipClipInvalid: 'Invalid time (use 1:20 or seconds)',
     worshipClipRangeInvalid: 'End must be after start',
     worshipClipSummary: '{start}–{end}',
+    worshipClipSegments: 'Segments',
+    worshipClipAddSegment: 'Add segment',
+    worshipClipRemoveSegment: 'Remove',
+    worshipClipLabelPlaceholder: 'Label (optional)',
+    worshipSlidePlayingBg: 'Playing in background',
+    worshipModeSwitchHint:
+      'Default format; switch freely in preview/projection. The original slide stays visible.',
   },
   worshipSongs: {
     title: 'Praise & worship',

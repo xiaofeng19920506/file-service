@@ -9,6 +9,7 @@ import { useI18n } from '../../i18n';
 import { rebuildBulletinSlides } from '../../lib/bulletin-slides';
 import { parsePptxSlidesDetailed, type EditableSlide } from '../../lib/pptx-preview';
 import type { WorshipLiveMode } from '../../lib/worship-live-config';
+import { resolvePlayClips } from '../../lib/worship-presentation-mode';
 
 type Transport = {
   activeIndex: number;
@@ -37,14 +38,32 @@ type BulletinWorshipMaximizeOverlayProps = {
 };
 
 function toYoutubeItems(items: PlaylistItem[]): YoutubePlayerItem[] {
-  return items
-    .filter((item) => item.youtubeVideoId)
-    .map((item) => ({
-      youtubeVideoId: item.youtubeVideoId,
-      title: item.title,
-      startSeconds: item.playStartSec ?? null,
-      endSeconds: item.playEndSec ?? null,
-    }));
+  const out: YoutubePlayerItem[] = [];
+  for (const item of items) {
+    if (!item.youtubeVideoId) continue;
+    const clips = resolvePlayClips(item);
+    if (clips.length === 0) {
+      out.push({
+        youtubeVideoId: item.youtubeVideoId,
+        title: item.title,
+        startSeconds: null,
+        endSeconds: null,
+      });
+      continue;
+    }
+    clips.forEach((clip, index) => {
+      const segLabel =
+        clip.label?.trim() ||
+        (clips.length > 1 ? `${index + 1}/${clips.length}` : null);
+      out.push({
+        youtubeVideoId: item.youtubeVideoId,
+        title: segLabel ? `${item.title} (${segLabel})` : item.title,
+        startSeconds: clip.startSec,
+        endSeconds: clip.endSec,
+      });
+    });
+  }
+  return out;
 }
 
 function slideImageUrl(slide: EditableSlide): string | null {

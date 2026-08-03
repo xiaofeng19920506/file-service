@@ -6570,6 +6570,66 @@
   margin: 0;
   flex-shrink: 0;
   box-sizing: border-box;
+  position: relative;
+}
+
+.bulletin-deck-slide--worship .bulletin-slide-preview {
+  flex: 1;
+  min-height: 0;
+}
+
+.bulletin-worship-dock {
+  position: absolute;
+  left: 0.5rem;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, #111 78%, transparent);
+  color: #fff;
+  backdrop-filter: blur(6px);
+  pointer-events: auto;
+}
+
+.bulletin-worship-dock-modes,
+.bulletin-worship-dock-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.bulletin-worship-dock-mode,
+.bulletin-worship-dock-btn {
+  padding: 0.28rem 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.bulletin-worship-dock-mode:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.bulletin-worship-dock-mode.is-active,
+.bulletin-worship-dock-btn--primary {
+  background: #0b5394;
+  border-color: #0b5394;
+}
+
+.bulletin-worship-dock-status {
+  font-size: 0.75rem;
+  opacity: 0.85;
 }
 
 .bulletin-deck-slide .bulletin-slide-preview,
@@ -7364,6 +7424,59 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   flex-wrap: wrap;
   gap: 0.35rem 0.55rem;
   align-items: center;
+}
+
+.bulletin-worship-clip-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.bulletin-worship-clip-editor-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+}
+
+.bulletin-worship-clip-editor-label {
+  font-size: 0.75rem;
+  color: var(--muted, #666);
+  font-weight: 600;
+}
+
+.bulletin-worship-clip-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.bulletin-worship-clip-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.45rem;
+}
+
+.bulletin-worship-clip-label-input {
+  width: 6.5rem;
+  min-width: 5rem;
+  padding: 0.15rem 0.3rem;
+  font-size: 0.8rem;
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.14));
+  border-radius: 4px;
+}
+
+.bulletin-worship-clip-summary-line {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--muted, #666);
+  line-height: 1.35;
 }
 
 .bulletin-worship-clip-field {

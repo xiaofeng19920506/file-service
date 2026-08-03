@@ -13,6 +13,8 @@ import {
   YOUTUBE_SEARCH_MAX_PAGE_SIZE,
   parsePlayClipSeconds,
   assertClipRange,
+  parsePlayClips,
+  clipsToLegacyStartEnd,
   type ApiEnv,
   type Db,
 } from '@file-service/shared';
@@ -331,6 +333,7 @@ export function registerWorshipPlaylistInviteRoutes(
       title?: string;
       playStartSec?: number | null;
       playEndSec?: number | null;
+      playClips?: { startSec: number; endSec: number | null; label?: string | null }[] | null;
     };
   }>('/v1/playlists/invite/*', async (request, reply) => {
     const parsed = parseWorshipInviteRest(request.params['*'] ?? '');
@@ -355,26 +358,40 @@ export function registerWorshipPlaylistInviteRoutes(
       .where(and(eq(playlistItems.id, itemId), eq(playlistItems.playlistId, playlistId)));
     if (!existing) return reply.code(404).send({ error: 'not_found' });
 
-    const clip = parsePlayClipSeconds({
-      playStartSec: body.playStartSec,
-      playEndSec: body.playEndSec,
-    });
-    if (!clip.ok) return reply.code(400).send({ error: clip.error });
-
-    const nextStart =
-      clip.playStartSec !== undefined ? clip.playStartSec : existing.playStartSec;
-    const nextEnd = clip.playEndSec !== undefined ? clip.playEndSec : existing.playEndSec;
-    const rangeError = assertClipRange(nextStart, nextEnd);
-    if (rangeError) return reply.code(400).send({ error: rangeError });
-
     const itemPatch: Partial<typeof playlistItems.$inferInsert> = {};
     if (typeof body.title === 'string') {
       const title = body.title.trim();
       if (!title) return reply.code(400).send({ error: 'title_required' });
       itemPatch.title = title;
     }
-    if (clip.playStartSec !== undefined) itemPatch.playStartSec = clip.playStartSec;
-    if (clip.playEndSec !== undefined) itemPatch.playEndSec = clip.playEndSec;
+
+    if (body.playClips !== undefined) {
+      const parsedClips = parsePlayClips(body.playClips);
+      if (!parsedClips.ok) return reply.code(400).send({ error: parsedClips.error });
+      const legacy = clipsToLegacyStartEnd(parsedClips.playClips);
+      itemPatch.playClips = parsedClips.playClips;
+      itemPatch.playStartSec = legacy.playStartSec;
+      itemPatch.playEndSec = legacy.playEndSec;
+    } else if (body.playStartSec !== undefined || body.playEndSec !== undefined) {
+      const clip = parsePlayClipSeconds({
+        playStartSec: body.playStartSec,
+        playEndSec: body.playEndSec,
+      });
+      if (!clip.ok) return reply.code(400).send({ error: clip.error });
+
+      const nextStart =
+        clip.playStartSec !== undefined ? clip.playStartSec : existing.playStartSec;
+      const nextEnd = clip.playEndSec !== undefined ? clip.playEndSec : existing.playEndSec;
+      const rangeError = assertClipRange(nextStart, nextEnd);
+      if (rangeError) return reply.code(400).send({ error: rangeError });
+
+      if (clip.playStartSec !== undefined) itemPatch.playStartSec = clip.playStartSec;
+      if (clip.playEndSec !== undefined) itemPatch.playEndSec = clip.playEndSec;
+      const start = nextStart ?? null;
+      const end = nextEnd ?? null;
+      itemPatch.playClips =
+        start == null && end == null ? null : [{ startSec: start ?? 0, endSec: end, label: null }];
+    }
 
     if (Object.keys(itemPatch).length === 0) {
       return reply.code(400).send({ error: 'empty_patch' });

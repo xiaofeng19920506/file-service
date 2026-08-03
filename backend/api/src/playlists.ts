@@ -269,6 +269,7 @@ function serializePlaylistItem(
     blobId: item.blobId,
     playStartSec: item.playStartSec ?? null,
     playEndSec: item.playEndSec ?? null,
+    playClips: Array.isArray(item.playClips) ? item.playClips : null,
     audio: audio ?? {
       videoId: item.youtubeVideoId,
       status: 'pending' as const,

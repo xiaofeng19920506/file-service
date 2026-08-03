@@ -500,6 +500,12 @@ export default {
     worshipClipInvalid: '时间格式无效（可用 1:20 或秒数）',
     worshipClipRangeInvalid: '结束时间须晚于开始时间',
     worshipClipSummary: '{start}–{end}',
+    worshipClipSegments: '播放段落',
+    worshipClipAddSegment: '加一段',
+    worshipClipRemoveSegment: '删除',
+    worshipClipLabelPlaceholder: '段落名（可选）',
+    worshipSlidePlayingBg: '背景播放中',
+    worshipModeSwitchHint: '默认格式；预览与投影时可随时切换显示形式，不会遮住原幻灯片。',
   },
   worshipSongs: {
     title: '敬拜赞美',

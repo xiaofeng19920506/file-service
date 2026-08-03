@@ -20,6 +20,7 @@ import {
 import PlaylistYoutubeSearchPanel from '../PlaylistYoutubeSearchPanel';
 import WorshipClipFields from '../bulletin/WorshipClipFields';
 import { friendlyError } from '../../lib/error-messages';
+import type { PlayClip } from '../../lib/worship-presentation-mode';
 import { useI18n } from '../../i18n';
 
 export type WorshipSongsEditorProps = {
@@ -186,10 +187,7 @@ export default function WorshipSongsEditor({
     }
   };
 
-  const handleClipSave = async (
-    itemId: string,
-    patch: { playStartSec: number | null; playEndSec: number | null },
-  ) => {
+  const handleClipSave = async (itemId: string, patch: { playClips: PlayClip[] | null }) => {
     const data = inviteToken
       ? await patchInvitePlaylistItem(inviteToken, itemId, patch)
       : await patchBulletinWorshipPlaylistItem(bulletinId!, itemId, patch);

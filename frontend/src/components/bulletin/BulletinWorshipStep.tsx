@@ -15,10 +15,12 @@ import BulletinWorshipYoutubeImportPanel from './BulletinWorshipYoutubeImportPan
 import BulletinWorshipInviteModal from './BulletinWorshipInviteModal';
 import { friendlyError } from '../../lib/error-messages';
 import {
-  formatClipTime,
+  formatClipSummary,
   normalizeWorshipPresentationMode,
+  resolvePlayClips,
   worshipNeedsLyricsPptx,
   worshipNeedsPlaylist,
+  type PlayClip,
   type WorshipPresentationMode,
 } from '../../lib/worship-presentation-mode';
 import { useI18n } from '../../i18n';
@@ -179,10 +181,7 @@ export default function BulletinWorshipStep({
     }
   };
 
-  const handleClipSave = async (
-    itemId: string,
-    patch: { playStartSec: number | null; playEndSec: number | null },
-  ) => {
+  const handleClipSave = async (itemId: string, patch: { playClips: PlayClip[] | null }) => {
     const detail = await patchBulletinWorshipPlaylistItem(draft.id, itemId, patch);
     setItems(detail.items);
     onPlaylistChanged?.();
@@ -276,6 +275,7 @@ export default function BulletinWorshipStep({
           ))}
         </div>
         <p className="bulletin-worship-mode-hint">
+          {t('bulletin.worshipModeSwitchHint')}{' '}
           {mode === 'ppt'
             ? t('bulletin.worshipModePptHint')
             : mode === 'youtube'
@@ -411,12 +411,9 @@ export default function BulletinWorshipStep({
                         disabled={busy}
                         onSave={(patch) => handleClipSave(item.id, patch)}
                       />
-                    ) : item.playStartSec != null || item.playEndSec != null ? (
+                    ) : resolvePlayClips(item).length > 0 ? (
                       <span className="bulletin-worship-clip-summary">
-                        {t('bulletin.worshipClipSummary', {
-                          start: formatClipTime(item.playStartSec) || '0:00',
-                          end: formatClipTime(item.playEndSec) || '—',
-                        })}
+                        {resolvePlayClips(item).map((c) => formatClipSummary(c)).join(' · ')}
                       </span>
                     ) : null}
                   </div>

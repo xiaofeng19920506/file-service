@@ -123,10 +123,14 @@ export const playlistItems = pgTable('playlist_items', {
   youtubeVideoId: text('youtube_video_id').notNull(),
   youtubeUrl: text('youtube_url').notNull(),
   blobId: uuid('blob_id').references(() => blobs.id, { onDelete: 'set null' }),
-  /** 可选：只播放片段起点（秒） */
+  /** 可选：只播放片段起点（秒）；多段时与 playClips[0] 同步 */
   playStartSec: integer('play_start_sec'),
   /** 可选：片段终点（秒，需 > playStartSec） */
   playEndSec: integer('play_end_sec'),
+  /** 可选：多段剪切 [{ startSec, endSec, label? }, ...] */
+  playClips: jsonb('play_clips').$type<
+    { startSec: number; endSec: number | null; label?: string | null }[] | null
+  >(),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
