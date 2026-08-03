@@ -6198,6 +6198,32 @@
   gap: 0.65rem;
 }
 
+.bulletin-header-btn-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.bulletin-header-btn-group > .btn-primary,
+.bulletin-header-btn-group > .btn-secondary,
+.bulletin-header-btn-group > a.btn-secondary {
+  margin: 0;
+  border-radius: 0;
+  border: none;
+  border-right: 1px solid var(--border-light);
+  box-shadow: none;
+  white-space: nowrap;
+}
+
+.bulletin-header-btn-group > :last-child {
+  border-right: none;
+}
+
 .bulletin-week-select {
   display: flex;
   flex-direction: column;
@@ -6985,20 +7011,20 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
 
 .bulletin-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: 0.85rem;
+  margin-bottom: 0.65rem;
 }
 
 .bulletin-header h1 {
-  margin: 0 0 0.35rem;
-  font-size: 1.5rem;
+  margin: 0;
+  font-size: 1.35rem;
+  line-height: 1.2;
 }
 
 .bulletin-intro {
-  margin: 0;
-  color: var(--text-secondary);
+  display: none;
 }
 
 .bulletin-layout {

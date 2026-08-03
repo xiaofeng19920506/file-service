@@ -826,10 +826,7 @@ export default function BulletinPage() {
   return (
     <div className="bulletin-page bulletin-page--workspace">
       <header className="bulletin-header">
-        <div>
-          <h1>{t('bulletin.title')}</h1>
-          <p className="bulletin-intro">{t('bulletin.intro')}</p>
-        </div>
+        <h1>{t('bulletin.title')}</h1>
         <div className="bulletin-header-actions">
           {bulletins.length > 0 && (
             <label className="bulletin-week-select">
@@ -848,11 +845,49 @@ export default function BulletinPage() {
               </select>
             </label>
           )}
-          {canManage && (
-            <button type="button" className="btn-primary" disabled={saving} onClick={handleCreate}>
-              {t('bulletin.create')}
-            </button>
-          )}
+          <div className="bulletin-header-btn-group" role="group" aria-label={t('bulletin.title')}>
+            {draft && canPublish ? (
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={publishing}
+                onClick={() => void handlePublish()}
+              >
+                {publishing ? t('bulletin.publishing') : t('bulletin.publishToLibrary')}
+              </button>
+            ) : null}
+            {draft ? (
+              <BulletinSlideShowLauncher
+                bulletin={draft}
+                totalSlides={previewTotalSlides}
+                className="btn-secondary bulletin-slideshow-start"
+                disabled={!permissions.canViewBulletin}
+              />
+            ) : null}
+            {draft ? (
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={generating}
+                onClick={() => void handleGenerate()}
+              >
+                {generating ? t('bulletin.generating') : t('bulletin.downloadPptx')}
+              </button>
+            ) : null}
+            {draft?.outputBlobId && permissions.canDownload ? (
+              <a
+                className="btn-secondary"
+                href={`#/preview/${encodeURIComponent(draft.outputBlobId)}?title=${encodeURIComponent(draft.serviceDate)}`}
+              >
+                {t('bulletin.openInLibrary')}
+              </a>
+            ) : null}
+            {canManage ? (
+              <button type="button" className="btn-primary" disabled={saving} onClick={handleCreate}>
+                {t('bulletin.create')}
+              </button>
+            ) : null}
+          </div>
         </div>
       </header>
 
@@ -904,43 +939,6 @@ export default function BulletinPage() {
                 onSaved={handleSectionPptxSaved}
               />
             ) : null}
-
-            <div className="bulletin-workspace-form-footer">
-              <div className="bulletin-actions">
-                {canPublish && (
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    disabled={publishing}
-                    onClick={() => void handlePublish()}
-                  >
-                    {publishing ? t('bulletin.publishing') : t('bulletin.publishToLibrary')}
-                  </button>
-                )}
-                <BulletinSlideShowLauncher
-                  bulletin={draft}
-                  totalSlides={previewTotalSlides}
-                  className="btn-secondary bulletin-slideshow-start"
-                  disabled={!permissions.canViewBulletin}
-                />
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  disabled={generating}
-                  onClick={() => void handleGenerate()}
-                >
-                  {generating ? t('bulletin.generating') : t('bulletin.downloadPptx')}
-                </button>
-                {draft.outputBlobId && permissions.canDownload && (
-                  <a
-                    className="btn-secondary"
-                    href={`#/preview/${encodeURIComponent(draft.outputBlobId)}?title=${encodeURIComponent(draft.serviceDate)}`}
-                  >
-                    {t('bulletin.openInLibrary')}
-                  </a>
-                )}
-              </div>
-            </div>
           </section>
 
           <aside className="bulletin-workspace-preview" aria-label={t('bulletin.previewTitle')}>
