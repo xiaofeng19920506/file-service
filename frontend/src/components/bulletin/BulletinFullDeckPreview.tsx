@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { WeeklyBulletin } from '../../api/bulletins';
 import type { PlaylistItem } from '../../api/playlists';
 import { useI18n } from '../../i18n';
@@ -20,6 +20,7 @@ import {
   bulletinDynamicTextOverridesKey,
   mergeSlideTextOverrides,
 } from '../../lib/bulletin-pptx-patches';
+import { ChevronLeftIcon, ChevronRightIcon } from '../icons';
 import BulletinPptSlidePreview from './BulletinPptSlidePreview';
 import BulletinWorshipEmbeddedPlayer, {
   hasBulletinWorshipPlayItems,
@@ -204,6 +205,18 @@ export default function BulletinFullDeckPreview({
     return allComposedSections.filter((section) => section.id === highlightSectionId);
   }, [allComposedSections, highlightSectionId]);
 
+  const sectionSlides = useMemo(
+    () => composedSections.flatMap((section) => section.slides),
+    [composedSections],
+  );
+
+  const [visibleSlide, setVisibleSlide] = useState(1);
+
+  useEffect(() => {
+    if (sectionSlides.length === 0) return;
+    setVisibleSlide((prev) => (sectionSlides.includes(prev) ? prev : sectionSlides[0]!));
+  }, [sectionSlides]);
+
   const prefetchSectionIds = useMemo(() => {
     const set = new Set<string>();
     if (highlightSectionId) set.add(highlightSectionId);
@@ -273,6 +286,7 @@ export default function BulletinFullDeckPreview({
     const slide = scrollRequest.slide;
     if (slide < 1 || slide > deckPlan.totalSlides) return;
 
+    setVisibleSlide(slide);
     scrollSyncUntilRef.current = Date.now() + 700;
 
     const root = scrollRootRef.current;
@@ -294,7 +308,7 @@ export default function BulletinFullDeckPreview({
   }, [scrollRequest?.id, scrollRequest?.slide, scrollRequest?.sectionId, deckPlan]);
 
   const reportVisibleSlide = useCallback(() => {
-    if (!onVisibleSlideChange || Date.now() < scrollSyncUntilRef.current) return;
+    if (Date.now() < scrollSyncUntilRef.current) return;
     const root = scrollRootRef.current;
     if (!root) return;
 
@@ -325,12 +339,38 @@ export default function BulletinFullDeckPreview({
       }
     });
 
-    onVisibleSlideChange(bestSlide || fallbackSlide || 1);
+    const slide = bestSlide || fallbackSlide || 1;
+    setVisibleSlide(slide);
+    onVisibleSlideChange?.(slide);
   }, [onVisibleSlideChange]);
+
+  const goToSlide = useCallback(
+    (slide: number) => {
+      if (!deckPlan || slide < 1) return;
+      scrollSyncUntilRef.current = Date.now() + 700;
+      setVisibleSlide(slide);
+      onVisibleSlideChange?.(slide);
+      const root = scrollRootRef.current;
+      if (!root) return;
+      const target = { slide, sectionId: highlightSectionId || undefined };
+      runScrollToTarget(root, target);
+      window.setTimeout(() => runScrollToTarget(root, target), 80);
+      window.setTimeout(() => runScrollToTarget(root, target), 220);
+      window.setTimeout(() => {
+        scrollSyncUntilRef.current = Date.now() + 120;
+      }, 500);
+    },
+    [deckPlan, highlightSectionId, onVisibleSlideChange],
+  );
+
+  const slideIndex = sectionSlides.indexOf(visibleSlide);
+  const effectiveIndex = slideIndex >= 0 ? slideIndex : 0;
+  const canPrev = sectionSlides.length > 0 && effectiveIndex > 0;
+  const canNext = sectionSlides.length > 0 && effectiveIndex < sectionSlides.length - 1;
 
   useEffect(() => {
     const root = scrollRootRef.current;
-    if (!root || !onVisibleSlideChange || !deckPlan) return;
+    if (!root || !deckPlan) return;
 
     let raf = 0;
     const onScroll = () => {
@@ -351,7 +391,7 @@ export default function BulletinFullDeckPreview({
       window.clearTimeout(initialTimer);
       window.clearTimeout(settleTimer);
     };
-  }, [onVisibleSlideChange, reportVisibleSlide, deckPlan]);
+  }, [reportVisibleSlide, deckPlan, sectionSlides]);
 
   if (!deckPlan) {
     return (
@@ -363,53 +403,84 @@ export default function BulletinFullDeckPreview({
   }
 
   return (
-    <div ref={scrollRootRef} className="bulletin-deck-preview bulletin-deck-preview--current-section">
-      {composedSections.map((section) => {
-        const sectionBusy = busySectionId === section.id;
-        return (
-          <section
-            key={section.id}
-            className={`bulletin-deck-section bulletin-deck-section--active${
-              sectionBusy ? ' bulletin-deck-section--busy' : ''
-            }`}
-            data-section={section.id}
-          >
-            {sectionBusy ? (
-              <div className="bulletin-deck-section-busy-banner" role="status">
-                <span className="preview-spinner bulletin-section-syncing-spinner" />
-                {t('bulletin.sectionPreviewRefreshing')}
+    <div className="bulletin-deck-preview-shell">
+      <div ref={scrollRootRef} className="bulletin-deck-preview bulletin-deck-preview--current-section">
+        {composedSections.map((section) => {
+          const sectionBusy = busySectionId === section.id;
+          return (
+            <section
+              key={section.id}
+              className={`bulletin-deck-section bulletin-deck-section--active${
+                sectionBusy ? ' bulletin-deck-section--busy' : ''
+              }`}
+              data-section={section.id}
+            >
+              {sectionBusy ? (
+                <div className="bulletin-deck-section-busy-banner" role="status">
+                  <span className="preview-spinner bulletin-section-syncing-spinner" />
+                  {t('bulletin.sectionPreviewRefreshing')}
+                </div>
+              ) : null}
+              <div className="bulletin-deck-section-slides">
+                {section.slides.map((page) => (
+                  <DeckSlideItem
+                    key={`${section.id}-${page}`}
+                    slideNumber={page}
+                    sectionId={section.id}
+                    patch={fullPatch}
+                    highlight={highlightSet.has(page)}
+                    prefetch={prefetchSectionIds.has(section.id)}
+                    bulletinId={bulletin.id}
+                    worshipPlaylistId={bulletin.servicePlaylistId}
+                    worshipPlaylistTitle={worshipPlaylistTitle}
+                    worshipItems={worshipItems}
+                    worshipFirstSlide={worshipFirstSlide}
+                    worshipLyricsPptxBlobId={bulletin.worshipLyricsPptxBlobId}
+                  />
+                ))}
               </div>
-            ) : null}
-            <div className="bulletin-deck-section-slides">
-              {section.slides.map((page) => (
-                <DeckSlideItem
-                  key={`${section.id}-${page}`}
-                  slideNumber={page}
-                  sectionId={section.id}
-                  patch={fullPatch}
-                  highlight={highlightSet.has(page)}
-                  prefetch={prefetchSectionIds.has(section.id)}
-                  bulletinId={bulletin.id}
-                  worshipPlaylistId={bulletin.servicePlaylistId}
-                  worshipPlaylistTitle={worshipPlaylistTitle}
-                  worshipItems={worshipItems}
-                  worshipFirstSlide={worshipFirstSlide}
-                  worshipLyricsPptxBlobId={bulletin.worshipLyricsPptxBlobId}
-                />
-              ))}
-            </div>
+            </section>
+          );
+        })}
+        {highlightSectionId &&
+        !allComposedSections.some((s) => s.id === highlightSectionId) &&
+        navSectionById(highlightSectionId) ? (
+          <section
+            className="bulletin-deck-section bulletin-deck-section--hidden-placeholder"
+            data-section={highlightSectionId}
+          >
+            <p className="bulletin-deck-section-hidden-hint">{t('bulletin.previewSectionHiddenHint')}</p>
           </section>
-        );
-      })}
-      {highlightSectionId &&
-      !allComposedSections.some((s) => s.id === highlightSectionId) &&
-      navSectionById(highlightSectionId) ? (
-        <section
-          className="bulletin-deck-section bulletin-deck-section--hidden-placeholder"
-          data-section={highlightSectionId}
-        >
-          <p className="bulletin-deck-section-hidden-hint">{t('bulletin.previewSectionHiddenHint')}</p>
-        </section>
+        ) : null}
+      </div>
+
+      {sectionSlides.length > 0 ? (
+        <>
+          <button
+            type="button"
+            className="bulletin-deck-nav bulletin-deck-nav--prev"
+            disabled={!canPrev}
+            aria-label={t('bulletin.previewPrev')}
+            onClick={() => {
+              if (!canPrev) return;
+              goToSlide(sectionSlides[effectiveIndex - 1]!);
+            }}
+          >
+            <ChevronLeftIcon />
+          </button>
+          <button
+            type="button"
+            className="bulletin-deck-nav bulletin-deck-nav--next"
+            disabled={!canNext}
+            aria-label={t('bulletin.previewNext')}
+            onClick={() => {
+              if (!canNext) return;
+              goToSlide(sectionSlides[effectiveIndex + 1]!);
+            }}
+          >
+            <ChevronRightIcon />
+          </button>
+        </>
       ) : null}
     </div>
   );

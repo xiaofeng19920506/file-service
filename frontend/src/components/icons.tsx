@@ -192,6 +192,14 @@ export function ChevronLeftIcon() {
   );
 }
 
+export function ChevronRightIcon() {
+  return (
+    <svg className="nav-back-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function QueueIcon() {
   return (
     <svg className="player-chrome-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
