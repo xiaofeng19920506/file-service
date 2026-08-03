@@ -27,38 +27,29 @@ export function worshipNeedsLyricsPptx(mode: WorshipPresentationMode): boolean {
   return mode === 'ppt' || mode === 'ppt_youtube';
 }
 
-/** mm:ss / m:ss / h:mm:ss 或纯秒数 → 整数秒；空 → null；非法 → 'invalid' */
-export function parseClipTimeInput(raw: string): number | null | 'invalid' {
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-
-  if (/^\d+$/.test(trimmed)) {
-    const n = Number(trimmed);
-    if (!Number.isFinite(n) || n < 0 || !Number.isInteger(n)) return 'invalid';
-    return n;
-  }
-
-  // h:mm:ss 或 m:ss（秒必须 00–59）
-  const parts = trimmed.match(/^(\d+):([0-5]\d)(?::([0-5]\d))?$/);
-  if (!parts) return 'invalid';
-
-  if (parts[3] !== undefined) {
-    const hours = Number(parts[1]);
-    const minutes = Number(parts[2]);
-    const seconds = Number(parts[3]);
-    if (![hours, minutes, seconds].every((n) => Number.isFinite(n) && n >= 0)) return 'invalid';
-    return hours * 3600 + minutes * 60 + seconds;
-  }
-
-  const minutes = Number(parts[1]);
-  const seconds = Number(parts[2]);
-  if (!Number.isFinite(minutes) || !Number.isFinite(seconds) || minutes < 0) return 'invalid';
-  return minutes * 60 + seconds;
+/** `<input type="time" step="1">` 的 value（HH:MM:SS）；null → 空 */
+export function secondsToHtmlTime(seconds: number | null | undefined): string {
+  if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return '';
+  const whole = Math.min(Math.floor(seconds), 23 * 3600 + 59 * 60 + 59);
+  const h = Math.floor(whole / 3600);
+  const m = Math.floor((whole % 3600) / 60);
+  const s = whole % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-/** 输入是否为合法时间（空视为合法，表示未填/整首） */
-export function isClipTimeInputValid(raw: string): boolean {
-  return parseClipTimeInput(raw) !== 'invalid';
+/** HTML time value → 秒；空 → null；非法 → 'invalid' */
+export function htmlTimeToSeconds(raw: string): number | null | 'invalid' {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const m = trimmed.match(/^(\d{1,2}):([0-5]\d)(?::([0-5]\d))?$/);
+  if (!m) return 'invalid';
+  const hours = Number(m[1]);
+  const minutes = Number(m[2]);
+  const seconds = m[3] !== undefined ? Number(m[3]) : 0;
+  if (![hours, minutes, seconds].every((n) => Number.isFinite(n) && n >= 0) || hours > 23) {
+    return 'invalid';
+  }
+  return hours * 3600 + minutes * 60 + seconds;
 }
 
 export function formatClipTime(seconds: number | null | undefined): string {

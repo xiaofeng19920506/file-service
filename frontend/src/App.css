@@ -7540,25 +7540,13 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   opacity: 0.8;
 }
 
-.bulletin-worship-clip-editor-title-block {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  min-width: 0;
-}
-
-.bulletin-worship-clip-format-hint {
-  font-size: 0.72rem;
-  color: var(--muted, #666);
-  line-height: 1.3;
-}
-
 .bulletin-worship-clip-field--label {
   flex: 1 1 6rem;
 }
 
 .bulletin-worship-clip-input {
-  width: 5.2rem;
+  width: 7.25rem;
+  min-width: 6.5rem;
   padding: 0.2rem 0.35rem;
   font-size: 0.82rem;
   border: 1px solid var(--border, rgba(0, 0, 0, 0.14));
@@ -7571,7 +7559,12 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
 }
 
 .bulletin-worship-clip-field input.bulletin-worship-clip-input {
-  width: 5.2rem;
+  width: 7.25rem;
+  min-width: 6.5rem;
+}
+
+.bulletin-worship-clip-field input[type='time'].bulletin-worship-clip-input {
+  width: 7.5rem;
 }
 
 .bulletin-worship-pptx-section {
