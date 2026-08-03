@@ -212,11 +212,6 @@ export default function BulletinWorshipStep({
 
   return (
     <div className="bulletin-wizard-step bulletin-worship-step">
-      <header className="bulletin-step-header">
-        <h3>{t('bulletin.steps.worshipTitle')}</h3>
-        <p className="bulletin-step-intro">{t('bulletin.steps.worshipIntro')}</p>
-      </header>
-
       <section className="bulletin-worship-playlist-preview">
         <div className="bulletin-worship-playlist-heading-row">
           <h4 className="bulletin-worship-playlist-heading">

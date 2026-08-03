@@ -1,5 +1,5 @@
 import { useI18n } from '../../i18n';
-import { formatBulletinCoverDate, upcomingSundayIso } from '../../lib/bulletin-date';
+import { upcomingSundayIso } from '../../lib/bulletin-date';
 
 const DEFAULT_SERVICE_TIME = '11:00';
 
@@ -34,21 +34,9 @@ export default function BulletinCoverStep({
   const autoSunday = upcomingSundayIso();
   const dateValue = serviceDate || autoSunday;
   const timeValue = normalizeTimeValue(serviceTime || DEFAULT_SERVICE_TIME);
-  const isAutoUpcoming = dateValue === autoSunday;
 
   return (
     <div className="bulletin-cover-step">
-      <header className="bulletin-step-header">
-        <h3>{t('bulletin.steps.coverTitle')}</h3>
-        <p className="bulletin-step-intro">
-          {isAutoUpcoming
-            ? t('bulletin.steps.coverIntroAuto', {
-                date: formatBulletinCoverDate(dateValue),
-              })
-            : t('bulletin.steps.coverIntro')}
-        </p>
-      </header>
-
       <div className="bulletin-cover-step-fields">
         <label className="bulletin-field">
           {t('bulletin.pickServiceDate')}

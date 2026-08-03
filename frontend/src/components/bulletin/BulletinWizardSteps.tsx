@@ -17,19 +17,12 @@ import {
 } from '../../lib/bulletin-roster';
 
 type StepShellProps = {
-  titleKey: string;
-  introKey: string;
   children: ReactNode;
 };
 
-function StepShell({ titleKey, introKey, children }: StepShellProps) {
-  const { t } = useI18n();
+function StepShell({ children }: StepShellProps) {
   return (
     <div className="bulletin-wizard-step">
-      <header className="bulletin-step-header">
-        <h3>{t(titleKey as never)}</h3>
-        <p className="bulletin-step-intro">{t(introKey as never)}</p>
-      </header>
       <div className="bulletin-cover-step-fields">{children}</div>
     </div>
   );
@@ -257,7 +250,7 @@ export function BulletinScriptureStep({
 }: BulletinStepPanelProps) {
   const { t } = useI18n();
   return (
-    <StepShell titleKey="bulletin.steps.scriptureTitle" introKey="bulletin.steps.scriptureIntro">
+    <StepShell>
       <div className="bulletin-scripture-picker">
         <SelectField
           label={t('bulletin.scriptureBook')}
@@ -302,7 +295,7 @@ export function BulletinOfferingStep({
     })();
 
   return (
-    <StepShell titleKey="bulletin.steps.offeringTitle" introKey="bulletin.steps.offeringIntro">
+    <StepShell>
       <TextField
         label={t('bulletin.lastWeekOffering')}
         value={draft.lastWeekOfferingDate}
@@ -391,7 +384,7 @@ export function BulletinBirthdayStep({
   const filledCount = rows.map((s) => s.trim()).filter(Boolean).length;
 
   return (
-    <StepShell titleKey="bulletin.steps.birthdayTitle" introKey="bulletin.steps.birthdayIntro">
+    <StepShell>
       <TextField
         label={t('bulletin.birthdayMonth')}
         value={draft.birthdayMonth}
@@ -503,7 +496,7 @@ export function BulletinPreServiceStep({
   const { t } = useI18n();
   const showChair = Boolean(draft.showPreServiceChairName);
   return (
-    <StepShell titleKey="bulletin.steps.preServiceTitle" introKey="bulletin.steps.preServiceIntro">
+    <StepShell>
       <label className="bulletin-field bulletin-field--checkbox">
         <input
           type="checkbox"
@@ -550,7 +543,7 @@ export function BulletinAnnouncementsStep({
 }: AnnouncementsProps) {
   const { t } = useI18n();
   return (
-    <StepShell titleKey="bulletin.steps.announcementsTitle" introKey="bulletin.steps.announcementsIntro">
+    <StepShell>
       {announcements.map((item, index) => (
         <div key={item.key} className="bulletin-announcement-block">
           <div className="bulletin-announcement-block-header">
@@ -635,7 +628,7 @@ export function BulletinVerseStep({
 }: BulletinStepPanelProps) {
   const { t } = useI18n();
   return (
-    <StepShell titleKey="bulletin.steps.verseTitle" introKey="bulletin.steps.verseIntro">
+    <StepShell>
       <TextField
         label={t('bulletin.verseOfWeek')}
         value={draft.verseOfWeek}
@@ -657,29 +650,8 @@ export function BulletinMoreStep({
   const { t } = useI18n();
   const show = (id: string) => !sectionId || sectionId === id;
 
-  const titleKey =
-    sectionId === 'staff_meeting'
-      ? 'bulletin.sections.staff_meeting'
-      : sectionId === 'future_testimony'
-        ? 'bulletin.sections.future_testimony'
-        : sectionId === 'service_roster'
-          ? 'bulletin.sections.service_roster'
-          : sectionId === 'weekly_meetings'
-            ? 'bulletin.sections.weekly_meetings'
-            : sectionId === 'rotation'
-              ? 'bulletin.sections.rotation'
-              : 'bulletin.steps.moreTitle';
-  const introKey =
-    sectionId === 'staff_meeting' ||
-    sectionId === 'future_testimony' ||
-    sectionId === 'service_roster' ||
-    sectionId === 'weekly_meetings' ||
-    sectionId === 'rotation'
-      ? 'bulletin.steps.sectionFieldIntro'
-      : 'bulletin.steps.moreIntro';
-
   return (
-    <StepShell titleKey={titleKey} introKey={introKey}>
+    <StepShell>
       {show('staff_meeting') ? (
         <>
           <TextField
