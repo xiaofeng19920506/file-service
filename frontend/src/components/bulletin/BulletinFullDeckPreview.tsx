@@ -469,30 +469,26 @@ export default function BulletinFullDeckPreview({
 
       {deckSlides.length > 0 ? (
         <>
-          <button
-            type="button"
-            className="bulletin-deck-nav bulletin-deck-nav--prev"
-            disabled={!canPrev}
-            aria-label={t('bulletin.previewPrev')}
-            onClick={() => {
-              if (!canPrev) return;
-              goToSlide(deckSlides[effectiveIndex - 1]!);
-            }}
-          >
-            <ChevronLeftIcon />
-          </button>
-          <button
-            type="button"
-            className="bulletin-deck-nav bulletin-deck-nav--next"
-            disabled={!canNext}
-            aria-label={t('bulletin.previewNext')}
-            onClick={() => {
-              if (!canNext) return;
-              goToSlide(deckSlides[effectiveIndex + 1]!);
-            }}
-          >
-            <ChevronRightIcon />
-          </button>
+          {canPrev ? (
+            <button
+              type="button"
+              className="bulletin-deck-nav bulletin-deck-nav--prev"
+              aria-label={t('bulletin.previewPrev')}
+              onClick={() => goToSlide(deckSlides[effectiveIndex - 1]!)}
+            >
+              <ChevronLeftIcon />
+            </button>
+          ) : null}
+          {canNext ? (
+            <button
+              type="button"
+              className="bulletin-deck-nav bulletin-deck-nav--next"
+              aria-label={t('bulletin.previewNext')}
+              onClick={() => goToSlide(deckSlides[effectiveIndex + 1]!)}
+            >
+              <ChevronRightIcon />
+            </button>
+          ) : null}
         </>
       ) : null}
     </div>
