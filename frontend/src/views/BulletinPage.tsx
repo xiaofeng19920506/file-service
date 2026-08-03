@@ -863,36 +863,37 @@ export default function BulletinPage() {
         <p className="bulletin-empty">{t('bulletin.selectWeek')}</p>
       ) : (
         <div className="bulletin-workspace">
-          <section className="bulletin-workspace-editor" aria-label={t('bulletin.editorPanel')}>
-            <div className="bulletin-workspace-editor-inner">
-              <ProgressStepper
-                steps={stepperSteps}
-                currentIndex={navCurrentIndex}
-                previewIndex={navPreviewIndex}
-                orientation="vertical"
-                canManage={canManage}
-                onEditSlides={(sectionId) => {
-                  selectNavSection(sectionId);
-                  openEditSlides(sectionId);
-                }}
-                onReplacePptx={handleReplaceSectionPptx}
-                onResetPptx={handleResetSectionPptx}
-                onStepVisibilityChange={handleSectionVisibilityChange}
-                onStepSelect={(index) => {
-                  const section = BULLETIN_NAV_SECTIONS[index];
-                  if (!section) return;
-                  selectNavSection(section.id);
-                }}
-              />
-              <div className="bulletin-step-panel">
-                {busySectionId === activeSectionId ? (
-                  <div className="bulletin-section-syncing" role="status">
-                    <span className="preview-spinner bulletin-section-syncing-spinner" />
-                    <span>{t('bulletin.sectionSyncing')}</span>
-                  </div>
-                ) : null}
-                {renderStepPanel()}
-              </div>
+          <nav className="bulletin-workspace-nav" aria-label={t('bulletin.editorPanel')}>
+            <ProgressStepper
+              steps={stepperSteps}
+              currentIndex={navCurrentIndex}
+              previewIndex={navPreviewIndex}
+              orientation="vertical"
+              canManage={canManage}
+              onEditSlides={(sectionId) => {
+                selectNavSection(sectionId);
+                openEditSlides(sectionId);
+              }}
+              onReplacePptx={handleReplaceSectionPptx}
+              onResetPptx={handleResetSectionPptx}
+              onStepVisibilityChange={handleSectionVisibilityChange}
+              onStepSelect={(index) => {
+                const section = BULLETIN_NAV_SECTIONS[index];
+                if (!section) return;
+                selectNavSection(section.id);
+              }}
+            />
+          </nav>
+
+          <section className="bulletin-workspace-form" aria-label={t('bulletin.editorPanel')}>
+            <div className="bulletin-step-panel">
+              {busySectionId === activeSectionId ? (
+                <div className="bulletin-section-syncing" role="status">
+                  <span className="preview-spinner bulletin-section-syncing-spinner" />
+                  <span>{t('bulletin.sectionSyncing')}</span>
+                </div>
+              ) : null}
+              {renderStepPanel()}
             </div>
 
             {editSlidesSectionId ? (
@@ -904,47 +905,48 @@ export default function BulletinPage() {
               />
             ) : null}
 
-            <div className="bulletin-actions">
-              {canPublish && (
+            <div className="bulletin-workspace-form-footer">
+              <div className="bulletin-actions">
+                {canPublish && (
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    disabled={publishing}
+                    onClick={() => void handlePublish()}
+                  >
+                    {publishing ? t('bulletin.publishing') : t('bulletin.publishToLibrary')}
+                  </button>
+                )}
+                <BulletinSlideShowLauncher
+                  bulletin={draft}
+                  totalSlides={previewTotalSlides}
+                  className="btn-secondary bulletin-slideshow-start"
+                  disabled={!permissions.canViewBulletin}
+                />
                 <button
                   type="button"
-                  className="btn-primary"
-                  disabled={publishing}
-                  onClick={() => void handlePublish()}
-                >
-                  {publishing ? t('bulletin.publishing') : t('bulletin.publishToLibrary')}
-                </button>
-              )}
-              <BulletinSlideShowLauncher
-                bulletin={draft}
-                totalSlides={previewTotalSlides}
-                className="btn-secondary bulletin-slideshow-start"
-                disabled={!permissions.canViewBulletin}
-              />
-              <button
-                type="button"
-                className="btn-secondary"
-                disabled={generating}
-                onClick={() => void handleGenerate()}
-              >
-                {generating ? t('bulletin.generating') : t('bulletin.downloadPptx')}
-              </button>
-              {draft.outputBlobId && permissions.canDownload && (
-                <a
                   className="btn-secondary"
-                  href={`#/preview/${encodeURIComponent(draft.outputBlobId)}?title=${encodeURIComponent(draft.serviceDate)}`}
+                  disabled={generating}
+                  onClick={() => void handleGenerate()}
                 >
-                  {t('bulletin.openInLibrary')}
-                </a>
+                  {generating ? t('bulletin.generating') : t('bulletin.downloadPptx')}
+                </button>
+                {draft.outputBlobId && permissions.canDownload && (
+                  <a
+                    className="btn-secondary"
+                    href={`#/preview/${encodeURIComponent(draft.outputBlobId)}?title=${encodeURIComponent(draft.serviceDate)}`}
+                  >
+                    {t('bulletin.openInLibrary')}
+                  </a>
+                )}
+              </div>
+              {draft.outputBlobId && (
+                <p className="bulletin-published-hint">{t('bulletin.publishedHint')}</p>
+              )}
+              {!canManage && (
+                <p className="bulletin-readonly-hint">{t('bulletin.readonlyHint')}</p>
               )}
             </div>
-
-            {draft.outputBlobId && (
-              <p className="bulletin-published-hint">{t('bulletin.publishedHint')}</p>
-            )}
-            {!canManage && (
-              <p className="bulletin-readonly-hint">{t('bulletin.readonlyHint')}</p>
-            )}
           </section>
 
           <aside className="bulletin-workspace-preview" aria-label={t('bulletin.previewTitle')}>
