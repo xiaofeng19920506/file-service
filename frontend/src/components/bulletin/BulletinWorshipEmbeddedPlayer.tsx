@@ -16,7 +16,6 @@ type BulletinWorshipEmbeddedPlayerProps = {
   items: PlaylistItem[];
   slideNumber: number;
   patch: BulletinSlidePreviewParams;
-  slideLabel: string;
   lyricsPptxBlobId?: string | null;
 };
 
@@ -40,7 +39,6 @@ export default function BulletinWorshipEmbeddedPlayer({
   items,
   slideNumber,
   patch,
-  slideLabel,
   lyricsPptxBlobId = null,
 }: BulletinWorshipEmbeddedPlayerProps) {
   const { t } = useI18n();
@@ -80,8 +78,6 @@ export default function BulletinWorshipEmbeddedPlayer({
     <figure
       className={`bulletin-slide-preview bulletin-worship-embedded${started ? ' is-playing' : ''}`}
     >
-      <figcaption className="bulletin-slide-preview-caption">{slideLabel}</figcaption>
-
       <div className="bulletin-worship-embedded-stage">
         <div className="bulletin-worship-embedded-slide-back" aria-hidden={started}>
           <BulletinPptSlidePreview

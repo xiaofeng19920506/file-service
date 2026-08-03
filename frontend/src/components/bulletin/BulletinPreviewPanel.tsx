@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getBulletinWorshipPlaylist, type WeeklyBulletin } from '../../api/bulletins';
 import type { PlaylistItem } from '../../api/playlists';
-import { useI18n } from '../../i18n';
 import {
   buildBulletinDeckPlan,
   firstSlideForSection,
@@ -43,7 +42,6 @@ export default function BulletinPreviewPanel({
   onVisibleSectionChange,
   onDeckMetaChange,
 }: BulletinPreviewPanelProps) {
-  const { t } = useI18n();
   const [deckPlan, setDeckPlan] = useState<BulletinDeckPlan | null>(null);
   const [planRefreshing, setPlanRefreshing] = useState(false);
   const [scrollRequest, setScrollRequest] = useState<BulletinPreviewScrollRequest>({
@@ -195,11 +193,6 @@ export default function BulletinPreviewPanel({
 
   return (
     <div className="bulletin-preview-panel">
-      <header className="bulletin-preview-panel-header">
-        <h2>{t('bulletin.previewTitle')}</h2>
-        <p className="bulletin-preview-panel-hint">{t('bulletin.previewHint')}</p>
-      </header>
-
       <BulletinFullDeckPreview
         bulletin={bulletin}
         deckPlan={deckPlan}

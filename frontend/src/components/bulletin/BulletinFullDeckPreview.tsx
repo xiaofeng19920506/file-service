@@ -38,7 +38,6 @@ type DeckSlideItemProps = {
   highlight: boolean;
   /** 相邻分区：低优先级提前一点点加载 */
   prefetch: boolean;
-  label: string;
   bulletinId: string;
   worshipPlaylistId: string | null;
   worshipPlaylistTitle: string;
@@ -53,7 +52,6 @@ function deckSlidePropsEqual(prev: DeckSlideItemProps, next: DeckSlideItemProps)
     prev.sectionId !== next.sectionId ||
     prev.highlight !== next.highlight ||
     prev.prefetch !== next.prefetch ||
-    prev.label !== next.label ||
     prev.bulletinId !== next.bulletinId ||
     prev.worshipPlaylistId !== next.worshipPlaylistId ||
     prev.worshipPlaylistTitle !== next.worshipPlaylistTitle ||
@@ -82,7 +80,6 @@ const DeckSlideItem = memo(function DeckSlideItem({
   patch,
   highlight,
   prefetch,
-  label,
   bulletinId,
   worshipPlaylistId,
   worshipPlaylistTitle,
@@ -116,7 +113,6 @@ const DeckSlideItem = memo(function DeckSlideItem({
           items={worshipItems}
           slideNumber={slideNumber}
           patch={slidePatch}
-          slideLabel={label}
           lyricsPptxBlobId={worshipLyricsPptxBlobId}
         />
       ) : (
@@ -124,7 +120,6 @@ const DeckSlideItem = memo(function DeckSlideItem({
           slideNumber={slideNumber}
           patch={slidePatch}
           sectionId={sectionId}
-          slideLabel={label}
           lazy
           priority={priority}
           rootMargin={rootMargin}
@@ -363,11 +358,6 @@ export default function BulletinFullDeckPreview({
 
   return (
     <div ref={scrollRootRef} className="bulletin-deck-preview">
-      <p className="bulletin-deck-preview-meta">
-        {t('bulletin.previewDeckMeta', { count: deckPlan.totalSlides })}
-        {` · ${t('bulletin.previewSectionComposeMeta', { count: composedSections.length })}`}
-        {highlightSlides.length > 0 ? ` · ${t('bulletin.previewDeckHighlightNote')}` : ''}
-      </p>
       {composedSections.map((section) => {
         const nav = navSectionById(section.id);
         const title = nav ? t(nav.labelKey) : section.id;
@@ -383,16 +373,14 @@ export default function BulletinFullDeckPreview({
           >
             <header className="bulletin-deck-section-header">
               <h3 className="bulletin-deck-section-title">{title}</h3>
-              <span className="bulletin-deck-section-pages">
-                {sectionBusy ? (
+              {sectionBusy ? (
+                <span className="bulletin-deck-section-pages">
                   <span className="bulletin-deck-section-busy-label">
                     <span className="preview-spinner bulletin-section-syncing-spinner" />
                     {t('bulletin.sectionPreviewRefreshing')}
                   </span>
-                ) : (
-                  t('bulletin.previewSectionPages', { count: section.slides.length })
-                )}
-              </span>
+                </span>
+              ) : null}
             </header>
             <div className="bulletin-deck-section-slides">
               {section.slides.map((page) => (
@@ -403,7 +391,6 @@ export default function BulletinFullDeckPreview({
                   patch={fullPatch}
                   highlight={highlightSet.has(page)}
                   prefetch={prefetchSectionIds.has(section.id)}
-                  label={t('bulletin.previewSlideSingle', { page })}
                   bulletinId={bulletin.id}
                   worshipPlaylistId={bulletin.servicePlaylistId}
                   worshipPlaylistTitle={worshipPlaylistTitle}

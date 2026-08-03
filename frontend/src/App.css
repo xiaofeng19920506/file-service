@@ -6427,7 +6427,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
-  scroll-margin-top: 2.25rem;
+  scroll-margin-top: 0.5rem;
 }
 
 .bulletin-deck-section-header {
@@ -6436,7 +6436,7 @@
   justify-content: space-between;
   gap: 0.5rem;
   position: sticky;
-  top: 1.85rem;
+  top: 0;
   z-index: 1;
   margin: 0;
   padding: 0.4rem 0.55rem;
