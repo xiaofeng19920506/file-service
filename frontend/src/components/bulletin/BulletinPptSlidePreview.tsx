@@ -229,7 +229,6 @@ export default function BulletinPptSlidePreview({
     >
       {slideLabel && <figcaption className="bulletin-slide-preview-caption">{slideLabel}</figcaption>}
       <div className="bulletin-slide-preview-frame bulletin-slide-preview-frame--png">
-        {/* 不强制 aspect-ratio：由 PNG 固有宽高比撑开，避免容器把画幅压扁/拉宽 */}
         <img className="bulletin-slide-preview-img" src={previewUrl!} alt="" draggable={false} />
         {overlay}
         {showLoading ? (

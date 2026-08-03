@@ -6271,6 +6271,8 @@
   flex-direction: column;
   align-items: stretch;
   overflow: hidden;
+  container-type: inline-size;
+  container-name: bulletin-preview;
 }
 
 .bulletin-preview-stack {
@@ -6399,7 +6401,7 @@
 .bulletin-deck-preview {
   width: 100%;
   flex: 1;
-  min-height: 0;
+  min-height: calc(100cqi * 9 / 16);
   max-height: none;
   overflow-x: hidden;
   overflow-y: auto;
@@ -6482,6 +6484,17 @@
   gap: 0.65rem;
 }
 
+.bulletin-deck-slide {
+  width: 100%;
+  /* 每张幻灯片槽位至少占满一张 16:9，避免 PNG 未撑开前塌缩 */
+  min-height: calc(100cqi * 9 / 16);
+}
+
+.bulletin-deck-section--hidden-placeholder {
+  min-height: calc(100cqi * 9 / 16);
+  justify-content: center;
+}
+
 .bulletin-deck-section-busy-banner {
   display: inline-flex;
   align-items: center;
@@ -6545,7 +6558,7 @@
   align-items: center;
   justify-content: center;
   gap: 0.65rem;
-  min-height: min(52vh, 360px);
+  min-height: calc(100cqi * 9 / 16);
   color: var(--text-secondary);
   font-size: 0.88rem;
 }
@@ -8397,20 +8410,19 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
 }
 
 .bulletin-slide-preview-frame--png {
-  /* 由 LibreOffice PNG 固有比例决定高度，避免外层把画幅压扁成超宽条 */
-  aspect-ratio: auto;
+  /* 固定为模板 16:9 槽位；PNG 用 contain 填满，避免未加载时高度塌缩 */
+  aspect-ratio: var(--bulletin-slide-aspect, 16 / 9);
   background: #000;
   line-height: 0;
 }
 
 .bulletin-slide-preview-frame--png .bulletin-slide-preview-img {
-  position: static;
-  inset: auto;
+  position: absolute;
+  inset: 0;
   width: 100%;
-  height: auto;
-  object-fit: fill;
+  height: 100%;
+  object-fit: contain;
   display: block;
-  vertical-align: top;
 }
 
 .bulletin-composite-slide {
