@@ -37,7 +37,10 @@ type BulletinWorshipStepProps = {
   onPlaylistReady: (playlistId: string) => void;
   onPlaylistChanged?: () => void;
   onLyricsPptxChange?: (blobId: string | null) => void;
-  onPresentationModeChange?: (mode: WorshipPresentationMode) => void;
+  onPresentationModeChange?: (
+    mode: WorshipPresentationMode,
+    meta?: { updatedAt?: string | null; worshipPresentationMode?: WorshipPresentationMode },
+  ) => void;
 };
 
 function reorderToFinalIndex<T>(items: T[], from: number, toIndex: number): T[] {
@@ -133,15 +136,24 @@ export default function BulletinWorshipStep({
 
   const changeMode = async (next: WorshipPresentationMode) => {
     if (next === mode || modeSaving) return;
+    const previous = mode;
     setModeSaving(true);
     setError(null);
+    // 先本地切过去，避免受控 radio 在请求期间弹回 youtube
+    onPresentationModeChange?.(next);
     try {
       const updated = await updateBulletin(draft.id, { worshipPresentationMode: next });
-      onPresentationModeChange?.(
-        normalizeWorshipPresentationMode(updated.worshipPresentationMode),
+      const confirmed = normalizeWorshipPresentationMode(
+        updated.worshipPresentationMode,
+        next,
       );
+      onPresentationModeChange?.(confirmed, {
+        updatedAt: updated.updatedAt,
+        worshipPresentationMode: confirmed,
+      });
       setStatus(t('bulletin.worshipModeUpdated'));
     } catch (err) {
+      onPresentationModeChange?.(previous);
       setError(friendlyError(err instanceof Error ? err.message : 'update_failed', t));
     } finally {
       setModeSaving(false);

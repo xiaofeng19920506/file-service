@@ -765,9 +765,16 @@ export default function BulletinPage() {
               setDraft((prev) => (prev ? { ...prev, worshipLyricsPptxBlobId: blobId } : prev));
               setWorshipPreviewRevision((v) => v + 1);
             }}
-            onPresentationModeChange={(mode) => {
-              setDraft((prev) => (prev ? { ...prev, worshipPresentationMode: mode } : prev));
-              setWorshipPreviewRevision((v) => v + 1);
+            onPresentationModeChange={(mode, meta) => {
+              setDraft((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      worshipPresentationMode: mode,
+                      ...(meta?.updatedAt !== undefined ? { updatedAt: meta.updatedAt } : {}),
+                    }
+                  : prev,
+              );
             }}
           />
         );
