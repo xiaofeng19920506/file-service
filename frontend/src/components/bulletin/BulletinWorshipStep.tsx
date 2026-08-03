@@ -289,14 +289,6 @@ export default function BulletinWorshipStep({
           </div>
         ) : null}
 
-        {(canManage || hasLyricsPptx) && (
-          <p className="bulletin-worship-meta-line">
-            {hasLyricsPptx
-              ? t('bulletin.worshipLyricsPptxReady')
-              : t('bulletin.worshipLyricsPptxEmpty')}
-          </p>
-        )}
-
         {items.length > 0 ? (
           <ol className="bulletin-worship-track-preview">
             {items.map((item, index) => (
@@ -332,11 +324,6 @@ export default function BulletinWorshipStep({
               </li>
             ))}
           </ol>
-        ) : (
-          <p className="playlists-muted">{t('bulletin.worshipEmptyHint')}</p>
-        )}
-        {canAddSongs && items.length > 0 ? (
-          <p className="bulletin-worship-reorder-hint">{t('bulletin.worshipReorderHint')}</p>
         ) : null}
       </section>
 

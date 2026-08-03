@@ -6247,7 +6247,7 @@
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
-  padding: 1rem;
+  padding: 0.55rem 0.65rem;
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
@@ -6286,24 +6286,24 @@
 .bulletin-birthday-names {
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
+  gap: 0.35rem;
 }
 
 .bulletin-birthday-names-label {
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   font-weight: 600;
 }
 
 .bulletin-birthday-names-list {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.45rem;
+  gap: 0.3rem;
 }
 
 .bulletin-birthday-name-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.45rem;
+  gap: 0.3rem;
   align-items: center;
 }
 
@@ -6311,7 +6311,7 @@
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
-  padding: 0.45rem 0.65rem;
+  padding: 0.35rem 0.5rem;
   border: 1px solid var(--border-light);
   border-radius: 8px;
   background: var(--surface);
@@ -6322,22 +6322,22 @@
 .bulletin-birthday-name-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.3rem;
+  gap: 0.25rem;
   align-items: center;
 }
 
 .bulletin-birthday-names-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.45rem;
+  gap: 0.35rem;
   align-items: center;
 }
 
 .bulletin-announcement-block {
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
-  padding: 0.75rem 0;
+  gap: 0.4rem;
+  padding: 0.4rem 0;
   border-bottom: 1px dashed var(--border-light);
 }
 
@@ -6349,21 +6349,21 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .bulletin-announcement-block-label {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--text-primary);
 }
 
 .bulletin-announcement-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.65rem;
-  margin-top: 0.35rem;
+  gap: 0.45rem;
+  margin-top: 0.15rem;
 }
 
 .bulletin-fieldset-inline {
@@ -6389,14 +6389,11 @@
 
 .bulletin-wizard-step .bulletin-field textarea {
   resize: vertical;
-  min-height: 5rem;
+  min-height: 3.25rem;
 }
 
 .bulletin-field-hint {
-  margin: 0;
-  font-size: 0.82rem;
-  color: var(--text-secondary);
-  line-height: 1.45;
+  display: none;
 }
 
 .bulletin-deck-preview {
@@ -7028,18 +7025,17 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
 .bulletin-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 0.45rem;
   flex-shrink: 0;
   margin: 0;
-  padding: 0.85rem 1rem;
+  padding: 0.55rem 0.65rem;
   background: transparent;
   border-top: none;
 }
 
 .bulletin-workspace-form-footer .bulletin-published-hint,
 .bulletin-workspace-form-footer .bulletin-readonly-hint {
-  margin: 0;
-  padding: 0 1rem 0.85rem;
+  display: none;
 }
 
 .bulletin-readonly-hint,
@@ -7235,8 +7231,8 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
 .bulletin-worship-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin: 0.75rem 0;
+  gap: 0.4rem;
+  margin: 0.35rem 0;
 }
 
 .bulletin-worship-layout {
@@ -7244,17 +7240,17 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
 }
 
 .bulletin-worship-action-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-  margin: 1rem 0 1.25rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin: 0.35rem 0 0.55rem;
 }
 
 .bulletin-worship-action-btn {
   width: 100%;
   justify-content: center;
-  padding: 0.75rem 1rem;
-  font-size: 1rem;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.88rem;
 }
 
 .bulletin-worship-playlist-heading-row {
@@ -7269,15 +7265,13 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
 .bulletin-worship-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.45rem;
-  margin: 0 0 0.65rem;
+  gap: 0.35rem;
+  margin: 0 0 0.4rem;
 }
 
-.bulletin-worship-meta-line {
-  margin: 0 0 0.65rem;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  line-height: 1.4;
+.bulletin-worship-meta-line,
+.bulletin-worship-reorder-hint {
+  display: none;
 }
 
 .bulletin-worship-youtube-modal {
@@ -7288,23 +7282,16 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
 
 .bulletin-worship-playlist-heading {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   font-weight: 600;
-}
-
-.bulletin-worship-reorder-hint {
-  margin: 0.65rem 0 0;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  line-height: 1.4;
 }
 
 .bulletin-worship-track-preview-item {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.4rem;
   align-items: center;
-  padding: 0.35rem 0.25rem;
-  border-radius: 8px;
+  padding: 0.25rem 0.2rem;
+  border-radius: 6px;
   cursor: grab;
 }
 
@@ -8274,10 +8261,25 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
 }
 
 .bulletin-cover-step-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 0.85rem;
-  margin-top: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem 0.65rem;
+  margin-top: 0;
+  align-content: start;
+}
+
+.bulletin-cover-step-fields > .bulletin-birthday-names,
+.bulletin-cover-step-fields > .bulletin-scripture-picker,
+.bulletin-cover-step-fields > .bulletin-announcement-block,
+.bulletin-cover-step-fields > .bulletin-announcement-actions,
+.bulletin-cover-step-fields > .bulletin-field--checkbox,
+.bulletin-cover-step-fields > .bulletin-field:has(textarea) {
+  grid-column: 1 / -1;
+}
+
+/* 名单列表、会议变体等占满一行 */
+.bulletin-cover-step-fields > .bulletin-field:has(select) {
+  grid-column: 1 / -1;
 }
 
 .bulletin-section-controls {
@@ -8329,14 +8331,14 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
 .bulletin-field {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  font-size: 0.9rem;
+  gap: 0.2rem;
+  font-size: 0.82rem;
 }
 
 .bulletin-field--checkbox {
   flex-direction: row;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.45rem;
 }
 
 .bulletin-field--checkbox input[type='checkbox'] {
@@ -8348,10 +8350,13 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
 .bulletin-field select,
 .bulletin-field textarea {
   width: 100%;
+  padding: 0.35rem 0.5rem;
+  min-height: 2.1rem;
+  box-sizing: border-box;
 }
 
 .bulletin-field select {
-  padding: 0.5rem 0.65rem;
+  padding: 0.35rem 0.5rem;
   border: 1px solid var(--border-light);
   border-radius: 8px;
   background: var(--surface-primary, #fff);
@@ -8362,33 +8367,33 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
 .bulletin-scripture-picker {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
-  padding: 1rem;
+  gap: 0.45rem;
+  padding: 0.55rem 0.65rem;
   border: 1px solid var(--border-light);
-  border-radius: 12px;
+  border-radius: 10px;
   background: color-mix(in srgb, var(--surface) 92%, var(--text-primary) 8%);
 }
 
 .bulletin-scripture-picker-body {
-  display: flex;
-  flex-direction: column;
-  gap: 0.85rem;
-  padding-top: 0.15rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem 0.5rem;
+  padding-top: 0.45rem;
   border-top: 1px solid color-mix(in srgb, var(--border-light) 80%, transparent);
 }
 
 .bulletin-scripture-picker-field {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.2rem;
   min-width: 0;
 }
 
 .bulletin-scripture-picker-label,
 .bulletin-scripture-picker-sublabel {
-  font-size: 0.82rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   white-space: nowrap;
 }
 
@@ -8398,15 +8403,15 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
 
 .bulletin-scripture-picker-select {
   width: 100%;
-  min-height: 2.5rem;
-  padding: 0.5rem 2.25rem 0.5rem 0.75rem;
+  min-height: 2.1rem;
+  padding: 0.35rem 1.75rem 0.35rem 0.5rem;
   border: 1px solid var(--border-light);
-  border-radius: 10px;
+  border-radius: 8px;
   background-color: var(--surface-primary, #fff);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 0.7rem center;
-  background-size: 1rem;
+  background-position: right 0.55rem center;
+  background-size: 0.85rem;
   color: inherit;
   font: inherit;
   appearance: none;
@@ -8418,17 +8423,9 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   cursor: not-allowed;
 }
 
-.bulletin-scripture-picker-hint {
-  margin: 0;
-  font-size: 0.82rem;
-  color: var(--text-secondary);
-  line-height: 1.45;
-}
-
+.bulletin-scripture-picker-hint,
 .bulletin-cover-date-hint {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--text-secondary);
+  display: none;
 }
 
 .bulletin-slide-preview {

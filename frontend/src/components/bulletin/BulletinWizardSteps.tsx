@@ -31,13 +31,11 @@ function StepShell({ children }: StepShellProps) {
 /** 多人名列表（服事轮值：可点添加） */
 function RosterNameListField({
   label,
-  hint,
   value,
   canEdit,
   onCommit,
 }: {
   label: string;
-  hint?: string;
   value: string;
   canEdit: boolean;
   onCommit: (joined: string) => void;
@@ -88,7 +86,6 @@ function RosterNameListField({
   return (
     <div className="bulletin-birthday-names">
       <span className="bulletin-birthday-names-label">{label}</span>
-      {hint ? <p className="bulletin-field-hint">{hint}</p> : null}
       <div className="bulletin-birthday-names-list">
         {rows.map((name, index) => (
           <div key={`roster-${index}`} className="bulletin-birthday-name-row">
@@ -169,7 +166,7 @@ function TextField({ label, value, disabled, onChange, multiline, commitOnBlur }
       <label className="bulletin-field">
         {label}
         <textarea
-          rows={4}
+          rows={3}
           value={commitOnBlur ? local : value}
           disabled={disabled}
           onChange={(e) => (commitOnBlur ? setLocal(e.target.value) : onChange(e.target.value))}
@@ -270,7 +267,6 @@ export function BulletinScriptureStep({
           onChange={(v) => onPatch('scriptureReference', v)}
         />
       </div>
-      <p className="bulletin-field-hint">{t('bulletin.scriptureHint')}</p>
     </StepShell>
   );
 }
@@ -321,7 +317,6 @@ export function BulletinOfferingStep({
         {t('bulletin.offeringTotal')}
         <input type="text" value={totalDisplay} disabled readOnly />
       </label>
-      <p className="bulletin-field-hint">{t('bulletin.offeringTotalHint')}</p>
     </StepShell>
   );
 }
@@ -394,7 +389,6 @@ export function BulletinBirthdayStep({
       />
       <div className="bulletin-birthday-names">
         <span className="bulletin-birthday-names-label">{t('bulletin.birthdayNames')}</span>
-        <p className="bulletin-field-hint">{t('bulletin.birthdayNamesHint')}</p>
         <div className="bulletin-birthday-names-list">
           {rows.map((name, index) => (
             <div key={`bday-${index}`} className="bulletin-birthday-name-row">
@@ -515,7 +509,6 @@ export function BulletinPreServiceStep({
           onChange={(v) => onPatch('preServiceChairNames', v)}
         />
       ) : null}
-      <p className="bulletin-field-hint">{t('bulletin.preServiceChairNamesHint')}</p>
     </StepShell>
   );
 }
@@ -689,7 +682,6 @@ export function BulletinMoreStep({
             commitOnBlur
             onChange={(v) => onPatch('staffMeetingEndTime', v)}
           />
-          <p className="bulletin-field-hint">{t('bulletin.staffMeetingHint')}</p>
         </>
       ) : null}
       {show('rotation') ? (
@@ -708,7 +700,6 @@ export function BulletinMoreStep({
             commitOnBlur
             onChange={(v) => onPatch('rotationEndMonth', v)}
           />
-          <p className="bulletin-field-hint">{t('bulletin.rotationMonthsHint')}</p>
         </>
       ) : null}
       {show('future_testimony') ? (
@@ -720,7 +711,6 @@ export function BulletinMoreStep({
             commitOnBlur
             onChange={(v) => onPatch('testimonyShareDate', v)}
           />
-          <p className="bulletin-field-hint">{t('bulletin.testimonyShareHint')}</p>
         </>
       ) : null}
       {show('service_roster') ? (
@@ -732,10 +722,8 @@ export function BulletinMoreStep({
             commitOnBlur
             onChange={(v) => onPatch('serviceRosterTodayDate', v)}
           />
-          <p className="bulletin-field-hint">{t('bulletin.serviceRosterTodayDateHint')}</p>
           <RosterNameListField
             label={t('bulletin.serviceRosterTodayNames')}
-            hint={t('bulletin.serviceRosterTodayNamesHint')}
             value={draft.serviceRosterText ?? ''}
             canEdit={canEdit}
             onCommit={(joined) => onPatch('serviceRosterText', joined)}
@@ -747,7 +735,6 @@ export function BulletinMoreStep({
             commitOnBlur
             onChange={(v) => onPatch('serviceRosterNextDate', v)}
           />
-          <p className="bulletin-field-hint">{t('bulletin.serviceRosterNextDateHint')}</p>
           <TextField
             label={t('bulletin.serviceRosterChair')}
             value={draft.serviceRosterChair ?? ''}
@@ -771,7 +758,6 @@ export function BulletinMoreStep({
           />
           <RosterNameListField
             label={t('bulletin.serviceRosterCleanNames')}
-            hint={t('bulletin.serviceRosterCleanNamesHint')}
             value={draft.serviceRosterCleanNames ?? ''}
             canEdit={canEdit}
             onCommit={(joined) => onPatch('serviceRosterCleanNames', joined)}

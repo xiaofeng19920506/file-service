@@ -940,12 +940,6 @@ export default function BulletinPage() {
                   </a>
                 )}
               </div>
-              {draft.outputBlobId && (
-                <p className="bulletin-published-hint">{t('bulletin.publishedHint')}</p>
-              )}
-              {!canManage && (
-                <p className="bulletin-readonly-hint">{t('bulletin.readonlyHint')}</p>
-              )}
             </div>
           </section>
 
