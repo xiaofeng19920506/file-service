@@ -123,6 +123,10 @@ export const playlistItems = pgTable('playlist_items', {
   youtubeVideoId: text('youtube_video_id').notNull(),
   youtubeUrl: text('youtube_url').notNull(),
   blobId: uuid('blob_id').references(() => blobs.id, { onDelete: 'set null' }),
+  /** 可选：只播放片段起点（秒） */
+  playStartSec: integer('play_start_sec'),
+  /** 可选：片段终点（秒，需 > playStartSec） */
+  playEndSec: integer('play_end_sec'),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -288,6 +292,8 @@ export const weeklyBulletins = pgTable('weekly_bulletins', {
     .notNull()
     .default({}),
   servicePlaylistId: uuid('service_playlist_id').references(() => playlists.id, { onDelete: 'set null' }),
+  /** 敬拜赞美投影格式：ppt | youtube | ppt_youtube */
+  worshipPresentationMode: text('worship_presentation_mode').notNull().default('youtube'),
   /** 敬拜赞美歌词 PPT（用户上传，投影时音乐在后台） */
   worshipLyricsPptxBlobId: uuid('worship_lyrics_pptx_blob_id').references(() => blobs.id, {
     onDelete: 'set null',

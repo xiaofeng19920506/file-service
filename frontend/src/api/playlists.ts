@@ -37,6 +37,8 @@ export type PlaylistItem = {
   youtubeVideoId: string;
   youtubeUrl: string;
   blobId: string | null;
+  playStartSec?: number | null;
+  playEndSec?: number | null;
   audio?: PlaylistAudioRef;
   blob: PlaylistBlobRef | null;
 };
@@ -234,4 +236,24 @@ export async function removeInvitePlaylistItem(token: string, itemId: string): P
     { method: 'DELETE' },
   );
   await parseJson<{ ok: boolean }>(res);
+}
+
+export async function patchInvitePlaylistItem(
+  token: string,
+  itemId: string,
+  body: {
+    title?: string;
+    playStartSec?: number | null;
+    playEndSec?: number | null;
+  },
+): Promise<PlaylistDetail> {
+  const res = await apiFetch(
+    `/v1/playlists/invite/${encodeURIComponent(token)}/items/${encodeURIComponent(itemId)}`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  );
+  return parseJson<PlaylistDetail>(res);
 }

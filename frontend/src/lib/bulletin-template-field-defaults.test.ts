@@ -47,6 +47,7 @@ function baseBulletin(over: Partial<WeeklyBulletin> = {}): WeeklyBulletin {
     sectionPptxOverrides: {},
     worshipLyricsPptxBlobId: null,
     servicePlaylistId: null,
+    worshipPresentationMode: 'youtube',
     outputBlobId: null,
     announcements: [],
     createdAt: '2026-08-01T00:00:00.000Z',

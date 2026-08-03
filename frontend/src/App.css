@@ -7320,6 +7320,100 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   margin: 0.35rem 0;
 }
 
+.bulletin-worship-mode-fieldset {
+  margin: 0 0 0.75rem;
+  padding: 0.55rem 0.65rem 0.65rem;
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.12));
+  border-radius: 8px;
+}
+
+.bulletin-worship-mode-fieldset legend {
+  padding: 0 0.25rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.bulletin-worship-mode-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 1rem;
+}
+
+.bulletin-worship-mode-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.bulletin-worship-mode-hint {
+  margin: 0.45rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted, #666);
+  line-height: 1.35;
+}
+
+.bulletin-worship-pptx-section {
+  margin: 0 0 0.75rem;
+}
+
+.bulletin-worship-pptx-status {
+  margin: 0.25rem 0 0;
+  font-size: 0.82rem;
+  color: var(--muted, #666);
+}
+
+.bulletin-worship-track-preview-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.bulletin-worship-clip-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.55rem;
+  align-items: center;
+}
+
+.bulletin-worship-clip-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--muted, #666);
+}
+
+.bulletin-worship-clip-field input {
+  width: 4.2rem;
+  padding: 0.15rem 0.3rem;
+  font-size: 0.8rem;
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.14));
+  border-radius: 4px;
+}
+
+.bulletin-worship-clip-error {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--danger, #b42318);
+}
+
+.bulletin-worship-clip-summary {
+  font-size: 0.75rem;
+  color: var(--muted, #666);
+}
+
+.worship-songs-track-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
 .bulletin-worship-layout {
   display: block;
 }
@@ -7763,6 +7857,17 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   flex: 1;
   min-height: 0;
   display: block;
+}
+
+.bulletin-worship-embedded-player--audio-only {
+  position: fixed;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  inset: auto;
 }
 
 .bulletin-worship-embedded-toolbar {

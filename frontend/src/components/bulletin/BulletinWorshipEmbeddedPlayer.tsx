@@ -8,15 +8,20 @@ import type { BulletinSlidePreviewParams } from '../../api/bulletins';
 import BulletinPptSlidePreview from './BulletinPptSlidePreview';
 import BulletinWorshipMaximizeOverlay from './BulletinWorshipMaximizeOverlay';
 import type { WorshipLiveMode } from '../../lib/worship-live-config';
+import {
+  normalizeWorshipPresentationMode,
+  type WorshipPresentationMode,
+} from '../../lib/worship-presentation-mode';
 
 type BulletinWorshipEmbeddedPlayerProps = {
   bulletinId: string;
-  playlistId: string;
+  playlistId: string | null;
   playlistTitle?: string;
   items: PlaylistItem[];
   slideNumber: number;
   patch: BulletinSlidePreviewParams;
   lyricsPptxBlobId?: string | null;
+  presentationMode?: WorshipPresentationMode | string | null;
 };
 
 function toPlayerItems(items: PlaylistItem[]): YoutubePlayerItem[] {
@@ -25,11 +30,23 @@ function toPlayerItems(items: PlaylistItem[]): YoutubePlayerItem[] {
     .map((item) => ({
       youtubeVideoId: item.youtubeVideoId,
       title: item.title,
+      startSeconds: item.playStartSec ?? null,
+      endSeconds: item.playEndSec ?? null,
     }));
 }
 
 export function hasBulletinWorshipPlayItems(items: PlaylistItem[]): boolean {
   return toPlayerItems(items).length > 0;
+}
+
+export function shouldShowBulletinWorshipEmbedded(opts: {
+  mode: WorshipPresentationMode;
+  items: PlaylistItem[];
+  lyricsPptxBlobId?: string | null;
+}): boolean {
+  if (opts.mode === 'ppt') return Boolean(opts.lyricsPptxBlobId);
+  if (opts.mode === 'youtube') return hasBulletinWorshipPlayItems(opts.items);
+  return Boolean(opts.lyricsPptxBlobId) || hasBulletinWorshipPlayItems(opts.items);
 }
 
 export default function BulletinWorshipEmbeddedPlayer({
@@ -40,12 +57,16 @@ export default function BulletinWorshipEmbeddedPlayer({
   slideNumber,
   patch,
   lyricsPptxBlobId = null,
+  presentationMode = 'youtube',
 }: BulletinWorshipEmbeddedPlayerProps) {
   const { t } = useI18n();
+  const mode = normalizeWorshipPresentationMode(presentationMode);
   const playerItems = useMemo(() => toPlayerItems(items), [items]);
   const [started, setStarted] = useState(false);
   const [maximized, setMaximized] = useState(false);
-  const [maximizeMode, setMaximizeMode] = useState<WorshipLiveMode>('youtube');
+  const [maximizeMode, setMaximizeMode] = useState<WorshipLiveMode>(
+    mode === 'ppt' ? 'ppt' : mode === 'ppt_youtube' ? 'ppt' : 'youtube',
+  );
 
   const transport = usePlaylistPlaybackTransport({
     itemCount: playerItems.length,
@@ -53,11 +74,17 @@ export default function BulletinWorshipEmbeddedPlayer({
     repeatMode: 'all',
   });
 
-  if (playerItems.length === 0) return null;
+  if (!shouldShowBulletinWorshipEmbedded({ mode, items, lyricsPptxBlobId })) {
+    return null;
+  }
+
+  const hasTracks = playerItems.length > 0;
+  const pptOnly = mode === 'ppt';
+  const youtubeOnly = mode === 'youtube';
 
   const startPlayback = () => {
     setStarted(true);
-    transport.setPlaying(true);
+    if (hasTracks) transport.setPlaying(true);
   };
 
   const stopPlayback = () => {
@@ -65,12 +92,12 @@ export default function BulletinWorshipEmbeddedPlayer({
     setStarted(false);
   };
 
-  const openMaximize = (mode: WorshipLiveMode) => {
-    setMaximizeMode(mode);
+  const openMaximize = (liveMode: WorshipLiveMode) => {
+    setMaximizeMode(liveMode);
     setMaximized(true);
     if (!started) {
       setStarted(true);
-      transport.setPlaying(true);
+      if (hasTracks) transport.setPlaying(true);
     }
   };
 
@@ -79,11 +106,8 @@ export default function BulletinWorshipEmbeddedPlayer({
       className={`bulletin-slide-preview bulletin-worship-embedded${started ? ' is-playing' : ''}`}
     >
       <div className="bulletin-worship-embedded-stage">
-        <div className="bulletin-worship-embedded-slide-back" aria-hidden={started}>
-          <BulletinPptSlidePreview
-            slideNumber={slideNumber}
-            patch={patch}
-          />
+        <div className="bulletin-worship-embedded-slide-back" aria-hidden={started && youtubeOnly}>
+          <BulletinPptSlidePreview slideNumber={slideNumber} patch={patch} />
         </div>
 
         <div className="bulletin-worship-embedded-layer">
@@ -95,16 +119,38 @@ export default function BulletinWorshipEmbeddedPlayer({
                 </span>
                 <span className="bulletin-worship-embedded-idle-copy">
                   <span className="bulletin-worship-embedded-idle-title">
-                    {t('bulletin.worshipSlideTapPlay')}
+                    {pptOnly
+                      ? t('bulletin.worshipSlideModePpt')
+                      : t('bulletin.worshipSlideTapPlay')}
                   </span>
                   <span className="bulletin-worship-embedded-idle-meta">
-                    {t('bulletin.worshipSlideTrackCount', { count: playerItems.length })}
+                    {pptOnly
+                      ? t('bulletin.worshipLyricsPptxReady')
+                      : mode === 'ppt_youtube'
+                        ? t('bulletin.worshipModePptYoutubeHint')
+                        : t('bulletin.worshipSlideTrackCount', { count: playerItems.length })}
                   </span>
                 </span>
               </span>
             </button>
-          ) : !maximized ? (
+          ) : !maximized && youtubeOnly && hasTracks ? (
             <div className="bulletin-worship-embedded-player">
+              <YoutubePlaylistPlayer
+                items={playerItems}
+                activeIndex={transport.activeIndex}
+                onActiveIndexChange={transport.setActiveIndex}
+                playing={transport.playing}
+                onPlayingChange={transport.setPlaying}
+                onNextTrack={transport.goToNextTrack}
+                onPrevTrack={transport.goToPrevTrack}
+                canGoNext={transport.canGoNext}
+                canGoPrev={transport.canGoPrev}
+                mobileInline
+                nativeControls
+              />
+            </div>
+          ) : !maximized && mode === 'ppt_youtube' && hasTracks ? (
+            <div className="bulletin-worship-embedded-player bulletin-worship-embedded-player--audio-only">
               <YoutubePlaylistPlayer
                 items={playerItems}
                 activeIndex={transport.activeIndex}
@@ -124,21 +170,27 @@ export default function BulletinWorshipEmbeddedPlayer({
 
         {started && !maximized ? (
           <div className="bulletin-worship-embedded-toolbar">
-            <button
-              type="button"
-              className="bulletin-worship-embedded-tool"
-              onClick={() => openMaximize('ppt')}
-            >
-              {t('bulletin.worshipSlideModePpt')}
-            </button>
-            <button
-              type="button"
-              className="bulletin-worship-embedded-tool bulletin-worship-embedded-tool--primary"
-              onClick={() => openMaximize('youtube')}
-              title={t('bulletin.worshipSlideMaximize')}
-            >
-              {t('bulletin.worshipSlideMaximize')}
-            </button>
+            {!youtubeOnly ? (
+              <button
+                type="button"
+                className="bulletin-worship-embedded-tool"
+                onClick={() => openMaximize('ppt')}
+              >
+                {t('bulletin.worshipSlideModePpt')}
+              </button>
+            ) : null}
+            {hasTracks ? (
+              <button
+                type="button"
+                className="bulletin-worship-embedded-tool bulletin-worship-embedded-tool--primary"
+                onClick={() => openMaximize('youtube')}
+                title={t('bulletin.worshipSlideMaximize')}
+              >
+                {youtubeOnly
+                  ? t('bulletin.worshipSlideMaximize')
+                  : t('bulletin.worshipSlideModeVideo')}
+              </button>
+            ) : null}
             <button
               type="button"
               className="bulletin-worship-embedded-tool"
@@ -152,7 +204,9 @@ export default function BulletinWorshipEmbeddedPlayer({
             <button
               type="button"
               className="bulletin-worship-embedded-tool bulletin-worship-embedded-tool--primary"
-              onClick={() => openMaximize('youtube')}
+              onClick={() =>
+                openMaximize(pptOnly || mode === 'ppt_youtube' ? 'ppt' : 'youtube')
+              }
             >
               {t('bulletin.worshipSlideOpenLive')}
             </button>
@@ -166,11 +220,13 @@ export default function BulletinWorshipEmbeddedPlayer({
           onModeChange={setMaximizeMode}
           onClose={() => setMaximized(false)}
           bulletinId={bulletinId}
-          playlistId={playlistId}
+          playlistId={playlistId ?? ''}
           playlistTitle={playlistTitle}
           items={items}
           transport={transport}
           lyricsPptxBlobId={lyricsPptxBlobId}
+          allowYoutube={!pptOnly && hasTracks}
+          allowPpt={!youtubeOnly}
         />
       )}
     </figure>

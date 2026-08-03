@@ -43,10 +43,15 @@ import {
   contentDisposition,
   computeOfferingTotalAmount,
   normalizeOfferingAmountInput,
+  isWorshipPresentationMode,
+  normalizeWorshipPresentationMode,
+  parsePlayClipSeconds,
+  assertClipRange,
   type ApiEnv,
   type Db,
   type SlideTextOverride,
   type ObjectStorage,
+  type WorshipPresentationMode,
 } from '@file-service/shared';
 import type { FastifyInstance } from 'fastify';
 import { getValidYoutubeAccessToken, resolveOAuthConfig } from './youtube-oauth-token.js';
@@ -318,6 +323,7 @@ export type WeeklyBulletinDto = {
   slideTextOverrides: { slide: number; textIndex: number; text: string }[];
   sectionPptxOverrides: Record<string, string>;
   servicePlaylistId: string | null;
+  worshipPresentationMode: WorshipPresentationMode;
   worshipLyricsPptxBlobId: string | null;
   outputBlobId: string | null;
   createdByUserId: string;
@@ -396,6 +402,7 @@ async function mapBulletin(
     slideTextOverrides: normalizeSlideTextOverrides(row.slideTextOverrides),
     sectionPptxOverrides: normalizeSectionPptxOverrides(row.sectionPptxOverrides),
     servicePlaylistId: row.servicePlaylistId,
+    worshipPresentationMode: normalizeWorshipPresentationMode(row.worshipPresentationMode),
     worshipLyricsPptxBlobId: row.worshipLyricsPptxBlobId,
     outputBlobId: row.outputBlobId,
     createdByUserId: row.createdByUserId,
@@ -442,6 +449,7 @@ type BulletinPatchBody = Partial<{
   hiddenSections: string[];
   slideTextOverrides: { slide: number; textIndex: number; text: string }[];
   sectionPptxOverrides: Record<string, string>;
+  worshipPresentationMode: WorshipPresentationMode;
   worshipLyricsPptxBlobId: string | null;
   outputBlobId: string | null;
 }>;
@@ -1249,6 +1257,12 @@ export function registerBulletinRoutes(
           patch.outputBlobId = body.outputBlobId;
         }
       }
+      if (body.worshipPresentationMode !== undefined) {
+        if (!isWorshipPresentationMode(body.worshipPresentationMode)) {
+          return reply.code(400).send({ error: 'invalid_worship_presentation_mode' });
+        }
+        patch.worshipPresentationMode = body.worshipPresentationMode;
+      }
       if (body.worshipLyricsPptxBlobId !== undefined) {
         if (body.worshipLyricsPptxBlobId === null) {
           patch.worshipLyricsPptxBlobId = null;
@@ -1766,4 +1780,73 @@ export function registerBulletinRoutes(
       return { ok: true };
     },
   );
+
+  app.patch<{
+    Params: { id: string; itemId: string };
+    Body: {
+      title?: string;
+      playStartSec?: number | null;
+      playEndSec?: number | null;
+    };
+  }>('/v1/bulletins/:id/worship-playlist/items/:itemId', async (request, reply) => {
+    const user = requireUser(request);
+    if (!user || !canEditBulletinWorshipSongs(user.role)) {
+      return reply.code(403).send({ error: 'bulletin_forbidden' });
+    }
+
+    const [bulletin] = await db
+      .select()
+      .from(weeklyBulletins)
+      .where(eq(weeklyBulletins.id, request.params.id));
+    if (!bulletin?.servicePlaylistId) return reply.code(404).send({ error: 'not_found' });
+
+    const playlistId = bulletin.servicePlaylistId;
+    const { itemId } = request.params;
+    const body = request.body ?? {};
+
+    const [existing] = await db
+      .select()
+      .from(playlistItems)
+      .where(and(eq(playlistItems.id, itemId), eq(playlistItems.playlistId, playlistId)));
+    if (!existing) return reply.code(404).send({ error: 'not_found' });
+
+    const clip = parsePlayClipSeconds({
+      playStartSec: body.playStartSec,
+      playEndSec: body.playEndSec,
+    });
+    if (!clip.ok) return reply.code(400).send({ error: clip.error });
+
+    const nextStart =
+      clip.playStartSec !== undefined ? clip.playStartSec : existing.playStartSec;
+    const nextEnd = clip.playEndSec !== undefined ? clip.playEndSec : existing.playEndSec;
+    const rangeError = assertClipRange(nextStart, nextEnd);
+    if (rangeError) return reply.code(400).send({ error: rangeError });
+
+    const itemPatch: Partial<typeof playlistItems.$inferInsert> = {};
+    if (typeof body.title === 'string') {
+      const title = body.title.trim();
+      if (!title) return reply.code(400).send({ error: 'title_required' });
+      itemPatch.title = title;
+    }
+    if (clip.playStartSec !== undefined) itemPatch.playStartSec = clip.playStartSec;
+    if (clip.playEndSec !== undefined) itemPatch.playEndSec = clip.playEndSec;
+
+    if (Object.keys(itemPatch).length === 0) {
+      return reply.code(400).send({ error: 'empty_patch' });
+    }
+
+    await db
+      .update(playlistItems)
+      .set(itemPatch)
+      .where(and(eq(playlistItems.id, itemId), eq(playlistItems.playlistId, playlistId)));
+
+    await db
+      .update(playlists)
+      .set({ updatedAt: new Date() })
+      .where(eq(playlists.id, playlistId));
+
+    const [updated] = await db.select().from(playlists).where(eq(playlists.id, playlistId));
+    notifyPlaylist(bulletin.id);
+    return buildPlaylistDetail(db, updated!, audioQueue);
+  });
 }

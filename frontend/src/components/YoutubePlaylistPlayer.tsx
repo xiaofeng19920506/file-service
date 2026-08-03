@@ -15,6 +15,8 @@ import {
 export type YoutubePlayerItem = {
   youtubeVideoId: string;
   title: string;
+  startSeconds?: number | null;
+  endSeconds?: number | null;
 };
 
 type YoutubePlaylistPlayerProps = {
@@ -189,6 +191,8 @@ export default function YoutubePlaylistPlayer({
   const landscapeStageRef = useRef<HTMLDivElement>(null);
   const lastLoadedIndexRef = useRef(-1);
   const ignorePauseUntilRef = useRef(0);
+  const clipEndIndexRef = useRef(-1);
+  const goNextRef = useRef<(() => void) | null>(null);
   const [playerError, setPlayerError] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -292,7 +296,20 @@ export default function YoutubePlaylistPlayer({
       const nextTime = player.getCurrentTime();
       const nextDuration = player.getDuration();
       setCurrentTime(Number.isFinite(nextTime) ? nextTime : 0);
-      setDuration(Number.isFinite(nextDuration) ? nextDuration : 0);
+      setDuration(Number.isFinite(nextDuration) && nextDuration > 0 ? nextDuration : 0);
+
+      const endSeconds = itemsRef.current[activeIndexRef.current]?.endSeconds;
+      if (
+        typeof endSeconds === 'number' &&
+        endSeconds > 0 &&
+        Number.isFinite(nextTime) &&
+        nextTime >= endSeconds - 0.2
+      ) {
+        if (clipEndIndexRef.current !== activeIndexRef.current) {
+          clipEndIndexRef.current = activeIndexRef.current;
+          goNextRef.current?.();
+        }
+      }
     } catch {
       // player not ready
     }
@@ -301,21 +318,28 @@ export default function YoutubePlaylistPlayer({
   const loadTrack = useCallback(
     (index: number, autoplay: boolean) => {
       const player = playerRef.current;
-      const videoId = itemsRef.current[index]?.youtubeVideoId;
+      const item = itemsRef.current[index];
+      const videoId = item?.youtubeVideoId;
       if (!player || !readyRef.current || !videoId) return;
+
+      const startSeconds =
+        typeof item.startSeconds === 'number' && item.startSeconds > 0
+          ? item.startSeconds
+          : 0;
 
       ignorePauseUntilRef.current = Date.now() + 3000;
       lastLoadedIndexRef.current = index;
-      setCurrentTime(0);
+      clipEndIndexRef.current = -1;
+      setCurrentTime(startSeconds);
       setDuration(0);
       scrubbingRef.current = false;
 
       if (autoplay) {
         playingRef.current = true;
-        player.loadVideoById(videoId);
+        player.loadVideoById(videoId, startSeconds);
         onPlayingChange(true);
       } else {
-        player.cueVideoById(videoId);
+        player.cueVideoById(videoId, startSeconds);
       }
 
       window.setTimeout(syncProgress, 400);
@@ -336,6 +360,7 @@ export default function YoutubePlaylistPlayer({
       onPlayingChange(false);
     }
   }, [loadTrack, onActiveIndexChange, onPlayingChange, onNextTrack]);
+  goNextRef.current = goNext;
 
   const goPrev = useCallback(() => {
     if (onPrevTrack) {
@@ -475,16 +500,22 @@ export default function YoutubePlaylistPlayer({
                 }
                 if (activeIndexRef.current < itemsRef.current.length - 1) {
                   const nextIndex = activeIndexRef.current + 1;
-                  const nextId = itemsRef.current[nextIndex]?.youtubeVideoId;
+                  const nextItem = itemsRef.current[nextIndex];
+                  const nextId = nextItem?.youtubeVideoId;
                   if (nextId) {
+                    const start =
+                      typeof nextItem.startSeconds === 'number' && nextItem.startSeconds > 0
+                        ? nextItem.startSeconds
+                        : 0;
                     ignorePauseUntilRef.current = Date.now() + 3000;
                     lastLoadedIndexRef.current = nextIndex;
+                    clipEndIndexRef.current = -1;
                     playingRef.current = true;
                     onActiveIndexChange(nextIndex);
                     onPlayingChange(true);
-                    setCurrentTime(0);
+                    setCurrentTime(start);
                     setDuration(0);
-                    event.target.loadVideoById(nextId);
+                    event.target.loadVideoById(nextId, start);
                   }
                 } else {
                   onPlayingChange(false);
@@ -515,7 +546,13 @@ export default function YoutubePlaylistPlayer({
       lastLoadedIndexRef.current = -1;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- recreate only when list identity changes
-  }, [elementId, items.map((i) => i.youtubeVideoId).join('|'), nativeControls]);
+  }, [
+    elementId,
+    items
+      .map((i) => `${i.youtubeVideoId}:${i.startSeconds ?? ''}:${i.endSeconds ?? ''}`)
+      .join('|'),
+    nativeControls,
+  ]);
 
   useEffect(() => {
     const player = playerRef.current;

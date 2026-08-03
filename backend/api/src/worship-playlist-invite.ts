@@ -11,6 +11,8 @@ import {
   weeklyBulletins,
   YOUTUBE_SEARCH_DEFAULT_PAGE_SIZE,
   YOUTUBE_SEARCH_MAX_PAGE_SIZE,
+  parsePlayClipSeconds,
+  assertClipRange,
   type ApiEnv,
   type Db,
 } from '@file-service/shared';
@@ -294,7 +296,7 @@ export function registerWorshipPlaylistInviteRoutes(
 
   app.delete<{ Params: { '*': string } }>('/v1/playlists/invite/*', async (request, reply) => {
     const parsed = parseWorshipInviteRest(request.params['*'] ?? '');
-    if (parsed.kind !== 'deleteItem') {
+    if (parsed.kind !== 'item') {
       return reply.code(404).send({ error: 'not_found' });
     }
 
@@ -321,5 +323,75 @@ export function registerWorshipPlaylistInviteRoutes(
 
     notifyPlaylist(resolved.bulletin.id);
     return { ok: true };
+  });
+
+  app.patch<{
+    Params: { '*': string };
+    Body: {
+      title?: string;
+      playStartSec?: number | null;
+      playEndSec?: number | null;
+    };
+  }>('/v1/playlists/invite/*', async (request, reply) => {
+    const parsed = parseWorshipInviteRest(request.params['*'] ?? '');
+    if (parsed.kind !== 'item') {
+      return reply.code(404).send({ error: 'not_found' });
+    }
+
+    const resolved = await resolvePlaylistEditInvite(
+      db,
+      env.DOWNLOAD_HMAC_SECRET,
+      parsed.token,
+    );
+    if ('error' in resolved) return inviteError(reply, resolved.error);
+
+    const { itemId } = parsed;
+    const playlistId = resolved.playlist.id;
+    const body = request.body ?? {};
+
+    const [existing] = await db
+      .select()
+      .from(playlistItems)
+      .where(and(eq(playlistItems.id, itemId), eq(playlistItems.playlistId, playlistId)));
+    if (!existing) return reply.code(404).send({ error: 'not_found' });
+
+    const clip = parsePlayClipSeconds({
+      playStartSec: body.playStartSec,
+      playEndSec: body.playEndSec,
+    });
+    if (!clip.ok) return reply.code(400).send({ error: clip.error });
+
+    const nextStart =
+      clip.playStartSec !== undefined ? clip.playStartSec : existing.playStartSec;
+    const nextEnd = clip.playEndSec !== undefined ? clip.playEndSec : existing.playEndSec;
+    const rangeError = assertClipRange(nextStart, nextEnd);
+    if (rangeError) return reply.code(400).send({ error: rangeError });
+
+    const itemPatch: Partial<typeof playlistItems.$inferInsert> = {};
+    if (typeof body.title === 'string') {
+      const title = body.title.trim();
+      if (!title) return reply.code(400).send({ error: 'title_required' });
+      itemPatch.title = title;
+    }
+    if (clip.playStartSec !== undefined) itemPatch.playStartSec = clip.playStartSec;
+    if (clip.playEndSec !== undefined) itemPatch.playEndSec = clip.playEndSec;
+
+    if (Object.keys(itemPatch).length === 0) {
+      return reply.code(400).send({ error: 'empty_patch' });
+    }
+
+    await db
+      .update(playlistItems)
+      .set(itemPatch)
+      .where(and(eq(playlistItems.id, itemId), eq(playlistItems.playlistId, playlistId)));
+
+    await db
+      .update(playlists)
+      .set({ updatedAt: new Date() })
+      .where(eq(playlists.id, playlistId));
+
+    const [updated] = await db.select().from(playlists).where(eq(playlists.id, playlistId));
+    notifyPlaylist(resolved.bulletin.id);
+    return buildPlaylistDetail(db, updated!, audioQueue);
   });
 }

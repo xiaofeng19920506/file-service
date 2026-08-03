@@ -4,7 +4,7 @@ export type WorshipInvitePath =
   | { kind: 'detail'; token: string }
   | { kind: 'items'; token: string }
   | { kind: 'order'; token: string }
-  | { kind: 'deleteItem'; token: string; itemId: string }
+  | { kind: 'item'; token: string; itemId: string }
   | { kind: 'youtubeSearch'; token: string }
   | { kind: 'youtubeSuggest'; token: string }
   | { kind: 'unknown'; rest: string };
@@ -29,7 +29,7 @@ export function parseWorshipInviteRest(rest: string): WorshipInvitePath {
   if (tail.startsWith(itemPrefix)) {
     const itemId = tail.slice(itemPrefix.length);
     if (itemId && !itemId.includes('/')) {
-      return { kind: 'deleteItem', token, itemId };
+      return { kind: 'item', token, itemId };
     }
   }
 

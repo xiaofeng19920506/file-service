@@ -16,7 +16,7 @@ describe('parseWorshipInviteRest', () => {
       token: longToken,
     });
     expect(parseWorshipInviteRest(`${longToken}/items/item-1`)).toEqual({
-      kind: 'deleteItem',
+      kind: 'item',
       token: longToken,
       itemId: 'item-1',
     });

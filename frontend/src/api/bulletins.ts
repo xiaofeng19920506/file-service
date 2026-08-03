@@ -61,6 +61,8 @@ export type WeeklyBulletin = {
   sectionPptxOverrides: Record<string, string>;
   outputBlobId: string | null;
   servicePlaylistId: string | null;
+  /** 敬拜赞美投影格式 */
+  worshipPresentationMode: 'ppt' | 'youtube' | 'ppt_youtube';
   /** 敬拜赞美歌词 PPT blob */
   worshipLyricsPptxBlobId: string | null;
   createdByUserId: string;
@@ -107,6 +109,7 @@ export type BulletinPatch = Partial<{
   slideTextOverrides: SlideTextOverride[];
   sectionPptxOverrides: Record<string, string>;
   outputBlobId: string | null;
+  worshipPresentationMode: 'ppt' | 'youtube' | 'ppt_youtube';
   worshipLyricsPptxBlobId: string | null;
 }>;
 
@@ -521,6 +524,26 @@ export async function removeBulletinWorshipPlaylistItem(
         : res.statusText;
     throw new Error(msg);
   }
+}
+
+export async function patchBulletinWorshipPlaylistItem(
+  bulletinId: string,
+  itemId: string,
+  body: {
+    title?: string;
+    playStartSec?: number | null;
+    playEndSec?: number | null;
+  },
+): Promise<PlaylistDetail> {
+  const res = await apiFetch(
+    `/v1/bulletins/${encodeURIComponent(bulletinId)}/worship-playlist/items/${encodeURIComponent(itemId)}`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  );
+  return parseJson<PlaylistDetail>(res);
 }
 
 export async function importBulletinWorshipYoutubePlaylist(

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ensureBulletinWorshipPlaylist,
   getBulletinWorshipPlaylist,
+  patchBulletinWorshipPlaylistItem,
   removeBulletinWorshipPlaylistItem,
   reorderBulletinWorshipPlaylistItems,
   updateBulletin,
@@ -13,7 +14,15 @@ import AddPlaylistItemsModal from '../AddPlaylistItemsModal';
 import BulletinWorshipYoutubeImportPanel from './BulletinWorshipYoutubeImportPanel';
 import BulletinWorshipInviteModal from './BulletinWorshipInviteModal';
 import { friendlyError } from '../../lib/error-messages';
+import {
+  formatClipTime,
+  normalizeWorshipPresentationMode,
+  worshipNeedsLyricsPptx,
+  worshipNeedsPlaylist,
+  type WorshipPresentationMode,
+} from '../../lib/worship-presentation-mode';
 import { useI18n } from '../../i18n';
+import WorshipClipFields from './WorshipClipFields';
 
 type BulletinWorshipStepProps = {
   draft: WeeklyBulletin;
@@ -22,11 +31,11 @@ type BulletinWorshipStepProps = {
   oauthJustConnected?: boolean;
   oauthError?: string | null;
   onClearOauthError?: () => void;
-  /** SSE / 预览刷新：远端歌单变更时递增，触发重新拉取 */
   playlistRefreshKey?: number;
   onPlaylistReady: (playlistId: string) => void;
   onPlaylistChanged?: () => void;
   onLyricsPptxChange?: (blobId: string | null) => void;
+  onPresentationModeChange?: (mode: WorshipPresentationMode) => void;
 };
 
 function reorderToFinalIndex<T>(items: T[], from: number, toIndex: number): T[] {
@@ -48,6 +57,7 @@ export default function BulletinWorshipStep({
   onPlaylistReady,
   onPlaylistChanged,
   onLyricsPptxChange,
+  onPresentationModeChange,
 }: BulletinWorshipStepProps) {
   const { t } = useI18n();
   const lyricsFileInputRef = useRef<HTMLInputElement>(null);
@@ -57,6 +67,7 @@ export default function BulletinWorshipStep({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [lyricsUploading, setLyricsUploading] = useState(false);
+  const [modeSaving, setModeSaving] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [youtubeModalOpen, setYoutubeModalOpen] = useState(
     Boolean(oauthJustConnected || oauthError),
@@ -64,7 +75,10 @@ export default function BulletinWorshipStep({
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
 
-  const canAddSongs = canEditSongs || canManage;
+  const mode = normalizeWorshipPresentationMode(draft.worshipPresentationMode);
+  const showPlaylist = worshipNeedsPlaylist(mode);
+  const showPptx = worshipNeedsLyricsPptx(mode);
+  const canAddSongs = (canEditSongs || canManage) && showPlaylist;
   const hasLyricsPptx = Boolean(draft.worshipLyricsPptxBlobId);
 
   const existingVideoIds = useMemo(
@@ -85,8 +99,9 @@ export default function BulletinWorshipStep({
   }, [draft.id, draft.servicePlaylistId, onPlaylistReady]);
 
   useEffect(() => {
+    if (!showPlaylist) return;
     void refreshPlaylist().catch(() => undefined);
-  }, [refreshPlaylist, draft.servicePlaylistId, playlistRefreshKey]);
+  }, [refreshPlaylist, draft.servicePlaylistId, playlistRefreshKey, showPlaylist]);
 
   useEffect(() => {
     if (oauthJustConnected || oauthError) setYoutubeModalOpen(true);
@@ -114,6 +129,23 @@ export default function BulletinWorshipStep({
     handleImported(detail, meta);
   };
 
+  const changeMode = async (next: WorshipPresentationMode) => {
+    if (next === mode || modeSaving) return;
+    setModeSaving(true);
+    setError(null);
+    try {
+      const updated = await updateBulletin(draft.id, { worshipPresentationMode: next });
+      onPresentationModeChange?.(
+        normalizeWorshipPresentationMode(updated.worshipPresentationMode),
+      );
+      setStatus(t('bulletin.worshipModeUpdated'));
+    } catch (err) {
+      setError(friendlyError(err instanceof Error ? err.message : 'update_failed', t));
+    } finally {
+      setModeSaving(false);
+    }
+  };
+
   const handleRemove = async (item: PlaylistItem) => {
     if (!canAddSongs) return;
     setError(null);
@@ -137,7 +169,7 @@ export default function BulletinWorshipStep({
     try {
       const data = await reorderBulletinWorshipPlaylistItems(
         draft.id,
-        reordered.map((item) => item.id),
+        reordered.map((row) => row.id),
       );
       setItems(data.items);
       onPlaylistChanged?.();
@@ -145,6 +177,15 @@ export default function BulletinWorshipStep({
       setError(friendlyError(err instanceof Error ? err.message : 'reorder_playlist_failed', t));
       await refreshPlaylist();
     }
+  };
+
+  const handleClipSave = async (
+    itemId: string,
+    patch: { playStartSec: number | null; playEndSec: number | null },
+  ) => {
+    const detail = await patchBulletinWorshipPlaylistItem(draft.id, itemId, patch);
+    setItems(detail.items);
+    onPlaylistChanged?.();
   };
 
   const copyInviteLink = async () => {
@@ -212,120 +253,188 @@ export default function BulletinWorshipStep({
 
   return (
     <div className="bulletin-wizard-step bulletin-worship-step">
-      <section className="bulletin-worship-playlist-preview">
-        <div className="bulletin-worship-playlist-heading-row">
-          <h4 className="bulletin-worship-playlist-heading">
-            {items.length > 0
-              ? t('bulletin.worshipTrackCount', { count: items.length })
-              : t('bulletin.worshipNoPlaylist')}
-          </h4>
+      <fieldset className="bulletin-worship-mode-fieldset" disabled={!canManage || modeSaving}>
+        <legend>{t('bulletin.worshipModeLabel')}</legend>
+        <div className="bulletin-worship-mode-options" role="radiogroup">
+          {(
+            [
+              ['ppt', 'bulletin.worshipModePpt'],
+              ['youtube', 'bulletin.worshipModeYoutube'],
+              ['ppt_youtube', 'bulletin.worshipModePptYoutube'],
+            ] as const
+          ).map(([value, labelKey]) => (
+            <label key={value} className="bulletin-worship-mode-option">
+              <input
+                type="radio"
+                name="worship-presentation-mode"
+                value={value}
+                checked={mode === value}
+                onChange={() => void changeMode(value)}
+              />
+              <span>{t(labelKey)}</span>
+            </label>
+          ))}
         </div>
+        <p className="bulletin-worship-mode-hint">
+          {mode === 'ppt'
+            ? t('bulletin.worshipModePptHint')
+            : mode === 'youtube'
+              ? t('bulletin.worshipModeYoutubeHint')
+              : t('bulletin.worshipModePptYoutubeHint')}
+        </p>
+      </fieldset>
 
-        {canAddSongs ? (
-          <div className="bulletin-worship-toolbar" role="group" aria-label={t('bulletin.worshipSourceTabs')}>
-            <button
-              type="button"
-              className="btn-primary btn-sm"
-              onClick={() => setSearchModalOpen(true)}
-            >
-              {t('bulletin.worshipOpenSearchModal')}
-            </button>
-            <button
-              type="button"
-              className="btn-secondary btn-sm"
-              onClick={() => setYoutubeModalOpen(true)}
-            >
-              {t('bulletin.worshipImportYoutubeBtn')}
-            </button>
-            {canManage ? (
-              <>
-                <input
-                  ref={lyricsFileInputRef}
-                  type="file"
-                  accept=".pptx,.ppt,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-powerpoint"
-                  hidden
-                  onChange={(e) => void handleLyricsPptxSelected(e.target.files?.[0] ?? null)}
-                />
+      {showPptx ? (
+        <section className="bulletin-worship-pptx-section">
+          <h4 className="bulletin-worship-playlist-heading">{t('bulletin.worshipLyricsPptxTitle')}</h4>
+          {canManage ? (
+            <div className="bulletin-worship-toolbar">
+              <input
+                ref={lyricsFileInputRef}
+                type="file"
+                accept=".pptx,.ppt,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-powerpoint"
+                hidden
+                onChange={(e) => void handleLyricsPptxSelected(e.target.files?.[0] ?? null)}
+              />
+              <button
+                type="button"
+                className="btn-secondary btn-sm"
+                disabled={lyricsUploading}
+                onClick={() => lyricsFileInputRef.current?.click()}
+              >
+                {lyricsUploading
+                  ? t('bulletin.worshipLyricsPptxUploading')
+                  : hasLyricsPptx
+                    ? t('bulletin.worshipLyricsPptxReplace')
+                    : t('bulletin.worshipLyricsPptxUpload')}
+              </button>
+              {hasLyricsPptx ? (
                 <button
                   type="button"
                   className="btn-secondary btn-sm"
                   disabled={lyricsUploading}
-                  onClick={() => lyricsFileInputRef.current?.click()}
+                  onClick={() => void clearLyricsPptx()}
                 >
-                  {lyricsUploading
-                    ? t('bulletin.worshipLyricsPptxUploading')
-                    : hasLyricsPptx
-                      ? t('bulletin.worshipLyricsPptxReplace')
-                      : t('bulletin.worshipLyricsPptxUpload')}
+                  {t('bulletin.worshipLyricsPptxClear')}
                 </button>
-                {hasLyricsPptx ? (
-                  <button
-                    type="button"
-                    className="btn-secondary btn-sm"
-                    disabled={lyricsUploading}
-                    onClick={() => void clearLyricsPptx()}
-                  >
-                    {t('bulletin.worshipLyricsPptxClear')}
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  className="btn-secondary btn-sm"
-                  disabled={busy}
-                  onClick={() => setInviteModalOpen(true)}
-                >
-                  {t('bulletin.worshipOpenInviteModal')}
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary btn-sm"
-                  disabled={busy}
-                  onClick={() => void copyInviteLink()}
-                >
-                  {t('bulletin.worshipCopyInvite')}
-                </button>
-              </>
-            ) : null}
-          </div>
-        ) : null}
+              ) : null}
+            </div>
+          ) : null}
+          <p className="bulletin-worship-pptx-status">
+            {hasLyricsPptx
+              ? t('bulletin.worshipLyricsPptxReady')
+              : t('bulletin.worshipLyricsPptxEmpty')}
+          </p>
+        </section>
+      ) : null}
 
-        {items.length > 0 ? (
-          <ol className="bulletin-worship-track-preview">
-            {items.map((item, index) => (
-              <li
-                key={item.id}
-                className={
-                  canAddSongs
-                    ? `bulletin-worship-track-preview-item${dragIndex === index ? ' is-dragging' : ''}`
-                    : undefined
-                }
-                draggable={canAddSongs}
-                onDragStart={canAddSongs ? () => setDragIndex(index) : undefined}
-                onDragOver={
-                  canAddSongs
-                    ? (e) => {
-                        e.preventDefault();
-                      }
-                    : undefined
-                }
-                onDrop={canAddSongs ? () => void handleDrop(index) : undefined}
+      {showPlaylist ? (
+        <section className="bulletin-worship-playlist-preview">
+          <div className="bulletin-worship-playlist-heading-row">
+            <h4 className="bulletin-worship-playlist-heading">
+              {items.length > 0
+                ? t('bulletin.worshipTrackCount', { count: items.length })
+                : t('bulletin.worshipNoPlaylist')}
+            </h4>
+          </div>
+
+          {canAddSongs ? (
+            <div
+              className="bulletin-worship-toolbar"
+              role="group"
+              aria-label={t('bulletin.worshipSourceTabs')}
+            >
+              <button
+                type="button"
+                className="btn-primary btn-sm"
+                onClick={() => setSearchModalOpen(true)}
               >
-                <span className="bulletin-worship-track-preview-order">{index + 1}</span>
-                <span className="bulletin-worship-track-preview-title">{item.title}</span>
-                {canAddSongs ? (
+                {t('bulletin.worshipOpenSearchModal')}
+              </button>
+              <button
+                type="button"
+                className="btn-secondary btn-sm"
+                onClick={() => setYoutubeModalOpen(true)}
+              >
+                {t('bulletin.worshipImportYoutubeBtn')}
+              </button>
+              {canManage ? (
+                <>
                   <button
                     type="button"
                     className="btn-secondary btn-sm"
-                    onClick={() => void handleRemove(item)}
+                    disabled={busy}
+                    onClick={() => setInviteModalOpen(true)}
                   >
-                    {t('playlists.removeTrackShort')}
+                    {t('bulletin.worshipOpenInviteModal')}
                   </button>
-                ) : null}
-              </li>
-            ))}
-          </ol>
-        ) : null}
-      </section>
+                  <button
+                    type="button"
+                    className="btn-secondary btn-sm"
+                    disabled={busy}
+                    onClick={() => void copyInviteLink()}
+                  >
+                    {t('bulletin.worshipCopyInvite')}
+                  </button>
+                </>
+              ) : null}
+            </div>
+          ) : null}
+
+          {items.length > 0 ? (
+            <ol className="bulletin-worship-track-preview">
+              {items.map((item, index) => (
+                <li
+                  key={item.id}
+                  className={
+                    canAddSongs
+                      ? `bulletin-worship-track-preview-item${dragIndex === index ? ' is-dragging' : ''}`
+                      : 'bulletin-worship-track-preview-item'
+                  }
+                  draggable={canAddSongs}
+                  onDragStart={canAddSongs ? () => setDragIndex(index) : undefined}
+                  onDragOver={
+                    canAddSongs
+                      ? (e) => {
+                          e.preventDefault();
+                        }
+                      : undefined
+                  }
+                  onDrop={canAddSongs ? () => void handleDrop(index) : undefined}
+                >
+                  <span className="bulletin-worship-track-preview-order">{index + 1}</span>
+                  <div className="bulletin-worship-track-preview-main">
+                    <span className="bulletin-worship-track-preview-title">{item.title}</span>
+                    {canAddSongs ? (
+                      <WorshipClipFields
+                        item={item}
+                        disabled={busy}
+                        onSave={(patch) => handleClipSave(item.id, patch)}
+                      />
+                    ) : item.playStartSec != null || item.playEndSec != null ? (
+                      <span className="bulletin-worship-clip-summary">
+                        {t('bulletin.worshipClipSummary', {
+                          start: formatClipTime(item.playStartSec) || '0:00',
+                          end: formatClipTime(item.playEndSec) || '—',
+                        })}
+                      </span>
+                    ) : null}
+                  </div>
+                  {canAddSongs ? (
+                    <button
+                      type="button"
+                      className="btn-secondary btn-sm"
+                      onClick={() => void handleRemove(item)}
+                    >
+                      {t('playlists.removeTrackShort')}
+                    </button>
+                  ) : null}
+                </li>
+              ))}
+            </ol>
+          ) : null}
+        </section>
+      ) : null}
 
       {status && <p className="success-msg">{status}</p>}
       {error && <p className="error-msg">{error}</p>}

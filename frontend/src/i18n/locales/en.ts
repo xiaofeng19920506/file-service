@@ -509,6 +509,21 @@ const en: MessageTree = {
     worshipLyricsPptxMissing: 'No lyrics PPT yet — upload one in the worship step first',
     worshipLyricsPptxPlayHint:
       'Music plays in the background. Use ←→↑↓ or PgUp/PgDn to change slides; Esc or Exit to leave.',
+    worshipModeLabel: 'Worship presentation format',
+    worshipModePpt: 'PPT only',
+    worshipModeYoutube: 'YouTube playlist only',
+    worshipModePptYoutube: 'PPT + playlist',
+    worshipModePptHint: 'Project lyrics PPT only — no YouTube playback.',
+    worshipModeYoutubeHint: 'Play the YouTube playlist on the projector.',
+    worshipModePptYoutubeHint:
+      'Default: PPT in front with playlist audio in the background; switch to playlist video when needed.',
+    worshipModeUpdated: 'Worship presentation format updated',
+    worshipClipStart: 'Start',
+    worshipClipEnd: 'End',
+    worshipClipEndPlaceholder: 'Full',
+    worshipClipInvalid: 'Invalid time (use 1:20 or seconds)',
+    worshipClipRangeInvalid: 'End must be after start',
+    worshipClipSummary: '{start}–{end}',
   },
   worshipSongs: {
     title: 'Praise & worship',

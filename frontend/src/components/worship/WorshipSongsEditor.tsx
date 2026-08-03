@@ -1,21 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  addBulletinWorshipPlaylistItems,
-  getBulletinWorshipPlaylist,
-  openBulletinWorshipPlaylist,
-  removeBulletinWorshipPlaylistItem,
-  reorderBulletinWorshipPlaylistItems,
-  type BulletinWorshipPlaylistDetail,
-} from '../../api/bulletins';
-import {
   addInvitePlaylistItems,
   getWorshipPlaylistInvite,
+  patchInvitePlaylistItem,
   removeInvitePlaylistItem,
   reorderInvitePlaylistItems,
   type PlaylistDetail,
   type PlaylistItem,
 } from '../../api/playlists';
+import {
+  addBulletinWorshipPlaylistItems,
+  getBulletinWorshipPlaylist,
+  openBulletinWorshipPlaylist,
+  patchBulletinWorshipPlaylistItem,
+  removeBulletinWorshipPlaylistItem,
+  reorderBulletinWorshipPlaylistItems,
+  type BulletinWorshipPlaylistDetail,
+} from '../../api/bulletins';
 import PlaylistYoutubeSearchPanel from '../PlaylistYoutubeSearchPanel';
+import WorshipClipFields from '../bulletin/WorshipClipFields';
 import { friendlyError } from '../../lib/error-messages';
 import { useI18n } from '../../i18n';
 
@@ -183,6 +186,16 @@ export default function WorshipSongsEditor({
     }
   };
 
+  const handleClipSave = async (
+    itemId: string,
+    patch: { playStartSec: number | null; playEndSec: number | null },
+  ) => {
+    const data = inviteToken
+      ? await patchInvitePlaylistItem(inviteToken, itemId, patch)
+      : await patchBulletinWorshipPlaylistItem(bulletinId!, itemId, patch);
+    setDetail(data);
+  };
+
   if (loading) {
     return <p className="worship-songs-loading">{t('worshipSongs.loading')}</p>;
   }
@@ -259,7 +272,13 @@ export default function WorshipSongsEditor({
                 onDrop={() => void handleDrop(index)}
               >
                 <span className="worship-songs-track-order">{index + 1}</span>
-                <span className="worship-songs-track-title">{item.title}</span>
+                <div className="worship-songs-track-main">
+                  <span className="worship-songs-track-title">{item.title}</span>
+                  <WorshipClipFields
+                    item={item}
+                    onSave={(patch) => handleClipSave(item.id, patch)}
+                  />
+                </div>
                 <button
                   type="button"
                   className="btn-secondary btn-sm"

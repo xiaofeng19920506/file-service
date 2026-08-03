@@ -32,12 +32,19 @@ type BulletinWorshipMaximizeOverlayProps = {
   transport: Transport;
   /** 用户上传的歌词 PPT；有则优先于周报 PPT */
   lyricsPptxBlobId?: string | null;
+  allowYoutube?: boolean;
+  allowPpt?: boolean;
 };
 
 function toYoutubeItems(items: PlaylistItem[]): YoutubePlayerItem[] {
   return items
     .filter((item) => item.youtubeVideoId)
-    .map((item) => ({ youtubeVideoId: item.youtubeVideoId, title: item.title }));
+    .map((item) => ({
+      youtubeVideoId: item.youtubeVideoId,
+      title: item.title,
+      startSeconds: item.playStartSec ?? null,
+      endSeconds: item.playEndSec ?? null,
+    }));
 }
 
 function slideImageUrl(slide: EditableSlide): string | null {
@@ -56,6 +63,8 @@ export default function BulletinWorshipMaximizeOverlay({
   items,
   transport,
   lyricsPptxBlobId = null,
+  allowYoutube = true,
+  allowPpt = true,
 }: BulletinWorshipMaximizeOverlayProps) {
   const { t } = useI18n();
   const stageRef = useRef<HTMLDivElement>(null);
@@ -186,24 +195,28 @@ export default function BulletinWorshipMaximizeOverlay({
     <div className="bulletin-worship-maximize" role="dialog" aria-modal="true">
       <header className="bulletin-worship-maximize-topbar">
         <div className="bulletin-worship-maximize-modes" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'youtube'}
-            className={`bulletin-worship-maximize-mode${mode === 'youtube' ? ' is-active' : ''}`}
-            onClick={() => onModeChange('youtube')}
-          >
-            {t('bulletin.worshipSlideModeVideo')}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'ppt'}
-            className={`bulletin-worship-maximize-mode${mode === 'ppt' ? ' is-active' : ''}`}
-            onClick={() => onModeChange('ppt')}
-          >
-            {t('bulletin.worshipSlideModePpt')}
-          </button>
+          {allowYoutube ? (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === 'youtube'}
+              className={`bulletin-worship-maximize-mode${mode === 'youtube' ? ' is-active' : ''}`}
+              onClick={() => onModeChange('youtube')}
+            >
+              {t('bulletin.worshipSlideModeVideo')}
+            </button>
+          ) : null}
+          {allowPpt ? (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === 'ppt'}
+              className={`bulletin-worship-maximize-mode${mode === 'ppt' ? ' is-active' : ''}`}
+              onClick={() => onModeChange('ppt')}
+            >
+              {t('bulletin.worshipSlideModePpt')}
+            </button>
+          ) : null}
         </div>
         <div className="bulletin-worship-maximize-topbar-actions">
           {mode === 'ppt' && (
@@ -297,22 +310,42 @@ export default function BulletinWorshipMaximizeOverlay({
               : t('worship.worshipSlideHint')}
           </p>
 
-          <div className={`bulletin-worship-maximize-music${musicOpen ? ' is-open' : ''}`}>
-            <PlaylistAudioPlayer
-              items={audioItems}
-              activeIndex={transport.activeIndex}
-              onActiveIndexChange={transport.setActiveIndex}
-              playing={transport.playing}
-              onPlayingChange={transport.setPlaying}
-              onNextTrack={transport.goToNextTrack}
-              onPrevTrack={transport.goToPrevTrack}
-              canGoNext={transport.canGoNext}
-              canGoPrev={transport.canGoPrev}
-              playlistTitle={playlistTitle}
-              variant={musicOpen ? 'desktopDock' : 'default'}
-              repeatMode="all"
-            />
-          </div>
+          {youtubeItems.length > 0 ? (
+            <div
+              className={`bulletin-worship-maximize-music bulletin-worship-maximize-music--yt${musicOpen ? ' is-open' : ''}`}
+            >
+              <YoutubePlaylistPlayer
+                items={youtubeItems}
+                activeIndex={transport.activeIndex}
+                onActiveIndexChange={transport.setActiveIndex}
+                playing={transport.playing}
+                onPlayingChange={transport.setPlaying}
+                onNextTrack={transport.goToNextTrack}
+                onPrevTrack={transport.goToPrevTrack}
+                canGoNext={transport.canGoNext}
+                canGoPrev={transport.canGoPrev}
+                mobileInline
+                nativeControls
+              />
+            </div>
+          ) : (
+            <div className={`bulletin-worship-maximize-music${musicOpen ? ' is-open' : ''}`}>
+              <PlaylistAudioPlayer
+                items={audioItems}
+                activeIndex={transport.activeIndex}
+                onActiveIndexChange={transport.setActiveIndex}
+                playing={transport.playing}
+                onPlayingChange={transport.setPlaying}
+                onNextTrack={transport.goToNextTrack}
+                onPrevTrack={transport.goToPrevTrack}
+                canGoNext={transport.canGoNext}
+                canGoPrev={transport.canGoPrev}
+                playlistTitle={playlistTitle}
+                variant={musicOpen ? 'desktopDock' : 'default'}
+                repeatMode="all"
+              />
+            </div>
+          )}
         </div>
       )}
     </div>,

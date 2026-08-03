@@ -46,6 +46,7 @@ function baseBulletin(overrides: Partial<WeeklyBulletin> = {}): WeeklyBulletin {
     slideTextOverrides: [],
     sectionPptxOverrides: {},
     servicePlaylistId: null,
+    worshipPresentationMode: 'youtube',
     worshipLyricsPptxBlobId: null,
     outputBlobId: null,
     createdByUserId: 'u1',

@@ -225,6 +225,13 @@
       "when": 1754006400000,
       "tag": "0033_bulletin_service_roster_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1754251200000,
+      "tag": "0034_worship_presentation_mode_and_clips",
+      "breakpoints": true
     }
   ]
 }

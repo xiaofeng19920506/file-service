@@ -60,4 +60,5 @@ export * from './scripture-reference.js';
 export * from './bible-text.js';
 export type { ScriptureSlideBodies } from './bible-text.js';
 export * from './bulletin-scripture-preference.js';
+export * from './worship-presentation-mode.js';
 export type { ScripturePreference } from './bulletin-scripture-preference.js';

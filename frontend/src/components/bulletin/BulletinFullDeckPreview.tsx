@@ -23,8 +23,9 @@ import {
 import { ChevronLeftIcon, ChevronRightIcon } from '../icons';
 import BulletinPptSlidePreview from './BulletinPptSlidePreview';
 import BulletinWorshipEmbeddedPlayer, {
-  hasBulletinWorshipPlayItems,
+  shouldShowBulletinWorshipEmbedded,
 } from './BulletinWorshipEmbeddedPlayer';
+import { normalizeWorshipPresentationMode } from '../../lib/worship-presentation-mode';
 
 export type BulletinPreviewScrollRequest = {
   slide: number;
@@ -45,6 +46,7 @@ type DeckSlideItemProps = {
   worshipItems: PlaylistItem[];
   worshipFirstSlide: number | null;
   worshipLyricsPptxBlobId: string | null;
+  worshipPresentationMode: string;
 };
 
 function deckSlidePropsEqual(prev: DeckSlideItemProps, next: DeckSlideItemProps): boolean {
@@ -58,6 +60,7 @@ function deckSlidePropsEqual(prev: DeckSlideItemProps, next: DeckSlideItemProps)
     prev.worshipPlaylistTitle !== next.worshipPlaylistTitle ||
     prev.worshipFirstSlide !== next.worshipFirstSlide ||
     prev.worshipLyricsPptxBlobId !== next.worshipLyricsPptxBlobId ||
+    prev.worshipPresentationMode !== next.worshipPresentationMode ||
     prev.worshipItems !== next.worshipItems
   ) {
     return false;
@@ -87,14 +90,19 @@ const DeckSlideItem = memo(function DeckSlideItem({
   worshipItems,
   worshipFirstSlide,
   worshipLyricsPptxBlobId,
+  worshipPresentationMode,
 }: DeckSlideItemProps) {
   const slidePatch = useMemo(() => previewPatchFull(patch), [patch]);
+  const presentationMode = normalizeWorshipPresentationMode(worshipPresentationMode);
 
   const showWorshipPlayer =
     worshipFirstSlide != null &&
     slideNumber === worshipFirstSlide &&
-    worshipPlaylistId &&
-    hasBulletinWorshipPlayItems(worshipItems);
+    shouldShowBulletinWorshipEmbedded({
+      mode: presentationMode,
+      items: worshipItems,
+      lyricsPptxBlobId: worshipLyricsPptxBlobId,
+    });
 
   // 一律懒加载：视口内升 high；当前分区近距也 high；相邻分区 low，避免抢带宽
   const priority = highlight ? 'high' : prefetch ? 'low' : 'normal';
@@ -109,12 +117,13 @@ const DeckSlideItem = memo(function DeckSlideItem({
       {showWorshipPlayer ? (
         <BulletinWorshipEmbeddedPlayer
           bulletinId={bulletinId}
-          playlistId={worshipPlaylistId!}
+          playlistId={worshipPlaylistId}
           playlistTitle={worshipPlaylistTitle}
           items={worshipItems}
           slideNumber={slideNumber}
           patch={slidePatch}
           lyricsPptxBlobId={worshipLyricsPptxBlobId}
+          presentationMode={presentationMode}
         />
       ) : (
         <BulletinPptSlidePreview
@@ -449,6 +458,7 @@ export default function BulletinFullDeckPreview({
                     worshipItems={worshipItems}
                     worshipFirstSlide={worshipFirstSlide}
                     worshipLyricsPptxBlobId={bulletin.worshipLyricsPptxBlobId}
+                    worshipPresentationMode={bulletin.worshipPresentationMode}
                   />
                 ))}
               </div>
