@@ -6199,29 +6199,16 @@
 }
 
 .bulletin-header-btn-group {
-  display: inline-flex;
+  display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0;
-  border: 1px solid var(--border-light);
-  border-radius: 10px;
-  overflow: hidden;
-  background: var(--surface);
+  gap: 0.5rem;
 }
 
 .bulletin-header-btn-group > .btn-primary,
 .bulletin-header-btn-group > .btn-secondary,
 .bulletin-header-btn-group > a.btn-secondary {
-  margin: 0;
-  border-radius: 0;
-  border: none;
-  border-right: 1px solid var(--border-light);
-  box-shadow: none;
   white-space: nowrap;
-}
-
-.bulletin-header-btn-group > :last-child {
-  border-right: none;
 }
 
 .bulletin-week-select {
