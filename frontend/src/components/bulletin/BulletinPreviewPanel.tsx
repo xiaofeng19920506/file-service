@@ -122,8 +122,22 @@ export default function BulletinPreviewPanel({
 
   useEffect(() => {
     if (!deckPlan || !scrollToPresentationSlide) return;
-    requestScroll(scrollToPresentationSlide.slide);
-  }, [scrollToPresentationSlide?.bump, deckPlan, requestScroll, scrollToPresentationSlide]);
+    const slide = scrollToPresentationSlide.slide;
+    if (slide < 1) return;
+    const sectionId = sectionIdForSlide(slide, deckPlan);
+    if (sectionId) {
+      // 先标记，避免随后 scrollToSectionId 变化又滚回分区首页
+      lastVisibleSectionRef.current = sectionId;
+      onVisibleSectionChange?.(sectionId);
+    }
+    requestScroll(slide, sectionId ?? undefined);
+  }, [
+    scrollToPresentationSlide?.bump,
+    deckPlan,
+    requestScroll,
+    scrollToPresentationSlide,
+    onVisibleSectionChange,
+  ]);
 
   useEffect(() => {
     if (!bulletin.servicePlaylistId) {

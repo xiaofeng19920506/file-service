@@ -27,6 +27,7 @@ import BulletinSectionPptEditor from '../components/bulletin/BulletinSectionPptE
 import { useBulletinLocalDraftSync } from '../hooks/useBulletinLocalDraftSync';
 import { useBulletinRealtime } from '../hooks/useBulletinRealtime';
 import { useBulletinScripturePersistence } from '../hooks/useBulletinScripturePersistence';
+import { createSlideShowBus } from '../lib/bulletin-slideshow-bus';
 import { useI18n } from '../i18n';
 import { computeOfferingTotalAmount } from '../lib/bulletin-offering';
 import { resolveAvailableSundayIso, upcomingSundayIso } from '../lib/bulletin-date';
@@ -153,6 +154,7 @@ export default function BulletinPage() {
   } | null>(null);
   const [worshipPreviewRevision, setWorshipPreviewRevision] = useState(0);
   const [previewTotalSlides, setPreviewTotalSlides] = useState<number | undefined>();
+  const [slideShowSessionId, setSlideShowSessionId] = useState<string | null>(null);
   const [worshipYoutubeOauthReady, setWorshipYoutubeOauthReady] = useState(false);
   const [worshipOauthError, setWorshipOauthError] = useState<string | null>(null);
   const [editSlidesSectionId, setEditSlidesSectionId] = useState<string | null>(() =>
@@ -242,6 +244,29 @@ export default function BulletinPage() {
     const stepIdx = BULLETIN_WIZARD_STEPS.findIndex((s) => s.id === section.editableStepId);
     if (stepIdx >= 0) setWizardStep(stepIdx);
   }, []);
+
+  /** 投影窗翻页 → 主页左侧分区与右侧预览跟随 */
+  useEffect(() => {
+    if (!slideShowSessionId) return;
+    const bus = createSlideShowBus(slideShowSessionId);
+    const unsub = bus.subscribe((message) => {
+      if (message.type === 'close') {
+        setSlideShowSessionId(null);
+        return;
+      }
+      if (message.type !== 'sync') return;
+      const slide = message.currentSlide;
+      if (!Number.isFinite(slide) || slide < 1) return;
+      setPreviewScrollToSlide((prev) => ({
+        slide,
+        bump: (prev?.bump ?? 0) + 1,
+      }));
+    });
+    return () => {
+      unsub();
+      bus.close();
+    };
+  }, [slideShowSessionId]);
 
   const selectNavSection = useCallback((sectionId: string) => {
     const targetId = resolveNavTargetSectionId(sectionId);
@@ -893,6 +918,7 @@ export default function BulletinPage() {
                 totalSlides={previewTotalSlides}
                 className="btn-secondary bulletin-slideshow-start"
                 disabled={!permissions.canViewBulletin}
+                onSessionStarted={setSlideShowSessionId}
               />
             ) : null}
             {draft ? (

@@ -101,6 +101,13 @@ export function useBulletinSlideShow(opts: {
         from: 'presenter',
       });
     } else {
+      // 投影窗启动时也广播当前页，方便主周报页跟随左侧分区
+      bus.publish({
+        type: 'sync',
+        currentSlide: stateRef.current.currentSlide,
+        totalSlides: stateRef.current.totalSlides,
+        from: 'projector',
+      });
       bus.publish({ type: 'request-sync', from: 'projector' });
     }
 

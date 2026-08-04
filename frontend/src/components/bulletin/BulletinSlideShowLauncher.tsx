@@ -20,6 +20,8 @@ type BulletinSlideShowLauncherProps = {
   totalSlides?: number;
   className?: string;
   disabled?: boolean;
+  /** 投影会话已打开（主页可跟随翻页同步左侧分区） */
+  onSessionStarted?: (sessionId: string) => void;
 };
 
 export default function BulletinSlideShowLauncher({
@@ -28,6 +30,7 @@ export default function BulletinSlideShowLauncher({
   totalSlides,
   className,
   disabled = false,
+  onSessionStarted,
 }: BulletinSlideShowLauncherProps) {
   const { t } = useI18n();
   const [starting, setStarting] = useState(false);
@@ -88,7 +91,11 @@ export default function BulletinSlideShowLauncher({
     setError(null);
     void startBulletinSlideShow({ patch, initialSlide, totalSlides })
       .then((result) => {
-        if (!result.ok) setError(t('bulletin.slideShowPopupBlocked'));
+        if (!result.ok) {
+          setError(t('bulletin.slideShowPopupBlocked'));
+          return;
+        }
+        onSessionStarted?.(result.sessionId);
       })
       .finally(() => setStarting(false));
   };
