@@ -42,8 +42,8 @@ describe('header title stabilize', () => {
     expect(out).toContain('y="2880000"');
   });
 
-  it('P24 birthday: wrap none and footer line spacing', async () => {
-    const out = stabilizeBirthdayTitleSlideXml(await slideXml(24));
+  it('P45 birthday (July template): wrap none and footer line spacing', async () => {
+    const out = stabilizeBirthdayTitleSlideXml(await slideXml(45));
     expect(out).toContain('wrap="none"');
     expect(out).toContain('spcPct val="135000"');
   });

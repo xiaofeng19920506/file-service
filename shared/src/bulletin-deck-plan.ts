@@ -2,6 +2,7 @@ import {
   BULLETIN_SECTION_TEMPLATE_SLIDES,
   bulletinSlidePathsToDelete,
 } from './bulletin-section-visibility.js';
+import { BIRTHDAY_LEGACY_SLIDE_FILES } from './bulletin-birthday-months.js';
 import { listPptxSlidesInPresentationOrder } from './pptx-presentation-order.js';
 
 export type BulletinDeckSlide = {
@@ -22,14 +23,21 @@ export type BulletinDeckPlanCore = {
 };
 
 /**
- * 按模板正文划分的分区（读完 06_14_2026.pptx 全部 38 页，含未进 deck 的 P3）。
+ * 按模板正文划分的分区。
  * 键为 slide 文件号；演示页码随删页/读经加页变化，归属只认文件号。
  */
 export const BULLETIN_TEMPLATE_SLIDE_SECTIONS: { id: string; slides: readonly number[] }[] =
   Object.entries(BULLETIN_SECTION_TEMPLATE_SLIDES).map(([id, slides]) => ({ id, slides }));
 
-/** 始终省略：P3 会前名单；P7/P9 敬拜多余页（只留 P8） */
-export const BULLETIN_OMITTED_TEMPLATE_SLIDES = [3, 7, 9, 21, 22, 23] as const;
+/** 始终省略：P3 会前；P7/P9 敬拜多余；P21/P22 奉献多余；旧生日 P23–P24 */
+export const BULLETIN_OMITTED_TEMPLATE_SLIDES = [
+  3,
+  7,
+  9,
+  21,
+  22,
+  ...BIRTHDAY_LEGACY_SLIDE_FILES,
+] as const;
 
 function buildSlideInFileToSection(
   sections: { id: string; slides: readonly number[] }[] = BULLETIN_TEMPLATE_SLIDE_SECTIONS,
@@ -116,7 +124,7 @@ export function assertSectionSlideMapCoversTemplate(): void {
       covered.add(n);
     }
   }
-  for (let n = 1; n <= 38; n++) {
+  for (let n = 1; n <= 50; n++) {
     if ((BULLETIN_OMITTED_TEMPLATE_SLIDES as readonly number[]).includes(n)) continue;
     if (!covered.has(n)) throw new Error(`unmapped_template_slide:${n}`);
   }

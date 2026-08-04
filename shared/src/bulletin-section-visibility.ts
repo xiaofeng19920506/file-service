@@ -1,3 +1,11 @@
+import {
+  BIRTHDAY_LEGACY_SLIDE_FILES,
+  BIRTHDAY_MONTH_SLIDES,
+  normalizeBirthdayMonth,
+  slideNumberForBirthdayMonth,
+  type BirthdayMonth,
+} from './bulletin-birthday-months.js';
+
 /**
  * 模板分区 → 幻灯片文件编号（与 bulletin-deck-plan / template-slide-map 对齐）。
  * 隐藏分区时按此删页。
@@ -16,8 +24,8 @@ export const BULLETIN_SECTION_TEMPLATE_SLIDES: Record<string, readonly number[]>
   family_time: [18],
   /** 奉献报告只保留前两页（P19–P20）；P21/P22 见 ALWAYS_OMIT */
   offering: [19, 20],
-  /** 生日只保留第 2 页（P24）；P23 见 ALWAYS_OMIT */
-  birthday: [24],
+  /** 1–12 月生日页（P39–P50）；旧 P23/P24 见 ALWAYS_OMIT */
+  birthday: [...BIRTHDAY_MONTH_SLIDES],
   announcements: [25, 26, 27],
   weekly_meetings: [28, 29, 30],
   staff_meeting: [31],
@@ -30,8 +38,15 @@ export const BULLETIN_SECTION_TEMPLATE_SLIDES: Record<string, readonly number[]>
   benediction: [38],
 };
 
-/** 始终删：P3 会前名单；P7/P9 敬拜；P21/P22 奉献；P23 生日提醒页 */
-export const BULLETIN_ALWAYS_OMIT_SLIDE_FILES = [3, 7, 9, 21, 22, 23] as const;
+/** 始终删：P3 会前名单；P7/P9 敬拜；P21/P22 奉献；旧生日 P23/P24 */
+export const BULLETIN_ALWAYS_OMIT_SLIDE_FILES = [
+  3,
+  7,
+  9,
+  21,
+  22,
+  ...BIRTHDAY_LEGACY_SLIDE_FILES,
+] as const;
 
 const WEEKLY_MEETING_VARIANTS = [28, 29, 30] as const;
 
@@ -87,15 +102,18 @@ function slidePath(n: number): string {
 
 /**
  * 需要从 PPTX 删除的 slide 路径：
- * - 始终删 P3（会前名单）、P7/P9（敬拜多余页，只留 P8）、P21/P22（奉献多余页，只留 P19–P20）、P23（生日提醒，只留 P24）
+ * - 始终删 P3 / P7/P9 / P21/P22 / 旧生日 P23–P24
  * - 隐藏分区对应页
  * - 本週聚会未选中的版式页
+ * - 生日未选中的月份页（12 选 1）
  */
 export function bulletinSlidePathsToDelete(input: {
   hiddenSections?: string[] | null;
   skipTestimonyWeek?: boolean;
   skipDepartmentReports?: boolean;
   weeklyMeetingVariant?: number | null;
+  /** 1–12；缺省时删掉全部生日月页 */
+  birthdayMonth?: string | number | null;
 }): string[] {
   const hidden = resolveHiddenSections(input);
   const paths = new Set<string>(
@@ -112,6 +130,17 @@ export function bulletinSlidePathsToDelete(input: {
     const keep = input.weeklyMeetingVariant ?? null;
     for (const n of WEEKLY_MEETING_VARIANTS) {
       if (keep === null || n !== keep) paths.add(slidePath(n));
+    }
+  }
+
+  if (!hidden.includes('birthday')) {
+    const month: BirthdayMonth | null =
+      input.birthdayMonth === null || input.birthdayMonth === undefined || input.birthdayMonth === ''
+        ? null
+        : normalizeBirthdayMonth(input.birthdayMonth);
+    const keepSlide = month == null ? null : slideNumberForBirthdayMonth(month);
+    for (const n of BIRTHDAY_MONTH_SLIDES) {
+      if (keepSlide === null || n !== keepSlide) paths.add(slidePath(n));
     }
   }
 

@@ -12,6 +12,10 @@ import {
 import { expandScriptureSlidesInPptx } from './bulletin-scripture-pptx-expand';
 import { expandAnnouncementSlidesInPptx } from './bulletin-announcement-pptx-expand';
 import { applyBirthdayNameGridToSlideXml } from './bulletin-birthday';
+import {
+  resolveBirthdayFields,
+  slideNumberForBirthdayMonth,
+} from './bulletin-birthday-months';
 import { buildServiceRosterReplacements } from './bulletin-roster';
 import { stabilizeOfferingReportSlideXml } from './bulletin-offering-layout';
 import {
@@ -166,15 +170,12 @@ export function patchCoverDateLineInSlideXml(
   });
 }
 
-/** 生日页 P24：仅月份标题 textIndex=2；名单走 birthdayNames → grid */
+/** 生日页 P24 起：名单走 birthdayNames → grid；月份标题在各月模板内 */
 export function buildBirthdaySlideReplacements(
-  birthdayMonth: string,
+  _birthdayMonth: string,
   _birthdayNames?: string,
 ): { textIndex: number; text: string }[] {
-  const reps: { textIndex: number; text: string }[] = [];
-  const month = birthdayMonth.trim();
-  if (month) reps.push({ textIndex: 2, text: month });
-  return reps;
+  return [];
 }
 
 /**
@@ -390,14 +391,18 @@ export function patchesForStep(stepId: string, bulletin: WeeklyBulletin): SlideT
       return patches;
     }
     case 'birthday': {
-      const month = bulletin.birthdayMonth.trim();
-      const names = bulletin.birthdayNames.trim();
-      if (!month && !names) return [];
+      const { month, namesForMonth } = resolveBirthdayFields({
+        birthdayMonth: bulletin.birthdayMonth,
+        birthdayNames: bulletin.birthdayNames,
+        serviceDate: bulletin.serviceDate,
+      });
+      const slideNumber = slideNumberForBirthdayMonth(month);
+      if (!namesForMonth.trim()) return [];
       return [
         {
-          slideNumber: 24,
-          replacements: buildBirthdaySlideReplacements(bulletin.birthdayMonth),
-          birthdayNames: bulletin.birthdayNames,
+          slideNumber,
+          replacements: [],
+          birthdayNames: namesForMonth,
         },
       ];
     }
@@ -646,8 +651,8 @@ export async function applySlidePatches(
   const zip = await JSZip.loadAsync(templateBlob);
 
   for (const patch of patches) {
-    const slidePath = pathBySlide.get(patch.slideNumber);
-    if (!slidePath) continue;
+    const slidePath =
+      pathBySlide.get(patch.slideNumber) ?? `ppt/slides/slide${patch.slideNumber}.xml`;
     const entry = zip.file(slidePath);
     if (!entry) continue;
     const xml = await entry.async('string');
@@ -664,6 +669,7 @@ export async function applySlidePatches(
     }
     if (patch.birthdayNames !== undefined) {
       nextXml = applyBirthdayNameGridToSlideXml(nextXml, patch.birthdayNames);
+      nextXml = stabilizeBirthdayTitleSlideXml(nextXml);
     }
     if (patch.replacements.length) {
       nextXml = applyIndexedTextReplacementsToSlideXml(nextXml, patch.replacements);
@@ -685,7 +691,7 @@ export async function applySlidePatches(
   {
     const specs: { slide: number; fn: (xml: string) => string }[] = [
       { slide: 19, fn: stabilizeOfferingReportSlideXml },
-      { slide: 24, fn: stabilizeBirthdayTitleSlideXml },
+      // 生日月页在 apply 时已按选中月写入；此处不再写死 slide24
       { slide: 31, fn: stabilizeStaffMeetingSlideXml },
       { slide: 32, fn: stabilizeRotationSlideXml },
       { slide: 33, fn: stabilizeTestimonySlideXml },

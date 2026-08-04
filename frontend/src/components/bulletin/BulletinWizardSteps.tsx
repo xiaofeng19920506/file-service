@@ -11,6 +11,13 @@ import {
   parseBirthdayNames,
 } from '../../lib/bulletin-birthday';
 import {
+  BIRTHDAY_MONTHS,
+  resolveBirthdayFields,
+  serializeBirthdayNamesByMonth,
+  setBirthdayNamesForMonth,
+  type BirthdayMonth,
+} from '../../lib/bulletin-birthday-months';
+import {
   ROSTER_NAME_MAX,
   joinRosterNames,
   parseRosterNames,
@@ -368,30 +375,46 @@ export function BulletinBirthdayStep({
   onPatch,
 }: BulletinStepPanelProps) {
   const { t } = useI18n();
-  const namesFromDraft = parseBirthdayNames(draft.birthdayNames);
-  // 本地保留空行：joinBirthdayNames 会滤掉空字符串，不能只用 draft 驱动 UI
+  const resolved = resolveBirthdayFields({
+    birthdayMonth: draft.birthdayMonth,
+    birthdayNames: draft.birthdayNames,
+    serviceDate: draft.serviceDate,
+  });
+  const selectedMonth = resolved.month;
+  const namesFromDraft = parseBirthdayNames(resolved.namesForMonth);
   const [rows, setRows] = useState<string[]>(() =>
     namesFromDraft.length > 0 ? namesFromDraft : [''],
   );
   const rowsRef = useRef(rows);
   rowsRef.current = rows;
+  const monthRef = useRef(selectedMonth);
+  monthRef.current = selectedMonth;
+  const namesMapRef = useRef(resolved.namesByMonth);
+  namesMapRef.current = resolved.namesByMonth;
 
   useEffect(() => {
-    const parsed = parseBirthdayNames(draft.birthdayNames);
+    const nextResolved = resolveBirthdayFields({
+      birthdayMonth: draft.birthdayMonth,
+      birthdayNames: draft.birthdayNames,
+      serviceDate: draft.serviceDate,
+    });
+    const parsed = parseBirthdayNames(nextResolved.namesForMonth);
     const next = parsed.length > 0 ? parsed : [''];
     setRows((prev) => {
       const prevFilled = prev.map((s) => s.trim()).filter(Boolean);
       const nextFilled = next.map((s) => s.trim()).filter(Boolean);
-      // 草稿名单未变时保留用户正在编辑的本地行（含空 input）
       if (
         prevFilled.join('\n') === nextFilled.join('\n') &&
-        prev.length >= next.length
+        prev.length >= next.length &&
+        monthRef.current === nextResolved.month
       ) {
         return prev;
       }
       return next;
     });
-  }, [draft.birthdayNames]);
+    monthRef.current = nextResolved.month;
+    namesMapRef.current = nextResolved.namesByMonth;
+  }, [draft.birthdayMonth, draft.birthdayNames, draft.serviceDate]);
 
   const draftJoined = joinBirthdayNames(namesFromDraft);
   const draftJoinedRef = useRef(draftJoined);
@@ -405,15 +428,18 @@ export function BulletinBirthdayStep({
     setRows(uiRows);
     rowsRef.current = uiRows;
     const joined = joinBirthdayNames(uiRows);
-    if (joined !== draftJoinedRef.current) onPatch('birthdayNames', joined);
+    if (joined === draftJoinedRef.current) return;
+    const map = setBirthdayNamesForMonth(namesMapRef.current, monthRef.current, joined);
+    namesMapRef.current = map;
+    onPatch('birthdayNames', serializeBirthdayNamesByMonth(map));
   };
 
-  // 切走步骤时若还有未 blur 的改动，补一次提交
   useEffect(() => {
     return () => {
       const joined = joinBirthdayNames(rowsRef.current);
       if (joined !== draftJoinedRef.current) {
-        onPatchRef.current('birthdayNames', joined);
+        const map = setBirthdayNamesForMonth(namesMapRef.current, monthRef.current, joined);
+        onPatchRef.current('birthdayNames', serializeBirthdayNamesByMonth(map));
       }
     };
   }, []);
@@ -422,18 +448,32 @@ export function BulletinBirthdayStep({
 
   return (
     <StepShell>
-      <TextField
-        label={t('bulletin.birthdayMonth')}
-        value={draft.birthdayMonth}
-        disabled={!canEdit}
-        commitOnBlur
-        onChange={(v) => onPatch('birthdayMonth', v)}
-      />
+      <label className="bulletin-field">
+        {t('bulletin.birthdayMonth')}
+        <select
+          value={String(selectedMonth)}
+          disabled={!canEdit}
+          onChange={(e) => {
+            commitNames();
+            const month = Number(e.target.value) as BirthdayMonth;
+            onPatch('birthdayMonth', String(month));
+          }}
+        >
+          {BIRTHDAY_MONTHS.map((m) => (
+            <option key={m} value={String(m)}>
+              {t('bulletin.birthdayMonthOption', { n: String(m) })}
+            </option>
+          ))}
+        </select>
+        <span className="bulletin-field-hint">{t('bulletin.birthdayMonthHint')}</span>
+      </label>
       <div className="bulletin-birthday-names">
-        <span className="bulletin-birthday-names-label">{t('bulletin.birthdayNames')}</span>
+        <span className="bulletin-birthday-names-label">
+          {t('bulletin.birthdayNamesForMonth', { n: String(selectedMonth) })}
+        </span>
         <div className="bulletin-birthday-names-list">
           {rows.map((name, index) => (
-            <div key={`bday-${index}`} className="bulletin-birthday-name-row">
+            <div key={`bday-${selectedMonth}-${index}`} className="bulletin-birthday-name-row">
               <input
                 type="text"
                 className="bulletin-birthday-name-input"

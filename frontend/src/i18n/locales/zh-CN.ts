@@ -195,7 +195,10 @@ export default {
     offeringTotal: '奉献总数',
     offeringTotalHint: '总数由后端自动计算（十一奉献 + 其他奉献），不可手动修改。',
     birthdayMonth: '生日月份',
+    birthdayMonthOption: '{n} 月',
+    birthdayMonthHint: '选择月份后编辑该月名单；幻灯片使用该月专用模板。',
     birthdayNames: '生日名单',
+    birthdayNamesForMonth: '{n} 月名单',
     birthdayNamesHint:
       '每人单独填写；幻灯片按阵列多列显示，姓名不会折到下一行。输入后点别处或按 Enter 再保存；可用上下箭头调整顺序，或点「自动排列」。',
     birthdayNamePlaceholder: '姓名 {n}',
@@ -387,9 +390,9 @@ export default {
       scriptureIntro: '填写本週经卷与经节；标题「读经 / Scripture Reading」保持模板不变。',
       offeringTitle: '奉献 · 第 19–20 页',
       offeringIntro: '填写上週奉献日期、十一奉献与其他奉献金额；总数自动计算并写入 PPT。',
-      birthdayTitle: '生日 · 第 24 页',
+      birthdayTitle: '生日',
       birthdayIntro:
-        '填写月份标题；名单逐人添加，幻灯片以阵列排列且姓名保持单行。可用「自动排列」按中英文顺序整理。',
+        '选择 1–12 月；每月名单分开保存。幻灯片只保留当月模板页，名单以阵列排列且姓名保持单行。可用「自动排列」按中英文顺序整理。',
       announcementsTitle: '公告',
       announcementsIntro: '编辑公告标题与内容；可添加多页。受洗公告写在下方。',
       verseTitle: '本週金句 · 第 35 页',

@@ -37,8 +37,19 @@ const CONTENT_SECTION_BY_FILE: Record<number, string> = {
   19: 'offering',
   20: 'offering',
   // 21–22 omitted (extra offering)
-  // 23 omitted (birthday reminder)
-  24: 'birthday',
+  // 23–24 omitted (legacy birthday)
+  39: 'birthday',
+  40: 'birthday',
+  41: 'birthday',
+  42: 'birthday',
+  43: 'birthday',
+  44: 'birthday',
+  45: 'birthday',
+  46: 'birthday',
+  47: 'birthday',
+  48: 'birthday',
+  49: 'birthday',
+  50: 'birthday',
   25: 'announcements',
   26: 'announcements',
   27: 'announcements',
@@ -56,7 +67,7 @@ const CONTENT_SECTION_BY_FILE: Record<number, string> = {
 };
 
 describe('bulletin deck plan from template content', () => {
-  it('maps every template file 1-38 except always-omitted slides', () => {
+  it('maps every template file 1-50 except always-omitted slides', () => {
     assertSectionSlideMapCoversTemplate();
     for (const [file, sectionId] of Object.entries(CONTENT_SECTION_BY_FILE)) {
       const n = Number(file);
@@ -65,6 +76,34 @@ describe('bulletin deck plan from template content', () => {
       )?.[0];
       expect(mapped).toBe(sectionId);
     }
+  });
+
+  it('keeps only the selected birthday month slide', async () => {
+    const tpl = await readFile(templatePath);
+    const july = await patchBulletinPreviewInPptx(tpl, {
+      serviceDate: '2026-07-26',
+      serviceTime: '11:00',
+      birthdayMonth: '7',
+      birthdayNames: JSON.stringify({ '7': '甲\n乙' }),
+      hiddenSections: [],
+      weeklyMeetingVariant: 28,
+    });
+    const julyPlan = await buildBulletinDeckPlanFromPptxBytes(july);
+    const julyBirthday = julyPlan.slides.filter((s) => s.sectionId === 'birthday');
+    expect(julyBirthday.map((s) => s.slideInFile)).toEqual([45]);
+
+    const march = await patchBulletinPreviewInPptx(tpl, {
+      serviceDate: '2026-07-26',
+      serviceTime: '11:00',
+      birthdayMonth: '3',
+      birthdayNames: JSON.stringify({ '3': '丙', '7': '甲' }),
+      hiddenSections: [],
+      weeklyMeetingVariant: 28,
+    });
+    const marchPlan = await buildBulletinDeckPlanFromPptxBytes(march);
+    expect(marchPlan.slides.filter((s) => s.sectionId === 'birthday').map((s) => s.slideInFile)).toEqual([
+      41,
+    ]);
   });
 
   it('keeps welcome and youth_prayer between communion and message', async () => {

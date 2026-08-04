@@ -239,7 +239,8 @@ export const weeklyBulletins = pgTable('weekly_bulletins', {
   offeringOtherAmount: text('offering_other_amount').notNull().default(''),
   /** 奉献总数 = 十一 + 其他（后端计算写入） */
   offeringTotalAmount: text('offering_total_amount').notNull().default(''),
-  birthdayMonth: text('birthday_month').notNull().default(''),
+  birthdayMonth: text('birthday_month').notNull().default(''), // "1"…"12"
+  /** JSON：{ "1": "甲\\n乙", ... }；兼容旧扁平名单字符串 */
   birthdayNames: text('birthday_names').notNull().default(''),
   /** 会前祷告是否在第 2 页显示主席姓名 */
   showPreServiceChairName: boolean('show_pre_service_chair_name').notNull().default(false),

@@ -25,6 +25,7 @@ describe('bulletin section visibility', () => {
     const paths = bulletinSlidePathsToDelete({
       hiddenSections: ['communion', 'testimony_week'],
       weeklyMeetingVariant: 28,
+      birthdayMonth: 7,
     });
     expect(paths).toContain('ppt/slides/slide3.xml');
     expect(paths).toContain('ppt/slides/slide7.xml');
@@ -35,5 +36,21 @@ describe('bulletin section visibility', () => {
     expect(paths).toContain('ppt/slides/slide29.xml');
     expect(paths).toContain('ppt/slides/slide30.xml');
     expect(paths).not.toContain('ppt/slides/slide28.xml');
+    // 旧生日页始终删；当月 7→P45 保留，其余月页删
+    expect(paths).toContain('ppt/slides/slide23.xml');
+    expect(paths).toContain('ppt/slides/slide24.xml');
+    expect(paths).not.toContain('ppt/slides/slide45.xml');
+    expect(paths).toContain('ppt/slides/slide39.xml');
+    expect(paths).toContain('ppt/slides/slide50.xml');
+  });
+
+  it('keeps only the selected birthday month among P39–P50', () => {
+    const march = bulletinSlidePathsToDelete({ birthdayMonth: '3' });
+    expect(march).not.toContain('ppt/slides/slide41.xml');
+    expect(march).toContain('ppt/slides/slide45.xml');
+
+    const allGone = bulletinSlidePathsToDelete({ birthdayMonth: '' });
+    expect(allGone).toContain('ppt/slides/slide41.xml');
+    expect(allGone).toContain('ppt/slides/slide45.xml');
   });
 });

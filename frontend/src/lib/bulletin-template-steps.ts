@@ -1,3 +1,5 @@
+import { BIRTHDAY_MONTH_SLIDES } from './bulletin-birthday-months';
+
 /** 周报编辑向导步骤（按 PPT 模板分区，静态页后续可标记为跳过） */
 export type BulletinWizardStep = {
   id: string;
@@ -60,7 +62,7 @@ export const BULLETIN_WIZARD_STEPS: BulletinWizardStep[] = [
   {
     id: 'birthday',
     sectionId: 'birthday',
-    slides: [24],
+    slides: [...BIRTHDAY_MONTH_SLIDES],
     labelKey: 'bulletin.steps.birthday',
     enabled: true,
   },

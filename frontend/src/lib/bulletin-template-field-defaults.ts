@@ -2,14 +2,21 @@ import type { WeeklyBulletin, BulletinAnnouncement } from '../api/bulletins';
 import { computeOfferingTotalAmount } from './bulletin-offering';
 import { normalizeTestimonyShareDate } from './bulletin-pptx-patches';
 import { formatBulletinShortDate, sundayAfterIso } from './bulletin-date';
+import {
+  birthdayMonthFromServiceDate,
+  resolveBirthdayFields,
+  serializeBirthdayNamesByMonth,
+} from './bulletin-birthday-months';
 
 /**
  * 原版模板 `06_14_2026.pptx` 上对应表单字段的默认文字。
  * 库字段为空时用这些值填充左侧输入，保证与右侧幻灯片一致。
  */
 export const BULLETIN_TEMPLATE_FIELD_DEFAULTS = {
-  birthdayMonth: '7月份生日的家人們',
-  birthdayNames: '孫强\n邱春林\nAndrew Wang',
+  birthdayMonth: '7',
+  birthdayNames: JSON.stringify({
+    '7': '孫强\n邱春林\nAndrew Wang',
+  }),
   lastWeekOfferingDate: '06/07/2026',
   /** 与模板 P19 textIndex 14/18/22 一致（读自原版幻灯片） */
   offeringTitheAmount: '3260.00',
@@ -80,10 +87,23 @@ export function withTemplateFieldDefaults(bulletin: WeeklyBulletin): WeeklyBulle
           body: a.body,
         }));
 
+  const defaultMonth = birthdayMonthFromServiceDate(bulletin.serviceDate);
+  const hasStoredMonth = Boolean(bulletin.birthdayMonth?.trim());
+  const hasStoredNames = Boolean(bulletin.birthdayNames?.trim());
+  const birthdayResolved = resolveBirthdayFields({
+    birthdayMonth: hasStoredMonth ? bulletin.birthdayMonth : String(defaultMonth),
+    birthdayNames: hasStoredNames
+      ? bulletin.birthdayNames
+      : defaultMonth === 7
+        ? BULLETIN_TEMPLATE_FIELD_DEFAULTS.birthdayNames
+        : '{}',
+    serviceDate: bulletin.serviceDate,
+  });
+
   return {
     ...bulletin,
-    birthdayMonth: pickText(bulletin.birthdayMonth, BULLETIN_TEMPLATE_FIELD_DEFAULTS.birthdayMonth),
-    birthdayNames: pickText(bulletin.birthdayNames, BULLETIN_TEMPLATE_FIELD_DEFAULTS.birthdayNames),
+    birthdayMonth: String(birthdayResolved.month),
+    birthdayNames: serializeBirthdayNamesByMonth(birthdayResolved.namesByMonth),
     lastWeekOfferingDate: pickText(
       bulletin.lastWeekOfferingDate,
       BULLETIN_TEMPLATE_FIELD_DEFAULTS.lastWeekOfferingDate,

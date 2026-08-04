@@ -203,7 +203,10 @@ const en: MessageTree = {
     offeringTotal: 'Offering total',
     offeringTotalHint: 'Total is calculated on the server (tithes + other) and cannot be edited.',
     birthdayMonth: 'Birthday month',
+    birthdayMonthOption: 'Month {n}',
+    birthdayMonthHint: 'Pick a month, then edit that month’s name list. The slide uses the month-specific template.',
     birthdayNames: 'Birthday names',
+    birthdayNamesForMonth: 'Names for month {n}',
     birthdayNamesHint:
       'Add each person separately; the slide shows a multi-column grid and keeps each name on one line. Changes save on blur or Enter. Reorder with arrows, or use Auto-arrange.',
     birthdayNamePlaceholder: 'Name {n}',
@@ -404,9 +407,9 @@ const en: MessageTree = {
       scriptureIntro: 'Weekly book name and verse range; the Scripture Reading title is not edited.',
       offeringTitle: 'Offering · slides 19–20',
       offeringIntro: 'Last week’s date, tithes, and other amounts; total is calculated automatically.',
-      birthdayTitle: 'Birthdays · slide 24',
+      birthdayTitle: 'Birthdays',
       birthdayIntro:
-        'Edit the month heading; add each name separately — the slide shows a grid and keeps each name on one line. Use Auto-arrange to sort Chinese then English names.',
+        'Choose month 1–12; each month has its own name list. Only that month’s template slide is kept. Add names in a grid (one line each). Use Auto-arrange to sort Chinese then English names.',
       announcementsTitle: 'Announcements',
       announcementsIntro: 'Edit title and body for each announcement; add pages as needed. Baptism text is below.',
       verseTitle: 'Verse of the week · slide 35',

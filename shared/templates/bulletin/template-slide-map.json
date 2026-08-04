@@ -87,10 +87,14 @@
     },
     {
       "id": "birthday",
-      "slides": [24],
-      "role": "date_sensitive",
-      "titleFromSlide": "Birthday Reminder / 生日",
-      "notes": "只保留 P24 月份与名单；P23 Month End Reminder 始终省略"
+      "slides": [39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50],
+      "role": "variant_pick_one",
+      "titleFromSlide": "Birthday / 生日（1–12 月）",
+      "notes": "P39–P50 为 1–12 月生日页，每次只保留选中月；旧 P23/P24 始终省略",
+      "monthSlideMap": {
+        "1": 39, "2": 40, "3": 41, "4": 42, "5": 43, "6": 44,
+        "7": 45, "8": 46, "9": 47, "10": 48, "11": 49, "12": 50
+      }
     },
     {
       "id": "announcements",
@@ -195,10 +199,10 @@
       ]
     },
     {
-      "slide": 24,
+      "slide": 39,
       "fields": [
-        { "key": "birthdayMonth", "textIndex": 2, "example": "7月份生日的家人們" },
-        { "key": "birthdayNames", "shapeId": "399", "layout": "grid", "example": "孫强\\n邱春林\\nAndrew Wang" }
+        { "key": "birthdayMonth", "example": "1", "notes": "存 1–12；对应 P39–P50" },
+        { "key": "birthdayNames", "shapeId": "399", "layout": "grid", "example": "{\"1\":\"甲\\n乙\"}", "notes": "JSON 按月名单" }
       ]
     },
     {

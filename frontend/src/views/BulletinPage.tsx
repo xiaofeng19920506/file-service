@@ -30,6 +30,7 @@ import { useBulletinScripturePersistence } from '../hooks/useBulletinScripturePe
 import { createSlideShowBus } from '../lib/bulletin-slideshow-bus';
 import { useI18n } from '../i18n';
 import { computeOfferingTotalAmount } from '../lib/bulletin-offering';
+import { BIRTHDAY_MONTH_SLIDES } from '../lib/bulletin-birthday-months';
 import { resolveAvailableSundayIso, upcomingSundayIso } from '../lib/bulletin-date';
 import {
   isBulletinSectionVisible,
@@ -463,8 +464,8 @@ export default function BulletinPage() {
         serviceTime: [1],
         showPreServiceChairName: [2],
         preServiceChairNames: [2],
-        birthdayMonth: [24],
-        birthdayNames: [24],
+        birthdayMonth: [...BIRTHDAY_MONTH_SLIDES],
+        birthdayNames: [...BIRTHDAY_MONTH_SLIDES],
         verseOfWeek: [35],
         lastWeekOfferingDate: [19, 20],
         offeringTitheAmount: [19, 20],

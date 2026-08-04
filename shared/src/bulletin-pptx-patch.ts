@@ -1,6 +1,10 @@
 import JSZip from 'jszip';
 import { resolveScriptureSlideBodies } from './bible-text.js';
 import { applyBirthdayNameGridToSlideXml } from './bulletin-birthday.js';
+import {
+  resolveBirthdayFields,
+  slideNumberForBirthdayMonth,
+} from './bulletin-birthday-months.js';
 import { applyScripturePagesToZip } from './bulletin-scripture-pptx.js';
 import { duplicateSlideInZip, removeSlidesFromPptxZip } from './pptx-duplicate-slide.js';
 import { bulletinSlidePathsToDelete } from './bulletin-section-visibility.js';
@@ -257,8 +261,13 @@ export function stabilizeBirthdayTitleSlideXml(xml: string): string {
   });
 }
 
-export async function stabilizeBirthdayTitleSlideInZip(zip: JSZip): Promise<void> {
-  const path = 'ppt/slides/slide24.xml';
+export async function stabilizeBirthdayTitleSlideInZip(
+  zip: JSZip,
+  birthdayMonth?: string | null,
+  serviceDate?: string | null,
+): Promise<void> {
+  const { month } = resolveBirthdayFields({ birthdayMonth, serviceDate });
+  const path = `ppt/slides/slide${slideNumberForBirthdayMonth(month)}.xml`;
   const entry = zip.file(path);
   if (!entry) return;
   zip.file(path, stabilizeBirthdayTitleSlideXml(await entry.async('string')));
@@ -613,9 +622,9 @@ export type BulletinPreviewPatchInput = {
   showPreServiceChairName?: boolean;
   /** 主席姓名（单人） */
   preServiceChairNames?: string;
-  /** 生日页月份标题（P24 textIndex 2） */
+  /** 生日月份编号 1–12（字符串） */
   birthdayMonth?: string;
-  /** 生日名单，换行/逗号分隔最多 3 人（P24 textIndex 5–7） */
+  /** 生日名单：JSON `{ "1": "甲\\n乙", ... }` 或旧扁平字符串 */
   birthdayNames?: string;
   /** 本週金句（P35：整句写入 textIndex 16，并清空 17–19） */
   verseOfWeek?: string;
@@ -753,7 +762,12 @@ export async function reapplyBulletinFormFieldsInPptx(
 
   // 表单字段最后回写，确保生日/金句预览跟左侧输入一致
   if (!options.skipBirthday) {
-    await applyBirthdayFieldsToZip(zip, input.birthdayMonth, input.birthdayNames);
+    await applyBirthdayFieldsToZip(
+      zip,
+      input.birthdayMonth,
+      input.birthdayNames,
+      input.serviceDate,
+    );
   }
   if (!options.skipVerseOfWeek) {
     await applyVerseOfWeekToZip(zip, input.verseOfWeek);
@@ -763,37 +777,33 @@ export async function reapplyBulletinFormFieldsInPptx(
 }
 
 export function buildBirthdaySlideReplacements(
-  birthdayMonth: string,
+  _birthdayMonth: string,
   _birthdayNames?: string,
 ): TextRunReplacement[] {
-  const reps: TextRunReplacement[] = [];
-  const month = birthdayMonth.trim();
-  // 名单改由 applyBirthdayNameGridToSlideXml 写入 shape 399（多列 grid）
-  if (month) reps.push({ textIndex: 2, text: month });
-  return reps;
+  // 月份标题已在各月模板页内；名单走 applyBirthdayNameGridToSlideXml
+  return [];
 }
 
 async function applyBirthdayFieldsToZip(
   zip: JSZip,
   birthdayMonth: string | undefined,
   birthdayNames: string | undefined,
+  serviceDate?: string,
 ): Promise<void> {
-  const month = birthdayMonth?.trim() ?? '';
-  const hasNamesField = birthdayNames !== undefined;
-  if (!month && !hasNamesField) return;
-  const entry = zip.file('ppt/slides/slide24.xml');
+  if (birthdayMonth === undefined && birthdayNames === undefined) return;
+  const { month, namesForMonth } = resolveBirthdayFields({
+    birthdayMonth,
+    birthdayNames,
+    serviceDate,
+  });
+  const slideNum = slideNumberForBirthdayMonth(month);
+  const entry = zip.file(`ppt/slides/slide${slideNum}.xml`);
   if (!entry) return;
   let xml = await entry.async('string');
-  if (hasNamesField) {
-    xml = applyBirthdayNameGridToSlideXml(xml, birthdayNames ?? '');
+  if (birthdayNames !== undefined) {
+    xml = applyBirthdayNameGridToSlideXml(xml, namesForMonth);
   }
-  if (month) {
-    xml = applyIndexedTextReplacementsToSlideXml(
-      xml,
-      buildBirthdaySlideReplacements(birthdayMonth ?? ''),
-    );
-  }
-  zip.file('ppt/slides/slide24.xml', xml);
+  zip.file(`ppt/slides/slide${slideNum}.xml`, xml);
 }
 
 /**
@@ -981,11 +991,16 @@ export async function patchBulletinPreviewInPptx(
     await applySlideTextOverridesToZip(zip, overrides);
   }
 
-  await applyBirthdayFieldsToZip(zip, input.birthdayMonth, input.birthdayNames);
+  await applyBirthdayFieldsToZip(
+    zip,
+    input.birthdayMonth,
+    input.birthdayNames,
+    input.serviceDate,
+  );
   await applyVerseOfWeekToZip(zip, input.verseOfWeek);
 
   // 顶栏标题单行/防裁切（须在文字覆盖之后，保留几何修正）
-  await stabilizeBirthdayTitleSlideInZip(zip);
+  await stabilizeBirthdayTitleSlideInZip(zip, input.birthdayMonth, input.serviceDate);
   await stabilizeStaffMeetingSlideInZip(zip);
   await stabilizeRotationSlideInZip(zip);
   await stabilizeTestimonySlideInZip(zip);

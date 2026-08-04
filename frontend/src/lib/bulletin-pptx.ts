@@ -2,7 +2,6 @@ import type { WeeklyBulletin } from '../api/bulletins';
 import {
   applyBulletinPatches,
   applySlidePatches,
-  buildBirthdaySlideReplacements,
   buildCoverPatch,
   buildVerseOfWeekSlideReplacements,
   bulletinDynamicTextOverrides,
@@ -10,6 +9,7 @@ import {
   patchesFromBulletin,
   type SlideTextPatch,
 } from './bulletin-pptx-patches';
+import { resolveBirthdayFields, slideNumberForBirthdayMonth } from './bulletin-birthday-months';
 import { bulletinSlidePathsToDelete } from './bulletin-section-visibility';
 import { BULLETIN_SECTION_TEMPLATE_SLIDES } from './bulletin-section-visibility';
 import { deleteSlidesFromPptx } from './pptx-preview';
@@ -94,10 +94,15 @@ export async function generateBulletinPptx(
     const month = bulletin.birthdayMonth?.trim() ?? '';
     const names = bulletin.birthdayNames?.trim() ?? '';
     if (!skip.skipBirthday && (month || names)) {
+      const { month: m, namesForMonth } = resolveBirthdayFields({
+        birthdayMonth: bulletin.birthdayMonth,
+        birthdayNames: bulletin.birthdayNames,
+        serviceDate: bulletin.serviceDate,
+      });
       reapply.push({
-        slideNumber: 24,
-        replacements: buildBirthdaySlideReplacements(bulletin.birthdayMonth ?? ''),
-        birthdayNames: bulletin.birthdayNames ?? '',
+        slideNumber: slideNumberForBirthdayMonth(m),
+        replacements: [],
+        birthdayNames: namesForMonth,
       });
     }
     if (!skip.skipVerse && bulletin.verseOfWeek?.trim()) {

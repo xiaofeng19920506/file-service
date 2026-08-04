@@ -56,6 +56,7 @@ export * from './pptx-integrity.js';
 export * from './bulletin-section-pptx-overrides.js';
 export * from './bulletin-offering.js';
 export * from './bulletin-birthday.js';
+export * from './bulletin-birthday-months.js';
 export * from './scripture-reference.js';
 export * from './bible-text.js';
 export type { ScriptureSlideBodies } from './bible-text.js';

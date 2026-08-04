@@ -11,18 +11,26 @@ import {
   bulletinDynamicTextOverrides,
   mergeSlideTextOverrides,
 } from './bulletin-pptx-patches';
+import { BIRTHDAY_LEGACY_SLIDE_FILES, BIRTHDAY_MONTH_SLIDES } from './bulletin-birthday-months';
 
 type TemplateSlideSection = { id: string; slides: number[] };
 
 /**
  * 模板内永不进入 deck 的 slide 文件编号。
- * P3：会前祷告名单；P7/P9：敬拜多余页（只保留 P8）；P21/P22：奉献多余页（只保留 P19–P20）；P23：生日提醒（只保留 P24）。
+ * P3：会前；P7/P9：敬拜多余；P21/P22：奉献多余；P23–P24：旧生日页。
  */
-export const BULLETIN_OMITTED_TEMPLATE_SLIDES = [3, 7, 9, 21, 22, 23] as const;
+export const BULLETIN_OMITTED_TEMPLATE_SLIDES = [
+  3,
+  7,
+  9,
+  21,
+  22,
+  ...BIRTHDAY_LEGACY_SLIDE_FILES,
+] as const;
 
 /**
  * 模板内 slide 文件编号 → 分区（非放映页码）。
- * 敬拜赞美只保留 P8；奉献只保留 P19–P20；生日只保留 P24。
+ * 生日为 P39–P50（1–12 月，预览/导出时只留选中月）。
  */
 export const BULLETIN_TEMPLATE_SLIDE_SECTIONS: TemplateSlideSection[] = [
   { id: 'cover', slides: [1] },
@@ -36,7 +44,7 @@ export const BULLETIN_TEMPLATE_SLIDE_SECTIONS: TemplateSlideSection[] = [
   { id: 'message', slides: [17] },
   { id: 'family_time', slides: [18] },
   { id: 'offering', slides: [19, 20] },
-  { id: 'birthday', slides: [24] },
+  { id: 'birthday', slides: [...BIRTHDAY_MONTH_SLIDES] },
   { id: 'announcements', slides: [25, 26, 27] },
   { id: 'weekly_meetings', slides: [28, 29, 30] },
   { id: 'staff_meeting', slides: [31] },

@@ -37,6 +37,8 @@ export async function buildPreviewMatchingPptx(
     | 'scriptureReference'
     | 'showPreServiceChairName'
     | 'preServiceChairNames'
+    | 'birthdayMonth'
+    | 'birthdayNames'
     | 'hiddenSections'
     | 'skipTestimonyWeek'
     | 'skipDepartmentReports'

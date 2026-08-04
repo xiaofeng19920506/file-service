@@ -144,8 +144,9 @@ describe('bulletin deck plan', () => {
       { index: 2, slideInFile: 2 },
       { index: 3, slideInFile: 4 },
       { index: 4, slideInFile: 5 },
-      { index: 5, slideInFile: 39 },
-      { index: 6, slideInFile: 40 },
+      // 读经加页：文件号须大于模板锚点上限（现含生日 P39–P50，故用 51+）
+      { index: 5, slideInFile: 51 },
+      { index: 6, slideInFile: 52 },
       { index: 7, slideInFile: 6 },
       { index: 8, slideInFile: 8 },
     ]);

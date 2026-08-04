@@ -45,6 +45,8 @@ import {
   normalizeOfferingAmountInput,
   isWorshipPresentationMode,
   normalizeWorshipPresentationMode,
+  resolveBirthdayFields,
+  serializeBirthdayNamesByMonth,
   parsePlayClipSeconds,
   assertClipRange,
   parsePlayClips,
@@ -88,7 +90,8 @@ const slidePreviewCache = new Map<string, Buffer>();
 const patchedPptxCache = new Map<string, Buffer>();
 /** 预览补丁版本；v35=分区 override 支持增删页（splice 变长） */
 /** v52：圣餐英文经文略加大至 28pt，减少底部空白 */
-const SLIDE_PREVIEW_PATCH_REV = 'v62';
+/** v63：生日 12 月页（选月保留一页 + 按月名单 JSON） */
+const SLIDE_PREVIEW_PATCH_REV = 'v63';
 
 async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   const chunks: Buffer[] = [];
@@ -213,8 +216,11 @@ function parsePreviewQuery(query: {
     showPreServiceChairName:
       query.showPreServiceChairName === '1' || query.showPreServiceChairName === 'true',
     preServiceChairNames: query.preServiceChairNames?.trim() ?? '',
-    birthdayMonth: query.birthdayMonth?.trim() ?? '',
-    birthdayNames: query.birthdayNames?.trim() ?? '',
+    ...normalizePreviewBirthdayFields(
+      query.birthdayMonth,
+      query.birthdayNames,
+      query.serviceDate,
+    ),
     verseOfWeek: query.verseOfWeek?.trim() ?? '',
     announcements: parseAnnouncementsQuery(query.announcements),
     hiddenSections: normalizeHiddenSections(
@@ -225,6 +231,36 @@ function parsePreviewQuery(query: {
     ),
     weeklyMeetingVariant:
       variantRaw && /^\d+$/.test(variantRaw) ? Number.parseInt(variantRaw, 10) : null,
+  };
+}
+
+/** 预览 query：月份 1–12，名单为按月 JSON（兼容旧扁平文案） */
+function normalizePreviewBirthdayFields(
+  birthdayMonth: string | undefined,
+  birthdayNames: string | undefined,
+  serviceDate: string | undefined,
+): { birthdayMonth: string; birthdayNames: string } {
+  const resolved = resolveBirthdayFields({
+    birthdayMonth,
+    birthdayNames,
+    serviceDate,
+  });
+  return {
+    birthdayMonth: String(resolved.month),
+    birthdayNames: serializeBirthdayNamesByMonth(resolved.namesByMonth),
+  };
+}
+
+/** 读写库：规范月份编号 + 按月 JSON 名单 */
+function normalizeStoredBirthdayFields(input: {
+  birthdayMonth?: string | null;
+  birthdayNames?: string | null;
+  serviceDate?: string | null;
+}): { birthdayMonth: string; birthdayNames: string } {
+  const resolved = resolveBirthdayFields(input);
+  return {
+    birthdayMonth: String(resolved.month),
+    birthdayNames: serializeBirthdayNamesByMonth(resolved.namesByMonth),
   };
 }
 
@@ -239,13 +275,13 @@ function previewPatchCacheSuffix(
   return `${q.serviceDate ?? ''}:${q.serviceTime}:${q.scriptureBook}:${q.scriptureReference}:${q.showPreServiceChairName}:${q.preServiceChairNames}:${q.birthdayMonth}:${q.birthdayNames}:${q.verseOfWeek}:${announcementsKey}:${hiddenKey}:${q.weeklyMeetingVariant ?? ''}:${overridesKey}`;
 }
 
-/** 不含生日字段：改名单时可复用整卷补丁，只重写 slide24 */
+/** 不含名单：改名单时可复用同月底稿，只重写当月生日页（月份变化会换 stable key） */
 function previewPatchStableSuffix(
   q: PreviewQueryFields,
   overridesKey: string,
 ): string {
   return previewPatchCacheSuffix(
-    { ...q, birthdayMonth: '', birthdayNames: '' },
+    { ...q, birthdayNames: '' },
     overridesKey,
   );
 }
@@ -375,8 +411,11 @@ async function mapBulletin(
     offeringTitheAmount: row.offeringTitheAmount,
     offeringOtherAmount: row.offeringOtherAmount,
     offeringTotalAmount: row.offeringTotalAmount,
-    birthdayMonth: row.birthdayMonth,
-    birthdayNames: row.birthdayNames,
+    ...normalizeStoredBirthdayFields({
+      birthdayMonth: row.birthdayMonth,
+      birthdayNames: row.birthdayNames,
+      serviceDate: row.serviceDate,
+    }),
     showPreServiceChairName: row.showPreServiceChairName,
     preServiceChairNames: row.preServiceChairNames,
     staffMeetingDate: row.staffMeetingDate,
@@ -604,7 +643,7 @@ async function buildPatchedBulletinPptxBuf(opts: {
     return { pptxBuf, sectionKey, overridesKey };
   }
 
-  // 生日名单连改时：复用「无生日」底稿，只重写 slide24（避免每次全量 patch）
+  // 生日名单连改时：复用「同月、空名单」底稿，只重写当月生日页（避免每次全量 patch）
   let stableBuf: Buffer | undefined = patchedPptxCache.get(stableKey);
   if (!stableBuf) {
     const fromDisk = await readBulletinPreviewDiskCache(stableKey);
@@ -671,13 +710,19 @@ async function buildPatchedBulletinPptxBuf(opts: {
   };
 
   if (!stableBuf) {
-    // 底稿不含生日文字，供后续名单编辑增量复用
-    stableBuf = await buildFull({ ...q, birthdayMonth: '', birthdayNames: '' });
+    // 底稿保留当月页、清空名单，供后续名单编辑增量复用
+    stableBuf = await buildFull({ ...q, birthdayNames: '' });
     rememberLru(patchedPptxCache, stableKey, stableBuf, 48);
     void writeBulletinPreviewDiskCache(stableKey, stableBuf);
   }
 
-  if (!q.birthdayMonth && !q.birthdayNames) {
+  const namesForSelectedMonth = resolveBirthdayFields({
+    birthdayMonth: q.birthdayMonth,
+    birthdayNames: q.birthdayNames,
+    serviceDate: q.serviceDate,
+  }).namesForMonth;
+
+  if (!namesForSelectedMonth) {
     pptxBuf = stableBuf;
   } else {
     pptxBuf = Buffer.from(
@@ -686,6 +731,7 @@ async function buildPatchedBulletinPptxBuf(opts: {
         {
           birthdayMonth: q.birthdayMonth,
           birthdayNames: q.birthdayNames,
+          serviceDate: q.serviceDate,
         },
         { skipCover: true, skipPreService: true, skipVerseOfWeek: true },
       ),
@@ -1191,8 +1237,18 @@ export function registerBulletinRoutes(
         // 总数只由后端计算，忽略客户端传入的 offeringTotalAmount
         patch.offeringTotalAmount = computeOfferingTotalAmount(tithe, other);
       }
-      assignText('birthdayMonth', 'birthdayMonth');
-      assignText('birthdayNames', 'birthdayNames');
+      if (body.birthdayMonth !== undefined || body.birthdayNames !== undefined) {
+        const next = normalizeStoredBirthdayFields({
+          birthdayMonth:
+            body.birthdayMonth !== undefined ? body.birthdayMonth : existing.birthdayMonth,
+          birthdayNames:
+            body.birthdayNames !== undefined ? body.birthdayNames : existing.birthdayNames,
+          serviceDate:
+            body.serviceDate !== undefined ? body.serviceDate : existing.serviceDate,
+        });
+        patch.birthdayMonth = next.birthdayMonth;
+        patch.birthdayNames = next.birthdayNames;
+      }
       if (body.showPreServiceChairName !== undefined) {
         patch.showPreServiceChairName = body.showPreServiceChairName;
       }
