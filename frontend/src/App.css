@@ -6172,15 +6172,17 @@
 }
 
 .bulletin-page--workspace {
-  max-width: min(1760px, 100%);
+  max-width: 100%;
   width: 100%;
+  margin-inline: 0;
   box-sizing: border-box;
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 1rem 1rem 1.25rem;
+  /* 左右贴边，仅保留上下间距 */
+  padding: 1rem 0 1.25rem;
 }
 
 .bulletin-page--workspace > .bulletin-header,
