@@ -8132,6 +8132,13 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
 
 .bulletin-worship-invite-combobox-wrap {
   position: relative;
+  width: 100%;
+}
+
+.bulletin-worship-invite-combobox-wrap > .playlists-text-input {
+  display: block;
+  width: 100%;
+  flex: none;
 }
 
 .bulletin-worship-invite-options {
@@ -8139,6 +8146,8 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   z-index: 2;
   left: 0;
   right: 0;
+  width: 100%;
+  box-sizing: border-box;
   top: calc(100% + 4px);
   margin: 0;
   padding: 0.35rem 0;
