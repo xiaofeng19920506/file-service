@@ -18,6 +18,7 @@ import {
   type BulletinWorshipPlaylistDetail,
 } from '../../api/bulletins';
 import PlaylistYoutubeSearchPanel from '../PlaylistYoutubeSearchPanel';
+import { DragHandleIcon } from '../icons';
 import WorshipTrackActions from './WorshipTrackActions';
 import { friendlyError } from '../../lib/error-messages';
 import type { PlayClip } from '../../lib/worship-presentation-mode';
@@ -57,6 +58,7 @@ export default function WorshipSongsEditor({
   const [addingUrl, setAddingUrl] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const existingVideoIds = useMemo(
     () => new Set(detail?.items.map((item) => item.youtubeVideoId) ?? []),
@@ -165,10 +167,12 @@ export default function WorshipSongsEditor({
   const handleDrop = async (toIndex: number) => {
     if (!detail || dragIndex === null || dragIndex === toIndex) {
       setDragIndex(null);
+      setDragOverIndex(null);
       return;
     }
     const reordered = reorderToFinalIndex(detail.items, dragIndex, toIndex);
     setDragIndex(null);
+    setDragOverIndex(null);
     setDetail({ ...detail, items: reordered });
     try {
       const data = inviteToken
@@ -185,6 +189,11 @@ export default function WorshipSongsEditor({
       setError(friendlyError(err instanceof Error ? err.message : 'reorder_playlist_failed', t));
       await refresh();
     }
+  };
+
+  const clearDrag = () => {
+    setDragIndex(null);
+    setDragOverIndex(null);
   };
 
   const handleClipSave = async (itemId: string, patch: { playClips: PlayClip[] | null }) => {
@@ -259,28 +268,65 @@ export default function WorshipSongsEditor({
         {detail.items.length === 0 ? (
           <p className="playlists-muted">{t('worshipSongs.empty')}</p>
         ) : (
-          <ol className="worship-songs-track-list">
-            {detail.items.map((item, index) => (
-              <li
-                key={item.id}
-                className={`worship-songs-track${dragIndex === index ? ' worship-songs-track--drag' : ''}`}
-                draggable
-                onDragStart={() => setDragIndex(index)}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={() => void handleDrop(index)}
-              >
-                <span className="worship-songs-track-order">{index + 1}</span>
-                <div className="worship-songs-track-main">
-                  <WorshipTrackActions
-                    item={item}
-                    title={item.title}
-                    onRemove={() => handleRemove(item)}
-                    onClipSave={(patch) => handleClipSave(item.id, patch)}
-                  />
-                </div>
-              </li>
-            ))}
-          </ol>
+          <>
+            {detail.items.length > 1 ? (
+              <p className="bulletin-worship-reorder-hint">{t('bulletin.worshipReorderHint')}</p>
+            ) : null}
+            <ol className="worship-songs-track-list">
+              {detail.items.map((item, index) => (
+                <li
+                  key={item.id}
+                  className={[
+                    'worship-songs-track',
+                    'is-sortable',
+                    dragIndex === index ? 'worship-songs-track--drag' : '',
+                    dragOverIndex === index && dragIndex !== index ? 'is-drag-over' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    if (dragOverIndex !== index) setDragOverIndex(index);
+                  }}
+                  onDragLeave={(e) => {
+                    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                      setDragOverIndex((prev) => (prev === index ? null : prev));
+                    }
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    void handleDrop(index);
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="bulletin-worship-track-drag-handle"
+                    draggable
+                    aria-label={t('playlists.dragToReorder')}
+                    title={t('playlists.dragToReorder')}
+                    onDragStart={(e) => {
+                      e.dataTransfer.effectAllowed = 'move';
+                      e.dataTransfer.setData('text/plain', item.id);
+                      setDragIndex(index);
+                    }}
+                    onDragEnd={clearDrag}
+                  >
+                    <DragHandleIcon />
+                  </button>
+                  <span className="worship-songs-track-order">{index + 1}</span>
+                  <div className="worship-songs-track-main">
+                    <WorshipTrackActions
+                      item={item}
+                      title={item.title}
+                      onRemove={() => handleRemove(item)}
+                      onClipSave={(patch) => handleClipSave(item.id, patch)}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </>
         )}
       </section>
 

@@ -7453,11 +7453,20 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
 .worship-songs-track {
   display: flex;
   align-items: flex-start;
-  gap: 0.75rem;
+  gap: 0.5rem;
   padding: 0.5rem 0.65rem;
   border: 1px solid var(--border-light);
   border-radius: 8px;
   background: var(--bg);
+}
+
+.worship-songs-track.worship-songs-track--drag {
+  opacity: 0.55;
+}
+
+.worship-songs-track.is-drag-over {
+  border-color: color-mix(in srgb, var(--accent, #2563eb) 55%, transparent);
+  background: color-mix(in srgb, var(--accent, #2563eb) 8%, transparent);
 }
 
 .worship-songs-track-order {
@@ -7996,7 +8005,9 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
 
 .bulletin-worship-meta-line,
 .bulletin-worship-reorder-hint {
-  display: none;
+  margin: 0 0 0.45rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
 }
 
 .bulletin-worship-youtube-modal {
@@ -8011,18 +8022,68 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   font-weight: 600;
 }
 
+.bulletin-worship-track-preview {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
 .bulletin-worship-track-preview-item {
   display: flex;
-  gap: 0.4rem;
+  gap: 0.35rem;
   align-items: flex-start;
-  padding: 0.35rem 0.2rem;
-  border-radius: 6px;
-  cursor: grab;
+  padding: 0.35rem 0.25rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+}
+
+.bulletin-worship-track-preview-item.is-sortable {
+  background: var(--surface, #fff);
 }
 
 .bulletin-worship-track-preview-item.is-dragging {
-  opacity: 0.65;
+  opacity: 0.55;
   background: var(--surface-muted, rgba(0, 0, 0, 0.04));
+}
+
+.bulletin-worship-track-preview-item.is-drag-over {
+  border-color: color-mix(in srgb, var(--accent, #2563eb) 55%, transparent);
+  background: color-mix(in srgb, var(--accent, #2563eb) 8%, transparent);
+}
+
+.bulletin-worship-track-drag-handle {
+  appearance: none;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-top: 0.1rem;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: grab;
+  touch-action: none;
+}
+
+.bulletin-worship-track-drag-handle:hover {
+  background: var(--surface-muted, rgba(0, 0, 0, 0.06));
+  color: var(--text);
+}
+
+.bulletin-worship-track-drag-handle:active {
+  cursor: grabbing;
+}
+
+.bulletin-worship-track-drag-handle .drag-handle-icon {
+  width: 14px;
+  height: 14px;
 }
 
 .bulletin-worship-track-preview-item .bulletin-worship-track-preview-title {
@@ -8060,25 +8121,11 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   margin: 0 0 0.75rem;
 }
 
-.bulletin-worship-track-preview {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.bulletin-worship-track-preview li {
-  display: flex;
-  gap: 0.5rem;
-  align-items: baseline;
-}
-
 .bulletin-worship-track-preview-order {
   flex: 0 0 1.5rem;
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
+  padding-top: 0.2rem;
 }
 
 .bulletin-worship-track-preview-title {

@@ -22,6 +22,7 @@ import {
   type WorshipPresentationMode,
 } from '../../lib/worship-presentation-mode';
 import { useI18n } from '../../i18n';
+import { DragHandleIcon } from '../icons';
 import WorshipTrackActions from '../worship/WorshipTrackActions';
 
 type BulletinWorshipStepProps = {
@@ -71,6 +72,7 @@ export default function BulletinWorshipStep({
   );
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const mode = normalizeWorshipPresentationMode(draft.worshipPresentationMode);
   const showPlaylist = worshipNeedsPlaylist(mode);
@@ -148,10 +150,12 @@ export default function BulletinWorshipStep({
   const handleDrop = async (toIndex: number) => {
     if (!canAddSongs || dragIndex === null || dragIndex === toIndex) {
       setDragIndex(null);
+      setDragOverIndex(null);
       return;
     }
     const reordered = reorderToFinalIndex(items, dragIndex, toIndex);
     setDragIndex(null);
+    setDragOverIndex(null);
     setItems(reordered);
     try {
       const data = await reorderBulletinWorshipPlaylistItems(
@@ -164,6 +168,11 @@ export default function BulletinWorshipStep({
       setError(friendlyError(err instanceof Error ? err.message : 'reorder_playlist_failed', t));
       await refreshPlaylist();
     }
+  };
+
+  const clearDrag = () => {
+    setDragIndex(null);
+    setDragOverIndex(null);
   };
 
   const handleClipSave = async (itemId: string, patch: { playClips: PlayClip[] | null }) => {
@@ -313,49 +322,90 @@ export default function BulletinWorshipStep({
           </div>
 
           {items.length > 0 ? (
-            <ol className="bulletin-worship-track-preview">
-              {items.map((item, index) => (
-                <li
-                  key={item.id}
-                  className={
-                    canAddSongs
-                      ? `bulletin-worship-track-preview-item${dragIndex === index ? ' is-dragging' : ''}`
-                      : 'bulletin-worship-track-preview-item'
-                  }
-                  draggable={canAddSongs}
-                  onDragStart={canAddSongs ? () => setDragIndex(index) : undefined}
-                  onDragOver={
-                    canAddSongs
-                      ? (e) => {
-                          e.preventDefault();
-                        }
-                      : undefined
-                  }
-                  onDrop={canAddSongs ? () => void handleDrop(index) : undefined}
-                >
-                  <span className="bulletin-worship-track-preview-order">{index + 1}</span>
-                  <div className="bulletin-worship-track-preview-main">
+            <>
+              {canAddSongs && items.length > 1 ? (
+                <p className="bulletin-worship-reorder-hint">{t('bulletin.worshipReorderHint')}</p>
+              ) : null}
+              <ol className="bulletin-worship-track-preview">
+                {items.map((item, index) => (
+                  <li
+                    key={item.id}
+                    className={[
+                      'bulletin-worship-track-preview-item',
+                      canAddSongs ? 'is-sortable' : '',
+                      dragIndex === index ? 'is-dragging' : '',
+                      dragOverIndex === index && dragIndex !== index ? 'is-drag-over' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                    onDragOver={
+                      canAddSongs
+                        ? (e) => {
+                            e.preventDefault();
+                            e.dataTransfer.dropEffect = 'move';
+                            if (dragOverIndex !== index) setDragOverIndex(index);
+                          }
+                        : undefined
+                    }
+                    onDragLeave={
+                      canAddSongs
+                        ? (e) => {
+                            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                              setDragOverIndex((prev) => (prev === index ? null : prev));
+                            }
+                          }
+                        : undefined
+                    }
+                    onDrop={
+                      canAddSongs
+                        ? (e) => {
+                            e.preventDefault();
+                            void handleDrop(index);
+                          }
+                        : undefined
+                    }
+                  >
                     {canAddSongs ? (
-                      <WorshipTrackActions
-                        item={item}
-                        title={item.title}
-                        onRemove={() => handleRemove(item)}
-                        onClipSave={(patch) => handleClipSave(item.id, patch)}
-                      />
-                    ) : (
-                      <>
-                        <span className="bulletin-worship-track-preview-title">{item.title}</span>
-                        {resolvePlayClips(item).length > 0 ? (
-                          <span className="bulletin-worship-clip-summary">
-                            {resolvePlayClips(item).map((c) => formatClipSummary(c)).join(' · ')}
-                          </span>
-                        ) : null}
-                      </>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ol>
+                      <button
+                        type="button"
+                        className="bulletin-worship-track-drag-handle"
+                        draggable
+                        aria-label={t('playlists.dragToReorder')}
+                        title={t('playlists.dragToReorder')}
+                        onDragStart={(e) => {
+                          e.dataTransfer.effectAllowed = 'move';
+                          e.dataTransfer.setData('text/plain', item.id);
+                          setDragIndex(index);
+                        }}
+                        onDragEnd={clearDrag}
+                      >
+                        <DragHandleIcon />
+                      </button>
+                    ) : null}
+                    <span className="bulletin-worship-track-preview-order">{index + 1}</span>
+                    <div className="bulletin-worship-track-preview-main">
+                      {canAddSongs ? (
+                        <WorshipTrackActions
+                          item={item}
+                          title={item.title}
+                          onRemove={() => handleRemove(item)}
+                          onClipSave={(patch) => handleClipSave(item.id, patch)}
+                        />
+                      ) : (
+                        <>
+                          <span className="bulletin-worship-track-preview-title">{item.title}</span>
+                          {resolvePlayClips(item).length > 0 ? (
+                            <span className="bulletin-worship-clip-summary">
+                              {resolvePlayClips(item).map((c) => formatClipSummary(c)).join(' · ')}
+                            </span>
+                          ) : null}
+                        </>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </>
           ) : null}
         </section>
       ) : null}
