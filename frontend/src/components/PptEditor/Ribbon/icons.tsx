@@ -60,6 +60,7 @@ export type RibbonIconName =
   | 'undo'
   | 'redo'
   | 'save'
+  | 'upload'
   | 'discard'
   | 'delete'
   | 'duplicate'
@@ -531,6 +532,13 @@ function Body({ name }: { name: RibbonIconName }) {
         <>
           <path d="M5 5h11l3 3v11H5z" {...S} />
           <path d="M9 5v5h6V5M9 19v-5h6v5" {...S} />
+        </>
+      );
+    case 'upload':
+      return (
+        <>
+          <path d="M12 15V5.5M8.5 9 12 5.5 15.5 9" {...S} />
+          <path d="M5 14.5v3.5h14v-3.5" {...S} />
         </>
       );
     case 'discard':

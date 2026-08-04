@@ -8995,11 +8995,33 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
 }
 
 .bulletin-cover-step-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0;
+  align-content: start;
+}
+
+/* 输入项 ≥5：双列排布，尽量塞进中间栏 */
+.bulletin-cover-step-fields:has(> :nth-child(5)) {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.45rem 0.65rem;
-  margin-top: 0;
-  align-content: start;
+}
+
+/* 中间栏高度紧张且已有 ≥3 项：也改双列，避免滚动 */
+@container bulletin-step (max-height: 420px) {
+  .bulletin-cover-step-fields:has(> :nth-child(3)) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem 0.65rem;
+  }
+
+  .bulletin-grid:has(> :nth-child(3)) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem 0.75rem;
+  }
 }
 
 .bulletin-cover-step-fields > .bulletin-birthday-names,

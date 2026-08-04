@@ -115,6 +115,35 @@
   font-weight: 600;
 }
 
+.ppt-rb-qat-sep {
+  width: 1px;
+  height: 1.1rem;
+  margin: 0 0.35rem;
+  background: var(--rb-border, rgba(0, 0, 0, 0.12));
+  flex-shrink: 0;
+}
+
+.ppt-rb-qat-upload {
+  gap: 0.35rem;
+  padding: 0.22rem 0.55rem;
+  border: 1px solid var(--rb-border-strong);
+  border-radius: 4px;
+  background: var(--rb-panel);
+  color: var(--rb-text);
+  font-weight: 500;
+}
+
+.ppt-rb-qat-upload:hover:not(:disabled) {
+  background: var(--rb-accent-soft);
+  border-color: var(--rb-accent);
+  color: var(--rb-accent);
+}
+
+.ppt-rb-qat-upload .ppt-rb-icon {
+  width: 16px;
+  height: 16px;
+}
+
 .ppt-rb-collapse {
   appearance: none;
   border: none;

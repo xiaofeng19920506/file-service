@@ -262,6 +262,7 @@ const en: MessageTree = {
     editSlidesOpenHint:
       'Edit text and images in the browser, or upload a PPTX to replace this whole section (page count may change).',
     editSlidesReplaceUpload: 'Upload PPT to replace section',
+    editSlidesReplaceUploadShort: 'Replace section',
     editSlidesReplaceUploadHint:
       'Pick a local .pptx to replace this section (preview and export update immediately)',
     editSlidesReplaceHint:

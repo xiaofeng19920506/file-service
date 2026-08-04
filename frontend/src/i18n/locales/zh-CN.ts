@@ -252,6 +252,7 @@ export default {
     editSlidesOpenHint:
       '可在网页里改本区文字与图片，或直接上传一份 PPTX 整段替换本区（页数可增减）。',
     editSlidesReplaceUpload: '上传 PPT 替换本区',
+    editSlidesReplaceUploadShort: '上传替换',
     editSlidesReplaceUploadHint: '选择本机 .pptx，整段替换当前分区（预览与导出立即生效）',
     editSlidesReplaceHint: '上传本机 PPTX 可整段替换本区；网页内编辑请用右键菜单「修改幻灯片」。',
     editSlidesReplacedHint: '本区已用自定义 PPT 替换。可用右键菜单继续编辑，或「恢复原版」回到模板。',

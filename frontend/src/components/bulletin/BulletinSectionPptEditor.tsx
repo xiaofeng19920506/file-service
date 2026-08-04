@@ -211,6 +211,7 @@ export default function BulletinSectionPptEditor({
         onSaveFile={persistSectionFile}
         onResetToTemplate={hasOverride ? handleResetToTemplate : undefined}
         onUploadReplace={() => replaceInputRef.current?.click()}
+        uploadReplacing={replacing}
         onClose={onClose}
       />
     </div>

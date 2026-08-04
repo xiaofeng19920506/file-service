@@ -24,7 +24,14 @@ const TABS: { id: RibbonTabId; labelKey: string }[] = [
   { id: 'view', labelKey: 'ppt.ribbon.tabView' },
 ];
 
-export default function Ribbon({ ctx }: { ctx: RibbonContextValue }) {
+type RibbonProps = {
+  ctx: RibbonContextValue;
+  /** 用本机 PPTX 整段替换本区（周报分区编辑） */
+  onUploadReplace?: () => void;
+  uploadReplacing?: boolean;
+};
+
+export default function Ribbon({ ctx, onUploadReplace, uploadReplacing = false }: RibbonProps) {
   const { t } = useI18n();
   const [tab, setTab] = useState<RibbonTabId>('home');
   const [collapsed, setCollapsed] = useState(false);
@@ -82,6 +89,26 @@ export default function Ribbon({ ctx }: { ctx: RibbonContextValue }) {
           >
             <RibbonIcon name="discard" />
           </button>
+          {onUploadReplace && (
+            <>
+              <span className="ppt-rb-qat-sep" aria-hidden />
+              <button
+                type="button"
+                className="ppt-rb-qat-btn ppt-rb-qat-upload"
+                title={t('bulletin.editSlidesReplaceUploadHint')}
+                aria-label={t('bulletin.editSlidesReplaceUpload')}
+                disabled={uploadReplacing || ctx.saving}
+                onClick={onUploadReplace}
+              >
+                <RibbonIcon name="upload" />
+                <span>
+                  {uploadReplacing
+                    ? t('bulletin.editSlidesUploading')
+                    : t('bulletin.editSlidesReplaceUploadShort')}
+                </span>
+              </button>
+            </>
+          )}
           <button
             type="button"
             className={`ppt-rb-qat-btn ppt-rb-qat-save${ctx.dirty ? ' is-dirty' : ''}`}

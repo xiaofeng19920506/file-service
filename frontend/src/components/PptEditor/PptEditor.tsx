@@ -23,6 +23,7 @@ type PptEditorProps = {
   onResetToTemplate?: () => void;
   /** 用本机 PPTX 整段替换本区 */
   onUploadReplace?: () => void;
+  uploadReplacing?: boolean;
   onClose?: () => void;
   /**
    * 锁定幻灯片结构：禁用新建/复制/删除/拖拽重排幻灯片。
@@ -42,6 +43,7 @@ export default function PptEditor({
   downloading = false,
   onResetToTemplate,
   onUploadReplace,
+  uploadReplacing = false,
   onClose,
   lockSlideStructure = false,
 }: PptEditorProps) {
@@ -318,16 +320,6 @@ export default function PptEditor({
                 {downloading ? t('library.downloading') : t('slides.download')}
               </button>
             )}
-            {onUploadReplace && (
-              <button
-                type="button"
-                className="btn-secondary btn-sm"
-                onClick={() => onUploadReplace()}
-                title={t('bulletin.editSlidesReplaceUploadHint')}
-              >
-                {t('bulletin.editSlidesReplaceUpload')}
-              </button>
-            )}
             {onResetToTemplate && (
               <button
                 type="button"
@@ -346,7 +338,11 @@ export default function PptEditor({
           </div>
         </header>
 
-        <Ribbon ctx={ribbon} />
+        <Ribbon
+          ctx={ribbon}
+          onUploadReplace={onUploadReplace}
+          uploadReplacing={uploadReplacing}
+        />
 
         <input
           ref={imageInsertInputRef}
