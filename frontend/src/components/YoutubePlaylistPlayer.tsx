@@ -7,6 +7,7 @@ import {
   type CaptionCue,
 } from '../api/youtube-captions';
 import { useI18n } from '../i18n';
+import { isDocumentFullscreen, requestElementFullscreen, exitDocumentFullscreen } from '../lib/fullscreen';
 import {
   readSubtitleLanguageForVideo,
   writeSubtitleLanguageForVideo,
@@ -871,15 +872,16 @@ export default function YoutubePlaylistPlayer({
     scheduleOverlayHide,
   ]);
 
-  /** mount 后搜索全屏按钮并 click（敬拜播放键场景） */
+  /** mount 后自动全屏：优先点击全屏按钮；原生控件则全屏视频容器 */
   useEffect(() => {
-    if (!autoEnterFullscreen || nativeControls) return;
+    if (!autoEnterFullscreen) return;
     let cancelled = false;
     let tries = 0;
 
-    const clickFullscreen = () => {
+    const enter = async () => {
       if (cancelled) return true;
-      if (isFullscreen || isLandscapeTheater) return true;
+      if (isFullscreen || isLandscapeTheater || isDocumentFullscreen()) return true;
+
       const btn =
         fullscreenBtnRef.current ??
         (frameWrapRef.current
@@ -889,19 +891,27 @@ export default function YoutubePlaylistPlayer({
         btn.click();
         return true;
       }
+
+      // 原生控件没有自定义全屏按钮：直接全屏 iframe 容器（保留 YouTube Caption）
+      if (frameWrapRef.current) {
+        const ok = await requestElementFullscreen(frameWrapRef.current);
+        if (ok) {
+          setIsFullscreen(true);
+          return true;
+        }
+      }
       return false;
     };
 
     const tick = () => {
       if (cancelled) return;
-      if (clickFullscreen()) return;
-      tries += 1;
-      if (tries < 20) {
-        window.setTimeout(tick, 50);
-      }
+      void enter().then((done) => {
+        if (cancelled || done) return;
+        tries += 1;
+        if (tries < 24) window.setTimeout(tick, 50);
+      });
     };
 
-    // 等一帧让按钮挂上 DOM
     const raf = window.requestAnimationFrame(() => {
       window.setTimeout(tick, 0);
     });
@@ -910,7 +920,26 @@ export default function YoutubePlaylistPlayer({
       cancelled = true;
       window.cancelAnimationFrame(raf);
     };
-  }, [autoEnterFullscreen, nativeControls, isFullscreen, isLandscapeTheater]);
+  }, [autoEnterFullscreen, isFullscreen, isLandscapeTheater]);
+
+  useEffect(() => {
+    if (!autoEnterFullscreen && !nativeControls) return;
+    const onFsChange = () => {
+      const el = frameWrapRef.current;
+      const active =
+        el != null &&
+        (document.fullscreenElement === el ||
+          (document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement ===
+            el);
+      setIsFullscreen(active);
+    };
+    document.addEventListener('fullscreenchange', onFsChange);
+    document.addEventListener('webkitfullscreenchange', onFsChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFsChange);
+      document.removeEventListener('webkitfullscreenchange', onFsChange);
+    };
+  }, [autoEnterFullscreen, nativeControls]);
 
   useEffect(() => {
     if (!isLandscapeTheater) return;
@@ -978,10 +1007,13 @@ export default function YoutubePlaylistPlayer({
   if (nativeControls) {
     return (
       <section
-        className={`youtube-player-section youtube-player-section--native${mobileInline ? ' youtube-player-section--mobile-inline' : ' youtube-player-section--desktop-watch'}`}
+        className={`youtube-player-section youtube-player-section--native${mobileInline ? ' youtube-player-section--mobile-inline' : ' youtube-player-section--desktop-watch'}${autoEnterFullscreen ? ' youtube-player-section--auto-fs' : ''}`}
         aria-label={t('playlists.playerSection')}
       >
-        <div className="youtube-player-frame-wrap" ref={frameWrapRef}>
+        <div
+          className={`youtube-player-frame-wrap${isFullscreen ? ' is-fullscreen' : ''}`}
+          ref={frameWrapRef}
+        >
           <div className="youtube-player-video-shell">
             <div id={elementId} className="youtube-player-frame" />
             {activeCaption && (
@@ -990,6 +1022,38 @@ export default function YoutubePlaylistPlayer({
               </div>
             )}
           </div>
+          {/* 供 mount 后自动 click；原生控件保留 YouTube Caption */}
+          <button
+            ref={fullscreenBtnRef}
+            type="button"
+            className="youtube-player-icon-btn youtube-player-fullscreen-btn youtube-player-native-fs-btn"
+            onClick={() => {
+              void (async () => {
+                const el = frameWrapRef.current;
+                if (!el) return;
+                if (isDocumentFullscreen()) {
+                  await exitDocumentFullscreen();
+                  setIsFullscreen(false);
+                  return;
+                }
+                const ok = await requestElementFullscreen(el);
+                if (ok) setIsFullscreen(true);
+              })();
+            }}
+            aria-label={isFullscreen ? t('playlists.exitFullscreen') : t('playlists.fullscreen')}
+            title={isFullscreen ? t('playlists.exitFullscreen') : t('playlists.fullscreen')}
+          >
+            <svg className="youtube-player-fs-icon" viewBox="0 0 16 16" aria-hidden>
+              <path
+                fill="currentColor"
+                d={
+                  isFullscreen
+                    ? 'M3 9v4h4v-1H4V9H3zm9-5H9v1h3v3h1V4zm-9 0v1h3V4H3zm9 9h-1v3H9v1h4V9z'
+                    : 'M2 6V2h4V1H1v5h1zm8-5v1h4v4h1V1h-5zM1 10h1v4h4v1H1v-5zm13 5v-1h-4v-1h5v5h-1z'
+                }
+              />
+            </svg>
+          </button>
         </div>
         {playerError && <p className="error-msg">{playerError}</p>}
       </section>

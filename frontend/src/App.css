@@ -6169,6 +6169,28 @@
   height: 100%;
 }
 
+.youtube-player-native-fs-btn {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  z-index: 4;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.youtube-player-native-fs-btn:hover {
+  background: rgba(0, 0, 0, 0.75);
+}
+
+.youtube-player-section--auto-fs .youtube-player-native-fs-btn {
+  /* 保留可点，避免挡住 YouTube Caption 控件 */
+  opacity: 0.85;
+}
+
 .bulletin-page {
   /* 与 shared/templates/bulletin/06_14_2026.pptx 的 p:sldSz（16:9）一致 */
   --bulletin-slide-aspect: 16 / 9;

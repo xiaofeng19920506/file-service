@@ -288,9 +288,7 @@ export default function BulletinWorshipMaximizeOverlay({
             onPrevTrack={transport.goToPrevTrack}
             canGoNext={transport.canGoNext}
             canGoPrev={transport.canGoPrev}
-            immersive
-            lockLandscape
-            nativeControls={false}
+            nativeControls
             autoEnterFullscreen={autoEnterFullscreen}
           />
         </div>
