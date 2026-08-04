@@ -7301,9 +7301,26 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   }
 
   .bulletin-workspace {
-    grid-template-columns: minmax(12.5rem, 2fr) minmax(0, 3fr) minmax(0, 5fr);
-    grid-template-rows: minmax(0, 1fr);
+    flex-direction: row;
     min-height: 0;
+  }
+
+  .bulletin-workspace-nav {
+    flex: 2 1 0;
+    min-width: 12.5rem;
+    width: 0;
+  }
+
+  .bulletin-workspace-form {
+    flex: 3 1 0;
+    min-width: 0;
+    width: 0;
+  }
+
+  .bulletin-workspace-preview {
+    flex: 5 1 0;
+    min-width: 0;
+    width: 0;
   }
 
   .bulletin-workspace-nav,
@@ -7617,6 +7634,13 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   flex-direction: column;
   gap: 0.35rem;
   width: 100%;
+}
+
+.bulletin-worship-clip-toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
 }
 
 .bulletin-worship-clip-editor-head {

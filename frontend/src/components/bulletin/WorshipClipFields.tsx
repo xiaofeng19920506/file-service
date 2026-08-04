@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { PlaylistItem } from '../../api/playlists';
 import { friendlyError } from '../../lib/error-messages';
 import {
+  formatClipSummary,
   htmlTimeToSeconds,
   resolvePlayClips,
   secondsToHtmlTime,
@@ -40,13 +41,17 @@ export default function WorshipClipFields({
   onSave,
 }: WorshipClipFieldsProps) {
   const { t } = useI18n();
-  const [rows, setRows] = useState<DraftClip[]>(() => clipsToDraft(resolvePlayClips(item)));
+  const savedClips = resolvePlayClips(item);
+  const [open, setOpen] = useState(() => savedClips.length > 0);
+  const [rows, setRows] = useState<DraftClip[]>(() => clipsToDraft(savedClips));
   const [clipError, setClipError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    setRows(clipsToDraft(resolvePlayClips(item)));
+    const clips = resolvePlayClips(item);
+    setRows(clipsToDraft(clips));
     setClipError(null);
+    if (clips.length > 0) setOpen(true);
   }, [item.id, item.playClips, item.playStartSec, item.playEndSec]);
 
   const commit = async (nextRows: DraftClip[]) => {
@@ -116,87 +121,136 @@ export default function WorshipClipFields({
     updateRow(index, { endSec: parsed });
   };
 
+  const clearClips = async () => {
+    setRows([{ startSec: 0, endSec: null, label: '' }]);
+    setOpen(false);
+    setClipError(null);
+    if (savedClips.length === 0) return;
+    setSaving(true);
+    try {
+      await onSave({ playClips: null });
+    } catch (err) {
+      setClipError(friendlyError(err instanceof Error ? err.message : 'update_failed', t));
+      setOpen(true);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="bulletin-worship-clip-editor">
-      <div className="bulletin-worship-clip-editor-head">
-        <span className="bulletin-worship-clip-editor-label">{t('bulletin.worshipClipSegments')}</span>
+      <div className="bulletin-worship-clip-toggle-row">
         <button
           type="button"
           className="btn-secondary btn-sm"
-          disabled={disabled || saving || rows.length >= 40}
-          onClick={() => setRows((prev) => [...prev, { startSec: 0, endSec: null, label: '' }])}
+          disabled={disabled || saving}
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
         >
-          {t('bulletin.worshipClipAddSegment')}
+          {open ? t('bulletin.worshipClipHide') : t('bulletin.worshipClipShow')}
         </button>
+        {!open && savedClips.length > 0 ? (
+          <span className="bulletin-worship-clip-summary">
+            {savedClips.map((c) => formatClipSummary(c)).join(' · ')}
+          </span>
+        ) : null}
+        {open && savedClips.length > 0 ? (
+          <button
+            type="button"
+            className="btn-secondary btn-sm"
+            disabled={disabled || saving}
+            onClick={() => void clearClips()}
+          >
+            {t('bulletin.worshipClipClear')}
+          </button>
+        ) : null}
       </div>
-      <ul className="bulletin-worship-clip-rows">
-        {rows.map((row, index) => {
-          const badRange = rangeInvalid(row);
-          return (
-            <li key={index} className="bulletin-worship-clip-row">
-              <label className="bulletin-worship-clip-field bulletin-worship-clip-field--label">
-                <span>{t('bulletin.worshipClipLabel')}</span>
-                <input
-                  type="text"
-                  className="bulletin-worship-clip-label-input"
-                  value={row.label}
-                  disabled={disabled || saving}
-                  onChange={(e) => updateRow(index, { label: e.target.value })}
-                  onBlur={blurCommit}
-                />
-              </label>
-              <label className="bulletin-worship-clip-field">
-                <span>{t('bulletin.worshipClipStart')}</span>
-                <input
-                  type="time"
-                  step={1}
-                  className={
-                    badRange
-                      ? 'bulletin-worship-clip-input is-invalid'
-                      : 'bulletin-worship-clip-input'
-                  }
-                  value={secondsToHtmlTime(row.startSec)}
-                  disabled={disabled || saving}
-                  onChange={(e) => onStartChange(index, e.target.value)}
-                  onBlur={blurCommit}
-                />
-              </label>
-              <label className="bulletin-worship-clip-field">
-                <span>{t('bulletin.worshipClipEnd')}</span>
-                <input
-                  type="time"
-                  step={1}
-                  className={
-                    badRange
-                      ? 'bulletin-worship-clip-input is-invalid'
-                      : 'bulletin-worship-clip-input'
-                  }
-                  value={secondsToHtmlTime(row.endSec)}
-                  disabled={disabled || saving}
-                  onChange={(e) => onEndChange(index, e.target.value)}
-                  onBlur={blurCommit}
-                />
-              </label>
-              {rows.length > 1 ? (
-                <button
-                  type="button"
-                  className="btn-secondary btn-sm"
-                  disabled={disabled || saving}
-                  onClick={() => {
-                    const next = rows.filter((_, i) => i !== index);
-                    const fallback = next.length ? next : [{ startSec: 0, endSec: null, label: '' }];
-                    setRows(fallback);
-                    void commit(fallback);
-                  }}
-                >
-                  {t('bulletin.worshipClipRemoveSegment')}
-                </button>
-              ) : null}
-            </li>
-          );
-        })}
-      </ul>
-      {clipError ? <span className="bulletin-worship-clip-error">{clipError}</span> : null}
+
+      {open ? (
+        <>
+          <div className="bulletin-worship-clip-editor-head">
+            <span className="bulletin-worship-clip-editor-label">{t('bulletin.worshipClipSegments')}</span>
+            <button
+              type="button"
+              className="btn-secondary btn-sm"
+              disabled={disabled || saving || rows.length >= 40}
+              onClick={() => setRows((prev) => [...prev, { startSec: 0, endSec: null, label: '' }])}
+            >
+              {t('bulletin.worshipClipAddSegment')}
+            </button>
+          </div>
+          <ul className="bulletin-worship-clip-rows">
+            {rows.map((row, index) => {
+              const badRange = rangeInvalid(row);
+              return (
+                <li key={index} className="bulletin-worship-clip-row">
+                  <label className="bulletin-worship-clip-field bulletin-worship-clip-field--label">
+                    <span>{t('bulletin.worshipClipLabel')}</span>
+                    <input
+                      type="text"
+                      className="bulletin-worship-clip-label-input"
+                      value={row.label}
+                      disabled={disabled || saving}
+                      onChange={(e) => updateRow(index, { label: e.target.value })}
+                      onBlur={blurCommit}
+                    />
+                  </label>
+                  <label className="bulletin-worship-clip-field">
+                    <span>{t('bulletin.worshipClipStart')}</span>
+                    <input
+                      type="time"
+                      step={1}
+                      className={
+                        badRange
+                          ? 'bulletin-worship-clip-input is-invalid'
+                          : 'bulletin-worship-clip-input'
+                      }
+                      value={secondsToHtmlTime(row.startSec)}
+                      disabled={disabled || saving}
+                      onChange={(e) => onStartChange(index, e.target.value)}
+                      onBlur={blurCommit}
+                    />
+                  </label>
+                  <label className="bulletin-worship-clip-field">
+                    <span>{t('bulletin.worshipClipEnd')}</span>
+                    <input
+                      type="time"
+                      step={1}
+                      className={
+                        badRange
+                          ? 'bulletin-worship-clip-input is-invalid'
+                          : 'bulletin-worship-clip-input'
+                      }
+                      value={secondsToHtmlTime(row.endSec)}
+                      disabled={disabled || saving}
+                      onChange={(e) => onEndChange(index, e.target.value)}
+                      onBlur={blurCommit}
+                    />
+                  </label>
+                  {rows.length > 1 ? (
+                    <button
+                      type="button"
+                      className="btn-secondary btn-sm"
+                      disabled={disabled || saving}
+                      onClick={() => {
+                        const next = rows.filter((_, i) => i !== index);
+                        const fallback = next.length
+                          ? next
+                          : [{ startSec: 0, endSec: null, label: '' }];
+                        setRows(fallback);
+                        void commit(fallback);
+                      }}
+                    >
+                      {t('bulletin.worshipClipRemoveSegment')}
+                    </button>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+          {clipError ? <span className="bulletin-worship-clip-error">{clipError}</span> : null}
+        </>
+      ) : null}
     </div>
   );
 }
