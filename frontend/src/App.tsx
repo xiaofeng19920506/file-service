@@ -221,7 +221,11 @@ function AppShellInner({
   );
 
   return (
-    <div className={`app${page === 'playlists' || page === 'playlist-lists' ? ' app-playlists' : ''}${mobileMenuOpen ? ' nav-mobile-menu-open' : ''}`}>
+    <div
+      className={`app${page === 'playlists' || page === 'playlist-lists' ? ' app-playlists' : ''}${
+        page === 'bulletin' ? ' app-bulletin' : ''
+      }${mobileMenuOpen ? ' nav-mobile-menu-open' : ''}`}
+    >
       <header className="nav">
         <div className="nav-inner">
           <div className={`nav-brand${mobileHeader ? ' nav-brand--with-back' : ''}`}>
