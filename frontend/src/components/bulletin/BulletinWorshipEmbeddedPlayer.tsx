@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
+import { flushSync } from 'react-dom';
 import type { PlaylistItem } from '../../api/playlists';
 import YoutubePlaylistPlayer, { type YoutubePlayerItem } from '../YoutubePlaylistPlayer';
 import { ListPlayIcon } from '../icons';
 import { usePlaylistPlaybackTransport } from '../../hooks/usePlaylistPlaybackTransport';
 import { useI18n } from '../../i18n';
+import { exitDocumentFullscreen, requestElementFullscreen } from '../../lib/fullscreen';
 import BulletinWorshipMaximizeOverlay from './BulletinWorshipMaximizeOverlay';
 import type { WorshipLiveMode } from '../../lib/worship-live-config';
 import {
@@ -111,15 +113,22 @@ export default function BulletinWorshipEmbeddedPlayer({
     }
   };
 
-  /** 点播放：开始播歌并自动进入全屏敬拜 */
+  /** 点播放：开播 + 最大化层，并在同一用户手势内请求浏览器全屏 */
   const handlePlay = () => {
     if (!showSlidePlay) return;
-    if (mode === 'youtube') {
-      openLive('youtube');
-      return;
-    }
-    // ppt_youtube：歌词全屏 + 背景音频
-    openLive('ppt');
+    const nextLive: WorshipLiveMode = mode === 'youtube' ? 'youtube' : 'ppt';
+    flushSync(() => {
+      openLive(nextLive);
+    });
+    const stage = document.querySelector('.bulletin-worship-maximize') as HTMLElement | null;
+    void requestElementFullscreen(stage ?? document.documentElement);
+  };
+
+  const handleCloseLive = () => {
+    void exitDocumentFullscreen();
+    setMaximized(false);
+    transport.setPlaying(false);
+    setStarted(false);
   };
 
   const bgAudio = started && hasTracks && !maximized && mode === 'ppt_youtube';
@@ -174,12 +183,8 @@ export default function BulletinWorshipEmbeddedPlayer({
         <BulletinWorshipMaximizeOverlay
           mode={liveMode}
           onModeChange={setLiveMode}
-          onClose={() => {
-            setMaximized(false);
-            // 退出全屏后停止，避免后台继续播
-            transport.setPlaying(false);
-            setStarted(false);
-          }}
+          onClose={handleCloseLive}
+          autoEnterFullscreen
           bulletinId={bulletinId}
           playlistId={playlistId ?? ''}
           playlistTitle={playlistTitle}

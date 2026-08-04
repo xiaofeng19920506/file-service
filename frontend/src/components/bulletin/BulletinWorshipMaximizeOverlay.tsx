@@ -7,6 +7,11 @@ import PlaylistAudioPlayer from '../PlaylistAudioPlayer';
 import YoutubePlaylistPlayer, { type YoutubePlayerItem } from '../YoutubePlaylistPlayer';
 import { useI18n } from '../../i18n';
 import { rebuildBulletinSlides } from '../../lib/bulletin-slides';
+import {
+  exitDocumentFullscreen,
+  isDocumentFullscreen,
+  requestElementFullscreen,
+} from '../../lib/fullscreen';
 import { parsePptxSlidesDetailed, type EditableSlide } from '../../lib/pptx-preview';
 import type { WorshipLiveMode } from '../../lib/worship-live-config';
 import { resolvePlayClips } from '../../lib/worship-presentation-mode';
@@ -26,6 +31,8 @@ type BulletinWorshipMaximizeOverlayProps = {
   mode: WorshipLiveMode;
   onModeChange: (mode: WorshipLiveMode) => void;
   onClose: () => void;
+  /** 打开时自动请求浏览器全屏（播放键同一次手势内优先） */
+  autoEnterFullscreen?: boolean;
   bulletinId: string;
   playlistId: string;
   playlistTitle: string;
@@ -79,6 +86,7 @@ export default function BulletinWorshipMaximizeOverlay({
   mode,
   onModeChange,
   onClose,
+  autoEnterFullscreen = false,
   bulletinId,
   playlistTitle,
   items,
@@ -89,6 +97,7 @@ export default function BulletinWorshipMaximizeOverlay({
   requireLyricsPptx = true,
 }: BulletinWorshipMaximizeOverlayProps) {
   const { t } = useI18n();
+  const rootRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const [slides, setSlides] = useState<EditableSlide[]>([]);
   const [slideIndex, setSlideIndex] = useState(0);
@@ -179,9 +188,17 @@ export default function BulletinWorshipMaximizeOverlay({
   }, []);
 
   useEffect(() => {
+    if (!autoEnterFullscreen) return;
+    if (isDocumentFullscreen()) return;
+    const el = rootRef.current ?? document.documentElement;
+    void requestElementFullscreen(el);
+  }, [autoEnterFullscreen]);
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
+        void exitDocumentFullscreen();
         onClose();
         return;
       }
@@ -207,23 +224,23 @@ export default function BulletinWorshipMaximizeOverlay({
   }, [mode, onClose, slides.length]);
 
   const toggleStageFullscreen = useCallback(async () => {
-    const el = stageRef.current;
-    if (!el) return;
-    const doc = document as Document & { webkitFullscreenElement?: Element };
-    if (document.fullscreenElement || doc.webkitFullscreenElement) {
-      await document.exitFullscreen();
+    if (isDocumentFullscreen()) {
+      await exitDocumentFullscreen();
       return;
     }
-    const request =
-      el.requestFullscreen ??
-      (el as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> }).webkitRequestFullscreen;
-    if (request) await request.call(el);
+    const el = rootRef.current ?? stageRef.current;
+    await requestElementFullscreen(el);
   }, []);
 
   const currentSlide = slides[slideIndex];
 
   return createPortal(
-    <div className="bulletin-worship-maximize" role="dialog" aria-modal="true">
+    <div
+      ref={rootRef}
+      className="bulletin-worship-maximize"
+      role="dialog"
+      aria-modal="true"
+    >
       <header className="bulletin-worship-maximize-topbar">
         <div className="bulletin-worship-maximize-modes" role="tablist">
           {allowYoutube ? (
@@ -250,11 +267,9 @@ export default function BulletinWorshipMaximizeOverlay({
           ) : null}
         </div>
         <div className="bulletin-worship-maximize-topbar-actions">
-          {mode === 'ppt' && (
-            <button type="button" className="btn-secondary btn-sm" onClick={() => void toggleStageFullscreen()}>
-              {t('worship.projectFullscreen')}
-            </button>
-          )}
+          <button type="button" className="btn-secondary btn-sm" onClick={() => void toggleStageFullscreen()}>
+            {t('worship.projectFullscreen')}
+          </button>
           <button type="button" className="btn-secondary btn-sm" onClick={onClose}>
             {t('bulletin.worshipSlideExitMaximize')}
           </button>
