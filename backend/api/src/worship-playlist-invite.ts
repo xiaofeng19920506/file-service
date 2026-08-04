@@ -22,6 +22,7 @@ import type { FastifyInstance, FastifyReply } from 'fastify';
 import { appendVideosToPlaylist, buildPlaylistDetail } from './playlists.js';
 import { notifyBulletinPlaylistUpdated } from './bulletin-realtime.js';
 import { parseWorshipInviteRest } from './worship-invite-path.js';
+import { reorderPlaylistItems } from './reorder-playlist-items.js';
 
 async function resolvePlaylistEditInvite(
   db: Db,
@@ -277,14 +278,7 @@ export function registerWorshipPlaylistInviteRoutes(
         return reply.code(400).send({ error: 'invalid_request' });
       }
 
-      await Promise.all(
-        itemIds.map((id, index) =>
-          db
-            .update(playlistItems)
-            .set({ sortOrder: index })
-            .where(and(eq(playlistItems.id, id), eq(playlistItems.playlistId, playlistId))),
-        ),
-      );
+      await reorderPlaylistItems(db, playlistId, itemIds);
       await db
         .update(playlists)
         .set({ updatedAt: new Date() })

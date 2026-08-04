@@ -60,6 +60,7 @@ import { getValidYoutubeAccessToken, resolveOAuthConfig } from './youtube-oauth-
 import { notifyBulletinPlaylistUpdated, notifyBulletinUpdated } from './bulletin-realtime.js';
 import { resolveMailConfig, resolveWebAppUrl, sendMail } from './mail.js';
 import { appendVideosToPlaylist, buildPlaylistDetail } from './playlists.js';
+import { reorderPlaylistItems } from './reorder-playlist-items.js';
 import {
   readBulletinPreviewDiskCache,
   writeBulletinPreviewDiskCache,
@@ -1731,14 +1732,7 @@ export function registerBulletinRoutes(
         return reply.code(400).send({ error: 'invalid_request' });
       }
 
-      await Promise.all(
-        itemIds.map((id, index) =>
-          db
-            .update(playlistItems)
-            .set({ sortOrder: index })
-            .where(and(eq(playlistItems.id, id), eq(playlistItems.playlistId, playlistId))),
-        ),
-      );
+      await reorderPlaylistItems(db, playlistId, itemIds);
       await db
         .update(playlists)
         .set({ updatedAt: new Date() })

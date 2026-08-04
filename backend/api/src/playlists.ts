@@ -19,6 +19,7 @@ import {
 import type { FastifyInstance } from 'fastify';
 import { expandSearchQuery } from './chinese-search.js';
 import { resolveMailConfig, resolveWebAppUrl, sendMail } from './mail.js';
+import { reorderPlaylistItems } from './reorder-playlist-items.js';
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -583,20 +584,7 @@ export function registerPlaylistRoutes(
         return reply.code(400).send({ error: 'invalid_order' });
       }
 
-      await db.transaction(async (tx) => {
-        for (let i = 0; i < itemIds.length; i++) {
-          await tx
-            .update(playlistItems)
-            .set({ sortOrder: -(i + 1) })
-            .where(and(eq(playlistItems.id, itemIds[i]!), eq(playlistItems.playlistId, id)));
-        }
-        for (let i = 0; i < itemIds.length; i++) {
-          await tx
-            .update(playlistItems)
-            .set({ sortOrder: i })
-            .where(and(eq(playlistItems.id, itemIds[i]!), eq(playlistItems.playlistId, id)));
-        }
-      });
+      await reorderPlaylistItems(db, id, itemIds);
 
       await db
         .update(playlists)
