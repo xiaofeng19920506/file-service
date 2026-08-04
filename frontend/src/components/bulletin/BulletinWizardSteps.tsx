@@ -4,17 +4,8 @@ import { BIBLE_BOOKS } from '../../lib/bible-books';
 import { useI18n } from '../../i18n';
 import BulletinScriptureReferenceFields from './BulletinScriptureReferenceFields';
 import {
-  BIRTHDAY_NAME_MAX,
-  arrangeBirthdayNames,
-  joinBirthdayNames,
-  moveBirthdayName,
-  parseBirthdayNames,
-} from '../../lib/bulletin-birthday';
-import {
   BIRTHDAY_MONTHS,
   resolveBirthdayFields,
-  serializeBirthdayNamesByMonth,
-  setBirthdayNamesForMonth,
   type BirthdayMonth,
 } from '../../lib/bulletin-birthday-months';
 import {
@@ -286,6 +277,8 @@ export type BulletinStepPanelProps = {
   onPatch: <K extends keyof WeeklyBulletin>(key: K, value: WeeklyBulletin[K]) => void;
   /** 公告等仍走专用保存；其它分区自动同步，可不传 */
   onSave?: () => void;
+  /** 打开分区幻灯片编辑器（生日等「改幻灯片」入口） */
+  onEditSlides?: (sectionId: string) => void;
 };
 
 export function BulletinScriptureStep({
@@ -373,78 +366,14 @@ export function BulletinBirthdayStep({
   draft,
   canEdit,
   onPatch,
+  onEditSlides,
 }: BulletinStepPanelProps) {
   const { t } = useI18n();
-  const resolved = resolveBirthdayFields({
+  const selectedMonth = resolveBirthdayFields({
     birthdayMonth: draft.birthdayMonth,
     birthdayNames: draft.birthdayNames,
     serviceDate: draft.serviceDate,
-  });
-  const selectedMonth = resolved.month;
-  const namesFromDraft = parseBirthdayNames(resolved.namesForMonth);
-  const [rows, setRows] = useState<string[]>(() =>
-    namesFromDraft.length > 0 ? namesFromDraft : [''],
-  );
-  const rowsRef = useRef(rows);
-  rowsRef.current = rows;
-  const monthRef = useRef(selectedMonth);
-  monthRef.current = selectedMonth;
-  const namesMapRef = useRef(resolved.namesByMonth);
-  namesMapRef.current = resolved.namesByMonth;
-
-  useEffect(() => {
-    const nextResolved = resolveBirthdayFields({
-      birthdayMonth: draft.birthdayMonth,
-      birthdayNames: draft.birthdayNames,
-      serviceDate: draft.serviceDate,
-    });
-    const parsed = parseBirthdayNames(nextResolved.namesForMonth);
-    const next = parsed.length > 0 ? parsed : [''];
-    setRows((prev) => {
-      const prevFilled = prev.map((s) => s.trim()).filter(Boolean);
-      const nextFilled = next.map((s) => s.trim()).filter(Boolean);
-      if (
-        prevFilled.join('\n') === nextFilled.join('\n') &&
-        prev.length >= next.length &&
-        monthRef.current === nextResolved.month
-      ) {
-        return prev;
-      }
-      return next;
-    });
-    monthRef.current = nextResolved.month;
-    namesMapRef.current = nextResolved.namesByMonth;
-  }, [draft.birthdayMonth, draft.birthdayNames, draft.serviceDate]);
-
-  const draftJoined = joinBirthdayNames(namesFromDraft);
-  const draftJoinedRef = useRef(draftJoined);
-  draftJoinedRef.current = draftJoined;
-  const onPatchRef = useRef(onPatch);
-  onPatchRef.current = onPatch;
-  const composingRef = useRef(false);
-
-  const commitNames = (next?: string[]) => {
-    const uiRows = (next ?? rowsRef.current).length > 0 ? (next ?? rowsRef.current) : [''];
-    setRows(uiRows);
-    rowsRef.current = uiRows;
-    const joined = joinBirthdayNames(uiRows);
-    if (joined === draftJoinedRef.current) return;
-    const map = setBirthdayNamesForMonth(namesMapRef.current, monthRef.current, joined);
-    namesMapRef.current = map;
-    onPatch('birthdayNames', serializeBirthdayNamesByMonth(map));
-  };
-
-  useEffect(() => {
-    return () => {
-      const joined = joinBirthdayNames(rowsRef.current);
-      if (joined !== draftJoinedRef.current) {
-        const map = setBirthdayNamesForMonth(namesMapRef.current, monthRef.current, joined);
-        onPatchRef.current('birthdayNames', serializeBirthdayNamesByMonth(map));
-      }
-    };
-  }, []);
-
-  const filledCount = rows.map((s) => s.trim()).filter(Boolean).length;
+  }).month;
 
   return (
     <StepShell>
@@ -454,7 +383,6 @@ export function BulletinBirthdayStep({
           value={String(selectedMonth)}
           disabled={!canEdit}
           onChange={(e) => {
-            commitNames();
             const month = Number(e.target.value) as BirthdayMonth;
             onPatch('birthdayMonth', String(month));
           }}
@@ -467,118 +395,15 @@ export function BulletinBirthdayStep({
         </select>
         <span className="bulletin-field-hint">{t('bulletin.birthdayMonthHint')}</span>
       </label>
-      <div className="bulletin-birthday-names">
-        <span className="bulletin-birthday-names-label">
-          {t('bulletin.birthdayNamesForMonth', { n: String(selectedMonth) })}
-        </span>
-        <div className="bulletin-birthday-names-list">
-          {rows.map((name, index) => (
-            <div key={`bday-${selectedMonth}-${index}`} className="bulletin-birthday-name-row">
-              <input
-                type="text"
-                className="bulletin-birthday-name-input"
-                value={name}
-                disabled={!canEdit}
-                placeholder={t('bulletin.birthdayNamePlaceholder', { n: String(index + 1) })}
-                onChange={(e) => {
-                  const valueNext = e.target.value;
-                  setRows((prev) => {
-                    const next = [...prev];
-                    next[index] = valueNext;
-                    rowsRef.current = next;
-                    return next;
-                  });
-                }}
-                onCompositionStart={() => {
-                  composingRef.current = true;
-                }}
-                onCompositionEnd={(e) => {
-                  composingRef.current = false;
-                  const valueNext = e.currentTarget.value;
-                  setRows((prev) => {
-                    const next = [...prev];
-                    next[index] = valueNext;
-                    rowsRef.current = next;
-                    return next;
-                  });
-                }}
-                onBlur={() => {
-                  if (composingRef.current) return;
-                  commitNames();
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !isImeKeyEvent(e)) e.currentTarget.blur();
-                }}
-              />
-              {canEdit ? (
-                <div className="bulletin-birthday-name-actions">
-                  <button
-                    type="button"
-                    className="btn-secondary btn-sm"
-                    disabled={index === 0}
-                    aria-label={t('bulletin.moveBirthdayNameUp')}
-                    onClick={() => commitNames(moveBirthdayName(rows, index, index - 1))}
-                  >
-                    ↑
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-secondary btn-sm"
-                    disabled={index >= rows.length - 1}
-                    aria-label={t('bulletin.moveBirthdayNameDown')}
-                    onClick={() => commitNames(moveBirthdayName(rows, index, index + 1))}
-                  >
-                    ↓
-                  </button>
-                  {rows.length > 1 ? (
-                    <button
-                      type="button"
-                      className="btn-secondary btn-sm"
-                      onClick={() => {
-                        commitNames(rows.filter((_, i) => i !== index));
-                      }}
-                    >
-                      {t('bulletin.removeBirthdayName')}
-                    </button>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-          ))}
-        </div>
-        {canEdit ? (
-          <div className="bulletin-birthday-names-toolbar">
-            {rows.length < BIRTHDAY_NAME_MAX ? (
-              <button
-                type="button"
-                className="btn-secondary btn-sm"
-                onClick={() => {
-                  const next = [...rowsRef.current, ''];
-                  setRows(next);
-                  rowsRef.current = next;
-                }}
-              >
-                {t('bulletin.addBirthdayName')}
-              </button>
-            ) : null}
-            {filledCount >= 2 ? (
-              <button
-                type="button"
-                className="btn-secondary btn-sm"
-                onClick={() => {
-                  const arranged = arrangeBirthdayNames(rowsRef.current);
-                  const emptyTail = rowsRef.current.length - filledCount;
-                  commitNames(
-                    emptyTail > 0 ? [...arranged, ...Array(emptyTail).fill('')] : arranged,
-                  );
-                }}
-              >
-                {t('bulletin.arrangeBirthdayNames')}
-              </button>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+      {canEdit && onEditSlides ? (
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={() => onEditSlides('birthday')}
+        >
+          {t('bulletin.editSlides')}
+        </button>
+      ) : null}
     </StepShell>
   );
 }

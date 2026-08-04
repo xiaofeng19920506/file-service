@@ -778,6 +778,7 @@ export default function BulletinPage() {
       canEdit: canManage,
       saving,
       onPatch: patchField,
+      onEditSlides: openEditSlides,
     };
 
     switch (currentStepDef?.id) {

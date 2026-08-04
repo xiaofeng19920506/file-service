@@ -14,9 +14,8 @@ import {
  */
 export const BULLETIN_TEMPLATE_FIELD_DEFAULTS = {
   birthdayMonth: '7',
-  birthdayNames: JSON.stringify({
-    '7': '孫强\n邱春林\nAndrew Wang',
-  }),
+  /** 名单改在幻灯片上编辑；表单默认不再注入样例姓名 */
+  birthdayNames: '{}',
   lastWeekOfferingDate: '06/07/2026',
   /** 与模板 P19 textIndex 14/18/22 一致（读自原版幻灯片） */
   offeringTitheAmount: '3260.00',
@@ -92,11 +91,7 @@ export function withTemplateFieldDefaults(bulletin: WeeklyBulletin): WeeklyBulle
   const hasStoredNames = Boolean(bulletin.birthdayNames?.trim());
   const birthdayResolved = resolveBirthdayFields({
     birthdayMonth: hasStoredMonth ? bulletin.birthdayMonth : String(defaultMonth),
-    birthdayNames: hasStoredNames
-      ? bulletin.birthdayNames
-      : defaultMonth === 7
-        ? BULLETIN_TEMPLATE_FIELD_DEFAULTS.birthdayNames
-        : '{}',
+    birthdayNames: hasStoredNames ? bulletin.birthdayNames : '{}',
     serviceDate: bulletin.serviceDate,
   });
 
