@@ -6231,8 +6231,8 @@
   flex: 1;
   min-height: 0;
   display: grid;
-  /* 导航 / 表单 / 预览 三栏同高对齐，各自内部滚动 */
-  grid-template-columns: minmax(10.5rem, 12.5rem) minmax(0, 1.05fr) minmax(0, 1fr);
+  /* 左 section ~20%（保底可完整展示）/ 中表单 ~30% / 右预览 ~50% */
+  grid-template-columns: minmax(12.5rem, 2fr) minmax(0, 3fr) minmax(0, 5fr);
   grid-template-rows: minmax(0, 1fr);
   gap: 1rem;
   margin: 0;
@@ -6255,6 +6255,8 @@
 }
 
 .bulletin-workspace-nav {
+  /* 覆盖上方 min-width:0，避免 section 文案被挤扁 */
+  min-width: 12.5rem;
   padding: 0.75rem 0.65rem;
   overflow-x: hidden;
   overflow-y: auto;
@@ -7254,11 +7256,10 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   .bulletin-workspace-preview {
     overflow: visible;
     min-height: auto;
-    border-left: none;
   }
 
   .bulletin-workspace-nav {
-    padding: 0.75rem 0;
+    padding: 0.75rem;
   }
 
   .bulletin-step-panel {
@@ -7290,7 +7291,7 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   }
 
   .bulletin-workspace {
-    grid-template-columns: minmax(10.5rem, 12.5rem) minmax(0, 1.05fr) minmax(0, 1fr);
+    grid-template-columns: minmax(12.5rem, 2fr) minmax(0, 3fr) minmax(0, 5fr);
     grid-template-rows: minmax(0, 1fr);
     min-height: 0;
   }
