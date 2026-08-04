@@ -46,9 +46,9 @@ describe('bulletin-birthday', () => {
     expect(pickBirthdayFontSize([long, '甲'], 3)).toBeLessThan(4000);
   });
 
-  it('rewrites birthday month slide name shape into a positioned text-box grid', async () => {
+  it('rewrites birthday anchor slide name shape into a positioned text-box grid', async () => {
     const zip = await JSZip.loadAsync(readFileSync(templatePath));
-    const xml = await zip.file('ppt/slides/slide45.xml')!.async('string');
+    const xml = await zip.file('ppt/slides/slide24.xml')!.async('string');
     const out = applyBirthdayNameGridToSlideXml(
       xml,
       joinBirthdayNames(['Aaron Wong', '王伟', '李明', 'Amy Chen']),
@@ -78,7 +78,7 @@ describe('bulletin-birthday', () => {
 
   it('re-applies grid without leaving leftover name shapes', async () => {
     const zip = await JSZip.loadAsync(readFileSync(templatePath));
-    let xml = await zip.file('ppt/slides/slide45.xml')!.async('string');
+    let xml = await zip.file('ppt/slides/slide24.xml')!.async('string');
     xml = applyBirthdayNameGridToSlideXml(xml, '甲\n乙\n丙\n丁\n戊\n己');
     xml = applyBirthdayNameGridToSlideXml(xml, '张三\n李四');
     const nameShapes = [...xml.matchAll(/name="Birthday Name (\d+)"/g)].map((m) => m[1]);

@@ -1,18 +1,28 @@
 import { BULLETIN_SECTION_TEMPLATE_SLIDES } from './bulletin-section-visibility.js';
 import type { BulletinFormFieldReapplyOptions } from './bulletin-pptx-patch.js';
+import {
+  birthdayMonthOverrideKey,
+  parseBirthdayMonthOverrideKey,
+  type BirthdayMonth,
+} from './bulletin-birthday-months.js';
 
-/** sectionId → blobId */
+/** sectionId → blobId；另支持 birthday_1…birthday_12 按月覆盖 */
 export type SectionPptxOverrides = Record<string, string>;
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isAllowedOverrideKey(key: string): boolean {
+  if (BULLETIN_SECTION_TEMPLATE_SLIDES[key]) return true;
+  return parseBirthdayMonthOverrideKey(key) != null;
+}
 
 export function normalizeSectionPptxOverrides(raw: unknown): SectionPptxOverrides {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
   const out: SectionPptxOverrides = {};
   for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
     const sectionId = key.trim();
-    if (!sectionId || !BULLETIN_SECTION_TEMPLATE_SLIDES[sectionId]) continue;
+    if (!sectionId || !isAllowedOverrideKey(sectionId)) continue;
     if (typeof value !== 'string') continue;
     const blobId = value.trim();
     if (!blobId || !UUID_RE.test(blobId)) continue;
@@ -27,7 +37,7 @@ export function setSectionPptxOverride(
   blobId: string | null,
 ): SectionPptxOverrides {
   const next = { ...normalizeSectionPptxOverrides(existing) };
-  if (!BULLETIN_SECTION_TEMPLATE_SLIDES[sectionId]) return next;
+  if (!isAllowedOverrideKey(sectionId)) return next;
   if (!blobId) {
     delete next[sectionId];
     return next;
@@ -37,12 +47,34 @@ export function setSectionPptxOverride(
   return next;
 }
 
+/** 保存生日分区时写入 birthday_N（并可同步旧 birthday 键） */
+export function setBirthdayMonthPptxOverride(
+  existing: SectionPptxOverrides | null | undefined,
+  month: BirthdayMonth,
+  blobId: string | null,
+): SectionPptxOverrides {
+  let next = setSectionPptxOverride(existing, birthdayMonthOverrideKey(month), blobId);
+  // 兼容旧 UI：birthday 指向当前月覆盖
+  next = setSectionPptxOverride(next, 'birthday', blobId);
+  return next;
+}
+
+export function clearBirthdayMonthPptxOverride(
+  existing: SectionPptxOverrides | null | undefined,
+  month: BirthdayMonth,
+): SectionPptxOverrides {
+  return setBirthdayMonthPptxOverride(existing, month, null);
+}
+
 /** 已整段替换的分区：splice 后不要再回写该区「自由文字覆盖」；
  * 封面/会前/生日/金句仍由表单驱动，必须回写，否则中间改了右侧预览不变。 */
 export function formFieldReapplyOptionsForSectionOverrides(
   overrides: SectionPptxOverrides | null | undefined,
 ): BulletinFormFieldReapplyOptions {
-  const ids = new Set(Object.keys(normalizeSectionPptxOverrides(overrides)));
+  const normalized = normalizeSectionPptxOverrides(overrides);
+  const ids = new Set(
+    Object.keys(normalized).filter((k) => Boolean(BULLETIN_SECTION_TEMPLATE_SLIDES[k])),
+  );
   const formDriven = new Set(['cover', 'pre_service', 'birthday', 'verse_of_week', 'offering']);
   const skipSlideNumbers = new Set<number>();
   for (const sectionId of ids) {

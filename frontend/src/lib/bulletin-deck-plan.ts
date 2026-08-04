@@ -17,7 +17,7 @@ type TemplateSlideSection = { id: string; slides: number[] };
 
 /**
  * 模板内永不进入 deck 的 slide 文件编号。
- * P3：会前；P7/P9：敬拜多余；P21/P22：奉献多余；P23–P24：旧生日页。
+ * P3：会前；P7/P9：敬拜多余；P21/P22：奉献多余；P23：旧生日提醒。
  */
 export const BULLETIN_OMITTED_TEMPLATE_SLIDES = [
   3,
@@ -30,7 +30,7 @@ export const BULLETIN_OMITTED_TEMPLATE_SLIDES = [
 
 /**
  * 模板内 slide 文件编号 → 分区（非放映页码）。
- * 生日为 P39–P50（1–12 月，预览/导出时只留选中月）。
+ * 生日主模板仅 P24 锚点（月库 splice）。
  */
 export const BULLETIN_TEMPLATE_SLIDE_SECTIONS: TemplateSlideSection[] = [
   { id: 'cover', slides: [1] },

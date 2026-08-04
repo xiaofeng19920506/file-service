@@ -30,7 +30,6 @@ import { useBulletinScripturePersistence } from '../hooks/useBulletinScripturePe
 import { createSlideShowBus } from '../lib/bulletin-slideshow-bus';
 import { useI18n } from '../i18n';
 import { computeOfferingTotalAmount } from '../lib/bulletin-offering';
-import { BIRTHDAY_MONTH_SLIDES } from '../lib/bulletin-birthday-months';
 import { resolveAvailableSundayIso, upcomingSundayIso } from '../lib/bulletin-date';
 import {
   isBulletinSectionVisible,
@@ -464,8 +463,8 @@ export default function BulletinPage() {
         serviceTime: [1],
         showPreServiceChairName: [2],
         preServiceChairNames: [2],
-        birthdayMonth: [...BIRTHDAY_MONTH_SLIDES],
-        birthdayNames: [...BIRTHDAY_MONTH_SLIDES],
+        birthdayMonth: [24],
+        birthdayNames: [24],
         verseOfWeek: [35],
         lastWeekOfferingDate: [19, 20],
         offeringTitheAmount: [19, 20],
@@ -489,7 +488,12 @@ export default function BulletinPage() {
       const sectionId = sectionForField[key];
       if (sectionId && next.sectionPptxOverrides?.[sectionId]) {
         const overrides = { ...next.sectionPptxOverrides };
-        delete overrides[sectionId];
+        if (key === 'birthdayMonth') {
+          // 换月只清掉旧 birthday 别名，保留 birthday_N 各月编辑
+          delete overrides.birthday;
+        } else {
+          delete overrides[sectionId];
+        }
         next = { ...next, sectionPptxOverrides: overrides };
       }
       const slides = slidesForField[key];

@@ -1,9 +1,6 @@
 import {
   BIRTHDAY_LEGACY_SLIDE_FILES,
   BIRTHDAY_MONTH_SLIDES,
-  normalizeBirthdayMonth,
-  slideNumberForBirthdayMonth,
-  type BirthdayMonth,
 } from './bulletin-birthday-months.js';
 
 /**
@@ -24,7 +21,7 @@ export const BULLETIN_SECTION_TEMPLATE_SLIDES: Record<string, readonly number[]>
   family_time: [18],
   /** 奉献报告只保留前两页（P19–P20）；P21/P22 见 ALWAYS_OMIT */
   offering: [19, 20],
-  /** 1–12 月生日页（P39–P50）；旧 P23/P24 见 ALWAYS_OMIT */
+  /** 生日：主模板仅锚点 P24；各月完整页在 templates/bulletin/birthday/ */
   birthday: [...BIRTHDAY_MONTH_SLIDES],
   announcements: [25, 26, 27],
   weekly_meetings: [28, 29, 30],
@@ -38,7 +35,7 @@ export const BULLETIN_SECTION_TEMPLATE_SLIDES: Record<string, readonly number[]>
   benediction: [38],
 };
 
-/** 始终删：P3 会前名单；P7/P9 敬拜；P21/P22 奉献；旧生日 P23/P24 */
+/** 始终删：P3 会前名单；P7/P9 敬拜；P21/P22 奉献；旧生日提醒 P23 */
 export const BULLETIN_ALWAYS_OMIT_SLIDE_FILES = [
   3,
   7,
@@ -102,17 +99,17 @@ function slidePath(n: number): string {
 
 /**
  * 需要从 PPTX 删除的 slide 路径：
- * - 始终删 P3 / P7/P9 / P21/P22 / 旧生日 P23–P24
- * - 隐藏分区对应页
+ * - 始终删 P3 / P7/P9 / P21/P22 / 旧生日提醒 P23
+ * - 隐藏分区对应页（含生日锚点 P24）
  * - 本週聚会未选中的版式页
- * - 生日未选中的月份页（12 选 1）
+ * 各月生日页已外置到模板库，不再从主模板 12 选 1。
  */
 export function bulletinSlidePathsToDelete(input: {
   hiddenSections?: string[] | null;
   skipTestimonyWeek?: boolean;
   skipDepartmentReports?: boolean;
   weeklyMeetingVariant?: number | null;
-  /** 1–12；缺省时删掉全部生日月页 */
+  /** 保留参数以兼容调用方；不再用于删页 */
   birthdayMonth?: string | number | null;
 }): string[] {
   const hidden = resolveHiddenSections(input);
@@ -130,17 +127,6 @@ export function bulletinSlidePathsToDelete(input: {
     const keep = input.weeklyMeetingVariant ?? null;
     for (const n of WEEKLY_MEETING_VARIANTS) {
       if (keep === null || n !== keep) paths.add(slidePath(n));
-    }
-  }
-
-  if (!hidden.includes('birthday')) {
-    const month: BirthdayMonth | null =
-      input.birthdayMonth === null || input.birthdayMonth === undefined || input.birthdayMonth === ''
-        ? null
-        : normalizeBirthdayMonth(input.birthdayMonth);
-    const keepSlide = month == null ? null : slideNumberForBirthdayMonth(month);
-    for (const n of BIRTHDAY_MONTH_SLIDES) {
-      if (keepSlide === null || n !== keepSlide) paths.add(slidePath(n));
     }
   }
 

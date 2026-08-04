@@ -1,5 +1,9 @@
 import { fetchBlobContent, uploadFile } from '../api/client';
 import { updateBulletin, type WeeklyBulletin } from '../api/bulletins';
+import {
+  birthdayMonthOverrideKey,
+  resolveBirthdayFields,
+} from './bulletin-birthday-months';
 import { BULLETIN_SECTION_TEMPLATE_SLIDES } from './bulletin-section-visibility';
 import { navSectionById } from './bulletin-sections';
 import { pptxSlidesAreWellFormed } from './pptx-integrity';
@@ -35,10 +39,24 @@ export async function replaceBulletinSectionPptx(
     title: `周报分区 ${sectionLabel} ${draft.serviceDate}`,
     notes: `bulletin section pptx ${draft.id} ${sectionId}`,
   });
-  const nextOverrides = {
+
+  let nextOverrides = {
     ...(draft.sectionPptxOverrides ?? {}),
     [sectionId]: uploaded.blobId,
   };
+  if (sectionId === 'birthday') {
+    const { month } = resolveBirthdayFields({
+      birthdayMonth: draft.birthdayMonth,
+      birthdayNames: draft.birthdayNames,
+      serviceDate: draft.serviceDate,
+    });
+    nextOverrides = {
+      ...nextOverrides,
+      [birthdayMonthOverrideKey(month)]: uploaded.blobId,
+      birthday: uploaded.blobId,
+    };
+  }
+
   const updated = await updateBulletin(draft.id, { sectionPptxOverrides: nextOverrides });
   return {
     ...updated,
@@ -52,6 +70,15 @@ export async function clearBulletinSectionPptx(
 ): Promise<WeeklyBulletin> {
   const nextOverrides = { ...(draft.sectionPptxOverrides ?? {}) };
   delete nextOverrides[sectionId];
+  if (sectionId === 'birthday') {
+    const { month } = resolveBirthdayFields({
+      birthdayMonth: draft.birthdayMonth,
+      birthdayNames: draft.birthdayNames,
+      serviceDate: draft.serviceDate,
+    });
+    delete nextOverrides[birthdayMonthOverrideKey(month)];
+    delete nextOverrides.birthday;
+  }
   const updated = await updateBulletin(draft.id, { sectionPptxOverrides: nextOverrides });
   return {
     ...updated,

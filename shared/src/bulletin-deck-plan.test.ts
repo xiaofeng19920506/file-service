@@ -37,19 +37,8 @@ const CONTENT_SECTION_BY_FILE: Record<number, string> = {
   19: 'offering',
   20: 'offering',
   // 21–22 omitted (extra offering)
-  // 23–24 omitted (legacy birthday)
-  39: 'birthday',
-  40: 'birthday',
-  41: 'birthday',
-  42: 'birthday',
-  43: 'birthday',
-  44: 'birthday',
-  45: 'birthday',
-  46: 'birthday',
-  47: 'birthday',
-  48: 'birthday',
-  49: 'birthday',
-  50: 'birthday',
+  // 23 omitted (birthday reminder)
+  24: 'birthday',
   25: 'announcements',
   26: 'announcements',
   27: 'announcements',
@@ -67,7 +56,7 @@ const CONTENT_SECTION_BY_FILE: Record<number, string> = {
 };
 
 describe('bulletin deck plan from template content', () => {
-  it('maps every template file 1-50 except always-omitted slides', () => {
+  it('maps every template file 1-38 except always-omitted slides', () => {
     assertSectionSlideMapCoversTemplate();
     for (const [file, sectionId] of Object.entries(CONTENT_SECTION_BY_FILE)) {
       const n = Number(file);
@@ -78,7 +67,7 @@ describe('bulletin deck plan from template content', () => {
     }
   });
 
-  it('keeps only the selected birthday month slide', async () => {
+  it('splices selected birthday month onto anchor slide 24', async () => {
     const tpl = await readFile(templatePath);
     const july = await patchBulletinPreviewInPptx(tpl, {
       serviceDate: '2026-07-26',
@@ -90,7 +79,7 @@ describe('bulletin deck plan from template content', () => {
     });
     const julyPlan = await buildBulletinDeckPlanFromPptxBytes(july);
     const julyBirthday = julyPlan.slides.filter((s) => s.sectionId === 'birthday');
-    expect(julyBirthday.map((s) => s.slideInFile)).toEqual([45]);
+    expect(julyBirthday.map((s) => s.slideInFile)).toEqual([24]);
 
     const march = await patchBulletinPreviewInPptx(tpl, {
       serviceDate: '2026-07-26',
@@ -102,8 +91,16 @@ describe('bulletin deck plan from template content', () => {
     });
     const marchPlan = await buildBulletinDeckPlanFromPptxBytes(march);
     expect(marchPlan.slides.filter((s) => s.sectionId === 'birthday').map((s) => s.slideInFile)).toEqual([
-      41,
+      24,
     ]);
+
+    // 不同月份 splice 后生日页正文应不同（标题含月份）
+    const JSZip = (await import('jszip')).default;
+    const julyXml = await (await JSZip.loadAsync(july)).file('ppt/slides/slide24.xml')!.async('string');
+    const marchXml = await (await JSZip.loadAsync(march)).file('ppt/slides/slide24.xml')!.async('string');
+    expect(julyXml).toContain('7月份');
+    expect(marchXml).toContain('3月份');
+    expect(julyXml).not.toEqual(marchXml);
   });
 
   it('keeps welcome and youth_prayer between communion and message', async () => {

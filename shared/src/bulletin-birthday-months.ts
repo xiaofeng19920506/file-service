@@ -1,13 +1,18 @@
 /**
- * 生日十二个月：月份编号 ↔ 模板 slide 文件号；名单按月 JSON。
- * 占位页目前为 slide39–50（由 scripts/expand-birthday-month-slides.ts 从 P24 复制）。
- * 正式模板到位后只改 BIRTHDAY_MONTH_SLIDE_MAP。
+ * 生日十二个月：主模板只留一个锚点页；各月完整幻灯片存在模板库目录。
+ * 预览/导出时按 birthdayMonth 取出当月页 splice 到锚点。
  */
 
 export const BIRTHDAY_MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
 export type BirthdayMonth = (typeof BIRTHDAY_MONTHS)[number];
 
-/** 月 → 模板 ppt/slides/slideN.xml 的 N */
+/** 主模板内生日锚点（旧单月页）；库中当月页会覆写此文件号 */
+export const BIRTHDAY_ANCHOR_SLIDE = 24;
+
+/**
+ * 历史：曾把 1–12 月页扩进主模板为 slide39–50。
+ * 抽出到独立库后主模板不再含这些页；此映射仅用于迁移脚本。
+ */
 export const BIRTHDAY_MONTH_SLIDE_MAP: Record<BirthdayMonth, number> = {
   1: 39,
   2: 40,
@@ -23,12 +28,11 @@ export const BIRTHDAY_MONTH_SLIDE_MAP: Record<BirthdayMonth, number> = {
   12: 50,
 };
 
-export const BIRTHDAY_MONTH_SLIDES: readonly number[] = BIRTHDAY_MONTHS.map(
-  (m) => BIRTHDAY_MONTH_SLIDE_MAP[m],
-);
+/** 分区表 / deck：生日只有锚点一页 */
+export const BIRTHDAY_MONTH_SLIDES: readonly number[] = [BIRTHDAY_ANCHOR_SLIDE];
 
-/** 旧 P23 提醒 + 旧 P24 单月页：始终从 deck 删除，改用 39–50 */
-export const BIRTHDAY_LEGACY_SLIDE_FILES = [23, 24] as const;
+/** 旧 P23 提醒页：始终从 deck 删除 */
+export const BIRTHDAY_LEGACY_SLIDE_FILES = [23] as const;
 
 export type BirthdayNamesByMonth = Partial<Record<string, string>>;
 
@@ -37,7 +41,6 @@ export function isBirthdayMonth(value: unknown): value is BirthdayMonth {
   return Number.isInteger(n) && n >= 1 && n <= 12;
 }
 
-/** 将任意存库/表单值规范为 1–12；失败则用 fallback（默认当前月） */
 export function normalizeBirthdayMonth(
   raw: unknown,
   fallback: BirthdayMonth = (new Date().getMonth() + 1) as BirthdayMonth,
@@ -49,7 +52,6 @@ export function normalizeBirthdayMonth(
     const n = Number(text);
     if (isBirthdayMonth(n)) return n;
   }
-  // 旧文案：「7月份生日的家人們」「7月」
   const m = text.match(/(\d{1,2})\s*月/);
   if (m) {
     const n = Number(m[1]);
@@ -68,11 +70,41 @@ export function birthdayMonthFromServiceDate(serviceDate: string | null | undefi
   return (new Date().getMonth() + 1) as BirthdayMonth;
 }
 
-export function slideNumberForBirthdayMonth(month: BirthdayMonth): number {
-  return BIRTHDAY_MONTH_SLIDE_MAP[month];
+/** @deprecated 主模板不再按月占页；请用 BIRTHDAY_ANCHOR_SLIDE */
+export function slideNumberForBirthdayMonth(_month: BirthdayMonth): number {
+  return BIRTHDAY_ANCHOR_SLIDE;
 }
 
-/** 解析存库 birthday_names：JSON 按月，或旧扁平字符串 */
+export function birthdayMonthLibraryFileName(month: BirthdayMonth): string {
+  return `month-${String(month).padStart(2, '0')}.pptx`;
+}
+
+/** section_pptx_overrides 中按月覆盖的 key，如 birthday_7 */
+export function birthdayMonthOverrideKey(month: BirthdayMonth): string {
+  return `birthday_${month}`;
+}
+
+export function parseBirthdayMonthOverrideKey(key: string): BirthdayMonth | null {
+  const m = /^birthday_([1-9]|1[0-2])$/.exec(key.trim());
+  if (!m) return null;
+  return Number(m[1]) as BirthdayMonth;
+}
+
+/**
+ * 从 section_pptx_overrides 解析当月覆盖 blobId。
+ * 优先 birthday_N；兼容旧的 birthday 键。
+ */
+export function resolveBirthdayMonthOverrideBlobId(
+  overrides: Record<string, string> | null | undefined,
+  month: BirthdayMonth,
+): string | null {
+  if (!overrides) return null;
+  const keyed = overrides[birthdayMonthOverrideKey(month)]?.trim();
+  if (keyed) return keyed;
+  const legacy = overrides.birthday?.trim();
+  return legacy || null;
+}
+
 export function parseBirthdayNamesByMonth(raw: unknown): BirthdayNamesByMonth {
   if (raw == null) return {};
   if (typeof raw === 'object' && !Array.isArray(raw)) {
@@ -85,15 +117,13 @@ export function parseBirthdayNamesByMonth(raw: unknown): BirthdayNamesByMonth {
   }
   const text = String(raw).trim();
   if (!text) return {};
-  // 尝试 JSON
   if (text.startsWith('{')) {
     try {
       return parseBirthdayNamesByMonth(JSON.parse(text) as unknown);
     } catch {
-      /* fall through：当扁平名单 */
+      /* fall through */
     }
   }
-  // 旧扁平名单：调用方应再 merge 到当前月
   return { __flat__: text };
 }
 
@@ -107,10 +137,6 @@ export function serializeBirthdayNamesByMonth(map: BirthdayNamesByMonth): string
   return JSON.stringify(out);
 }
 
-/**
- * 兼容读取：返回规范月份 + 按月名单。
- * 若存的是旧扁平名单，挂到 resolvedMonth 上。
- */
 export function resolveBirthdayFields(input: {
   birthdayMonth?: string | null;
   birthdayNames?: string | null;

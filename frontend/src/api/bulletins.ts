@@ -195,6 +195,20 @@ export async function fetchBulletinTemplateFile(): Promise<Blob> {
   return res.blob();
 }
 
+/** 从服务器模板库取出某月生日单页 PPTX */
+export async function fetchBirthdayMonthTemplateFile(month: number): Promise<Blob> {
+  const res = await apiFetch(`/v1/bulletins/template/birthday/${month}`);
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    const msg =
+      typeof data === 'object' && data && 'error' in data
+        ? String((data as { error: string }).error)
+        : res.statusText;
+    throw new Error(msg);
+  }
+  return res.blob();
+}
+
 export type ScriptureSlideBodies = {
   chinesePages: string[];
   englishPages: string[][];

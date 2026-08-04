@@ -1,4 +1,5 @@
 import type { WeeklyBulletin } from '../api/bulletins';
+import { fetchBirthdayMonthTemplateFile } from '../api/bulletins';
 import {
   applyBulletinPatches,
   applySlidePatches,
@@ -9,11 +10,16 @@ import {
   patchesFromBulletin,
   type SlideTextPatch,
 } from './bulletin-pptx-patches';
-import { resolveBirthdayFields, slideNumberForBirthdayMonth } from './bulletin-birthday-months';
+import {
+  BIRTHDAY_ANCHOR_SLIDE,
+  resolveBirthdayFields,
+  resolveBirthdayMonthOverrideBlobId,
+  slideNumberForBirthdayMonth,
+} from './bulletin-birthday-months';
 import { bulletinSlidePathsToDelete } from './bulletin-section-visibility';
 import { BULLETIN_SECTION_TEMPLATE_SLIDES } from './bulletin-section-visibility';
 import { deleteSlidesFromPptx } from './pptx-preview';
-import { spliceAllSectionOverridesIntoPptx } from './pptx-splice-section';
+import { spliceAllSectionOverridesIntoPptx, spliceSectionSlidesIntoPptx } from './pptx-splice-section';
 
 const PPTX_MIME =
   'application/vnd.openxmlformats-officedocument.presentationml.presentation';
@@ -57,6 +63,40 @@ export async function generateBulletinPptx(
 
   let file = await applyBulletinPatches(templateBlob, patches, scriptureBodies, filename, bulletin);
 
+  // 从月库（或当月覆盖 blob）取出生日页，覆写主模板锚点
+  const birthdayHidden = slidesToDelete(bulletin).some((p) =>
+    p.includes(`slide${BIRTHDAY_ANCHOR_SLIDE}.xml`),
+  );
+  if (!birthdayHidden) {
+    const { month } = resolveBirthdayFields({
+      birthdayMonth: bulletin.birthdayMonth,
+      birthdayNames: bulletin.birthdayNames,
+      serviceDate: bulletin.serviceDate,
+    });
+    const overrideBlobId = resolveBirthdayMonthOverrideBlobId(
+      bulletin.sectionPptxOverrides,
+      month,
+    );
+    let monthMini: Blob | null = null;
+    if (overrideBlobId && sectionBlobs?.birthday) {
+      monthMini = sectionBlobs.birthday;
+    } else if (overrideBlobId && sectionBlobs?.[`birthday_${month}`]) {
+      monthMini = sectionBlobs[`birthday_${month}`]!;
+    } else {
+      try {
+        monthMini = await fetchBirthdayMonthTemplateFile(month);
+      } catch {
+        monthMini = null;
+      }
+    }
+    if (monthMini) {
+      const buf = await spliceSectionSlidesIntoPptx(file, monthMini, [BIRTHDAY_ANCHOR_SLIDE]);
+      const copy = new Uint8Array(buf.byteLength);
+      copy.set(buf);
+      file = new File([copy.buffer], filename, { type: PPTX_MIME });
+    }
+  }
+
   const deletePaths = slidesToDelete(bulletin);
   if (deletePaths.length) {
     file = await deleteSlidesFromPptx(file, deletePaths);
@@ -64,6 +104,7 @@ export async function generateBulletinPptx(
 
   const sections: { slideInFiles: readonly number[]; miniPptx: Blob }[] = [];
   for (const [sectionId, mini] of Object.entries(sectionBlobs ?? {})) {
+    if (sectionId === 'birthday' || sectionId.startsWith('birthday_')) continue;
     const slideInFiles = BULLETIN_SECTION_TEMPLATE_SLIDES[sectionId];
     if (!slideInFiles?.length || !mini) continue;
     sections.push({ slideInFiles, miniPptx: mini });
@@ -99,11 +140,13 @@ export async function generateBulletinPptx(
         birthdayNames: bulletin.birthdayNames,
         serviceDate: bulletin.serviceDate,
       });
-      reapply.push({
-        slideNumber: slideNumberForBirthdayMonth(m),
-        replacements: [],
-        birthdayNames: namesForMonth,
-      });
+      if (namesForMonth) {
+        reapply.push({
+          slideNumber: slideNumberForBirthdayMonth(m),
+          replacements: [],
+          birthdayNames: namesForMonth,
+        });
+      }
     }
     if (!skip.skipVerse && bulletin.verseOfWeek?.trim()) {
       reapply.push({

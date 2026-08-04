@@ -38,6 +38,13 @@ import {
   normalizeSectionPptxOverrides,
   formFieldReapplyOptionsForSectionOverrides,
   BULLETIN_SECTION_TEMPLATE_SLIDES,
+  BIRTHDAY_ANCHOR_SLIDE,
+  resolveBirthdayFields,
+  serializeBirthdayNamesByMonth,
+  resolveBirthdayMonthOverrideBlobId,
+  parseBirthdayMonthOverrideKey,
+  readBirthdayMonthLibraryPptx,
+  birthdayMonthLibraryFileName,
   spliceAllSectionOverridesIntoPptx,
   pptxBufferSlidesAreWellFormed,
   contentDisposition,
@@ -45,8 +52,6 @@ import {
   normalizeOfferingAmountInput,
   isWorshipPresentationMode,
   normalizeWorshipPresentationMode,
-  resolveBirthdayFields,
-  serializeBirthdayNamesByMonth,
   parsePlayClipSeconds,
   assertClipRange,
   parsePlayClips,
@@ -90,8 +95,8 @@ const slidePreviewCache = new Map<string, Buffer>();
 const patchedPptxCache = new Map<string, Buffer>();
 /** 预览补丁版本；v35=分区 override 支持增删页（splice 变长） */
 /** v52：圣餐英文经文略加大至 28pt，减少底部空白 */
-/** v63：生日 12 月页（选月保留一页 + 按月名单 JSON） */
-const SLIDE_PREVIEW_PATCH_REV = 'v63';
+/** v64：生日月页外置到模板库，主模板仅 P24 锚点 */
+const SLIDE_PREVIEW_PATCH_REV = 'v64';
 
 async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   const chunks: Buffer[] = [];
@@ -119,18 +124,44 @@ async function loadBlobBuffer(
 /**
  * 把分区覆盖 PPT 拼进主模板。结构损坏的 mini-PPTX（缺闭合标签）LibreOffice
  * 只能画出背景图、文字全无——必须跳过，退回模板页。
+ * 生日按月覆盖：用 birthday_N（或旧 birthday）覆写锚点 P24。
  */
 async function applySectionPptxOverridesToBuf(
   db: Db,
   storage: ObjectStorage,
   base: Buffer,
   sectionOverrides: Record<string, string>,
+  birthdayMonth?: string | null,
+  serviceDate?: string | null,
 ): Promise<{ buf: Buffer; skippedSectionIds: string[] }> {
   const entries = Object.entries(sectionOverrides);
   if (!entries.length) return { buf: base, skippedSectionIds: [] };
   const sections: { slideInFiles: readonly number[]; miniPptx: Buffer }[] = [];
   const skippedSectionIds: string[] = [];
+  const { month } = resolveBirthdayFields({ birthdayMonth, serviceDate });
+  const birthdayBlobId = resolveBirthdayMonthOverrideBlobId(sectionOverrides, month);
+  let birthdayHandled = false;
+
   for (const [sectionId, blobId] of entries) {
+    if (parseBirthdayMonthOverrideKey(sectionId)) continue;
+    if (sectionId === 'birthday') {
+      if (birthdayHandled || !birthdayBlobId) continue;
+      birthdayHandled = true;
+      const mini = await loadBlobBuffer(db, storage, birthdayBlobId);
+      if (!mini) {
+        skippedSectionIds.push(birthdayMonthOverrideSkipId(month));
+        continue;
+      }
+      if (!(await pptxBufferSlidesAreWellFormed(mini))) {
+        console.warn(
+          `[bulletin] skip malformed birthday month override month=${month} blob=${birthdayBlobId}`,
+        );
+        skippedSectionIds.push(birthdayMonthOverrideSkipId(month));
+        continue;
+      }
+      sections.push({ slideInFiles: [BIRTHDAY_ANCHOR_SLIDE], miniPptx: mini });
+      continue;
+    }
     const slides = BULLETIN_SECTION_TEMPLATE_SLIDES[sectionId];
     if (!slides?.length) continue;
     const mini = await loadBlobBuffer(db, storage, blobId);
@@ -147,11 +178,32 @@ async function applySectionPptxOverridesToBuf(
     }
     sections.push({ slideInFiles: slides, miniPptx: mini });
   }
+
+  // 仅有 birthday_N、没有 birthday 键时仍要应用当月覆盖
+  if (!birthdayHandled && birthdayBlobId) {
+    birthdayHandled = true;
+    const mini = await loadBlobBuffer(db, storage, birthdayBlobId);
+    if (!mini) {
+      skippedSectionIds.push(birthdayMonthOverrideSkipId(month));
+    } else if (!(await pptxBufferSlidesAreWellFormed(mini))) {
+      console.warn(
+        `[bulletin] skip malformed birthday month override month=${month} blob=${birthdayBlobId}`,
+      );
+      skippedSectionIds.push(birthdayMonthOverrideSkipId(month));
+    } else {
+      sections.push({ slideInFiles: [BIRTHDAY_ANCHOR_SLIDE], miniPptx: mini });
+    }
+  }
+
   if (!sections.length) return { buf: base, skippedSectionIds };
   return {
     buf: Buffer.from(await spliceAllSectionOverridesIntoPptx(base, sections)),
     skippedSectionIds,
   };
+}
+
+function birthdayMonthOverrideSkipId(month: number): string {
+  return `birthday_${month}`;
 }
 
 function slideOverridesCacheKey(overrides: readonly SlideTextOverride[]): string {
@@ -673,7 +725,14 @@ async function buildPatchedBulletinPptxBuf(opts: {
       }),
     );
     built = Buffer.from(
-      await applySectionPptxOverridesToBuf(db, storage, built, sectionOverrides).then(
+      await applySectionPptxOverridesToBuf(
+        db,
+        storage,
+        built,
+        sectionOverrides,
+        query.birthdayMonth,
+        query.serviceDate,
+      ).then(
         async ({ buf, skippedSectionIds }) => {
           if (bulletinId && skippedSectionIds.length) {
             const next = { ...sectionOverrides };
@@ -799,6 +858,31 @@ export function registerBulletinRoutes(
       .header('Content-Disposition', contentDisposition('attachment', BULLETIN_TEMPLATE_FILE))
       .send(buf);
   });
+
+  app.get<{ Params: { month: string } }>(
+    '/v1/bulletins/template/birthday/:month',
+    async (request, reply) => {
+      const user = requireUser(request);
+      if (!user || !canViewBulletin(user.role)) {
+        return reply.code(403).send({ error: 'bulletin_forbidden' });
+      }
+      const monthNum = Number.parseInt(request.params.month, 10);
+      if (!Number.isInteger(monthNum) || monthNum < 1 || monthNum > 12) {
+        return reply.code(400).send({ error: 'invalid_birthday_month' });
+      }
+      const month = monthNum as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
+      const buf = readBirthdayMonthLibraryPptx(month);
+      if (!buf) return reply.code(404).send({ error: 'birthday_month_template_missing' });
+      const name = birthdayMonthLibraryFileName(month);
+      return reply
+        .header(
+          'Content-Type',
+          'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        )
+        .header('Content-Disposition', contentDisposition('attachment', name))
+        .send(buf);
+    },
+  );
 
   app.get<{
     Params: { slide: string };

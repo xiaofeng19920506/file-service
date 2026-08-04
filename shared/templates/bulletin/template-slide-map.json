@@ -87,14 +87,11 @@
     },
     {
       "id": "birthday",
-      "slides": [39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50],
-      "role": "variant_pick_one",
-      "titleFromSlide": "Birthday / 生日（1–12 月）",
-      "notes": "P39–P50 为 1–12 月生日页，每次只保留选中月；旧 P23/P24 始终省略",
-      "monthSlideMap": {
-        "1": 39, "2": 40, "3": 41, "4": 42, "5": 43, "6": 44,
-        "7": 45, "8": 46, "9": 47, "10": 48, "11": 49, "12": 50
-      }
+      "slides": [24],
+      "role": "external_month_library",
+      "titleFromSlide": "Birthday / 生日",
+      "notes": "主模板仅 P24 锚点；1–12 月完整页在 templates/bulletin/birthday/month-NN.pptx，按 birthdayMonth splice；旧 P23 始终省略；按月覆盖存 section_pptx_overrides.birthday_N",
+      "monthLibrary": "birthday/month-01.pptx … month-12.pptx"
     },
     {
       "id": "announcements",
@@ -201,8 +198,8 @@
     {
       "slide": 39,
       "fields": [
-        { "key": "birthdayMonth", "example": "1", "notes": "存 1–12；对应 P39–P50" },
-        { "key": "birthdayNames", "shapeId": "399", "layout": "grid", "example": "{\"1\":\"甲\\n乙\"}", "notes": "JSON 按月名单" }
+        { "key": "birthdayMonth", "example": "1", "notes": "存 1–12；从 birthday/month-NN.pptx 取出 splice 到 P24" },
+        { "key": "birthdayNames", "shapeId": "399", "layout": "grid", "example": "{\"1\":\"甲\\n乙\"}", "notes": "可选；名单优先在幻灯片上编辑" }
       ]
     },
     {

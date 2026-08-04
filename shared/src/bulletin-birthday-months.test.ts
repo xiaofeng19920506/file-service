@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
+  BIRTHDAY_ANCHOR_SLIDE,
+  birthdayMonthLibraryFileName,
   normalizeBirthdayMonth,
   parseBirthdayNamesByMonth,
   resolveBirthdayFields,
   serializeBirthdayNamesByMonth,
   slideNumberForBirthdayMonth,
 } from './bulletin-birthday-months.js';
+import { readBirthdayMonthLibraryPptx } from './bulletin-birthday-month-pptx.js';
 
 describe('bulletin birthday months', () => {
   it('normalizes month numbers and legacy title text', () => {
@@ -16,10 +19,17 @@ describe('bulletin birthday months', () => {
     expect(normalizeBirthdayMonth('', 11)).toBe(11);
   });
 
-  it('maps months to placeholder slides 39–50', () => {
-    expect(slideNumberForBirthdayMonth(1)).toBe(39);
-    expect(slideNumberForBirthdayMonth(7)).toBe(45);
-    expect(slideNumberForBirthdayMonth(12)).toBe(50);
+  it('uses single main-template anchor for all months', () => {
+    expect(slideNumberForBirthdayMonth(1)).toBe(BIRTHDAY_ANCHOR_SLIDE);
+    expect(slideNumberForBirthdayMonth(7)).toBe(24);
+    expect(slideNumberForBirthdayMonth(12)).toBe(24);
+    expect(birthdayMonthLibraryFileName(7)).toBe('month-07.pptx');
+  });
+
+  it('reads month library files from disk', () => {
+    const july = readBirthdayMonthLibraryPptx(7);
+    expect(july).not.toBeNull();
+    expect(july!.byteLength).toBeGreaterThan(1000);
   });
 
   it('parses JSON by month and migrates flat legacy names', () => {

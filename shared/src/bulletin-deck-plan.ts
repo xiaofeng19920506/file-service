@@ -29,7 +29,7 @@ export type BulletinDeckPlanCore = {
 export const BULLETIN_TEMPLATE_SLIDE_SECTIONS: { id: string; slides: readonly number[] }[] =
   Object.entries(BULLETIN_SECTION_TEMPLATE_SLIDES).map(([id, slides]) => ({ id, slides }));
 
-/** 始终省略：P3 会前；P7/P9 敬拜多余；P21/P22 奉献多余；旧生日 P23–P24 */
+/** 始终省略：P3 会前；P7/P9 敬拜多余；P21/P22 奉献多余；旧生日提醒 P23 */
 export const BULLETIN_OMITTED_TEMPLATE_SLIDES = [
   3,
   7,
@@ -124,7 +124,7 @@ export function assertSectionSlideMapCoversTemplate(): void {
       covered.add(n);
     }
   }
-  for (let n = 1; n <= 50; n++) {
+  for (let n = 1; n <= 38; n++) {
     if ((BULLETIN_OMITTED_TEMPLATE_SLIDES as readonly number[]).includes(n)) continue;
     if (!covered.has(n)) throw new Error(`unmapped_template_slide:${n}`);
   }

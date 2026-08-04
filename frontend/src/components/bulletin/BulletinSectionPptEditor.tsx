@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchBlobContent } from '../../api/client';
-import { fetchBulletinTemplateFile, type WeeklyBulletin } from '../../api/bulletins';
+import {
+  fetchBirthdayMonthTemplateFile,
+  fetchBulletinTemplateFile,
+  type WeeklyBulletin,
+} from '../../api/bulletins';
 import PptEditor from '../PptEditor/PptEditor';
 import { useI18n } from '../../i18n';
 import { buildBulletinDeckPlan, slidesForSection } from '../../lib/bulletin-deck-plan';
@@ -10,6 +14,10 @@ import {
   clearBulletinSectionPptx,
   replaceBulletinSectionPptx,
 } from '../../lib/bulletin-section-pptx';
+import {
+  resolveBirthdayFields,
+  resolveBirthdayMonthOverrideBlobId,
+} from '../../lib/bulletin-birthday-months';
 import { BULLETIN_SECTION_TEMPLATE_SLIDES } from '../../lib/bulletin-section-visibility';
 import {
   previewPatchFull,
@@ -111,6 +119,27 @@ export default function BulletinSectionPptEditor({
     const snap = draftSnapRef.current;
     const forceTemplate = forceTemplateRef.current;
     forceTemplateRef.current = false;
+
+    if (sectionId === 'birthday') {
+      const { month } = resolveBirthdayFields({
+        birthdayMonth: snap.birthdayMonth,
+        birthdayNames: snap.birthdayNames,
+        serviceDate: snap.serviceDate,
+      });
+      const existingBlobId = forceTemplate
+        ? undefined
+        : resolveBirthdayMonthOverrideBlobId(snap.sectionPptxOverrides, month) ?? undefined;
+      if (existingBlobId) {
+        const blob = await fetchBlobContent(existingBlobId);
+        if (await pptxSlidesAreWellFormed(blob)) {
+          return new File([blob], downloadName, { type: PPTX_MIME });
+        }
+        console.warn(`birthday month override ${existingBlobId} is malformed, rebuilding from library`);
+      }
+      const library = await fetchBirthdayMonthTemplateFile(month);
+      return new File([library], downloadName, { type: PPTX_MIME });
+    }
+
     const existingBlobId = forceTemplate ? undefined : snap.sectionPptxOverrides?.[sectionId];
     if (existingBlobId) {
       const blob = await fetchBlobContent(existingBlobId);

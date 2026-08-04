@@ -1,19 +1,17 @@
-/**
- * 模板分区 → 幻灯片文件编号（与 shared/bulletin-section-visibility 对齐）。
- * 浏览器侧独立副本，避免 Next 直接解析 shared/src。
- */
 import {
   BIRTHDAY_LEGACY_SLIDE_FILES,
   BIRTHDAY_MONTH_SLIDES,
-  normalizeBirthdayMonth,
-  slideNumberForBirthdayMonth,
-  type BirthdayMonth,
 } from './bulletin-birthday-months';
 
+/**
+ * 模板分区 → 幻灯片文件编号（与 bulletin-deck-plan / template-slide-map 对齐）。
+ * 隐藏分区时按此删页。
+ */
 export const BULLETIN_SECTION_TEMPLATE_SLIDES: Record<string, readonly number[]> = {
   cover: [1],
   pre_service: [2],
   scripture: [4, 5, 6],
+  /** 敬拜赞美只保留模板第 2 页（P8）；P7/P9 见 ALWAYS_OMIT */
   worship: [8],
   communion: [10, 11, 12, 13],
   welcome: [14],
@@ -21,7 +19,9 @@ export const BULLETIN_SECTION_TEMPLATE_SLIDES: Record<string, readonly number[]>
   testimony_week: [16],
   message: [17],
   family_time: [18],
+  /** 奉献报告只保留前两页（P19–P20）；P21/P22 见 ALWAYS_OMIT */
   offering: [19, 20],
+  /** 生日：主模板仅锚点 P24；各月完整页在 templates/bulletin/birthday/ */
   birthday: [...BIRTHDAY_MONTH_SLIDES],
   announcements: [25, 26, 27],
   weekly_meetings: [28, 29, 30],
@@ -35,6 +35,7 @@ export const BULLETIN_SECTION_TEMPLATE_SLIDES: Record<string, readonly number[]>
   benediction: [38],
 };
 
+/** 始终删：P3 会前名单；P7/P9 敬拜；P21/P22 奉献；旧生日提醒 P23 */
 export const BULLETIN_ALWAYS_OMIT_SLIDE_FILES = [
   3,
   7,
@@ -58,6 +59,7 @@ export function normalizeHiddenSections(raw: unknown): string[] {
   return out;
 }
 
+/** 合并 hiddenSections 与旧 skip_* 字段 */
 export function resolveHiddenSections(input: {
   hiddenSections?: string[] | null;
   skipTestimonyWeek?: boolean;
@@ -95,11 +97,19 @@ function slidePath(n: number): string {
   return `ppt/slides/slide${n}.xml`;
 }
 
+/**
+ * 需要从 PPTX 删除的 slide 路径：
+ * - 始终删 P3 / P7/P9 / P21/P22 / 旧生日提醒 P23
+ * - 隐藏分区对应页（含生日锚点 P24）
+ * - 本週聚会未选中的版式页
+ * 各月生日页已外置到模板库，不再从主模板 12 选 1。
+ */
 export function bulletinSlidePathsToDelete(input: {
   hiddenSections?: string[] | null;
   skipTestimonyWeek?: boolean;
   skipDepartmentReports?: boolean;
   weeklyMeetingVariant?: number | null;
+  /** 保留参数以兼容调用方；不再用于删页 */
   birthdayMonth?: string | number | null;
 }): string[] {
   const hidden = resolveHiddenSections(input);
@@ -117,17 +127,6 @@ export function bulletinSlidePathsToDelete(input: {
     const keep = input.weeklyMeetingVariant ?? null;
     for (const n of WEEKLY_MEETING_VARIANTS) {
       if (keep === null || n !== keep) paths.add(slidePath(n));
-    }
-  }
-
-  if (!hidden.includes('birthday')) {
-    const month: BirthdayMonth | null =
-      input.birthdayMonth === null || input.birthdayMonth === undefined || input.birthdayMonth === ''
-        ? null
-        : normalizeBirthdayMonth(input.birthdayMonth);
-    const keepSlide = month == null ? null : slideNumberForBirthdayMonth(month);
-    for (const n of BIRTHDAY_MONTH_SLIDES) {
-      if (keepSlide === null || n !== keepSlide) paths.add(slidePath(n));
     }
   }
 

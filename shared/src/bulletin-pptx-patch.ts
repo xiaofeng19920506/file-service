@@ -2,9 +2,11 @@ import JSZip from 'jszip';
 import { resolveScriptureSlideBodies } from './bible-text.js';
 import { applyBirthdayNameGridToSlideXml } from './bulletin-birthday.js';
 import {
+  BIRTHDAY_ANCHOR_SLIDE,
   resolveBirthdayFields,
   slideNumberForBirthdayMonth,
 } from './bulletin-birthday-months.js';
+import { applyBirthdayMonthFromLibraryToPptx } from './bulletin-birthday-month-pptx.js';
 import { applyScripturePagesToZip } from './bulletin-scripture-pptx.js';
 import { duplicateSlideInZip, removeSlidesFromPptxZip } from './pptx-duplicate-slide.js';
 import { bulletinSlidePathsToDelete } from './bulletin-section-visibility.js';
@@ -791,18 +793,18 @@ async function applyBirthdayFieldsToZip(
   serviceDate?: string,
 ): Promise<void> {
   if (birthdayMonth === undefined && birthdayNames === undefined) return;
-  const { month, namesForMonth } = resolveBirthdayFields({
+  const { namesForMonth } = resolveBirthdayFields({
     birthdayMonth,
     birthdayNames,
     serviceDate,
   });
-  const slideNum = slideNumberForBirthdayMonth(month);
+  // 名单改在幻灯片上编辑；仅当表单仍有当月名单时才覆盖 grid，避免清空月库页内容
+  if (birthdayNames === undefined || !namesForMonth) return;
+  const slideNum = BIRTHDAY_ANCHOR_SLIDE;
   const entry = zip.file(`ppt/slides/slide${slideNum}.xml`);
   if (!entry) return;
   let xml = await entry.async('string');
-  if (birthdayNames !== undefined) {
-    xml = applyBirthdayNameGridToSlideXml(xml, namesForMonth);
-  }
+  xml = applyBirthdayNameGridToSlideXml(xml, namesForMonth);
   zip.file(`ppt/slides/slide${slideNum}.xml`, xml);
 }
 
@@ -989,6 +991,21 @@ export async function patchBulletinPreviewInPptx(
   const overrides = normalizeSlideTextOverrides(input.slideTextOverrides);
   if (overrides.length) {
     await applySlideTextOverridesToZip(zip, overrides);
+  }
+
+  const hideBirthday = bulletinSlidePathsToDelete(input).some((p) =>
+    p.includes(`slide${BIRTHDAY_ANCHOR_SLIDE}.xml`),
+  );
+  if (!hideBirthday) {
+    // 从独立月库取出当月页，覆写主模板生日锚点
+    const withMonth = await applyBirthdayMonthFromLibraryToPptx(
+      await zip.generateAsync({ type: 'uint8array' }),
+      {
+        birthdayMonth: input.birthdayMonth,
+        serviceDate: input.serviceDate,
+      },
+    );
+    zip = await JSZip.loadAsync(withMonth);
   }
 
   await applyBirthdayFieldsToZip(
