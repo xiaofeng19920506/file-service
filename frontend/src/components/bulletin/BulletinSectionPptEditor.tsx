@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchBlobContent } from '../../api/client';
 import { fetchBulletinTemplateFile, type WeeklyBulletin } from '../../api/bulletins';
 import PptEditor from '../PptEditor/PptEditor';
 import { useI18n } from '../../i18n';
+import { buildBulletinDeckPlan, slidesForSection } from '../../lib/bulletin-deck-plan';
 import { buildPatchedBulletinForSectionExtract } from '../../lib/bulletin-pptx';
 import {
   bulletinSectionLabel,
@@ -10,6 +11,15 @@ import {
   replaceBulletinSectionPptx,
 } from '../../lib/bulletin-section-pptx';
 import { BULLETIN_SECTION_TEMPLATE_SLIDES } from '../../lib/bulletin-section-visibility';
+import {
+  previewPatchFull,
+  sectionPptxOverridesKey,
+} from '../../lib/bulletin-preview-patch';
+import {
+  bulletinDynamicTextOverrides,
+  mergeSlideTextOverrides,
+} from '../../lib/bulletin-pptx-patches';
+import { upcomingSundayIso } from '../../lib/bulletin-date';
 import { friendlyError } from '../../lib/error-messages';
 import { extractSlidesByFileNumbersAsPptx } from '../../lib/pptx-extract-slide';
 import { pptxSlidesAreWellFormed } from '../../lib/pptx-integrity';
@@ -43,10 +53,59 @@ export default function BulletinSectionPptEditor({
   const [resetting, setResetting] = useState(false);
   const [replacing, setReplacing] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
+  const [fidelityPresentationSlides, setFidelityPresentationSlides] = useState<number[] | null>(
+    null,
+  );
 
   const sectionLabel = bulletinSectionLabel(sectionId, t);
   const downloadName = `周报-${draft.serviceDate}-${sectionLabel}.pptx`;
   const hasOverride = Boolean(draft.sectionPptxOverrides?.[sectionId]);
+
+  const fidelityPatch = useMemo(
+    () =>
+      previewPatchFull({
+        serviceDate: draft.serviceDate || upcomingSundayIso(),
+        serviceTime: draft.serviceTime || '11:00',
+        scriptureBook: draft.scriptureBook,
+        scriptureReference: draft.scriptureReference,
+        showPreServiceChairName: draft.showPreServiceChairName,
+        preServiceChairNames: draft.preServiceChairNames,
+        birthdayMonth: draft.birthdayMonth,
+        birthdayNames: draft.birthdayNames,
+        verseOfWeek: draft.verseOfWeek,
+        announcements: (draft.announcements ?? []).map((a) => ({
+          title: a.title ?? '',
+          body: a.body,
+        })),
+        hiddenSections: draft.hiddenSections,
+        skipTestimonyWeek: draft.skipTestimonyWeek,
+        skipDepartmentReports: draft.skipDepartmentReports,
+        weeklyMeetingVariant: draft.weeklyMeetingVariant,
+        slideTextOverrides: mergeSlideTextOverrides(
+          bulletinDynamicTextOverrides(draft),
+          draft.slideTextOverrides,
+        ),
+        bulletinId: draft.id,
+        sectionPptxKey: sectionPptxOverridesKey(draft.sectionPptxOverrides),
+      }),
+    [draft],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const plan = await buildBulletinDeckPlan(draft);
+        if (cancelled) return;
+        setFidelityPresentationSlides(slidesForSection(sectionId, plan));
+      } catch {
+        if (!cancelled) setFidelityPresentationSlides(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [draft, sectionId, reloadToken]);
 
   const loadSectionFile = useCallback(async () => {
     const snap = draftSnapRef.current;
@@ -213,6 +272,9 @@ export default function BulletinSectionPptEditor({
         onUploadReplace={() => replaceInputRef.current?.click()}
         uploadReplacing={replacing}
         onClose={onClose}
+        fidelityPresentationSlides={fidelityPresentationSlides}
+        fidelityPatch={fidelityPatch}
+        fidelitySectionId={sectionId}
       />
     </div>
   );

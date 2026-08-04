@@ -9236,12 +9236,53 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   container-type: size;
 }
 
+.bulletin-composite-slide--has-fidelity .bulletin-composite-fidelity {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.bulletin-composite-slide--has-fidelity .bulletin-composite-fidelity .bulletin-slide-preview,
+.bulletin-composite-slide--has-fidelity .bulletin-composite-fidelity .bulletin-slide-preview-frame,
+.bulletin-composite-slide--has-fidelity .bulletin-composite-fidelity .bulletin-slide-preview-frame--png {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  aspect-ratio: unset;
+}
+
+.bulletin-composite-slide--has-fidelity .bulletin-composite-fidelity .bulletin-slide-preview-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+}
+
+.bulletin-composite-slide--fidelity .bulletin-composite-bg,
+.bulletin-composite-slide--fidelity .bulletin-composite-image,
+.bulletin-composite-slide--fidelity .bulletin-composite-shape {
+  /* 保真下垫时隐藏 DOM 合成像素，仅保留可点选命中区 */
+  opacity: 0;
+}
+
+.bulletin-composite-slide--fidelity .bulletin-composite-shape--editable:hover,
+.bulletin-composite-slide--fidelity .bulletin-composite-shape--selected,
+.bulletin-composite-slide--fidelity .bulletin-composite-shape--editing {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.92) !important;
+}
+
 .bulletin-composite-bg {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  /* OOXML stretch/fillRect → 铺满画幅，勿用 cover 裁切 */
+  object-fit: fill;
   display: block;
 }
 

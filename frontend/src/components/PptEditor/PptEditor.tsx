@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useI18n } from '../../i18n';
+import type { BulletinSlidePreviewParams } from '../../api/bulletins';
 import { useMergedPptEditor } from '../../hooks/useMergedPptEditor';
 import { NUDGE_STEP_PCT, useRibbonCommands } from '../../hooks/useRibbonCommands';
 import ConfirmModal from '../ConfirmModal';
@@ -30,6 +31,13 @@ type PptEditorProps = {
    * 周报分区编辑器用它，因为增删/重排页当前不会进入预览与导出。
    */
   lockSlideStructure?: boolean;
+  /**
+   * 与右侧预览对齐的 LibreOffice PNG：本地 slideIndex → 演示页码。
+   * 有值时未改脏的画布用同一套 PNG 保真显示。
+   */
+  fidelityPresentationSlides?: number[] | null;
+  fidelityPatch?: BulletinSlidePreviewParams | null;
+  fidelitySectionId?: string;
 };
 
 export default function PptEditor({
@@ -46,6 +54,9 @@ export default function PptEditor({
   uploadReplacing = false,
   onClose,
   lockSlideStructure = false,
+  fidelityPresentationSlides = null,
+  fidelityPatch = null,
+  fidelitySectionId,
 }: PptEditorProps) {
   const { t } = useI18n();
   const [zoom, setZoom] = useState(100);
@@ -424,6 +435,14 @@ export default function PptEditor({
                 onResizeElement={ribbon.resizeElementByPct}
                 showGrid={showGrid}
                 showGuides={showGuides}
+                fidelitySlideNumber={fidelityPresentationSlides?.[focusIndex] ?? null}
+                fidelityPatch={fidelityPatch}
+                fidelitySectionId={fidelitySectionId}
+                fidelityDisabled={Boolean(
+                  slides[focusIndex]?.slideXmlOverride ||
+                    (slides[focusIndex]?.shapeTextOverrides &&
+                      Object.keys(slides[focusIndex].shapeTextOverrides!).length > 0),
+                )}
               />
             )}
 

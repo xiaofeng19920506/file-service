@@ -28,7 +28,7 @@ function blankRunPara(): SlideTextParagraph {
 }
 
 describe('trimEdgeBlankParagraphs', () => {
-  it('trims leading/trailing spacers used as Google padding (worship title)', () => {
+  it('keeps leading/trailing spacers used for worship title vertical padding', () => {
     const input = [
       blankRunPara(),
       spacerPara(40),
@@ -38,8 +38,8 @@ describe('trimEdgeBlankParagraphs', () => {
       blankRunPara(),
     ];
     const out = trimEdgeBlankParagraphs(input);
-    expect(out).toHaveLength(1);
-    expect(out[0]?.runs[0]?.text).toBe('敬拜讚美');
+    expect(out).toEqual(input);
+    expect(out).toHaveLength(6);
   });
 
   it('keeps middle spacers between real paragraphs (cover layout)', () => {

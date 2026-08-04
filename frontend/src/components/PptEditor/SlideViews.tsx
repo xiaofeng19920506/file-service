@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import type { BulletinSlidePreviewParams } from '../../api/bulletins';
 import { useI18n } from '../../i18n';
 import {
   slideDisplayImageUrl,
@@ -264,6 +265,10 @@ export function PptCanvasSlide({
   onResizeElement,
   showGrid = false,
   showGuides = false,
+  fidelitySlideNumber = null,
+  fidelityPatch = null,
+  fidelitySectionId,
+  fidelityDisabled = false,
 }: {
   slide: EditableSlide;
   zoom?: number;
@@ -285,6 +290,10 @@ export function PptCanvasSlide({
   ) => void;
   showGrid?: boolean;
   showGuides?: boolean;
+  fidelitySlideNumber?: number | null;
+  fidelityPatch?: BulletinSlidePreviewParams | null;
+  fidelitySectionId?: string;
+  fidelityDisabled?: boolean;
 }) {
   const { t } = useI18n();
   const scale = Math.max(0.5, Math.min(1.5, zoom / 100));
@@ -344,6 +353,10 @@ export function PptCanvasSlide({
             onResizeElement={onResizeElement}
             showGrid={showGrid}
             showGuides={showGuides}
+            fidelitySlideNumber={fidelitySlideNumber}
+            fidelityPatch={fidelityPatch}
+            fidelitySectionId={fidelitySectionId}
+            fidelityDisabled={fidelityDisabled}
           />
           {bgOverrideStyle ? (
             <div className="ppt-slide-bg-override" style={bgOverrideStyle} aria-hidden />

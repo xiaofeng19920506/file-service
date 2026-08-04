@@ -361,24 +361,17 @@ function extractTextContent(
     }
   }
 
-  return { paragraphs: trimEdgeBlankParagraphs(paragraphs), valign, autoFit };
+  return { paragraphs, valign, autoFit };
 }
 
-/** 去掉文本框首尾的空行/spacer（Google 导出常用来垫高）；保留夹在正文中间的间距 */
+/**
+ * 历史：曾去掉首尾空段以适配 Google 导出垫高。
+ * 但模板（如敬拜 P8）用空段/空格段落做垂直定位且 bodyPr anchor=t，
+ * 裁掉后标题会顶到文本框顶部，与 LibreOffice 预览不一致。
+ * 现原样保留，以贴近 PPT / 预览 PNG。
+ */
 export function trimEdgeBlankParagraphs(paragraphs: SlideTextParagraph[]): SlideTextParagraph[] {
-  if (paragraphs.length <= 1) return paragraphs;
-
-  const isBlank = (p: SlideTextParagraph): boolean => {
-    if (p.spacer) return true;
-    if (!p.runs.length) return true;
-    return p.runs.every((r) => !r.text.trim());
-  };
-
-  let start = 0;
-  while (start < paragraphs.length && isBlank(paragraphs[start]!)) start += 1;
-  let end = paragraphs.length;
-  while (end > start && isBlank(paragraphs[end - 1]!)) end -= 1;
-  return paragraphs.slice(start, end);
+  return paragraphs;
 }
 
 async function resolveMediaPath(zip: JSZip, slidePath: string, rId: string): Promise<string | null> {

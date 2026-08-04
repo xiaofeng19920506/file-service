@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import type { BulletinSlidePreviewParams } from '../../api/bulletins';
 import { loadPptxZipCached } from '../../lib/pptx-zip-cache';
 import {
   autoFitScale,
@@ -18,6 +19,7 @@ import {
 } from '../../lib/pptx-shape-text';
 import type { EditableSlide } from '../../lib/pptx-preview';
 import { slideAspectRatioStyle } from '../../lib/bulletin-slide-aspect';
+import BulletinPptSlidePreview from './BulletinPptSlidePreview';
 
 type BulletinCompositeSlideProps = {
   slide: EditableSlide | null;
@@ -51,6 +53,15 @@ type BulletinCompositeSlideProps = {
   ) => void;
   showGrid?: boolean;
   showGuides?: boolean;
+  /**
+   * 与右侧预览相同的 LibreOffice PNG（演示页码 + patch）。
+   * 未改脏时作保真下垫，避免 DOM 合成与预览观感不一致。
+   */
+  fidelitySlideNumber?: number | null;
+  fidelityPatch?: BulletinSlidePreviewParams | null;
+  fidelitySectionId?: string;
+  /** 本页有未保存改动时关闭保真下垫，改回 DOM 合成 */
+  fidelityDisabled?: boolean;
 };
 
 const SLIDE_WIDTH_PT = 720;
@@ -431,6 +442,10 @@ export default function BulletinCompositeSlide({
   onResizeElement,
   showGrid = false,
   showGuides = false,
+  fidelitySlideNumber = null,
+  fidelityPatch = null,
+  fidelitySectionId,
+  fidelityDisabled = false,
 }: BulletinCompositeSlideProps) {
   const [layers, setLayers] = useState<SlideVisualLayer[]>([]);
   const [slideSize, setSlideSize] = useState<SlideSizeEmu>({ ...DEFAULT_SLIDE_SIZE });
@@ -695,6 +710,13 @@ export default function BulletinCompositeSlide({
       ? -1
       : layers.findIndex((l) => l.kind !== 'background' && l.elementId === selectedElementId);
   const canPickElements = editable && !!onSelectElement;
+  const showFidelityUnderlay =
+    !fidelityDisabled &&
+    fidelitySlideNumber != null &&
+    fidelitySlideNumber > 0 &&
+    fidelityPatch != null;
+  /** 未进入编辑时隐藏 DOM 像素，只显示与预览相同的 LO PNG */
+  const ghostComposite = showFidelityUnderlay && editingShape == null;
 
   return (
     <figure className={rootClass}>
@@ -705,6 +727,8 @@ export default function BulletinCompositeSlide({
           editable ? ' bulletin-composite-slide--editable' : ''
         }${showGrid ? ' bulletin-composite-slide--grid' : ''}${
           showGuides ? ' bulletin-composite-slide--guides' : ''
+        }${ghostComposite ? ' bulletin-composite-slide--fidelity' : ''}${
+          showFidelityUnderlay ? ' bulletin-composite-slide--has-fidelity' : ''
         }`}
         style={slideAspectRatioStyle(slideSize)}
         onMouseDown={(e) => {
@@ -717,6 +741,18 @@ export default function BulletinCompositeSlide({
           onTextCharRangeChange?.(null);
         }}
       >
+        {showFidelityUnderlay ? (
+          <div className="bulletin-composite-fidelity" aria-hidden>
+            <BulletinPptSlidePreview
+              slideNumber={fidelitySlideNumber}
+              patch={fidelityPatch}
+              sectionId={fidelitySectionId}
+              lazy={false}
+              priority="high"
+              large
+            />
+          </div>
+        ) : null}
         {layers.map((layer, i) => {
           const role = layer.kind === 'shape' ? shapeRole(layer) : 'default';
           const stackStyle = { zIndex: layerZIndex(layer.kind, role, i) };
