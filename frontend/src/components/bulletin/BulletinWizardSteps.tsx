@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { WeeklyBulletin } from '../../api/bulletins';
 import { BIBLE_BOOKS } from '../../lib/bible-books';
 import { useI18n } from '../../i18n';
@@ -28,6 +28,11 @@ function StepShell({ children }: StepShellProps) {
   );
 }
 
+/** 中文等 IME 组字时按 Enter 是「上屏」不是「提交」；此时 blur 会把半成品与上屏各写一次 */
+function isImeKeyEvent(e: KeyboardEvent): boolean {
+  return e.nativeEvent.isComposing || e.keyCode === 229;
+}
+
 /** 多人名列表（服事轮值：可点添加） */
 function RosterNameListField({
   label,
@@ -51,6 +56,7 @@ function RosterNameListField({
   draftJoinedRef.current = joinRosterNames(namesFromValue);
   const onCommitRef = useRef(onCommit);
   onCommitRef.current = onCommit;
+  const composingRef = useRef(false);
 
   useEffect(() => {
     const parsed = parseRosterNames(value);
@@ -96,14 +102,33 @@ function RosterNameListField({
               disabled={!canEdit}
               placeholder={t('bulletin.rosterNamePlaceholder', { n: String(index + 1) })}
               onChange={(e) => {
-                const next = [...rows];
-                next[index] = e.target.value;
-                setRows(next);
-                rowsRef.current = next;
+                const valueNext = e.target.value;
+                setRows((prev) => {
+                  const next = [...prev];
+                  next[index] = valueNext;
+                  rowsRef.current = next;
+                  return next;
+                });
               }}
-              onBlur={() => commitNames()}
+              onCompositionStart={() => {
+                composingRef.current = true;
+              }}
+              onCompositionEnd={(e) => {
+                composingRef.current = false;
+                const valueNext = e.currentTarget.value;
+                setRows((prev) => {
+                  const next = [...prev];
+                  next[index] = valueNext;
+                  rowsRef.current = next;
+                  return next;
+                });
+              }}
+              onBlur={() => {
+                if (composingRef.current) return;
+                commitNames();
+              }}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                if (e.key === 'Enter' && !isImeKeyEvent(e)) e.currentTarget.blur();
               }}
             />
             {canEdit ? (
@@ -153,11 +178,13 @@ type FieldProps = {
 
 function TextField({ label, value, disabled, onChange, multiline, commitOnBlur }: FieldProps) {
   const [local, setLocal] = useState(value);
+  const composingRef = useRef(false);
   useEffect(() => {
     setLocal(value);
   }, [value]);
 
   const commit = () => {
+    if (composingRef.current) return;
     if (local !== value) onChange(local);
   };
 
@@ -170,6 +197,13 @@ function TextField({ label, value, disabled, onChange, multiline, commitOnBlur }
           value={commitOnBlur ? local : value}
           disabled={disabled}
           onChange={(e) => (commitOnBlur ? setLocal(e.target.value) : onChange(e.target.value))}
+          onCompositionStart={() => {
+            composingRef.current = true;
+          }}
+          onCompositionEnd={(e) => {
+            composingRef.current = false;
+            if (commitOnBlur) setLocal(e.currentTarget.value);
+          }}
           onBlur={commitOnBlur ? commit : undefined}
         />
       </label>
@@ -184,11 +218,18 @@ function TextField({ label, value, disabled, onChange, multiline, commitOnBlur }
         value={commitOnBlur ? local : value}
         disabled={disabled}
         onChange={(e) => (commitOnBlur ? setLocal(e.target.value) : onChange(e.target.value))}
+        onCompositionStart={() => {
+          composingRef.current = true;
+        }}
+        onCompositionEnd={(e) => {
+          composingRef.current = false;
+          if (commitOnBlur) setLocal(e.currentTarget.value);
+        }}
         onBlur={commitOnBlur ? commit : undefined}
         onKeyDown={
           commitOnBlur
             ? (e) => {
-                if (e.key === 'Enter') e.currentTarget.blur();
+                if (e.key === 'Enter' && !isImeKeyEvent(e)) e.currentTarget.blur();
               }
             : undefined
         }
@@ -357,6 +398,7 @@ export function BulletinBirthdayStep({
   draftJoinedRef.current = draftJoined;
   const onPatchRef = useRef(onPatch);
   onPatchRef.current = onPatch;
+  const composingRef = useRef(false);
 
   const commitNames = (next?: string[]) => {
     const uiRows = (next ?? rowsRef.current).length > 0 ? (next ?? rowsRef.current) : [''];
@@ -399,14 +441,33 @@ export function BulletinBirthdayStep({
                 disabled={!canEdit}
                 placeholder={t('bulletin.birthdayNamePlaceholder', { n: String(index + 1) })}
                 onChange={(e) => {
-                  const next = [...rows];
-                  next[index] = e.target.value;
-                  setRows(next);
-                  rowsRef.current = next;
+                  const valueNext = e.target.value;
+                  setRows((prev) => {
+                    const next = [...prev];
+                    next[index] = valueNext;
+                    rowsRef.current = next;
+                    return next;
+                  });
                 }}
-                onBlur={() => commitNames()}
+                onCompositionStart={() => {
+                  composingRef.current = true;
+                }}
+                onCompositionEnd={(e) => {
+                  composingRef.current = false;
+                  const valueNext = e.currentTarget.value;
+                  setRows((prev) => {
+                    const next = [...prev];
+                    next[index] = valueNext;
+                    rowsRef.current = next;
+                    return next;
+                  });
+                }}
+                onBlur={() => {
+                  if (composingRef.current) return;
+                  commitNames();
+                }}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                  if (e.key === 'Enter' && !isImeKeyEvent(e)) e.currentTarget.blur();
                 }}
               />
               {canEdit ? (
@@ -452,7 +513,7 @@ export function BulletinBirthdayStep({
                 type="button"
                 className="btn-secondary btn-sm"
                 onClick={() => {
-                  const next = [...rows, ''];
+                  const next = [...rowsRef.current, ''];
                   setRows(next);
                   rowsRef.current = next;
                 }}
@@ -465,8 +526,8 @@ export function BulletinBirthdayStep({
                 type="button"
                 className="btn-secondary btn-sm"
                 onClick={() => {
-                  const arranged = arrangeBirthdayNames(rows);
-                  const emptyTail = rows.length - filledCount;
+                  const arranged = arrangeBirthdayNames(rowsRef.current);
+                  const emptyTail = rowsRef.current.length - filledCount;
                   commitNames(
                     emptyTail > 0 ? [...arranged, ...Array(emptyTail).fill('')] : arranged,
                   );
