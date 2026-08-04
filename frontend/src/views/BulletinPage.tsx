@@ -860,25 +860,26 @@ export default function BulletinPage() {
   return (
     <div className="bulletin-page bulletin-page--workspace">
       <header className="bulletin-header">
-        <h1>{t('bulletin.title')}</h1>
+        <div className="bulletin-header-title-row">
+          <h1>{t('bulletin.title')}</h1>
+          {bulletins.length > 0 ? (
+            <select
+              className="bulletin-week-select"
+              value={selectedId ?? ''}
+              onChange={(e) => setSelectedId(e.target.value || null)}
+              aria-label={t('bulletin.weeks')}
+            >
+              {bulletins.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.outputBlobId
+                    ? `${b.serviceDate} (${t('bulletin.publishedBadge')})`
+                    : b.serviceDate}
+                </option>
+              ))}
+            </select>
+          ) : null}
+        </div>
         <div className="bulletin-header-actions">
-          {bulletins.length > 0 && (
-            <label className="bulletin-week-select">
-              {t('bulletin.weeks')}
-              <select
-                value={selectedId ?? ''}
-                onChange={(e) => setSelectedId(e.target.value || null)}
-              >
-                {bulletins.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.outputBlobId
-                      ? `${b.serviceDate} (${t('bulletin.publishedBadge')})`
-                      : b.serviceDate}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
           <div className="bulletin-header-btn-group" role="group" aria-label={t('bulletin.title')}>
             {draft && canPublish ? (
               <button
