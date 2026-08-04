@@ -89,6 +89,7 @@ export default function BulletinWorshipAddSongsModal({
               bulletinId={bulletinId}
               existingVideoIds={existingVideoIds}
               embedded
+              hideUrlPanel
               onClose={onClose}
               onAdded={onAdded}
             />

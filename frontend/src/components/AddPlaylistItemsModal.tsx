@@ -15,6 +15,8 @@ type AddPlaylistItemsModalProps = {
   existingVideoIds: Set<string>;
   /** 嵌在外层 modal 内时不渲染自己的 overlay/标题 */
   embedded?: boolean;
+  /** 隐藏右侧「粘贴链接」栏（链接改放到 YouTube 导入 tab） */
+  hideUrlPanel?: boolean;
   onClose: () => void;
   onAdded: (detail: PlaylistDetail, meta: { addedCount: number; skippedCount: number }) => void;
 };
@@ -24,6 +26,7 @@ export default function AddPlaylistItemsModal({
   bulletinId,
   existingVideoIds,
   embedded = false,
+  hideUrlPanel = false,
   onClose,
   onAdded,
 }: AddPlaylistItemsModalProps) {
@@ -32,6 +35,8 @@ export default function AddPlaylistItemsModal({
   const [url, setUrl] = useState('');
   const [addingUrl, setAddingUrl] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const showUrlPanel = !hideUrlPanel;
+  const splitLayout = !isMobileViewport && showUrlPanel;
 
   const handleCancel = () => {
     if (addingUrl) return;
@@ -116,9 +121,9 @@ export default function AddPlaylistItemsModal({
         className="add-playlist-items-col add-playlist-items-col--search"
         aria-label={t('playlists.searchSection')}
       >
-        {!isMobileViewport && (
+        {!isMobileViewport && showUrlPanel ? (
           <h4 className="add-playlist-items-col-title">{t('playlists.searchSection')}</h4>
-        )}
+        ) : null}
         <PlaylistYoutubeSearchPanel
           className="add-playlist-items-search"
           playlistId={bulletinId ? undefined : playlistId}
@@ -129,19 +134,21 @@ export default function AddPlaylistItemsModal({
         />
       </section>
 
-      <section
-        className="add-playlist-items-col add-playlist-items-col--url"
-        aria-label={t('playlists.addUrlLabel')}
-      >
-        {urlPanel}
-      </section>
+      {showUrlPanel ? (
+        <section
+          className="add-playlist-items-col add-playlist-items-col--url"
+          aria-label={t('playlists.addUrlLabel')}
+        >
+          {urlPanel}
+        </section>
+      ) : null}
     </div>
   );
 
   if (embedded) {
     return (
       <div
-        className={`add-playlist-items-modal add-playlist-items-modal--embedded${isMobileViewport ? '' : ' add-playlist-items-modal--split'}`}
+        className={`add-playlist-items-modal add-playlist-items-modal--embedded${splitLayout ? ' add-playlist-items-modal--split' : ''}`}
       >
         {body}
       </div>
@@ -157,7 +164,7 @@ export default function AddPlaylistItemsModal({
       onClick={handleCancel}
     >
       <div
-        className={`metadata-modal add-playlist-items-modal${isMobileViewport ? '' : ' add-playlist-items-modal--split'}`}
+        className={`metadata-modal add-playlist-items-modal${splitLayout ? ' add-playlist-items-modal--split' : ''}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="metadata-modal-header add-playlist-items-header">
