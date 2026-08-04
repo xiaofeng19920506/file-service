@@ -820,16 +820,72 @@ async function applyVerseOfWeekToZip(zip: JSZip, verseOfWeek: string | undefined
   zip.file('ppt/slides/slide35.xml', applyIndexedTextReplacementsToSlideXml(xml, reps));
 }
 
+/** 画幅高 5_143_500；正文贴到近底部，减少长公告被裁切 */
+const ANNOUNCEMENT_BODY_BOTTOM_EMU = 5_000_000;
+/** 正文 26pt（模板 30pt），多留几行 */
+const ANNOUNCEMENT_BODY_FONT_SZ = '2600';
+
+/**
+ * 公告正文框加高、略缩字号。仅处理 P25 式「大块 anchor=t」正文 shape。
+ */
+export function stabilizeAnnouncementSlideXml(xml: string): string {
+  return xml.replace(/<p:sp\b[\s\S]*?<\/p:sp>/g, (shapeXml) => {
+    if (!/<a:bodyPr\b[^>]*\banchor="t"/.test(shapeXml)) return shapeXml;
+    const ext = shapeXml.match(/<a:ext cx="(\d+)" cy="(\d+)"\/>/);
+    const off = shapeXml.match(/<a:off x="(-?\d+)" y="(-?\d+)"\/>/);
+    if (!ext || !off) return shapeXml;
+    const cy = Number(ext[2]);
+    if (cy < 2_000_000) return shapeXml;
+    const y = Number(off[2]);
+    const newCy = Math.max(cy, ANNOUNCEMENT_BODY_BOTTOM_EMU - y);
+    let out = shapeXml.replace(/(<a:ext cx="\d+" )cy="\d+"\/>/, `$1cy="${newCy}"/>`);
+    out = out.replace(/sz="3000"/g, `sz="${ANNOUNCEMENT_BODY_FONT_SZ}"`);
+    return out;
+  });
+}
+
+function buildAnnouncementBodyTxBody(body: string): string {
+  const lines = body.replace(/\r\n/g, '\n').split('\n');
+  const paras = (lines.length ? lines : [' ']).map((line) => {
+    const text = line.length ? line : ' ';
+    return (
+      `<a:p><a:pPr indent="0" lvl="0" marL="0" rtl="0" algn="l">` +
+      `<a:spcBef><a:spcPts val="0"/></a:spcBef>` +
+      `<a:spcAft><a:spcPts val="400"/></a:spcAft><a:buNone/></a:pPr>` +
+      `<a:r><a:rPr lang="zh-CN" sz="${ANNOUNCEMENT_BODY_FONT_SZ}">` +
+      `<a:solidFill><a:schemeClr val="lt1"/></a:solidFill></a:rPr>` +
+      `<a:t>${escapeXml(text)}</a:t></a:r>` +
+      `<a:endParaRPr sz="${ANNOUNCEMENT_BODY_FONT_SZ}">` +
+      `<a:solidFill><a:schemeClr val="lt1"/></a:solidFill></a:endParaRPr></a:p>`
+    );
+  });
+  return (
+    `<p:txBody>` +
+    `<a:bodyPr anchorCtr="0" anchor="t" bIns="91425" lIns="91425" spcFirstLastPara="1" rIns="91425" wrap="square" tIns="91425">` +
+    `<a:noAutofit/></a:bodyPr><a:lstStyle/>` +
+    paras.join('') +
+    `</p:txBody>`
+  );
+}
+
 function writeAnnouncementTitleBody(xml: string, item: AnnouncementPageInput): string {
-  return applyIndexedTextReplacementsToSlideXml(xml, [
-    { textIndex: 0, text: item.title?.trim() ? item.title.trim() : ' ' },
-    { textIndex: 1, text: item.body?.trim() ? item.body.trim() : ' ' },
-  ]);
+  const title = item.title?.trim() ? item.title.trim() : ' ';
+  const body = item.body?.trim() ? item.body.trim() : ' ';
+  // 标题仍按 run 序号；正文整段重写（支持换行，并去掉模板残留段落）
+  let out = applyIndexedTextReplacementsToSlideXml(xml, [{ textIndex: 0, text: title }]);
+  out = out.replace(/<p:sp\b[\s\S]*?<\/p:sp>/g, (shapeXml) => {
+    if (!/<a:bodyPr\b[^>]*\banchor="t"/.test(shapeXml)) return shapeXml;
+    const ext = shapeXml.match(/<a:ext cx="(\d+)" cy="(\d+)"\/>/);
+    if (!ext || Number(ext[2]) < 2_000_000) return shapeXml;
+    return shapeXml.replace(/<p:txBody>[\s\S]*?<\/p:txBody>/, buildAnnouncementBodyTxBody(body));
+  });
+  return out;
 }
 
 /**
- * 公告页：P25/P26 为 title+body 模板；第 3 条起复制 P25，插在最后一条公告之后、P27（浸礼）之前。
- * 空列表不改动（保留模板原文）。
+ * 公告页：一律用 P25「标题+正文」版式。
+ * P26 模板是「家有喜事」多段正文 + 底部经文，只改 textIndex 0/1 会残留旧文并裁切。
+ * 第 3 条起复制 P25，插在公告段末、P27（浸礼）之前。
  */
 export async function applyAnnouncementPagesToZip(
   zip: JSZip,
@@ -840,27 +896,19 @@ export async function applyAnnouncementPagesToZip(
 
   const slide25Path = 'ppt/slides/slide25.xml';
   const slide26Path = 'ppt/slides/slide26.xml';
-
   const slide25 = zip.file(slide25Path);
-  if (slide25) {
-    const xml = await slide25.async('string');
-    zip.file(slide25Path, writeAnnouncementTitleBody(xml, pages[0]));
-  }
+  if (!slide25) return;
+
+  const layout = stabilizeAnnouncementSlideXml(await slide25.async('string'));
+  zip.file(slide25Path, writeAnnouncementTitleBody(layout, pages[0]));
 
   if (pages.length === 1) {
-    const slide26 = zip.file(slide26Path);
-    if (slide26) {
-      const xml = await slide26.async('string');
-      zip.file(slide26Path, writeAnnouncementTitleBody(xml, { title: ' ', body: ' ' }));
-    }
+    // 清空第 2 页时也换成 P25 版式，避免留下「家有喜事」经文框
+    zip.file(slide26Path, writeAnnouncementTitleBody(layout, { title: ' ', body: ' ' }));
     return;
   }
 
-  const slide26 = zip.file(slide26Path);
-  if (slide26) {
-    const xml = await slide26.async('string');
-    zip.file(slide26Path, writeAnnouncementTitleBody(xml, pages[1]));
-  }
+  zip.file(slide26Path, writeAnnouncementTitleBody(layout, pages[1]));
 
   let lastPath = slide26Path;
   for (let i = 2; i < pages.length; i++) {

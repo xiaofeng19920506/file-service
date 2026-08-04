@@ -290,6 +290,35 @@ describe('patchScriptureSlideInSlideXml', () => {
     expect(extra).toContain('新增公告');
     expect(extra).toContain('第三条内容');
   });
+
+  it('rewrites slide26 with P25 layout so leftover 家有喜事 body/verse is cleared', async () => {
+    const tpl = await readFile(templatePath);
+    const longBody = [
+      '第一行：教会感谢各位同工的摆上与服事。',
+      '第二行：本週有多项服事需要更多弟兄姊妹参与。',
+      '第三行：请在主日后与同工联系报名。',
+      '第四行：愿主纪念并赐福每一位摆上的人。',
+      '第五行：详细内容请见周报或现场询问招待。',
+    ].join('\n');
+    const patched = await patchBulletinPreviewInPptx(tpl, {
+      announcements: [
+        { title: '特别感谢', body: '短公告' },
+        { title: '服事邀请', body: longBody },
+      ],
+    });
+    const zip = await JSZip.loadAsync(patched);
+    const slide26 = await zip.file('ppt/slides/slide26.xml')!.async('string');
+    expect(slide26).toContain('服事邀请');
+    expect(slide26).toContain('第一行：教会感谢');
+    expect(slide26).toContain('第五行：详细内容');
+    // 不再残留模板「家有喜事」正文 / 诗篇经文框
+    expect(slide26).not.toContain('Angelica');
+    expect(slide26).not.toContain('诗篇 127');
+    expect(slide26).not.toContain('Genevieve');
+    // 正文框加高（y=1420500 → 贴近画幅底部）
+    expect(slide26).toContain('cy="3579500"');
+    expect(slide26).toContain('sz="2600"');
+  });
 });
 
 describe('stabilizeCommunionEnglishSlideXml', () => {

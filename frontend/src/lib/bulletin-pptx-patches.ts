@@ -402,7 +402,7 @@ export function patchesForStep(stepId: string, bulletin: WeeklyBulletin): SlideT
       ];
     }
     case 'announcements': {
-      // 导出路径：前两页仍写补丁；第 3+ 条由 expandAnnouncementSlidesInPptx 加页写入
+      // 最终以 expandAnnouncementSlidesInPptx（shared P25 版式）为准；此处仅作早期占位
       const announcementSlides = [25, 26];
       return bulletin.announcements.flatMap((item, index) => {
         const slideNum = announcementSlides[index];
