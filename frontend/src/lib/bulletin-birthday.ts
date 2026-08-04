@@ -1,15 +1,20 @@
 /** 与 shared/bulletin-birthday 同逻辑的前端副本（避免整包引入 shared）。 */
 
 export const BIRTHDAY_NAME_MAX = 12;
-/** 模板 P24 名单文本框（会被替换为同 id 的表格） */
+/** 模板 P24 原名单文本框 id；替换后首个名字框仍用此 id，便于再次写入 */
 export const BIRTHDAY_NAMES_SHAPE_ID = '399';
+/** 额外名字框 id 起点（避开模板 400/401 页脚等） */
+const BIRTHDAY_EXTRA_ID_BASE = 12_001;
 
-/** 名单区位置/尺寸（EMU）；靠左半幅，底边避开页脚 */
+/**
+ * 名单区位置/尺寸（EMU）。
+ * 加宽加高：多列横排，底边仍在页脚「午餐聚會」之上（footer y≈3.89M）。
+ */
 const BIRTHDAY_NAMES_BOX = {
   x: 298_800,
-  y: 980_000,
-  cx: 4_800_000,
-  cy: 2_550_000,
+  y: 920_000,
+  cx: 8_500_000,
+  cy: 2_800_000,
 } as const;
 
 /** 百分子号：36pt 起，名单多时再缩小 */
@@ -91,7 +96,6 @@ function columnCapacityUnits(cols: number, fontSz: number): number {
 export function pickBirthdayFontSize(names: readonly string[], cols: number): number {
   const maxUnits = Math.max(1, ...names.map((n) => nameDisplayUnits(n)));
   const rowCount = Math.max(1, Math.ceil((names.length || 1) / Math.max(cols, 1)));
-  // 行高不够时再压字号，避免名单底边压进页脚
   const rowEmu = BIRTHDAY_NAMES_BOX.cy / rowCount;
   const maxByRow = Math.floor((rowEmu * 0.55) / 127);
   let sz = Math.min(BIRTHDAY_FONT_SZ_MAX, Math.max(BIRTHDAY_FONT_SZ_MIN, maxByRow));
@@ -139,37 +143,42 @@ function nameRunXml(text: string, color: string, fontSz: number): string {
   );
 }
 
-function emptyCellXml(): string {
-  return (
-    `<a:tc>` +
-    `<a:txBody><a:bodyPr wrap="none" anchor="ctr" lIns="45720" rIns="45720" tIns="0" bIns="0"/>` +
-    `<a:lstStyle/><a:p><a:pPr algn="ctr"/><a:endParaRPr sz="1200"/></a:p></a:txBody>` +
-    `<a:tcPr marL="45720" marR="45720" marT="0" marB="0" anchor="ctr"><a:noFill/>` +
-    `<a:lnL><a:noFill/></a:lnL><a:lnR><a:noFill/></a:lnR>` +
-    `<a:lnT><a:noFill/></a:lnT><a:lnB><a:noFill/></a:lnB></a:tcPr>` +
-    `</a:tc>`
-  );
+function birthdayNameShapeId(index: number): string {
+  return index === 0 ? BIRTHDAY_NAMES_SHAPE_ID : String(BIRTHDAY_EXTRA_ID_BASE + index - 1);
 }
 
-function nameCellXml(name: string, color: string, fontSz: number): string {
+function nameTextBoxXml(
+  index: number,
+  name: string,
+  x: number,
+  y: number,
+  cx: number,
+  cy: number,
+  color: string,
+  fontSz: number,
+): string {
+  const id = birthdayNameShapeId(index);
+  const text = name.trim() ? name : ' ';
   return (
-    `<a:tc>` +
-    `<a:txBody><a:bodyPr wrap="none" anchor="ctr" lIns="45720" rIns="45720" tIns="0" bIns="0">` +
+    `<p:sp>` +
+    `<p:nvSpPr><p:cNvPr id="${id}" name="Birthday Name ${index}"/>` +
+    `<p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>` +
+    `<p:spPr><a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm>` +
+    `<a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/></p:spPr>` +
+    `<p:txBody><a:bodyPr wrap="none" anchor="ctr" lIns="45720" rIns="45720" tIns="0" bIns="0">` +
     `<a:noAutofit/></a:bodyPr><a:lstStyle/>` +
     `<a:p><a:pPr algn="ctr" fontAlgn="ctr"><a:buNone/></a:pPr>` +
-    nameRunXml(name, color, fontSz) +
-    `<a:endParaRPr b="1" sz="${fontSz}"/></a:p></a:txBody>` +
-    `<a:tcPr marL="45720" marR="45720" marT="22860" marB="22860" anchor="ctr"><a:noFill/>` +
-    `<a:lnL><a:noFill/></a:lnL><a:lnR><a:noFill/></a:lnR>` +
-    `<a:lnT><a:noFill/></a:lnT><a:lnB><a:noFill/></a:lnB></a:tcPr>` +
-    `</a:tc>`
+    nameRunXml(text, color, fontSz) +
+    `<a:endParaRPr b="1" sz="${fontSz}"/></a:p></p:txBody>` +
+    `</p:sp>`
   );
 }
 
 /**
- * 将名单排成无边框表格阵列：一人一格，单元格 wrap=none，姓名不跨行。
+ * 将名单排成多文本框阵列（一人一框、定位成 grid）。
+ * 不用 ppt 表格：LibreOffice 预览常把表格单元格竖排/裁切。
  */
-export function buildBirthdayNameGridTableXml(names: readonly string[]): string {
+export function buildBirthdayNameGridShapesXml(names: readonly string[]): string {
   const list = names.map((s) => s.trim()).filter(Boolean).slice(0, BIRTHDAY_NAME_MAX);
   const cols = birthdayGridColumns(list.length, list);
   const rowCount = Math.max(1, Math.ceil((list.length || 1) / cols));
@@ -177,31 +186,33 @@ export function buildBirthdayNameGridTableXml(names: readonly string[]): string 
   const colors = ['4C1130', '274E13', '1C4587'];
   const colW = Math.floor(BIRTHDAY_NAMES_BOX.cx / cols);
   const rowH = Math.floor(BIRTHDAY_NAMES_BOX.cy / rowCount);
-  const grid = Array.from({ length: cols }, () => `<a:gridCol w="${colW}"/>`).join('');
+  const { x, y } = BIRTHDAY_NAMES_BOX;
 
-  const rowsXml: string[] = [];
-  for (let r = 0; r < rowCount; r++) {
-    const cells: string[] = [];
-    for (let c = 0; c < cols; c++) {
-      const name = list[r * cols + c];
-      if (name) cells.push(nameCellXml(name, colors[c % colors.length]!, fontSz));
-      else cells.push(emptyCellXml());
-    }
-    rowsXml.push(`<a:tr h="${rowH}">${cells.join('')}</a:tr>`);
+  const shapes: string[] = [];
+  const count = Math.max(list.length, 1);
+  for (let i = 0; i < count; i++) {
+    const c = i % cols;
+    const r = Math.floor(i / cols);
+    const name = list[i] ?? ' ';
+    shapes.push(
+      nameTextBoxXml(
+        i,
+        name,
+        x + c * colW,
+        y + r * rowH,
+        colW,
+        rowH,
+        colors[c % colors.length]!,
+        fontSz,
+      ),
+    );
   }
+  return shapes.join('');
+}
 
-  const { x, y, cx, cy } = BIRTHDAY_NAMES_BOX;
-  return (
-    `<p:graphicFrame>` +
-    `<p:nvGraphicFramePr>` +
-    `<p:cNvPr id="${BIRTHDAY_NAMES_SHAPE_ID}" name="Birthday Names Grid"/>` +
-    `<p:cNvGraphicFramePr><a:graphicFrameLocks noGrp="1"/></p:cNvGraphicFramePr>` +
-    `<p:nvPr/></p:nvGraphicFramePr>` +
-    `<p:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${cx}" cy="${cy}"/></p:xfrm>` +
-    `<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">` +
-    `<a:tbl><a:tblPr/><a:tblGrid>${grid}</a:tblGrid>${rowsXml.join('')}</a:tbl>` +
-    `</a:graphicData></a:graphic></p:graphicFrame>`
-  );
+/** @deprecated 兼容旧名；现为文本框阵列 */
+export function buildBirthdayNameGridTableXml(names: readonly string[]): string {
+  return buildBirthdayNameGridShapesXml(names);
 }
 
 function findShapeBlock(xml: string, shapeId: string): { start: number; end: number } | null {
@@ -221,12 +232,43 @@ function findShapeBlock(xml: string, shapeId: string): { start: number; end: num
   return { start: spStart, end: endTag + '</p:sp>'.length };
 }
 
+/** 去掉上次写入的额外名字框 / 旧表格 grid */
+function stripExtraBirthdayNameArtifacts(xml: string): string {
+  let out = xml.replace(/<p:sp\b[\s\S]*?<\/p:sp>/g, (sp) => {
+    const name = sp.match(/name="([^"]*)"/)?.[1] ?? '';
+    if (name.startsWith('Birthday Name ')) {
+      // 保留 id=399 主框，留给后面整体替换
+      if (sp.includes(`id="${BIRTHDAY_NAMES_SHAPE_ID}"`)) return sp;
+      return '';
+    }
+    return sp;
+  });
+  out = out.replace(/<p:graphicFrame\b[\s\S]*?<\/p:graphicFrame>/g, (gf) => {
+    if (gf.includes('Birthday Names Grid') || gf.includes(`id="${BIRTHDAY_NAMES_SHAPE_ID}"`)) {
+      return '';
+    }
+    return gf;
+  });
+  return out;
+}
+
 /**
- * 将 P24 名单 shape 替换为同位置的无边框表格阵列。
+ * 将 P24 名单区替换为横纵向 grid 文本框（不再用单文本框竖排）。
  */
 export function applyBirthdayNameGridToSlideXml(xml: string, namesRaw: string): string {
   const names = parseBirthdayNames(namesRaw);
-  const block = findShapeBlock(xml, BIRTHDAY_NAMES_SHAPE_ID);
-  if (!block) return xml;
-  return xml.slice(0, block.start) + buildBirthdayNameGridTableXml(names) + xml.slice(block.end);
+  const grid = buildBirthdayNameGridShapesXml(names);
+
+  let out = stripExtraBirthdayNameArtifacts(xml);
+  const block = findShapeBlock(out, BIRTHDAY_NAMES_SHAPE_ID);
+  if (block) {
+    return out.slice(0, block.start) + grid + out.slice(block.end);
+  }
+
+  // 原 shape 已不在：插在页脚「午餐聚會」之前
+  const footer = findShapeBlock(out, '401');
+  if (footer) {
+    return out.slice(0, footer.start) + grid + out.slice(footer.start);
+  }
+  return out;
 }
