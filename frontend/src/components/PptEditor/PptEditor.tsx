@@ -332,7 +332,7 @@ export default function PptEditor({
             )}
             {onClose && (
               <button type="button" className="btn-secondary btn-sm" onClick={onClose}>
-                {t('library.closePreviewTab')}
+                {t('common.close')}
               </button>
             )}
           </div>

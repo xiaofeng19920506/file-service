@@ -60,6 +60,7 @@ import {
 type AnnouncementDraft = AnnouncementInput & { key: string };
 
 const EDIT_SLIDES_PARAM = 'editSlides';
+const BULLETIN_ID_PARAM = 'id';
 
 function bulletinHashParams(): URLSearchParams {
   const hash = window.location.hash;
@@ -77,6 +78,11 @@ function editSlidesSectionFromHash(): string | null {
   const sectionId = bulletinHashParams().get(EDIT_SLIDES_PARAM)?.trim() || null;
   if (!sectionId || !(BULLETIN_SECTION_TEMPLATE_SLIDES[sectionId]?.length ?? 0)) return null;
   return sectionId;
+}
+
+function bulletinIdFromHash(): string | null {
+  if (!window.location.hash.startsWith('#/bulletin')) return null;
+  return bulletinHashParams().get(BULLETIN_ID_PARAM)?.trim() || null;
 }
 
 function emptyAnnouncement(): AnnouncementDraft {
@@ -152,56 +158,44 @@ export default function BulletinPage() {
   const [editSlidesSectionId, setEditSlidesSectionId] = useState<string | null>(() =>
     editSlidesSectionFromHash(),
   );
-  /** 本次打开编辑器是否 push 过历史条目；关闭时优先 history.back，避免残留 query */
-  const editSlidesHistoryPushedRef = useRef(false);
   const savingRef = useRef(false);
   const scripturePersistingRef = useRef(false);
   const [busySectionId, setBusySectionId] = useState<string | null>(null);
   savingRef.current = saving || publishing || scripturePersistingRef.current;
 
-  const openEditSlides = useCallback((sectionId: string) => {
-    if (!(BULLETIN_SECTION_TEMPLATE_SLIDES[sectionId]?.length ?? 0)) return;
-    const params = bulletinHashParams();
-    const current = params.get(EDIT_SLIDES_PARAM);
-    params.set(EDIT_SLIDES_PARAM, sectionId);
-    const nextHash = bulletinHashWithParams(params);
-    if (current === sectionId && window.location.hash === nextHash) {
+  /** 新标签打开分区幻灯片编辑页；弹窗被拦时回退到当前页 */
+  const openEditSlides = useCallback(
+    (sectionId: string) => {
+      if (!(BULLETIN_SECTION_TEMPLATE_SLIDES[sectionId]?.length ?? 0)) return;
+      const params = new URLSearchParams();
+      params.set(EDIT_SLIDES_PARAM, sectionId);
+      if (selectedId) params.set(BULLETIN_ID_PARAM, selectedId);
+      const hash = bulletinHashWithParams(params);
+      const url = `${window.location.origin}${window.location.pathname}${window.location.search}${hash}`;
+      const opened = window.open(url, '_blank');
+      if (opened) {
+        opened.focus();
+        return;
+      }
+      // 浏览器拦截弹窗：仍在本页打开
+      window.history.pushState({ bulletinEditSlides: sectionId }, '', hash);
       setEditSlidesSectionId(sectionId);
-      return;
-    }
-    if (current) {
-      window.history.replaceState(null, '', nextHash);
-    } else {
-      window.history.pushState({ bulletinEditSlides: sectionId }, '', nextHash);
-      editSlidesHistoryPushedRef.current = true;
-    }
-    setEditSlidesSectionId(sectionId);
-  }, []);
+    },
+    [selectedId],
+  );
 
   const closeEditSlides = useCallback(() => {
     const params = bulletinHashParams();
-    if (!params.get(EDIT_SLIDES_PARAM)) {
-      setEditSlidesSectionId(null);
-      editSlidesHistoryPushedRef.current = false;
-      return;
-    }
-    if (editSlidesHistoryPushedRef.current) {
-      editSlidesHistoryPushedRef.current = false;
-      window.history.back();
-      return;
-    }
     params.delete(EDIT_SLIDES_PARAM);
     window.history.replaceState(null, '', bulletinHashWithParams(params));
     setEditSlidesSectionId(null);
+    // 由「修改幻灯片」新开的标签可直接关掉；若浏览器不允许则留在周报页
+    window.close();
   }, []);
 
   useEffect(() => {
     const syncFromHistory = () => {
-      const sectionId = editSlidesSectionFromHash();
-      if (!sectionId) {
-        editSlidesHistoryPushedRef.current = false;
-      }
-      setEditSlidesSectionId(sectionId);
+      setEditSlidesSectionId(editSlidesSectionFromHash());
     };
     window.addEventListener('popstate', syncFromHistory);
     window.addEventListener('hashchange', syncFromHistory);
@@ -368,7 +362,9 @@ export default function BulletinPage() {
         }
 
         if (!cancelled) {
-          setSelectedId(target?.id ?? rows[0]?.id ?? null);
+          const hashId = bulletinIdFromHash();
+          const fromHash = hashId ? rows.find((b) => b.id === hashId) : null;
+          setSelectedId(fromHash?.id ?? target?.id ?? rows[0]?.id ?? null);
         }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : String(err));
@@ -941,7 +937,6 @@ export default function BulletinPage() {
               orientation="vertical"
               canManage={canManage}
               onEditSlides={(sectionId) => {
-                selectNavSection(sectionId);
                 openEditSlides(sectionId);
               }}
               onReplacePptx={handleReplaceSectionPptx}
