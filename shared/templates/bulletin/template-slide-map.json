@@ -261,7 +261,7 @@
     },
     {
       "slide": 35,
-      "fields": [{ "key": "verseOfWeek", "textIndex": 10, "example": "…" }]
+      "fields": [{ "key": "verseOfWeek", "textIndex": 16, "example": "(以弗所書 2:8) …", "notes": "整句写入 16，并清空 17–19" }]
     }
   ],
   "specialAnnouncementSlides": [25, 26]

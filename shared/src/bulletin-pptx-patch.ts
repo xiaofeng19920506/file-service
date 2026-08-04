@@ -617,7 +617,7 @@ export type BulletinPreviewPatchInput = {
   birthdayMonth?: string;
   /** 生日名单，换行/逗号分隔最多 3 人（P24 textIndex 5–7） */
   birthdayNames?: string;
-  /** 本週金句（P35 textIndex 18） */
+  /** 本週金句（P35：整句写入 textIndex 16，并清空 17–19） */
   verseOfWeek?: string;
   /** 特别公告（P25/P26；超出条数在 P27 前加页） */
   announcements?: AnnouncementPageInput[];
@@ -796,16 +796,28 @@ async function applyBirthdayFieldsToZip(
   zip.file('ppt/slides/slide24.xml', xml);
 }
 
+/**
+ * P35 金句正文跨多个 run：16=`(书卷 章:节`、17=`)  `、18=经文。
+ * 表单是整段文字，须写入 16 并清空 17–19，否则模板里残留的书卷名会再显示一次。
+ */
+export function buildVerseOfWeekSlideReplacements(verseOfWeek: string): TextRunReplacement[] {
+  const verse = verseOfWeek.trim();
+  if (!verse) return [];
+  return [
+    { textIndex: 16, text: verse },
+    { textIndex: 17, text: ' ' },
+    { textIndex: 18, text: ' ' },
+    { textIndex: 19, text: ' ' },
+  ];
+}
+
 async function applyVerseOfWeekToZip(zip: JSZip, verseOfWeek: string | undefined): Promise<void> {
-  const verse = verseOfWeek?.trim() ?? '';
-  if (!verse) return;
+  const reps = buildVerseOfWeekSlideReplacements(verseOfWeek ?? '');
+  if (!reps.length) return;
   const entry = zip.file('ppt/slides/slide35.xml');
   if (!entry) return;
   const xml = await entry.async('string');
-  zip.file(
-    'ppt/slides/slide35.xml',
-    applyIndexedTextReplacementsToSlideXml(xml, [{ textIndex: 18, text: verse }]),
-  );
+  zip.file('ppt/slides/slide35.xml', applyIndexedTextReplacementsToSlideXml(xml, reps));
 }
 
 function writeAnnouncementTitleBody(xml: string, item: AnnouncementPageInput): string {

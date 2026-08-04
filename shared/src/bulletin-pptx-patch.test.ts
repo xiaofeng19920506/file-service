@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import JSZip from 'jszip';
 import {
   extractIndexedTextRuns,
+  buildVerseOfWeekSlideReplacements,
   patchBulletinPreviewInPptx,
   patchCoverSlideInPptx,
   patchCoverDateLineInSlideXml,
@@ -347,5 +348,23 @@ describe('stabilizeOfferingReportSlideXml', () => {
     expect(xml).toContain('wrap="none"');
     expect(xml).toContain('cy="980000"');
     expect(xml).toContain('sz="2400"');
+  });
+});
+
+describe('buildVerseOfWeekSlideReplacements', () => {
+  it('writes full verse into textIndex 16 and clears leftover citation/body runs', async () => {
+    const tpl = await readFile(templatePath);
+    const verse = '(約翰福音 3:16)  神爱世人，甚至将他的独生子赐给他们';
+    const patched = await patchBulletinPreviewInPptx(tpl, { verseOfWeek: verse });
+    const zip = await JSZip.loadAsync(patched);
+    const runs = extractIndexedTextRuns(await zip.file('ppt/slides/slide35.xml')!.async('string'));
+    const joined = runs
+      .filter((r) => r.textIndex >= 16)
+      .map((r) => r.text)
+      .join('');
+    expect(joined).toContain(verse);
+    expect(joined).not.toContain('以弗所書');
+    expect(joined.match(/約翰福音/g)?.length).toBe(1);
+    expect(buildVerseOfWeekSlideReplacements(verse).map((r) => r.textIndex)).toEqual([16, 17, 18, 19]);
   });
 });

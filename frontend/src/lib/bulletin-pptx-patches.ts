@@ -178,6 +178,24 @@ export function buildBirthdaySlideReplacements(
 }
 
 /**
+ * P35 金句：模板把引用拆在 16–17、正文在 18。
+ * 整句写入 16 并清空 17–19，避免书卷名/章节叠字。
+ */
+export function buildVerseOfWeekSlideReplacements(verseOfWeek: string): {
+  textIndex: number;
+  text: string;
+}[] {
+  const verse = verseOfWeek.trim();
+  if (!verse) return [];
+  return [
+    { textIndex: 16, text: verse },
+    { textIndex: 17, text: ' ' },
+    { textIndex: 18, text: ' ' },
+    { textIndex: 19, text: ' ' },
+  ];
+}
+
+/**
  * 服事轮值表 P32：标题/正文里的「(7-9 月)」由开始、结束月份生成。
  */
 export function buildRotationMonthReplacements(bulletin: {
@@ -400,10 +418,10 @@ export function patchesForStep(stepId: string, bulletin: WeeklyBulletin): SlideT
         return [{ slideNumber: slideNum, replacements }];
       });
     }
-    case 'verse':
-      return bulletin.verseOfWeek.trim()
-        ? [{ slideNumber: 35, replacements: [{ textIndex: 18, text: bulletin.verseOfWeek.trim() }] }]
-        : [];
+    case 'verse': {
+      const verseReps = buildVerseOfWeekSlideReplacements(bulletin.verseOfWeek);
+      return verseReps.length ? [{ slideNumber: 35, replacements: verseReps }] : [];
+    }
     case 'more': {
       const patches: SlideTextPatch[] = [];
       if (bulletin.baptismText.trim()) {

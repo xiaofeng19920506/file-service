@@ -4,6 +4,7 @@ import {
   applySlidePatches,
   buildBirthdaySlideReplacements,
   buildCoverPatch,
+  buildVerseOfWeekSlideReplacements,
   bulletinDynamicTextOverrides,
   mergeSlideTextOverrides,
   patchesFromBulletin,
@@ -102,7 +103,7 @@ export async function generateBulletinPptx(
     if (!skip.skipVerse && bulletin.verseOfWeek?.trim()) {
       reapply.push({
         slideNumber: 35,
-        replacements: [{ textIndex: 18, text: bulletin.verseOfWeek.trim() }],
+        replacements: buildVerseOfWeekSlideReplacements(bulletin.verseOfWeek),
       });
     }
     const overrides = mergeSlideTextOverrides(
