@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import type { PlaylistItem } from '../../api/playlists';
 import { friendlyError } from '../../lib/error-messages';
 import {
-  formatClipSummary,
   htmlTimeToSeconds,
   resolvePlayClips,
   secondsToHtmlTime,
@@ -33,16 +32,30 @@ type WorshipClipFieldsProps = {
   item: PlaylistItem;
   disabled?: boolean;
   onSave: (patch: { playClips: PlayClip[] | null }) => Promise<void>;
+  /** 受控展开（由 ⋯ 菜单触发时使用） */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** 隐藏自带切换按钮，改由外部菜单控制 */
+  hideToggle?: boolean;
 };
 
 export default function WorshipClipFields({
   item,
   disabled = false,
   onSave,
+  open: openProp,
+  onOpenChange,
+  hideToggle = false,
 }: WorshipClipFieldsProps) {
   const { t } = useI18n();
   const savedClips = resolvePlayClips(item);
-  const [open, setOpen] = useState(() => savedClips.length > 0);
+  const [internalOpen, setInternalOpen] = useState(() => savedClips.length > 0);
+  const open = openProp ?? internalOpen;
+  const setOpen = (next: boolean) => {
+    onOpenChange?.(next);
+    if (openProp === undefined) setInternalOpen(next);
+  };
+
   const [rows, setRows] = useState<DraftClip[]>(() => clipsToDraft(savedClips));
   const [clipError, setClipError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -51,8 +64,8 @@ export default function WorshipClipFields({
     const clips = resolvePlayClips(item);
     setRows(clipsToDraft(clips));
     setClipError(null);
-    if (clips.length > 0) setOpen(true);
-  }, [item.id, item.playClips, item.playStartSec, item.playEndSec]);
+    if (clips.length > 0 && openProp === undefined) setInternalOpen(true);
+  }, [item.id, item.playClips, item.playStartSec, item.playEndSec, openProp]);
 
   const commit = async (nextRows: DraftClip[]) => {
     if (nextRows.some(rangeInvalid)) {
@@ -137,47 +150,66 @@ export default function WorshipClipFields({
     }
   };
 
+  if (!open && hideToggle) return null;
+
   return (
     <div className="bulletin-worship-clip-editor">
-      <div className="bulletin-worship-clip-toggle-row">
-        <button
-          type="button"
-          className="btn-secondary btn-sm"
-          disabled={disabled || saving}
-          aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
-        >
-          {open ? t('bulletin.worshipClipHide') : t('bulletin.worshipClipShow')}
-        </button>
-        {!open && savedClips.length > 0 ? (
-          <span className="bulletin-worship-clip-summary">
-            {savedClips.map((c) => formatClipSummary(c)).join(' · ')}
-          </span>
-        ) : null}
-        {open && savedClips.length > 0 ? (
+      {!hideToggle ? (
+        <div className="bulletin-worship-clip-toggle-row">
           <button
             type="button"
             className="btn-secondary btn-sm"
             disabled={disabled || saving}
-            onClick={() => void clearClips()}
+            aria-expanded={open}
+            onClick={() => setOpen(!open)}
           >
-            {t('bulletin.worshipClipClear')}
+            {open ? t('bulletin.worshipClipHide') : t('bulletin.worshipClipShow')}
           </button>
-        ) : null}
-      </div>
+          {open && savedClips.length > 0 ? (
+            <button
+              type="button"
+              className="btn-secondary btn-sm"
+              disabled={disabled || saving}
+              onClick={() => void clearClips()}
+            >
+              {t('bulletin.worshipClipClear')}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       {open ? (
         <>
           <div className="bulletin-worship-clip-editor-head">
             <span className="bulletin-worship-clip-editor-label">{t('bulletin.worshipClipSegments')}</span>
-            <button
-              type="button"
-              className="btn-secondary btn-sm"
-              disabled={disabled || saving || rows.length >= 40}
-              onClick={() => setRows((prev) => [...prev, { startSec: 0, endSec: null, label: '' }])}
-            >
-              {t('bulletin.worshipClipAddSegment')}
-            </button>
+            <div className="bulletin-worship-clip-editor-head-actions">
+              <button
+                type="button"
+                className="btn-secondary btn-sm"
+                disabled={disabled || saving || rows.length >= 40}
+                onClick={() => setRows((prev) => [...prev, { startSec: 0, endSec: null, label: '' }])}
+              >
+                {t('bulletin.worshipClipAddSegment')}
+              </button>
+              <button
+                type="button"
+                className="btn-secondary btn-sm"
+                disabled={disabled || saving}
+                onClick={() => setOpen(false)}
+              >
+                {t('bulletin.worshipClipHide')}
+              </button>
+              {savedClips.length > 0 ? (
+                <button
+                  type="button"
+                  className="btn-secondary btn-sm"
+                  disabled={disabled || saving}
+                  onClick={() => void clearClips()}
+                >
+                  {t('bulletin.worshipClipClear')}
+                </button>
+              ) : null}
+            </div>
           </div>
           <ul className="bulletin-worship-clip-rows">
             {rows.map((row, index) => {

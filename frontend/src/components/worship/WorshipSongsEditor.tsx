@@ -18,7 +18,7 @@ import {
   type BulletinWorshipPlaylistDetail,
 } from '../../api/bulletins';
 import PlaylistYoutubeSearchPanel from '../PlaylistYoutubeSearchPanel';
-import WorshipClipFields from '../bulletin/WorshipClipFields';
+import WorshipTrackActions from './WorshipTrackActions';
 import { friendlyError } from '../../lib/error-messages';
 import type { PlayClip } from '../../lib/worship-presentation-mode';
 import { useI18n } from '../../i18n';
@@ -271,19 +271,13 @@ export default function WorshipSongsEditor({
               >
                 <span className="worship-songs-track-order">{index + 1}</span>
                 <div className="worship-songs-track-main">
-                  <span className="worship-songs-track-title">{item.title}</span>
-                  <WorshipClipFields
+                  <WorshipTrackActions
                     item={item}
-                    onSave={(patch) => handleClipSave(item.id, patch)}
+                    title={item.title}
+                    onRemove={() => handleRemove(item)}
+                    onClipSave={(patch) => handleClipSave(item.id, patch)}
                   />
                 </div>
-                <button
-                  type="button"
-                  className="btn-secondary btn-sm"
-                  onClick={() => void handleRemove(item)}
-                >
-                  {t('playlists.removeTrackShort')}
-                </button>
               </li>
             ))}
           </ol>

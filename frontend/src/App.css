@@ -7387,7 +7387,7 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
 
 .worship-songs-track {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.75rem;
   padding: 0.5rem 0.65rem;
   border: 1px solid var(--border-light);
@@ -7399,6 +7399,7 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   flex: 0 0 1.5rem;
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
+  padding-top: 0.2rem;
 }
 
 .worship-songs-track-title {
@@ -7643,6 +7644,119 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   gap: 0.35rem 0.5rem;
 }
 
+.bulletin-worship-clip-editor-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.worship-track-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.worship-track-actions-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  min-width: 0;
+}
+
+.worship-track-actions-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.worship-track-actions-clip-hint {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 9rem;
+}
+
+.worship-track-more {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.worship-track-more-btn {
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted, #64748b);
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.worship-track-more-btn:hover:not(:disabled),
+.worship-track-more-btn:focus-visible {
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--surface-elevated, #fff) 80%, var(--border));
+  color: var(--text);
+}
+
+.worship-track-more-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.worship-track-more-menu {
+  position: absolute;
+  top: calc(100% + 0.2rem);
+  right: 0;
+  z-index: 30;
+  min-width: 7.5rem;
+  padding: 0.25rem;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  background: var(--surface-elevated, var(--surface));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.worship-track-more-item {
+  width: 100%;
+  text-align: left;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.85rem;
+  padding: 0.4rem 0.55rem;
+  cursor: pointer;
+}
+
+.worship-track-more-item:hover:not(:disabled) {
+  background: var(--surface-muted, rgba(0, 0, 0, 0.05));
+}
+
+.worship-track-more-item--danger {
+  color: var(--danger, #b42318);
+}
+
+.worship-track-more-item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .bulletin-worship-clip-editor-head {
   display: flex;
   flex-wrap: wrap;
@@ -7778,8 +7892,8 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
 .bulletin-worship-track-preview-item {
   display: flex;
   gap: 0.4rem;
-  align-items: center;
-  padding: 0.25rem 0.2rem;
+  align-items: flex-start;
+  padding: 0.35rem 0.2rem;
   border-radius: 6px;
   cursor: grab;
 }

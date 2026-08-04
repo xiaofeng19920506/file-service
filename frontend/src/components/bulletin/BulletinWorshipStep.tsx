@@ -22,7 +22,7 @@ import {
   type WorshipPresentationMode,
 } from '../../lib/worship-presentation-mode';
 import { useI18n } from '../../i18n';
-import WorshipClipFields from './WorshipClipFields';
+import WorshipTrackActions from '../worship/WorshipTrackActions';
 
 type BulletinWorshipStepProps = {
   draft: WeeklyBulletin;
@@ -335,27 +335,24 @@ export default function BulletinWorshipStep({
                 >
                   <span className="bulletin-worship-track-preview-order">{index + 1}</span>
                   <div className="bulletin-worship-track-preview-main">
-                    <span className="bulletin-worship-track-preview-title">{item.title}</span>
                     {canAddSongs ? (
-                      <WorshipClipFields
+                      <WorshipTrackActions
                         item={item}
-                        onSave={(patch) => handleClipSave(item.id, patch)}
+                        title={item.title}
+                        onRemove={() => handleRemove(item)}
+                        onClipSave={(patch) => handleClipSave(item.id, patch)}
                       />
-                    ) : resolvePlayClips(item).length > 0 ? (
-                      <span className="bulletin-worship-clip-summary">
-                        {resolvePlayClips(item).map((c) => formatClipSummary(c)).join(' · ')}
-                      </span>
-                    ) : null}
+                    ) : (
+                      <>
+                        <span className="bulletin-worship-track-preview-title">{item.title}</span>
+                        {resolvePlayClips(item).length > 0 ? (
+                          <span className="bulletin-worship-clip-summary">
+                            {resolvePlayClips(item).map((c) => formatClipSummary(c)).join(' · ')}
+                          </span>
+                        ) : null}
+                      </>
+                    )}
                   </div>
-                  {canAddSongs ? (
-                    <button
-                      type="button"
-                      className="btn-secondary btn-sm"
-                      onClick={() => void handleRemove(item)}
-                    >
-                      {t('playlists.removeTrackShort')}
-                    </button>
-                  ) : null}
                 </li>
               ))}
             </ol>

@@ -505,6 +505,7 @@ export default {
     worshipClipShow: '剪切',
     worshipClipHide: '收起',
     worshipClipClear: '清除剪切',
+    worshipTrackMore: '更多',
     worshipClipAddSegment: '加一段',
     worshipClipRemoveSegment: '删除',
     worshipClipLabel: '名称',
