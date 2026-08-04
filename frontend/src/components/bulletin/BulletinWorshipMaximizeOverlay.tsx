@@ -188,11 +188,11 @@ export default function BulletinWorshipMaximizeOverlay({
   }, []);
 
   useEffect(() => {
-    if (!autoEnterFullscreen) return;
+    if (!autoEnterFullscreen || mode !== 'ppt') return;
     if (isDocumentFullscreen()) return;
     const el = rootRef.current ?? document.documentElement;
     void requestElementFullscreen(el);
-  }, [autoEnterFullscreen]);
+  }, [autoEnterFullscreen, mode]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -290,6 +290,8 @@ export default function BulletinWorshipMaximizeOverlay({
             canGoPrev={transport.canGoPrev}
             immersive
             lockLandscape
+            nativeControls={false}
+            autoEnterFullscreen={autoEnterFullscreen}
           />
         </div>
       ) : (

@@ -113,15 +113,17 @@ export default function BulletinWorshipEmbeddedPlayer({
     }
   };
 
-  /** 点播放：开播 + 最大化层，并在同一用户手势内请求浏览器全屏 */
+  /** 点播放：开播 + 最大化层；PPT 直接全屏文档，YouTube 由播放器 mount 后点全屏按钮 */
   const handlePlay = () => {
     if (!showSlidePlay) return;
     const nextLive: WorshipLiveMode = mode === 'youtube' ? 'youtube' : 'ppt';
     flushSync(() => {
       openLive(nextLive);
     });
-    const stage = document.querySelector('.bulletin-worship-maximize') as HTMLElement | null;
-    void requestElementFullscreen(stage ?? document.documentElement);
+    if (nextLive === 'ppt') {
+      const stage = document.querySelector('.bulletin-worship-maximize') as HTMLElement | null;
+      void requestElementFullscreen(stage ?? document.documentElement);
+    }
   };
 
   const handleCloseLive = () => {

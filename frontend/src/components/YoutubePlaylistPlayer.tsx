@@ -41,6 +41,8 @@ type YoutubePlaylistPlayerProps = {
   mobileChrome?: ReactNode;
   /** 使用 YouTube 自带控制条（免费托管，进度条由 YouTube 负责） */
   nativeControls?: boolean;
+  /** mount 后自动查找并点击自定义全屏按钮 */
+  autoEnterFullscreen?: boolean;
 };
 
 type YtPlayer = {
@@ -174,6 +176,7 @@ export default function YoutubePlaylistPlayer({
   mobileImmersive = false,
   mobileChrome,
   nativeControls = true,
+  autoEnterFullscreen = false,
 }: YoutubePlaylistPlayerProps) {
   const immersive = immersiveProp ?? mobileImmersive;
   const overlayMode = !nativeControls && (immersive || mobileInline);
@@ -188,6 +191,7 @@ export default function YoutubePlaylistPlayer({
   const progressRef = useRef<HTMLDivElement>(null);
   const volumeProgressRef = useRef<HTMLDivElement>(null);
   const frameWrapRef = useRef<HTMLDivElement>(null);
+  const fullscreenBtnRef = useRef<HTMLButtonElement>(null);
   const landscapeStageRef = useRef<HTMLDivElement>(null);
   const lastLoadedIndexRef = useRef(-1);
   const ignorePauseUntilRef = useRef(0);
@@ -867,6 +871,47 @@ export default function YoutubePlaylistPlayer({
     scheduleOverlayHide,
   ]);
 
+  /** mount 后搜索全屏按钮并 click（敬拜播放键场景） */
+  useEffect(() => {
+    if (!autoEnterFullscreen || nativeControls) return;
+    let cancelled = false;
+    let tries = 0;
+
+    const clickFullscreen = () => {
+      if (cancelled) return true;
+      if (isFullscreen || isLandscapeTheater) return true;
+      const btn =
+        fullscreenBtnRef.current ??
+        (frameWrapRef.current
+          ?.closest('.youtube-player-section')
+          ?.querySelector('.youtube-player-fullscreen-btn') as HTMLButtonElement | null);
+      if (btn) {
+        btn.click();
+        return true;
+      }
+      return false;
+    };
+
+    const tick = () => {
+      if (cancelled) return;
+      if (clickFullscreen()) return;
+      tries += 1;
+      if (tries < 20) {
+        window.setTimeout(tick, 50);
+      }
+    };
+
+    // 等一帧让按钮挂上 DOM
+    const raf = window.requestAnimationFrame(() => {
+      window.setTimeout(tick, 0);
+    });
+
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(raf);
+    };
+  }, [autoEnterFullscreen, nativeControls, isFullscreen, isLandscapeTheater]);
+
   useEffect(() => {
     if (!isLandscapeTheater) return;
 
@@ -1087,6 +1132,7 @@ export default function YoutubePlaylistPlayer({
 
             {(!immersive || lockLandscape) && (
               <button
+                ref={fullscreenBtnRef}
                 type="button"
                 className="youtube-player-icon-btn youtube-player-fullscreen-btn"
                 onClick={() => void toggleFullscreen()}
