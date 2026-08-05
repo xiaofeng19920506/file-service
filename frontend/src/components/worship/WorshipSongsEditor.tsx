@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   addInvitePlaylistItems,
   getWorshipPlaylistInvite,
@@ -18,7 +18,7 @@ import {
   type BulletinWorshipPlaylistDetail,
 } from '../../api/bulletins';
 import PlaylistYoutubeSearchPanel from '../PlaylistYoutubeSearchPanel';
-import { DragHandleIcon } from '../icons';
+import { useSortableVerticalList } from '../../hooks/useSortableVerticalList';
 import WorshipTrackActions from './WorshipTrackActions';
 import { friendlyError } from '../../lib/error-messages';
 import type { PlayClip } from '../../lib/worship-presentation-mode';
@@ -57,8 +57,9 @@ export default function WorshipSongsEditor({
   const [url, setUrl] = useState('');
   const [addingUrl, setAddingUrl] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const listRef = useRef<HTMLOListElement>(null);
+  const detailRef = useRef(detail);
+  detailRef.current = detail;
 
   const existingVideoIds = useMemo(
     () => new Set(detail?.items.map((item) => item.youtubeVideoId) ?? []),
@@ -164,37 +165,36 @@ export default function WorshipSongsEditor({
     }
   };
 
-  const handleDrop = async (toIndex: number) => {
-    if (!detail || dragIndex === null || dragIndex === toIndex) {
-      setDragIndex(null);
-      setDragOverIndex(null);
-      return;
-    }
-    const reordered = reorderToFinalIndex(detail.items, dragIndex, toIndex);
-    setDragIndex(null);
-    setDragOverIndex(null);
-    setDetail({ ...detail, items: reordered });
-    try {
-      const data = inviteToken
-        ? await reorderInvitePlaylistItems(
-            inviteToken,
-            reordered.map((item) => item.id),
-          )
-        : await reorderBulletinWorshipPlaylistItems(
-            bulletinId!,
-            reordered.map((item) => item.id),
-          );
-      setDetail(data);
-    } catch (err) {
-      setError(friendlyError(err instanceof Error ? err.message : 'reorder_playlist_failed', t));
-      await refresh();
-    }
-  };
+  const handleReorderCommit = useCallback(
+    async (from: number, toIndex: number) => {
+      const current = detailRef.current;
+      if (!current) return;
+      const reordered = reorderToFinalIndex(current.items, from, toIndex);
+      setDetail({ ...current, items: reordered });
+      try {
+        const data = inviteToken
+          ? await reorderInvitePlaylistItems(
+              inviteToken,
+              reordered.map((item) => item.id),
+            )
+          : await reorderBulletinWorshipPlaylistItems(
+              bulletinId!,
+              reordered.map((item) => item.id),
+            );
+        setDetail(data);
+      } catch (err) {
+        setError(friendlyError(err instanceof Error ? err.message : 'reorder_playlist_failed', t));
+        await refresh();
+      }
+    },
+    [bulletinId, inviteToken, refresh, t],
+  );
 
-  const clearDrag = () => {
-    setDragIndex(null);
-    setDragOverIndex(null);
-  };
+  const trackSortable = useSortableVerticalList({
+    enabled: Boolean(detail && detail.items.length > 1),
+    listRef,
+    onCommit: (from, toIndex) => void handleReorderCommit(from, toIndex),
+  });
 
   const handleClipSave = async (itemId: string, patch: { playClips: PlayClip[] | null }) => {
     const data = inviteToken
@@ -272,48 +272,23 @@ export default function WorshipSongsEditor({
             {detail.items.length > 1 ? (
               <p className="bulletin-worship-reorder-hint">{t('bulletin.worshipReorderHint')}</p>
             ) : null}
-            <ol className="worship-songs-track-list">
+            <ol
+              ref={listRef}
+              className={`worship-songs-track-list${trackSortable.isSorting ? ' is-sorting' : ''}`}
+            >
               {detail.items.map((item, index) => (
                 <li
                   key={item.id}
                   className={[
                     'worship-songs-track',
                     'is-sortable',
-                    dragIndex === index ? 'worship-songs-track--drag' : '',
-                    dragOverIndex === index && dragIndex !== index ? 'is-drag-over' : '',
+                    trackSortable.isDraggingItem(index) ? 'is-dragging' : '',
                   ]
                     .filter(Boolean)
                     .join(' ')}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    e.dataTransfer.dropEffect = 'move';
-                    if (dragOverIndex !== index) setDragOverIndex(index);
-                  }}
-                  onDragLeave={(e) => {
-                    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-                      setDragOverIndex((prev) => (prev === index ? null : prev));
-                    }
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    void handleDrop(index);
-                  }}
+                  style={trackSortable.getItemStyle(index)}
+                  {...trackSortable.bindDragHandle(index, { ignoreInteractive: true })}
                 >
-                  <button
-                    type="button"
-                    className="bulletin-worship-track-drag-handle"
-                    draggable
-                    aria-label={t('playlists.dragToReorder')}
-                    title={t('playlists.dragToReorder')}
-                    onDragStart={(e) => {
-                      e.dataTransfer.effectAllowed = 'move';
-                      e.dataTransfer.setData('text/plain', item.id);
-                      setDragIndex(index);
-                    }}
-                    onDragEnd={clearDrag}
-                  >
-                    <DragHandleIcon />
-                  </button>
                   <span className="worship-songs-track-order">{index + 1}</span>
                   <div className="worship-songs-track-main">
                     <WorshipTrackActions

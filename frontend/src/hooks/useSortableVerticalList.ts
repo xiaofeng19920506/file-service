@@ -25,6 +25,20 @@ function finalIndexFromGap(from: number, gapIndex: number): number | null {
   return gapIndex > from ? gapIndex - 1 : gapIndex;
 }
 
+function isInteractiveDragTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  return Boolean(
+    target.closest(
+      'button, input, textarea, select, a, label, [role="button"], [contenteditable="true"]',
+    ),
+  );
+}
+
+type BindDragHandleOptions = {
+  /** 整行拖拽时跳过按钮、输入框等交互控件 */
+  ignoreInteractive?: boolean;
+};
+
 type UseSortableVerticalListOptions = {
   enabled: boolean;
   listRef: RefObject<HTMLOListElement | null>;
@@ -92,9 +106,10 @@ export function useSortableVerticalList({
   }, [drag, finishDrag]);
 
   const bindDragHandle = useCallback(
-    (index: number) => ({
+    (index: number, options?: BindDragHandleOptions) => ({
       onPointerDown: (event: React.PointerEvent<HTMLElement>) => {
         if (!enabled || event.button !== 0 || !listRef.current) return;
+        if (options?.ignoreInteractive && isInteractiveDragTarget(event.target)) return;
 
         const listEl = listRef.current;
         const children = Array.from(listEl.children) as HTMLElement[];

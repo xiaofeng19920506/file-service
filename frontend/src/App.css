@@ -7467,6 +7467,14 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   gap: 0.5rem;
 }
 
+.worship-songs-track-list.is-sorting {
+  user-select: none;
+}
+
+.worship-songs-track-list.is-sorting .worship-songs-track:not(.is-dragging) {
+  transition: transform 0.16s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
 .worship-songs-track {
   display: flex;
   align-items: flex-start;
@@ -7477,13 +7485,20 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   background: var(--bg);
 }
 
-.worship-songs-track.worship-songs-track--drag {
-  opacity: 0.55;
+.worship-songs-track.is-sortable {
+  cursor: grab;
 }
 
-.worship-songs-track.is-drag-over {
-  border-color: color-mix(in srgb, var(--accent, #2563eb) 55%, transparent);
-  background: color-mix(in srgb, var(--accent, #2563eb) 8%, transparent);
+.worship-songs-track.is-sortable:active {
+  cursor: grabbing;
+}
+
+.worship-songs-track.is-dragging {
+  opacity: 1;
+  background: var(--surface);
+  border-color: color-mix(in srgb, var(--accent, #2563eb) 35%, var(--border-light));
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+  cursor: grabbing;
 }
 
 .worship-songs-track-order {
@@ -8054,59 +8069,39 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   gap: 0.25rem;
 }
 
+.bulletin-worship-track-preview.is-sorting {
+  user-select: none;
+}
+
+.bulletin-worship-track-preview.is-sorting .bulletin-worship-track-preview-item:not(.is-dragging) {
+  transition: transform 0.16s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
 .bulletin-worship-track-preview-item {
   display: flex;
   gap: 0.35rem;
   align-items: flex-start;
-  padding: 0.35rem 0.25rem;
+  padding: 0.35rem 0.5rem;
   border-radius: 8px;
   border: 1px solid transparent;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .bulletin-worship-track-preview-item.is-sortable {
-  background: var(--surface, #fff);
-}
-
-.bulletin-worship-track-preview-item.is-dragging {
-  opacity: 0.55;
-  background: var(--surface-muted, rgba(0, 0, 0, 0.04));
-}
-
-.bulletin-worship-track-preview-item.is-drag-over {
-  border-color: color-mix(in srgb, var(--accent, #2563eb) 55%, transparent);
-  background: color-mix(in srgb, var(--accent, #2563eb) 8%, transparent);
-}
-
-.bulletin-worship-track-drag-handle {
-  appearance: none;
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  margin-top: 0.1rem;
-  padding: 0;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--text-secondary);
+  background: var(--surface);
   cursor: grab;
-  touch-action: none;
 }
 
-.bulletin-worship-track-drag-handle:hover {
-  background: var(--surface-muted, rgba(0, 0, 0, 0.06));
-  color: var(--text);
-}
-
-.bulletin-worship-track-drag-handle:active {
+.bulletin-worship-track-preview-item.is-sortable:active {
   cursor: grabbing;
 }
 
-.bulletin-worship-track-drag-handle .drag-handle-icon {
-  width: 14px;
-  height: 14px;
+.bulletin-worship-track-preview-item.is-dragging {
+  opacity: 1;
+  background: var(--surface);
+  border-color: color-mix(in srgb, var(--accent, #2563eb) 35%, var(--border-light));
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+  cursor: grabbing;
 }
 
 .bulletin-worship-track-preview-item .bulletin-worship-track-preview-title {

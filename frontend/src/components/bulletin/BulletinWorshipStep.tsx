@@ -22,7 +22,7 @@ import {
   type WorshipPresentationMode,
 } from '../../lib/worship-presentation-mode';
 import { useI18n } from '../../i18n';
-import { DragHandleIcon } from '../icons';
+import { useSortableVerticalList } from '../../hooks/useSortableVerticalList';
 import WorshipTrackActions from '../worship/WorshipTrackActions';
 
 type BulletinWorshipStepProps = {
@@ -71,8 +71,9 @@ export default function BulletinWorshipStep({
     Boolean(oauthJustConnected || oauthError),
   );
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const listRef = useRef<HTMLOListElement>(null);
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
 
   const mode = normalizeWorshipPresentationMode(draft.worshipPresentationMode);
   const showPlaylist = worshipNeedsPlaylist(mode);
@@ -147,33 +148,30 @@ export default function BulletinWorshipStep({
     }
   };
 
-  const handleDrop = async (toIndex: number) => {
-    if (!canAddSongs || dragIndex === null || dragIndex === toIndex) {
-      setDragIndex(null);
-      setDragOverIndex(null);
-      return;
-    }
-    const reordered = reorderToFinalIndex(items, dragIndex, toIndex);
-    setDragIndex(null);
-    setDragOverIndex(null);
-    setItems(reordered);
-    try {
-      const data = await reorderBulletinWorshipPlaylistItems(
-        draft.id,
-        reordered.map((row) => row.id),
-      );
-      setItems(data.items);
-      onPlaylistChanged?.();
-    } catch (err) {
-      setError(friendlyError(err instanceof Error ? err.message : 'reorder_playlist_failed', t));
-      await refreshPlaylist();
-    }
-  };
+  const handleReorderCommit = useCallback(
+    async (from: number, toIndex: number) => {
+      const reordered = reorderToFinalIndex(itemsRef.current, from, toIndex);
+      setItems(reordered);
+      try {
+        const data = await reorderBulletinWorshipPlaylistItems(
+          draft.id,
+          reordered.map((row) => row.id),
+        );
+        setItems(data.items);
+        onPlaylistChanged?.();
+      } catch (err) {
+        setError(friendlyError(err instanceof Error ? err.message : 'reorder_playlist_failed', t));
+        await refreshPlaylist();
+      }
+    },
+    [draft.id, onPlaylistChanged, refreshPlaylist, t],
+  );
 
-  const clearDrag = () => {
-    setDragIndex(null);
-    setDragOverIndex(null);
-  };
+  const trackSortable = useSortableVerticalList({
+    enabled: canAddSongs && items.length > 1,
+    listRef,
+    onCommit: (from, toIndex) => void handleReorderCommit(from, toIndex),
+  });
 
   const handleClipSave = async (itemId: string, patch: { playClips: PlayClip[] | null }) => {
     const detail = await patchBulletinWorshipPlaylistItem(draft.id, itemId, patch);
@@ -326,62 +324,25 @@ export default function BulletinWorshipStep({
               {canAddSongs && items.length > 1 ? (
                 <p className="bulletin-worship-reorder-hint">{t('bulletin.worshipReorderHint')}</p>
               ) : null}
-              <ol className="bulletin-worship-track-preview">
+              <ol
+                ref={listRef}
+                className={`bulletin-worship-track-preview${trackSortable.isSorting ? ' is-sorting' : ''}`}
+              >
                 {items.map((item, index) => (
                   <li
                     key={item.id}
                     className={[
                       'bulletin-worship-track-preview-item',
                       canAddSongs ? 'is-sortable' : '',
-                      dragIndex === index ? 'is-dragging' : '',
-                      dragOverIndex === index && dragIndex !== index ? 'is-drag-over' : '',
+                      trackSortable.isDraggingItem(index) ? 'is-dragging' : '',
                     ]
                       .filter(Boolean)
                       .join(' ')}
-                    onDragOver={
-                      canAddSongs
-                        ? (e) => {
-                            e.preventDefault();
-                            e.dataTransfer.dropEffect = 'move';
-                            if (dragOverIndex !== index) setDragOverIndex(index);
-                          }
-                        : undefined
-                    }
-                    onDragLeave={
-                      canAddSongs
-                        ? (e) => {
-                            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-                              setDragOverIndex((prev) => (prev === index ? null : prev));
-                            }
-                          }
-                        : undefined
-                    }
-                    onDrop={
-                      canAddSongs
-                        ? (e) => {
-                            e.preventDefault();
-                            void handleDrop(index);
-                          }
-                        : undefined
-                    }
+                    style={canAddSongs ? trackSortable.getItemStyle(index) : undefined}
+                    {...(canAddSongs
+                      ? trackSortable.bindDragHandle(index, { ignoreInteractive: true })
+                      : {})}
                   >
-                    {canAddSongs ? (
-                      <button
-                        type="button"
-                        className="bulletin-worship-track-drag-handle"
-                        draggable
-                        aria-label={t('playlists.dragToReorder')}
-                        title={t('playlists.dragToReorder')}
-                        onDragStart={(e) => {
-                          e.dataTransfer.effectAllowed = 'move';
-                          e.dataTransfer.setData('text/plain', item.id);
-                          setDragIndex(index);
-                        }}
-                        onDragEnd={clearDrag}
-                      >
-                        <DragHandleIcon />
-                      </button>
-                    ) : null}
                     <span className="bulletin-worship-track-preview-order">{index + 1}</span>
                     <div className="bulletin-worship-track-preview-main">
                       {canAddSongs ? (
