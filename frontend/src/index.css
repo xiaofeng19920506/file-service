@@ -158,6 +158,9 @@
   --pending-stripe-b: #3a3a3c;
   --editable-bg: #2c2c2e;
   --input-bg: #2c2c2e;
+  --form-field-border: rgba(255, 255, 255, 0.42);
+  --form-field-border-focus: rgba(255, 255, 255, 0.72);
+  --form-field-border-disabled: rgba(255, 255, 255, 0.22);
   --progress-track: #38383a;
   --focus-ring: 0 0 0 4px rgba(41, 151, 255, 0.32);
 }

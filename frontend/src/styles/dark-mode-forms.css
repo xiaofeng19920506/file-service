@@ -1,16 +1,110 @@
 /**
- * Dark mode 补丁：修正仍使用硬编码浅色或未设色的表单/UI
+ * Dark mode 补丁：表单可见边框 + 仍使用硬编码浅色或未设色的控件
  * （幻灯片画布白底 intentionally 保留，不在此覆盖）
  */
+
+/* ── 带边框的表单控件：半透明白色描边标出可点击范围 ── */
+[data-theme='dark'] .bulletin-field input:not([type='checkbox']):not([type='radio']),
+[data-theme='dark'] .bulletin-field textarea,
+[data-theme='dark'] .bulletin-field select,
+[data-theme='dark'] .bulletin-scripture-picker-select,
+[data-theme='dark'] .bulletin-worship-clip-input,
+[data-theme='dark'] .bulletin-worship-clip-label-input,
+[data-theme='dark'] .bulletin-worship-clip-field input:not([type='checkbox']):not([type='radio']),
+[data-theme='dark'] .bulletin-birthday-name-input,
+[data-theme='dark'] .admin-table-input,
+[data-theme='dark'] .admin-table-select,
+[data-theme='dark'] .admin-user-field input,
+[data-theme='dark'] .admin-user-field select,
+[data-theme='dark'] .admin-table-page-size select,
+[data-theme='dark'] .metadata-field input,
+[data-theme='dark'] .metadata-field textarea,
+[data-theme='dark'] .metadata-field select,
+[data-theme='dark'] .auth-form input,
+[data-theme='dark'] .playlists-text-input,
+[data-theme='dark'] .playlists-list-rename-input,
+[data-theme='dark'] .create-playlist-modal-input,
+[data-theme='dark'] .preview-input,
+[data-theme='dark'] .ppt-find-panel .ppt-rb-field input,
+[data-theme='dark'] .search-input-wrap,
+[data-theme='dark'] .admin-table-filter {
+  border-color: var(--form-field-border);
+}
+
+[data-theme='dark'] .bulletin-field input:not([type='checkbox']):not([type='radio']):focus,
+[data-theme='dark'] .bulletin-field input:not([type='checkbox']):not([type='radio']):focus-visible,
+[data-theme='dark'] .bulletin-field textarea:focus,
+[data-theme='dark'] .bulletin-field textarea:focus-visible,
+[data-theme='dark'] .bulletin-field select:focus,
+[data-theme='dark'] .bulletin-field select:focus-visible,
+[data-theme='dark'] .bulletin-scripture-picker-select:focus,
+[data-theme='dark'] .bulletin-scripture-picker-select:focus-visible,
+[data-theme='dark'] .bulletin-worship-clip-input:focus,
+[data-theme='dark'] .bulletin-worship-clip-input:focus-visible,
+[data-theme='dark'] .bulletin-worship-clip-label-input:focus,
+[data-theme='dark'] .bulletin-worship-clip-label-input:focus-visible,
+[data-theme='dark'] .bulletin-worship-clip-field input:not([type='checkbox']):not([type='radio']):focus,
+[data-theme='dark'] .bulletin-worship-clip-field input:not([type='checkbox']):not([type='radio']):focus-visible,
+[data-theme='dark'] .bulletin-birthday-name-input:focus,
+[data-theme='dark'] .bulletin-birthday-name-input:focus-visible,
+[data-theme='dark'] .admin-table-input:focus,
+[data-theme='dark'] .admin-table-input:focus-visible,
+[data-theme='dark'] .admin-table-select:focus,
+[data-theme='dark'] .admin-table-select:focus-visible,
+[data-theme='dark'] .admin-user-field input:focus,
+[data-theme='dark'] .admin-user-field input:focus-visible,
+[data-theme='dark'] .admin-user-field select:focus,
+[data-theme='dark'] .admin-user-field select:focus-visible,
+[data-theme='dark'] .admin-table-page-size select:focus,
+[data-theme='dark'] .admin-table-page-size select:focus-visible,
+[data-theme='dark'] .metadata-field input:focus,
+[data-theme='dark'] .metadata-field input:focus-visible,
+[data-theme='dark'] .metadata-field textarea:focus,
+[data-theme='dark'] .metadata-field textarea:focus-visible,
+[data-theme='dark'] .metadata-field select:focus,
+[data-theme='dark'] .metadata-field select:focus-visible,
+[data-theme='dark'] .auth-form input:focus,
+[data-theme='dark'] .auth-form input:focus-visible,
+[data-theme='dark'] .playlists-text-input:focus,
+[data-theme='dark'] .playlists-text-input:focus-visible,
+[data-theme='dark'] .playlists-list-rename-input:focus,
+[data-theme='dark'] .playlists-list-rename-input:focus-visible,
+[data-theme='dark'] .create-playlist-modal-input:focus,
+[data-theme='dark'] .create-playlist-modal-input:focus-visible,
+[data-theme='dark'] .preview-input:focus,
+[data-theme='dark'] .preview-input:focus-visible,
+[data-theme='dark'] .ppt-find-panel .ppt-rb-field input:focus,
+[data-theme='dark'] .ppt-find-panel .ppt-rb-field input:focus-visible,
+[data-theme='dark'] .search-input-wrap:focus-within,
+[data-theme='dark'] .admin-table-filter:focus-within {
+  border-color: var(--form-field-border-focus);
+}
+
+[data-theme='dark'] .bulletin-field input:not([type='checkbox']):not([type='radio']):disabled,
+[data-theme='dark'] .bulletin-field textarea:disabled,
+[data-theme='dark'] .bulletin-field select:disabled,
+[data-theme='dark'] .bulletin-scripture-picker-select:disabled,
+[data-theme='dark'] .bulletin-worship-clip-input:disabled,
+[data-theme='dark'] .bulletin-worship-clip-label-input:disabled,
+[data-theme='dark'] .bulletin-worship-clip-field input:not([type='checkbox']):not([type='radio']):disabled,
+[data-theme='dark'] .bulletin-birthday-name-input:disabled,
+[data-theme='dark'] .admin-table-input:disabled,
+[data-theme='dark'] .admin-table-select:disabled,
+[data-theme='dark'] .admin-user-field input:disabled,
+[data-theme='dark'] .admin-user-field select:disabled,
+[data-theme='dark'] .metadata-field input:disabled,
+[data-theme='dark'] .metadata-field textarea:disabled,
+[data-theme='dark'] .metadata-field select:disabled,
+[data-theme='dark'] .auth-form input:disabled,
+[data-theme='dark'] .playlists-text-input:disabled,
+[data-theme='dark'] .playlists-list-rename-input:disabled,
+[data-theme='dark'] .create-playlist-modal-input:disabled {
+  border-color: var(--form-field-border-disabled);
+}
 
 [data-theme='dark'] .ppt-find-panel .ppt-rb-field input {
   background: var(--input-bg);
   color: var(--text);
-  border-color: var(--border);
-}
-
-[data-theme='dark'] .ppt-find-panel .ppt-rb-field input:focus {
-  border-color: var(--blue);
 }
 
 [data-theme='dark'] input[type='date'],
@@ -20,20 +114,13 @@
 }
 
 [data-theme='dark'] .bulletin-field select,
-[data-theme='dark'] .bulletin-scripture-picker-select {
-  border-color: rgba(255, 255, 255, 0.42);
+[data-theme='dark'] .bulletin-scripture-picker-select,
+[data-theme='dark'] .metadata-field select,
+[data-theme='dark'] .admin-table-select,
+[data-theme='dark'] .admin-user-field select,
+[data-theme='dark'] .admin-table-page-size select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%23d1d1d6' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-}
-
-[data-theme='dark'] .bulletin-field select:focus,
-[data-theme='dark'] .bulletin-field select:focus-visible,
-[data-theme='dark'] .bulletin-scripture-picker-select:focus,
-[data-theme='dark'] .bulletin-scripture-picker-select:focus-visible {
-  border-color: rgba(255, 255, 255, 0.72);
-  box-shadow: var(--focus-ring);
-}
-
-[data-theme='dark'] .bulletin-field select:disabled,
-[data-theme='dark'] .bulletin-scripture-picker-select:disabled {
-  border-color: rgba(255, 255, 255, 0.22);
+  background-repeat: no-repeat;
+  background-position: right 0.55rem center;
+  background-size: 0.85rem;
 }
