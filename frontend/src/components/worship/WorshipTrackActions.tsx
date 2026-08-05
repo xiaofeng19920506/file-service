@@ -49,7 +49,9 @@ export default function WorshipTrackActions({
   return (
     <div className="worship-track-actions" ref={rootRef}>
       <div className="worship-track-actions-bar">
-        <span className="worship-track-actions-title">{title}</span>
+        <span className="worship-track-actions-title" title={title}>
+          {title}
+        </span>
         {!clipOpen && savedClips.length > 0 ? (
           <span className="bulletin-worship-clip-summary worship-track-actions-clip-hint">
             {savedClips.map((c) => formatClipSummary(c)).join(' · ')}
