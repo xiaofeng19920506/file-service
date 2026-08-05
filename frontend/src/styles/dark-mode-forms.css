@@ -1,0 +1,25 @@
+/**
+ * Dark mode 补丁：修正仍使用硬编码浅色或未设色的表单/UI
+ * （幻灯片画布白底 intentionally 保留，不在此覆盖）
+ */
+
+[data-theme='dark'] .ppt-find-panel .ppt-rb-field input {
+  background: var(--input-bg);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+[data-theme='dark'] .ppt-find-panel .ppt-rb-field input:focus {
+  border-color: var(--blue);
+}
+
+[data-theme='dark'] input[type='date'],
+[data-theme='dark'] input[type='time'],
+[data-theme='dark'] input[type='datetime-local'] {
+  color-scheme: dark;
+}
+
+[data-theme='dark'] .bulletin-field select,
+[data-theme='dark'] .bulletin-scripture-picker-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%23a1a1a6' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}

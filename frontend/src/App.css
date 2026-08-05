@@ -1040,7 +1040,7 @@
   border: none;
   background: transparent;
   font: inherit;
-  color: inherit;
+  color: var(--text);
   outline: none;
 }
 
@@ -1148,9 +1148,9 @@
   padding: 0.35rem 0.45rem;
   border-radius: 8px;
   border: 1px solid var(--border);
-  background: var(--bg);
+  background: var(--input-bg);
   font: inherit;
-  color: inherit;
+  color: var(--text);
 }
 
 .admin-table-actions-col {
@@ -2732,7 +2732,7 @@
   grid-column: 2;
   grid-row: 2;
   padding: 0.35rem 0.75rem;
-  background: #fff;
+  background: var(--surface);
   border-top: 1px solid var(--border-light);
   font-size: 0.75rem;
   color: var(--text-secondary);
@@ -4688,6 +4688,11 @@
 .playlists-list-rename-input {
   width: 100%;
   min-width: 0;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--input-bg);
+  color: var(--text);
 }
 
 .playlists-list-rename-actions {
@@ -4996,6 +5001,18 @@
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--input-bg);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.create-playlist-modal-input:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 1px;
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
 }
 
 .pick-playlist-for-add-body {
@@ -6403,8 +6420,8 @@
   padding: 0.35rem 0.5rem;
   border: 1px solid var(--border-light);
   border-radius: 8px;
-  background: var(--surface);
-  color: inherit;
+  background: var(--input-bg);
+  color: var(--text);
   font: inherit;
 }
 
@@ -7720,13 +7737,15 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   min-width: 6.5rem;
   padding: 0.2rem 0.35rem;
   font-size: 0.82rem;
-  border: 1px solid var(--border, rgba(0, 0, 0, 0.14));
+  border: 1px solid var(--border-light);
   border-radius: 4px;
+  background: var(--input-bg);
+  color: var(--text);
 }
 
 .bulletin-worship-clip-input.is-invalid {
-  border-color: var(--danger, #b42318);
-  background: color-mix(in srgb, #b42318 8%, #fff);
+  border-color: var(--red);
+  background: color-mix(in srgb, var(--red) 12%, var(--input-bg));
 }
 
 .bulletin-worship-clip-field input.bulletin-worship-clip-input {
@@ -7923,8 +7942,10 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   min-width: 5rem;
   padding: 0.15rem 0.3rem;
   font-size: 0.8rem;
-  border: 1px solid var(--border, rgba(0, 0, 0, 0.14));
+  border: 1px solid var(--border-light);
   border-radius: 4px;
+  background: var(--input-bg);
+  color: var(--text);
 }
 
 .bulletin-worship-clip-summary-line {
@@ -7946,8 +7967,10 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   width: 4.2rem;
   padding: 0.15rem 0.3rem;
   font-size: 0.8rem;
-  border: 1px solid var(--border, rgba(0, 0, 0, 0.14));
+  border: 1px solid var(--border-light);
   border-radius: 4px;
+  background: var(--input-bg);
+  color: var(--text);
 }
 
 .bulletin-worship-clip-error {
@@ -9165,15 +9188,23 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   padding: 0.35rem 0.5rem;
   min-height: 2.1rem;
   box-sizing: border-box;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  background: var(--input-bg);
+  color: var(--text);
+  font: inherit;
 }
 
 .bulletin-field select {
   padding: 0.35rem 0.5rem;
-  border: 1px solid var(--border-light);
-  border-radius: 8px;
-  background: var(--surface-primary, #fff);
-  color: inherit;
-  font: inherit;
+  background-color: var(--surface-primary);
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.55rem center;
+  background-size: 0.85rem;
+  padding-right: 1.75rem;
 }
 
 .bulletin-scripture-picker {
@@ -9219,12 +9250,12 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   padding: 0.35rem 1.75rem 0.35rem 0.5rem;
   border: 1px solid var(--border-light);
   border-radius: 8px;
-  background-color: var(--surface-primary, #fff);
+  background-color: var(--surface-primary);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.55rem center;
   background-size: 0.85rem;
-  color: inherit;
+  color: var(--text);
   font: inherit;
   appearance: none;
   -webkit-appearance: none;
