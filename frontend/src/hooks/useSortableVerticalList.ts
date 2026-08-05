@@ -7,7 +7,7 @@ type SortableDrag = {
   startY: number;
   deltaY: number;
   gapIndex: number;
-  stride: number;
+  slotHeight: number;
   layouts: ItemLayout[];
   pointerId: number;
 };
@@ -23,6 +23,13 @@ function gapIndexFromY(y: number, layouts: ItemLayout[]): number {
 function finalIndexFromGap(from: number, gapIndex: number): number | null {
   if (gapIndex === from || gapIndex === from + 1) return null;
   return gapIndex > from ? gapIndex - 1 : gapIndex;
+}
+
+function slotHeightForIndex(layouts: ItemLayout[], index: number, fallbackGap = 4): number {
+  if (index + 1 < layouts.length) {
+    return layouts[index + 1]!.top - layouts[index]!.top;
+  }
+  return layouts[index]!.height + fallbackGap;
 }
 
 function isInteractiveDragTarget(target: EventTarget | null): boolean {
@@ -112,17 +119,14 @@ export function useSortableVerticalList({
         if (options?.ignoreInteractive && isInteractiveDragTarget(event.target)) return;
 
         const listEl = listRef.current;
-        const children = Array.from(listEl.children) as HTMLElement[];
+        const children = Array.from(listEl.children).filter(
+          (child) => !child.classList.contains('sortable-gap-indicator'),
+        ) as HTMLElement[];
         const layouts = children.map((child) => {
           const rect = child.getBoundingClientRect();
           return { top: rect.top, height: rect.height };
         });
         if (!layouts[index]) return;
-
-        const stride =
-          layouts.length > 1
-            ? layouts[1]!.top - layouts[0]!.top
-            : layouts[0]!.height + 4;
 
         event.preventDefault();
         event.currentTarget.setPointerCapture(event.pointerId);
@@ -132,7 +136,7 @@ export function useSortableVerticalList({
           startY: event.clientY,
           deltaY: 0,
           gapIndex: index,
-          stride,
+          slotHeight: slotHeightForIndex(layouts, index),
           layouts,
           pointerId: event.pointerId,
         };
@@ -149,23 +153,48 @@ export function useSortableVerticalList({
 
       if (index === drag.from) {
         return {
-          transform: `translateY(${drag.deltaY}px)`,
-          zIndex: 2,
+          transform: `translate3d(0, ${drag.deltaY}px, 0) scale(1.02)`,
+          zIndex: 10,
           position: 'relative',
+          willChange: 'transform',
+          transition: 'none',
         };
       }
 
-      const { from, gapIndex, stride } = drag;
+      const { from, gapIndex, slotHeight } = drag;
       if (from < gapIndex && index > from && index < gapIndex) {
-        return { transform: `translateY(${-stride}px)` };
+        return {
+          transform: `translate3d(0, ${-slotHeight}px, 0)`,
+          willChange: 'transform',
+        };
       }
       if (from > gapIndex && index >= gapIndex && index < from) {
-        return { transform: `translateY(${stride}px)` };
+        return {
+          transform: `translate3d(0, ${slotHeight}px, 0)`,
+          willChange: 'transform',
+        };
       }
       return {};
     },
     [drag],
   );
+
+  const getGapIndicatorStyle = useCallback((): CSSProperties | null => {
+    if (!drag || !listRef.current) return null;
+
+    const listRect = listRef.current.getBoundingClientRect();
+    const { gapIndex, layouts } = drag;
+    let top: number;
+
+    if (gapIndex >= layouts.length) {
+      const last = layouts[layouts.length - 1]!;
+      top = last.top + last.height - listRect.top;
+    } else {
+      top = layouts[gapIndex]!.top - listRect.top;
+    }
+
+    return { top: `${top}px` };
+  }, [drag, listRef]);
 
   const isDraggingItem = useCallback((index: number) => drag?.from === index, [drag]);
 
@@ -173,6 +202,7 @@ export function useSortableVerticalList({
     isSorting: drag !== null,
     bindDragHandle,
     getItemStyle,
+    getGapIndicatorStyle,
     isDraggingItem,
   };
 }

@@ -274,15 +274,23 @@ export default function WorshipSongsEditor({
             ) : null}
             <ol
               ref={listRef}
-              className={`worship-songs-track-list${trackSortable.isSorting ? ' is-sorting' : ''}`}
+              className={`worship-songs-track-list sortable-vertical-list${trackSortable.isSorting ? ' is-sorting' : ''}`}
             >
+              {trackSortable.isSorting && trackSortable.getGapIndicatorStyle() ? (
+                <li
+                  aria-hidden
+                  className="sortable-gap-indicator"
+                  style={trackSortable.getGapIndicatorStyle()!}
+                />
+              ) : null}
               {detail.items.map((item, index) => (
                 <li
                   key={item.id}
                   className={[
                     'worship-songs-track',
+                    'sortable-vertical-item',
                     'is-sortable',
-                    trackSortable.isDraggingItem(index) ? 'is-dragging' : '',
+                    trackSortable.isDraggingItem(index) ? 'is-sortable-dragging' : '',
                   ]
                     .filter(Boolean)
                     .join(' ')}

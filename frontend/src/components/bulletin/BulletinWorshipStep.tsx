@@ -326,15 +326,23 @@ export default function BulletinWorshipStep({
               ) : null}
               <ol
                 ref={listRef}
-                className={`bulletin-worship-track-preview${trackSortable.isSorting ? ' is-sorting' : ''}`}
+                className={`bulletin-worship-track-preview sortable-vertical-list${trackSortable.isSorting ? ' is-sorting' : ''}`}
               >
+                {trackSortable.isSorting && trackSortable.getGapIndicatorStyle() ? (
+                  <li
+                    aria-hidden
+                    className="sortable-gap-indicator"
+                    style={trackSortable.getGapIndicatorStyle()!}
+                  />
+                ) : null}
                 {items.map((item, index) => (
                   <li
                     key={item.id}
                     className={[
                       'bulletin-worship-track-preview-item',
+                      'sortable-vertical-item',
                       canAddSongs ? 'is-sortable' : '',
-                      trackSortable.isDraggingItem(index) ? 'is-dragging' : '',
+                      trackSortable.isDraggingItem(index) ? 'is-sortable-dragging' : '',
                     ]
                       .filter(Boolean)
                       .join(' ')}

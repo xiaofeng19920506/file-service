@@ -1715,8 +1715,15 @@ export default function PlaylistsPage({
                       </div>
                       <ol
                         ref={tracksListRef}
-                        className={`playlists-tracks${savingOrder ? ' saving-order' : ''}${trackSortable.isSorting ? ' is-sorting' : ''}`}
+                        className={`playlists-tracks sortable-vertical-list${savingOrder ? ' saving-order' : ''}${trackSortable.isSorting ? ' is-sorting' : ''}`}
                       >
+                        {trackSortable.isSorting && trackSortable.getGapIndicatorStyle() ? (
+                          <li
+                            aria-hidden
+                            className="sortable-gap-indicator"
+                            style={trackSortable.getGapIndicatorStyle()!}
+                          />
+                        ) : null}
                         {displayTrackRows.map(({ item, index }) => {
                           const isActive = index === activeIndex;
                           const isPlaying = isActive && playing;
@@ -1726,7 +1733,7 @@ export default function PlaylistsPage({
                           return (
                             <li
                               key={item.id}
-                              className={`playlists-track${isActive ? ' active' : ''}${isPlaying ? ' playing' : ''}${trackSortable.isDraggingItem(index) ? ' is-sortable-dragging' : ''}`}
+                              className={`playlists-track sortable-vertical-item${isActive ? ' active' : ''}${isPlaying ? ' playing' : ''}${trackSortable.isDraggingItem(index) ? ' is-sortable-dragging' : ''}`}
                               style={canDragReorder ? trackSortable.getItemStyle(index) : undefined}
                             >
                               {useTrackSwipe ? (
