@@ -122,3 +122,51 @@ export function clampPlaybackBounds(
   }
   return { startSeconds: start, endSeconds: end };
 }
+
+export type YoutubeClipPlayerItem = {
+  youtubeVideoId: string;
+  title: string;
+  startSeconds: number | null;
+  endSeconds: number | null;
+};
+
+/** 歌单项 → 播放队列；expandClips 时多段剪切拆成连续多条 */
+export function toYoutubePlayerItems(
+  items: Array<{
+    youtubeVideoId?: string | null;
+    title: string;
+    playClips?: PlayClip[] | null;
+    playStartSec?: number | null;
+    playEndSec?: number | null;
+  }>,
+  opts?: { expandClips?: boolean },
+): YoutubeClipPlayerItem[] {
+  const expandClips = opts?.expandClips !== false;
+  const out: YoutubeClipPlayerItem[] = [];
+  for (const item of items) {
+    if (!item.youtubeVideoId) continue;
+    const clips = resolvePlayClips(item);
+    if (clips.length === 0) {
+      out.push({
+        youtubeVideoId: item.youtubeVideoId,
+        title: item.title,
+        startSeconds: null,
+        endSeconds: null,
+      });
+      continue;
+    }
+    const list = expandClips ? clips : [clips[0]!];
+    list.forEach((clip, index) => {
+      const segLabel =
+        clip.label?.trim() ||
+        (expandClips && clips.length > 1 ? `${index + 1}/${clips.length}` : null);
+      out.push({
+        youtubeVideoId: item.youtubeVideoId!,
+        title: segLabel ? `${item.title} (${segLabel})` : item.title,
+        startSeconds: clip.startSec,
+        endSeconds: clip.endSec,
+      });
+    });
+  }
+  return out;
+}

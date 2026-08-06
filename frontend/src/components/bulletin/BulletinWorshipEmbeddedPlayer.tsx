@@ -10,7 +10,7 @@ import BulletinWorshipMaximizeOverlay from './BulletinWorshipMaximizeOverlay';
 import type { WorshipLiveMode } from '../../lib/worship-live-config';
 import {
   normalizeWorshipPresentationMode,
-  resolvePlayClips,
+  toYoutubePlayerItems,
   type WorshipPresentationMode,
 } from '../../lib/worship-presentation-mode';
 
@@ -26,32 +26,7 @@ type BulletinWorshipEmbeddedPlayerProps = {
 
 /** 把歌单项展开为播放队列：多段剪切 = 多条连续播放项 */
 export function toWorshipPlayerItems(items: PlaylistItem[]): YoutubePlayerItem[] {
-  const out: YoutubePlayerItem[] = [];
-  for (const item of items) {
-    if (!item.youtubeVideoId) continue;
-    const clips = resolvePlayClips(item);
-    if (clips.length === 0) {
-      out.push({
-        youtubeVideoId: item.youtubeVideoId,
-        title: item.title,
-        startSeconds: null,
-        endSeconds: null,
-      });
-      continue;
-    }
-    clips.forEach((clip, index) => {
-      const segLabel =
-        clip.label?.trim() ||
-        (clips.length > 1 ? `${index + 1}/${clips.length}` : null);
-      out.push({
-        youtubeVideoId: item.youtubeVideoId,
-        title: segLabel ? `${item.title} (${segLabel})` : item.title,
-        startSeconds: clip.startSec,
-        endSeconds: clip.endSec,
-      });
-    });
-  }
-  return out;
+  return toYoutubePlayerItems(items, { expandClips: true });
 }
 
 export function hasBulletinWorshipPlayItems(items: PlaylistItem[]): boolean {

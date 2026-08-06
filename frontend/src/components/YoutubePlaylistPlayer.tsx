@@ -48,9 +48,15 @@ type YoutubePlaylistPlayerProps = {
   overlayChrome?: ReactNode;
 };
 
+type YtLoadOptions = {
+  videoId: string;
+  startSeconds?: number;
+  endSeconds?: number;
+};
+
 type YtPlayer = {
-  loadVideoById: (videoId: string, startSeconds?: number) => void;
-  cueVideoById: (videoId: string, startSeconds?: number) => void;
+  loadVideoById: (videoIdOrOpts: string | YtLoadOptions, startSeconds?: number) => void;
+  cueVideoById: (videoIdOrOpts: string | YtLoadOptions, startSeconds?: number) => void;
   playVideo: () => void;
   pauseVideo: () => void;
   destroy: () => void;
@@ -63,6 +69,51 @@ type YtPlayer = {
   unMute: () => void;
   isMuted: () => boolean;
 };
+
+function clipBoundsForItem(
+  item: YoutubePlayerItem | undefined,
+  trackDuration = 0,
+): { startSeconds: number; endSeconds: number | undefined } {
+  const rawStart =
+    typeof item?.startSeconds === 'number' && Number.isFinite(item.startSeconds)
+      ? Math.max(0, item.startSeconds)
+      : 0;
+  const rawEnd =
+    typeof item?.endSeconds === 'number' && Number.isFinite(item.endSeconds) && item.endSeconds > 0
+      ? item.endSeconds
+      : null;
+
+  let startSeconds = rawStart;
+  if (trackDuration > 0 && startSeconds >= trackDuration) {
+    startSeconds = Math.max(0, trackDuration - 1);
+  }
+
+  let endSeconds: number | undefined;
+  if (rawEnd != null) {
+    const capped = trackDuration > 0 ? Math.min(rawEnd, trackDuration) : rawEnd;
+    if (capped > startSeconds) endSeconds = capped;
+  }
+
+  return { startSeconds, endSeconds };
+}
+
+function loadOrCueClip(
+  player: YtPlayer,
+  videoId: string,
+  item: YoutubePlayerItem | undefined,
+  autoplay: boolean,
+  trackDuration = 0,
+) {
+  const { startSeconds, endSeconds } = clipBoundsForItem(item, trackDuration);
+  const opts: YtLoadOptions = {
+    videoId,
+    startSeconds,
+    ...(endSeconds != null ? { endSeconds } : {}),
+  };
+  if (autoplay) player.loadVideoById(opts);
+  else player.cueVideoById(opts);
+  return { startSeconds, endSeconds };
+}
 
 declare global {
   interface Window {
@@ -200,6 +251,8 @@ export default function YoutubePlaylistPlayer({
   const lastLoadedIndexRef = useRef(-1);
   const ignorePauseUntilRef = useRef(0);
   const clipEndIndexRef = useRef(-1);
+  /** 防止片段终点轮询与 YouTube ENDED 连续触发两次切歌 */
+  const clipAdvanceLockRef = useRef(false);
   const goNextRef = useRef<(() => void) | null>(null);
   const [playerError, setPlayerError] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
@@ -296,6 +349,17 @@ export default function YoutubePlaylistPlayer({
     }
   }, []);
 
+  const requestClipAdvance = useCallback(() => {
+    if (clipAdvanceLockRef.current) return;
+    if (clipEndIndexRef.current === activeIndexRef.current) return;
+    clipEndIndexRef.current = activeIndexRef.current;
+    clipAdvanceLockRef.current = true;
+    window.setTimeout(() => {
+      clipAdvanceLockRef.current = false;
+    }, 1500);
+    goNextRef.current?.();
+  }, []);
+
   const syncProgress = useCallback(() => {
     if (scrubbingRef.current) return;
     const player = playerRef.current;
@@ -307,29 +371,20 @@ export default function YoutubePlaylistPlayer({
       setDuration(Number.isFinite(nextDuration) && nextDuration > 0 ? nextDuration : 0);
 
       const item = itemsRef.current[activeIndexRef.current];
-      const rawEnd = item?.endSeconds;
       const trackDuration =
         Number.isFinite(nextDuration) && nextDuration > 0 ? nextDuration : 0;
-      const endSeconds =
-        typeof rawEnd === 'number' && rawEnd > 0
-          ? trackDuration > 0
-            ? Math.min(rawEnd, trackDuration)
-            : rawEnd
-          : null;
+      const { endSeconds } = clipBoundsForItem(item, trackDuration);
       if (
         endSeconds != null &&
         Number.isFinite(nextTime) &&
         nextTime >= endSeconds - 0.2
       ) {
-        if (clipEndIndexRef.current !== activeIndexRef.current) {
-          clipEndIndexRef.current = activeIndexRef.current;
-          goNextRef.current?.();
-        }
+        requestClipAdvance();
       }
     } catch {
       // player not ready
     }
-  }, []);
+  }, [requestClipAdvance]);
 
   const loadTrack = useCallback(
     (index: number, autoplay: boolean) => {
@@ -347,27 +402,18 @@ export default function YoutubePlaylistPlayer({
         }
       })();
 
-      let startSeconds =
-        typeof item.startSeconds === 'number' && item.startSeconds > 0
-          ? item.startSeconds
-          : 0;
-      if (trackDuration > 0 && startSeconds >= trackDuration) {
-        startSeconds = Math.max(0, trackDuration - 1);
-      }
-
       ignorePauseUntilRef.current = Date.now() + 3000;
       lastLoadedIndexRef.current = index;
       clipEndIndexRef.current = -1;
-      setCurrentTime(startSeconds);
-      setDuration(trackDuration);
+      clipAdvanceLockRef.current = false;
       scrubbingRef.current = false;
 
+      const { startSeconds } = loadOrCueClip(player, videoId, item, autoplay, trackDuration);
+      setCurrentTime(startSeconds);
+      setDuration(trackDuration);
       if (autoplay) {
         playingRef.current = true;
-        player.loadVideoById(videoId, startSeconds);
         onPlayingChange(true);
-      } else {
-        player.cueVideoById(videoId, startSeconds);
       }
 
       window.setTimeout(syncProgress, 400);
@@ -420,17 +466,11 @@ export default function YoutubePlaylistPlayer({
       if (trackDuration <= 0) return;
 
       const item = itemsRef.current[activeIndexRef.current];
-      const rawStart =
-        typeof item?.startSeconds === 'number' && item.startSeconds > 0
-          ? item.startSeconds
-          : 0;
-      const rawEnd =
-        typeof item?.endSeconds === 'number' && item.endSeconds > 0
-          ? item.endSeconds
-          : null;
-      const clipStart = Math.min(rawStart, Math.max(0, trackDuration - 1));
-      const clipEnd =
-        rawEnd != null ? Math.min(rawEnd, trackDuration) : trackDuration;
+      const { startSeconds: clipStart, endSeconds: clipEndRaw } = clipBoundsForItem(
+        item,
+        trackDuration,
+      );
+      const clipEnd = clipEndRaw ?? trackDuration;
       const span = Math.max(0, clipEnd - clipStart);
       const target =
         span > 0 ? clipStart + clamped * span : clamped * trackDuration;
@@ -488,8 +528,10 @@ export default function YoutubePlaylistPlayer({
         }
 
         const startIndex = activeIndexRef.current;
-        const startVideo = itemsRef.current[startIndex]?.youtubeVideoId;
+        const startItem = itemsRef.current[startIndex];
+        const startVideo = startItem?.youtubeVideoId;
         if (!startVideo) return;
+        const initialClip = clipBoundsForItem(startItem);
 
         playerRef.current = new window.YT.Player(elementId, {
           videoId: startVideo,
@@ -500,12 +542,17 @@ export default function YoutubePlaylistPlayer({
             enablejsapi: 1,
             controls: nativeControls ? 1 : 0,
             iv_load_policy: 3,
+            ...(initialClip.startSeconds > 0
+              ? { start: Math.floor(initialClip.startSeconds) }
+              : {}),
+            ...(initialClip.endSeconds != null
+              ? { end: Math.floor(initialClip.endSeconds) }
+              : {}),
             ...(typeof window !== 'undefined' ? { origin: window.location.origin } : {}),
           },
           events: {
             onReady: (event) => {
               readyRef.current = true;
-              lastLoadedIndexRef.current = activeIndexRef.current;
               try {
                 if (muted || volume === 0) event.target.mute();
                 else {
@@ -515,19 +562,38 @@ export default function YoutubePlaylistPlayer({
               } catch {
                 // ignore
               }
-              syncProgress();
-              if (playingRef.current) {
-                event.target.playVideo();
-                window.setTimeout(() => {
-                  if (playingRef.current) {
+
+              const idx = activeIndexRef.current;
+              const item = itemsRef.current[idx];
+              const videoId = item?.youtubeVideoId;
+              clipEndIndexRef.current = -1;
+              clipAdvanceLockRef.current = false;
+              if (videoId) {
+                // 必须按剪切起止加载；仅 playVideo() 会从 0 开始播整支视频
+                const { startSeconds } = loadOrCueClip(
+                  event.target,
+                  videoId,
+                  item,
+                  playingRef.current,
+                  0,
+                );
+                lastLoadedIndexRef.current = idx;
+                setCurrentTime(startSeconds);
+                if (playingRef.current) {
+                  onPlayingChange(true);
+                  window.setTimeout(() => {
+                    if (!playingRef.current) return;
                     try {
                       event.target.playVideo();
                     } catch {
                       /* ignore */
                     }
-                  }
-                }, 350);
+                  }, 350);
+                }
+              } else {
+                lastLoadedIndexRef.current = idx;
               }
+              syncProgress();
             },
             onStateChange: (event) => {
               const YTState = window.YT?.PlayerState;
@@ -537,40 +603,7 @@ export default function YoutubePlaylistPlayer({
               const bufferingState = YTState?.BUFFERING ?? 3;
 
               if (event.data === ended) {
-                if (onNextTrackRef.current) {
-                  onNextTrackRef.current();
-                  return;
-                }
-                if (activeIndexRef.current < itemsRef.current.length - 1) {
-                  const nextIndex = activeIndexRef.current + 1;
-                  const nextItem = itemsRef.current[nextIndex];
-                  const nextId = nextItem?.youtubeVideoId;
-                  if (nextId) {
-                    let start =
-                      typeof nextItem.startSeconds === 'number' && nextItem.startSeconds > 0
-                        ? nextItem.startSeconds
-                        : 0;
-                    try {
-                      const d = event.target.getDuration();
-                      if (Number.isFinite(d) && d > 0 && start >= d) {
-                        start = Math.max(0, d - 1);
-                      }
-                    } catch {
-                      /* ignore */
-                    }
-                    ignorePauseUntilRef.current = Date.now() + 3000;
-                    lastLoadedIndexRef.current = nextIndex;
-                    clipEndIndexRef.current = -1;
-                    playingRef.current = true;
-                    onActiveIndexChange(nextIndex);
-                    onPlayingChange(true);
-                    setCurrentTime(start);
-                    setDuration(0);
-                    event.target.loadVideoById(nextId, start);
-                  }
-                } else {
-                  onPlayingChange(false);
-                }
+                requestClipAdvance();
                 return;
               }
 

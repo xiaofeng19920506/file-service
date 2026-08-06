@@ -63,6 +63,7 @@ import { usePlaylistsMobileMenu, PlaylistsMobileMenuPortal } from '../contexts/P
 import { useAuth } from '../auth/AuthContext';
 import { writeLastPlaylistId } from '../lib/playlist-last-open';
 import { prefetchTrackLyrics, readDefaultSubtitleLanguage } from '../lib/playlist-lyrics';
+import { toYoutubePlayerItems } from '../lib/worship-presentation-mode';
 import { useRecordYoutubePlay } from '../hooks/useRecordYoutubePlay';
 
 type PlaylistsPageProps = {
@@ -800,12 +801,20 @@ export default function PlaylistsPage({
     }
   };
 
-  const playerItems =
-    detail?.items.map((item) => ({
-      youtubeVideoId: item.youtubeVideoId,
-      title: item.title,
-      audio: item.audio,
-    })) ?? [];
+  const playerItems = useMemo(() => {
+    if (!detail?.items) return [];
+    // 与曲目列表下标对齐；多段剪切在歌单页只播第一段（周报投影会 expand）
+    return detail.items.map((item) => {
+      const [clipRow] = toYoutubePlayerItems([item], { expandClips: false });
+      return {
+        youtubeVideoId: item.youtubeVideoId,
+        title: item.title,
+        audio: item.audio,
+        startSeconds: clipRow?.startSeconds ?? null,
+        endSeconds: clipRow?.endSeconds ?? null,
+      };
+    });
+  }, [detail?.items]);
 
   useEffect(() => {
     if (!detail?.items.length) return;

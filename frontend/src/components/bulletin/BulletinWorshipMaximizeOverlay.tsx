@@ -14,7 +14,7 @@ import {
 } from '../../lib/fullscreen';
 import { parsePptxSlidesDetailed, type EditableSlide } from '../../lib/pptx-preview';
 import type { WorshipLiveMode } from '../../lib/worship-live-config';
-import { resolvePlayClips } from '../../lib/worship-presentation-mode';
+import { toYoutubePlayerItems } from '../../lib/worship-presentation-mode';
 
 type Transport = {
   activeIndex: number;
@@ -47,32 +47,7 @@ type BulletinWorshipMaximizeOverlayProps = {
 };
 
 function toYoutubeItems(items: PlaylistItem[]): YoutubePlayerItem[] {
-  const out: YoutubePlayerItem[] = [];
-  for (const item of items) {
-    if (!item.youtubeVideoId) continue;
-    const clips = resolvePlayClips(item);
-    if (clips.length === 0) {
-      out.push({
-        youtubeVideoId: item.youtubeVideoId,
-        title: item.title,
-        startSeconds: null,
-        endSeconds: null,
-      });
-      continue;
-    }
-    clips.forEach((clip, index) => {
-      const segLabel =
-        clip.label?.trim() ||
-        (clips.length > 1 ? `${index + 1}/${clips.length}` : null);
-      out.push({
-        youtubeVideoId: item.youtubeVideoId,
-        title: segLabel ? `${item.title} (${segLabel})` : item.title,
-        startSeconds: clip.startSec,
-        endSeconds: clip.endSec,
-      });
-    });
-  }
-  return out;
+  return toYoutubePlayerItems(items, { expandClips: true });
 }
 
 function slideImageUrl(slide: EditableSlide): string | null {
