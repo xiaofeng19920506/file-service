@@ -3,7 +3,6 @@ import type { PlaylistItem } from '../../api/playlists';
 import { getYoutubeAudioStatus } from '../../api/youtube-audio';
 import { friendlyError } from '../../lib/error-messages';
 import {
-  clipExceedsDuration,
   formatClipTime,
   htmlTimeToSeconds,
   resolvePlayClips,
@@ -28,10 +27,6 @@ function clipsToDraft(clips: PlayClip[], durationSec?: number | null): DraftClip
   }));
 }
 
-function rangeInvalid(row: DraftClip): boolean {
-  return row.endSec != null && row.endSec <= row.startSec;
-}
-
 /** 终点等于视频总长时视为「播到结尾」 */
 function normalizeEndForSave(
   endSec: number | null,
@@ -40,6 +35,49 @@ function normalizeEndForSave(
   if (endSec == null) return null;
   if (durationSec != null && endSec >= durationSec) return null;
   return endSec;
+}
+
+function clamp(n: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, n));
+}
+
+/** 按视频时长与起止互斥关系，钳制到合法区间 */
+function clampClipRow(
+  row: DraftClip,
+  durationSec: number | null,
+  patch: Partial<DraftClip> = {},
+): DraftClip {
+  const duration =
+    durationSec != null && durationSec > 0 ? Math.floor(durationSec) : null;
+  const maxStart = duration != null ? Math.max(0, duration - 1) : Number.MAX_SAFE_INTEGER;
+
+  let startSec = patch.startSec !== undefined ? patch.startSec : row.startSec;
+  let endSec = patch.endSec !== undefined ? patch.endSec : row.endSec;
+  const label = patch.label !== undefined ? patch.label : row.label;
+
+  startSec = Math.max(0, Math.floor(startSec));
+  if (duration != null) {
+    startSec = clamp(startSec, 0, maxStart);
+  }
+
+  if (endSec != null) {
+    endSec = Math.floor(endSec);
+    const minEnd = startSec + 1;
+    if (duration != null) {
+      endSec = clamp(endSec, minEnd, duration);
+    } else if (endSec <= startSec) {
+      endSec = minEnd;
+    }
+  } else if (duration != null) {
+    endSec = duration;
+  }
+
+  // 若终点被压到与起点冲突，再把起点往前挪一点
+  if (endSec != null && endSec <= startSec) {
+    startSec = Math.max(0, endSec - 1);
+  }
+
+  return { startSec, endSec, label };
 }
 
 type WorshipClipFieldsProps = {
@@ -77,18 +115,15 @@ export default function WorshipClipFields({
 
   useEffect(() => {
     const clips = resolvePlayClips(item);
-    setRows(clipsToDraft(clips, durationSec));
+    setRows(clipsToDraft(clips, durationSec).map((row) => clampClipRow(row, durationSec)));
     setClipError(null);
     if (clips.length > 0 && openProp === undefined) setInternalOpen(true);
-    // durationSec 由下方 effect 单独回填终点，避免编辑中途被重置
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅跟随条目数据
   }, [item.id, item.playClips, item.playStartSec, item.playEndSec, openProp]);
 
   useEffect(() => {
     if (durationSec == null || durationSec <= 0) return;
-    setRows((prev) =>
-      prev.map((row) => (row.endSec == null ? { ...row, endSec: durationSec } : row)),
-    );
+    setRows((prev) => prev.map((row) => clampClipRow(row, durationSec)));
   }, [durationSec]);
 
   useEffect(() => {
@@ -112,28 +147,13 @@ export default function WorshipClipFields({
     };
   }, [open, item.youtubeVideoId]);
 
-  const exceedsDuration = (row: DraftClip): boolean =>
-    durationSec != null && clipExceedsDuration(row, durationSec);
-
   const commit = async (nextRows: DraftClip[]) => {
-    if (nextRows.some(rangeInvalid)) {
-      setClipError(t('bulletin.worshipClipRangeInvalid'));
-      return;
-    }
-    if (durationSec != null && nextRows.some((row) => clipExceedsDuration(row, durationSec))) {
-      setClipError(
-        t('bulletin.worshipClipExceedsDuration', {
-          duration: formatClipTime(durationSec) || String(durationSec),
-        }),
-      );
-      return;
-    }
-
+    const clamped = nextRows.map((row) => clampClipRow(row, durationSec));
     const parsed: PlayClip[] = [];
-    for (const row of nextRows) {
+    for (const row of clamped) {
       const endSec = normalizeEndForSave(row.endSec, durationSec);
       const blank = row.startSec === 0 && endSec == null && !row.label.trim();
-      if (blank && nextRows.length === 1) continue;
+      if (blank && clamped.length === 1) continue;
       if (blank) continue;
       parsed.push({
         startSec: row.startSec,
@@ -169,13 +189,16 @@ export default function WorshipClipFields({
 
   const blurCommit = () => {
     setRows((current) => {
-      void commit(current);
-      return current;
+      const clamped = current.map((row) => clampClipRow(row, durationSec));
+      void commit(clamped);
+      return clamped;
     });
   };
 
   const updateRow = (index: number, patch: Partial<DraftClip>) => {
-    setRows((prev) => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+    setRows((prev) =>
+      prev.map((row, i) => (i === index ? clampClipRow(row, durationSec, patch) : row)),
+    );
     setClipError(null);
   };
 
@@ -197,7 +220,7 @@ export default function WorshipClipFields({
   };
 
   const clearClips = async () => {
-    setRows([{ startSec: 0, endSec: durationSec, label: '' }]);
+    setRows([clampClipRow({ startSec: 0, endSec: durationSec, label: '' }, durationSec)]);
     setOpen(false);
     setClipError(null);
     if (savedClips.length === 0) return;
@@ -213,12 +236,23 @@ export default function WorshipClipFields({
   };
 
   const addSegment = () => {
-    setRows((prev) => [...prev, { startSec: 0, endSec: durationSec, label: '' }]);
+    setRows((prev) => [
+      ...prev,
+      clampClipRow({ startSec: 0, endSec: durationSec, label: '' }, durationSec),
+    ]);
   };
 
   if (!open && hideToggle) return null;
 
-  const endDisplayValue = (row: DraftClip) => secondsToHtmlTime(row.endSec ?? durationSec);
+  const startMaxSec = (row: DraftClip) => {
+    if (row.endSec != null) return Math.max(0, row.endSec - 1);
+    if (durationSec != null) return Math.max(0, durationSec - 1);
+    return undefined;
+  };
+
+  const endMinSec = (row: DraftClip) => row.startSec + 1;
+
+  const endMaxSec = () => (durationSec != null ? durationSec : undefined);
 
   return (
     <div className="bulletin-worship-clip-editor">
@@ -288,7 +322,9 @@ export default function WorshipClipFields({
           ) : null}
           <ul className="bulletin-worship-clip-rows">
             {rows.map((row, index) => {
-              const badRange = rangeInvalid(row) || exceedsDuration(row);
+              const startMax = startMaxSec(row);
+              const endMin = endMinSec(row);
+              const endMax = endMaxSec();
               return (
                 <li key={index} className="bulletin-worship-clip-row">
                   <label className="bulletin-worship-clip-field bulletin-worship-clip-field--label">
@@ -307,11 +343,9 @@ export default function WorshipClipFields({
                     <input
                       type="time"
                       step={1}
-                      className={
-                        badRange
-                          ? 'bulletin-worship-clip-input is-invalid'
-                          : 'bulletin-worship-clip-input'
-                      }
+                      min={secondsToHtmlTime(0)}
+                      max={startMax != null ? secondsToHtmlTime(startMax) : undefined}
+                      className="bulletin-worship-clip-input"
                       value={secondsToHtmlTime(row.startSec)}
                       disabled={disabled || saving}
                       onChange={(e) => onStartChange(index, e.target.value)}
@@ -323,12 +357,10 @@ export default function WorshipClipFields({
                     <input
                       type="time"
                       step={1}
-                      className={
-                        badRange
-                          ? 'bulletin-worship-clip-input is-invalid'
-                          : 'bulletin-worship-clip-input'
-                      }
-                      value={endDisplayValue(row)}
+                      min={secondsToHtmlTime(endMin)}
+                      max={endMax != null ? secondsToHtmlTime(endMax) : undefined}
+                      className="bulletin-worship-clip-input"
+                      value={secondsToHtmlTime(row.endSec ?? durationSec)}
                       disabled={disabled || saving}
                       onChange={(e) => onEndChange(index, e.target.value)}
                       onBlur={blurCommit}
@@ -350,7 +382,12 @@ export default function WorshipClipFields({
                         const next = rows.filter((_, i) => i !== index);
                         const fallback = next.length
                           ? next
-                          : [{ startSec: 0, endSec: durationSec, label: '' }];
+                          : [
+                              clampClipRow(
+                                { startSec: 0, endSec: durationSec, label: '' },
+                                durationSec,
+                              ),
+                            ];
                         setRows(fallback);
                         void commit(fallback);
                       }}
