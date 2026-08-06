@@ -7970,6 +7970,38 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   color: var(--muted, #666);
 }
 
+.bulletin-worship-clip-time-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1rem;
+}
+
+.bulletin-worship-clip-time-part {
+  width: 2.85rem;
+  min-width: 2.85rem;
+  padding: 0.2rem 0.1rem;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  background: var(--input-bg);
+  color: var(--text);
+  appearance: auto;
+}
+
+.bulletin-worship-clip-time-part:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.bulletin-worship-clip-time-sep {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  line-height: 1;
+}
+
 .bulletin-worship-clip-field input {
   width: 4.2rem;
   padding: 0.15rem 0.3rem;

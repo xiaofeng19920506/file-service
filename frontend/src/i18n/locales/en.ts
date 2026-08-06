@@ -531,6 +531,7 @@ const en: MessageTree = {
     worshipClipRangeInvalid: 'End must be after start',
     worshipClipExceedsDuration: 'Clip times cannot exceed video length ({duration})',
     worshipClipVideoDuration: 'Video length {duration}',
+    worshipClipDurationLoading: 'Loading video length…',
     worshipClipSummary: '{start}–{end}',
     worshipClipSegments: 'Clip',
     worshipClipShow: 'Clip',

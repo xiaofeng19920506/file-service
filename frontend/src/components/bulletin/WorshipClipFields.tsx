@@ -4,12 +4,11 @@ import { getYoutubeAudioStatus } from '../../api/youtube-audio';
 import { friendlyError } from '../../lib/error-messages';
 import {
   formatClipTime,
-  htmlTimeToSeconds,
   resolvePlayClips,
-  secondsToHtmlTime,
   type PlayClip,
 } from '../../lib/worship-presentation-mode';
 import { useI18n } from '../../i18n';
+import ClipTimeSelect from './ClipTimeSelect';
 
 type DraftClip = {
   startSec: number;
@@ -27,7 +26,6 @@ function clipsToDraft(clips: PlayClip[], durationSec?: number | null): DraftClip
   }));
 }
 
-/** 终点等于视频总长时视为「播到结尾」 */
 function normalizeEndForSave(
   endSec: number | null,
   durationSec: number | null,
@@ -41,7 +39,6 @@ function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
 }
 
-/** 按视频时长与起止互斥关系，钳制到合法区间 */
 function clampClipRow(
   row: DraftClip,
   durationSec: number | null,
@@ -72,7 +69,6 @@ function clampClipRow(
     endSec = duration;
   }
 
-  // 若终点被压到与起点冲突，再把起点往前挪一点
   if (endSec != null && endSec <= startSec) {
     startSec = Math.max(0, endSec - 1);
   }
@@ -84,10 +80,8 @@ type WorshipClipFieldsProps = {
   item: PlaylistItem;
   disabled?: boolean;
   onSave: (patch: { playClips: PlayClip[] | null }) => Promise<void>;
-  /** 受控展开（由 ⋯ 菜单触发时使用） */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-  /** 隐藏自带切换按钮，改由外部菜单控制 */
   hideToggle?: boolean;
 };
 
@@ -202,23 +196,6 @@ export default function WorshipClipFields({
     setClipError(null);
   };
 
-  const onStartChange = (index: number, value: string) => {
-    const parsed = htmlTimeToSeconds(value);
-    if (parsed === 'invalid') return;
-    updateRow(index, { startSec: parsed ?? 0 });
-  };
-
-  const onEndChange = (index: number, value: string) => {
-    const parsed = htmlTimeToSeconds(value);
-    if (parsed === 'invalid') return;
-    // 清空终点 → 默认回到视频结尾
-    if (parsed == null) {
-      updateRow(index, { endSec: durationSec });
-      return;
-    }
-    updateRow(index, { endSec: parsed });
-  };
-
   const clearClips = async () => {
     setRows([clampClipRow({ startSec: 0, endSec: durationSec, label: '' }, durationSec)]);
     setOpen(false);
@@ -244,15 +221,8 @@ export default function WorshipClipFields({
 
   if (!open && hideToggle) return null;
 
-  const startMaxSec = (row: DraftClip) => {
-    if (row.endSec != null) return Math.max(0, row.endSec - 1);
-    if (durationSec != null) return Math.max(0, durationSec - 1);
-    return undefined;
-  };
-
-  const endMinSec = (row: DraftClip) => row.startSec + 1;
-
-  const endMaxSec = () => (durationSec != null ? durationSec : undefined);
+  /** 时长未就绪时先给宽上限，避免下拉为空 */
+  const fallbackMax = 23 * 3600 + 59 * 60 + 59;
 
   return (
     <div className="bulletin-worship-clip-editor">
@@ -319,12 +289,19 @@ export default function WorshipClipFields({
                 duration: formatClipTime(durationSec) || String(durationSec),
               })}
             </p>
-          ) : null}
+          ) : (
+            <p className="bulletin-worship-clip-duration-hint">
+              {t('bulletin.worshipClipDurationLoading')}
+            </p>
+          )}
           <ul className="bulletin-worship-clip-rows">
             {rows.map((row, index) => {
-              const startMax = startMaxSec(row);
-              const endMin = endMinSec(row);
-              const endMax = endMaxSec();
+              const endSec = row.endSec ?? durationSec ?? fallbackMax;
+              const startMax = Math.max(0, endSec - 1);
+              const startMin = 0;
+              const endMin = row.startSec + 1;
+              const endMax = durationSec ?? fallbackMax;
+
               return (
                 <li key={index} className="bulletin-worship-clip-row">
                   <label className="bulletin-worship-clip-field bulletin-worship-clip-field--label">
@@ -338,41 +315,30 @@ export default function WorshipClipFields({
                       onBlur={blurCommit}
                     />
                   </label>
-                  <label className="bulletin-worship-clip-field">
+                  <div className="bulletin-worship-clip-field">
                     <span>{t('bulletin.worshipClipStart')}</span>
-                    <input
-                      type="time"
-                      step={1}
-                      min={secondsToHtmlTime(0)}
-                      max={startMax != null ? secondsToHtmlTime(startMax) : undefined}
-                      className="bulletin-worship-clip-input"
-                      value={secondsToHtmlTime(row.startSec)}
-                      disabled={disabled || saving}
-                      onChange={(e) => onStartChange(index, e.target.value)}
-                      onBlur={blurCommit}
+                    <ClipTimeSelect
+                      aria-label={t('bulletin.worshipClipStart')}
+                      valueSec={row.startSec}
+                      minSec={startMin}
+                      maxSec={startMax}
+                      disabled={disabled || saving || durationSec == null}
+                      onChange={(sec) => updateRow(index, { startSec: sec })}
+                      onCommit={blurCommit}
                     />
-                  </label>
-                  <label className="bulletin-worship-clip-field">
+                  </div>
+                  <div className="bulletin-worship-clip-field">
                     <span>{t('bulletin.worshipClipEnd')}</span>
-                    <input
-                      type="time"
-                      step={1}
-                      min={secondsToHtmlTime(endMin)}
-                      max={endMax != null ? secondsToHtmlTime(endMax) : undefined}
-                      className="bulletin-worship-clip-input"
-                      value={secondsToHtmlTime(row.endSec ?? durationSec)}
-                      disabled={disabled || saving}
-                      onChange={(e) => onEndChange(index, e.target.value)}
-                      onBlur={blurCommit}
-                      title={
-                        durationSec != null
-                          ? t('bulletin.worshipClipEndDefaultHint', {
-                              duration: formatClipTime(durationSec) || String(durationSec),
-                            })
-                          : undefined
-                      }
+                    <ClipTimeSelect
+                      aria-label={t('bulletin.worshipClipEnd')}
+                      valueSec={endSec}
+                      minSec={endMin}
+                      maxSec={endMax}
+                      disabled={disabled || saving || durationSec == null}
+                      onChange={(sec) => updateRow(index, { endSec: sec })}
+                      onCommit={blurCommit}
                     />
-                  </label>
+                  </div>
                   {rows.length > 1 ? (
                     <button
                       type="button"

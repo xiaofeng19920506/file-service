@@ -507,6 +507,7 @@ export default {
     worshipClipRangeInvalid: '终点须晚于起点',
     worshipClipExceedsDuration: '起止时间不能超过视频总长（{duration}）',
     worshipClipVideoDuration: '视频总长 {duration}',
+    worshipClipDurationLoading: '正在获取视频时长…',
     worshipClipSummary: '{start}–{end}',
     worshipClipSegments: '剪切',
     worshipClipShow: '剪切',
