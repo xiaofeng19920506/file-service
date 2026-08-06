@@ -41,6 +41,17 @@ describe('resolvePathAccessLevel', () => {
     expect(resolvePathAccessLevel('GET', '/v1/youtube/search')).toBe('youtube_browse');
   });
 
+  it('marks bulletin section invite token routes as public', () => {
+    const token = 'bs.abc.def.123.sig';
+    expect(resolvePathAccessLevel('GET', `/v1/bulletins/section-invite/${token}`)).toBe('public');
+    expect(resolvePathAccessLevel('POST', `/v1/bulletins/section-invite/${token}/pptx`)).toBe(
+      'public',
+    );
+    expect(
+      resolvePathAccessLevel('POST', '/v1/bulletins/bul-1/sections/message/invite'),
+    ).toBe('bulletin_manage');
+  });
+
   it('marks blob search as search (login + worship team)', () => {
     expect(resolvePathAccessLevel('GET', '/v1/blobs')).toBe('search');
   });

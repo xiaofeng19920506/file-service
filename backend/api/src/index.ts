@@ -58,6 +58,7 @@ import { registerYoutubeOAuthRoutes } from './youtube-oauth.js';
 import { registerYoutubeSearchRoutes } from './youtube-search.js';
 import { registerYoutubeTrendingRoutes } from './youtube-trending.js';
 import { registerBulletinRoutes } from './bulletins.js';
+import { registerBulletinSectionInviteRoutes } from './bulletin-section-invite.js';
 import { registerBulletinRealtimeRoutes } from './bulletin-realtime.js';
 import { resolveRequestActor } from './request-actor.js';
 
@@ -130,6 +131,12 @@ async function buildApp() {
     env,
     audioQueue,
     storage,
+  });
+  registerBulletinSectionInviteRoutes(app, {
+    db,
+    env,
+    storage,
+    redisUrl: env.REDIS_URL,
   });
   registerBulletinRealtimeRoutes(app, { redisUrl: env.REDIS_URL });
 

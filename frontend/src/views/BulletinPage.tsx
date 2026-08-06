@@ -13,6 +13,7 @@ import BulletinCoverStep from '../components/bulletin/BulletinCoverStep';
 import BulletinWorshipStep from '../components/bulletin/BulletinWorshipStep';
 import BulletinPreviewPanel from '../components/bulletin/BulletinPreviewPanel';
 import BulletinSlideShowLauncher from '../components/bulletin/BulletinSlideShowLauncher';
+import BulletinMessagePastorInviteModal from '../components/bulletin/BulletinMessagePastorInviteModal';
 import {
   BulletinAnnouncementsStep,
   BulletinBirthdayStep,
@@ -157,6 +158,7 @@ export default function BulletinPage() {
   const [slideShowSessionId, setSlideShowSessionId] = useState<string | null>(null);
   const [worshipYoutubeOauthReady, setWorshipYoutubeOauthReady] = useState(false);
   const [worshipOauthError, setWorshipOauthError] = useState<string | null>(null);
+  const [pastorInviteOpen, setPastorInviteOpen] = useState(false);
   const [editSlidesSectionId, setEditSlidesSectionId] = useState<string | null>(() =>
     editSlidesSectionFromHash(),
   );
@@ -772,6 +774,21 @@ export default function BulletinPage() {
   const renderStepPanel = () => {
     if (!draft) return null;
 
+    if (activeSectionId === 'message' && canManage) {
+      return (
+        <div className="bulletin-message-pastor-panel">
+          <p className="bulletin-step-hint">{t('bulletin.pastorInviteSectionIntro')}</p>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => setPastorInviteOpen(true)}
+          >
+            {t('bulletin.pastorInviteOpenSection')}
+          </button>
+        </div>
+      );
+    }
+
     if (activeSectionReadonly) {
       // 模板固定页：中间无需表单；分区操作在左侧右键菜单
       return null;
@@ -1024,6 +1041,17 @@ export default function BulletinPage() {
           </aside>
         </div>
       )}
+
+      {pastorInviteOpen && draft && canManage ? (
+        <BulletinMessagePastorInviteModal
+          bulletinId={draft.id}
+          onClose={() => setPastorInviteOpen(false)}
+          onInvited={({ email }) => {
+            setPastorInviteOpen(false);
+            setMessage(t('bulletin.pastorInviteSent', { email }));
+          }}
+        />
+      ) : null}
     </div>
   );
 }

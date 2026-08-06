@@ -115,6 +115,14 @@ export function isWorshipPlaylistInvitePath(method: string, path: string): boole
   return false;
 }
 
+/** 主日信息等分区 PPT 邀请：仅凭 HMAC token，无需登录 */
+export function isBulletinSectionInvitePath(method: string, path: string): boolean {
+  if (!path.startsWith('/v1/bulletins/section-invite/')) return false;
+  if (method === 'GET' && /^\/v1\/bulletins\/section-invite\/[^/]+$/.test(path)) return true;
+  if (method === 'POST' && /^\/v1\/bulletins\/section-invite\/[^/]+\/pptx$/.test(path)) return true;
+  return false;
+}
+
 export function isYoutubeBrowsePath(method: string, path: string): boolean {
   if (method === 'GET' && path === '/v1/youtube/search') return true;
   if (method === 'GET' && path === '/v1/youtube/search/suggest') return true;
@@ -273,6 +281,7 @@ export function resolvePathAccessLevel(method: string, path: string): PathAccess
   if (isAuthEntryPath(method, path)) return 'public';
   if (isYoutubeOAuthCallbackPath(method, path)) return 'public';
   if (isWorshipPlaylistInvitePath(method, path)) return 'public';
+  if (isBulletinSectionInvitePath(method, path)) return 'public';
   if (isVipVideoPath(method, path)) return 'vip_video';
   if (isYoutubeBrowsePath(method, path)) return 'youtube_browse';
   if (isYoutubeExportPath(method, path)) return 'youtube_export';

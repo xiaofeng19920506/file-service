@@ -16,6 +16,7 @@ export type AppPage =
   | 'bulletin-slideshow-presenter'
   | 'bulletin-slideshow-projector'
   | 'worship-songs'
+  | 'bulletin-section-invite'
   | 'vip-video';
 
 export type AppRoute = {
@@ -28,6 +29,7 @@ export type AppRoute = {
   mergePlaylistId?: string;
   worshipSongsInviteToken?: string;
   worshipSongsBulletinId?: string;
+  bulletinSectionInviteToken?: string;
   slideshowSessionId?: string;
 };
 
@@ -103,6 +105,15 @@ function routeFromHash(rawHash: string): AppRoute {
     }
     if (worshipSongsBulletinId) {
       return { page: 'worship-songs', worshipSongsBulletinId };
+    }
+  }
+  if (hash.startsWith('#/bulletin-section-invite')) {
+    const qIndex = hash.indexOf('?');
+    const params =
+      qIndex === -1 ? new URLSearchParams() : new URLSearchParams(hash.slice(qIndex + 1));
+    const bulletinSectionInviteToken = params.get('token')?.trim() || undefined;
+    if (bulletinSectionInviteToken) {
+      return { page: 'bulletin-section-invite', bulletinSectionInviteToken };
     }
   }
   if (hash.startsWith('#/bulletin/slideshow/projector')) {
@@ -225,6 +236,7 @@ export function useAppPage() {
     mergePlaylistId: route.mergePlaylistId,
     worshipSongsInviteToken: route.worshipSongsInviteToken,
     worshipSongsBulletinId: route.worshipSongsBulletinId,
+    bulletinSectionInviteToken: route.bulletinSectionInviteToken,
     slideshowSessionId: route.slideshowSessionId,
     navigate,
     navigateToPlaylist,

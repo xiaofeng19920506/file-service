@@ -9,6 +9,7 @@ import MergePage from './views/MergePage';
 import PlaylistsPage from './views/PlaylistsPage';
 import BulletinPage from './views/BulletinPage';
 import WorshipSongsInvitePage from './views/WorshipSongsInvitePage';
+import BulletinSectionInvitePage from './views/BulletinSectionInvitePage';
 import BulletinSlideShowPresenterPage from './views/BulletinSlideShowPresenterPage';
 import BulletinSlideShowProjectorPage from './views/BulletinSlideShowProjectorPage';
 import VipVideoPage from './views/VipVideoPage';
@@ -378,7 +379,7 @@ function AppShellWithMenu() {
 
 export default function App() {
   const { user, loading, permissions } = useAuth();
-  const { page, previewBlobId, mergeEditBlobIds, mergeEditTitle, worshipSongsInviteToken, worshipSongsBulletinId, slideshowSessionId } = useAppPage();
+  const { page, previewBlobId, mergeEditBlobIds, mergeEditTitle, worshipSongsInviteToken, worshipSongsBulletinId, bulletinSectionInviteToken, slideshowSessionId } = useAppPage();
   const libraryUpload = useLibraryUpload();
   const { t } = useI18n();
 
@@ -389,6 +390,11 @@ export default function App() {
         inviteToken={worshipSongsInviteToken}
       />
     );
+  }
+
+  // 主日信息牧师 PPT 邀请：无需登录
+  if (page === 'bulletin-section-invite' && bulletinSectionInviteToken) {
+    return <BulletinSectionInvitePage token={bulletinSectionInviteToken} />;
   }
 
   if (loading) {

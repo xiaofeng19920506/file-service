@@ -444,6 +444,60 @@ export async function inviteBulletinWorshipLeader(
   return parseJson<WorshipPlaylistInvite>(res);
 }
 
+export type BulletinSectionPastorInvite = {
+  inviteToken: string;
+  inviteUrl: string;
+  expiresAtUnix: number;
+  emailed: boolean;
+  email: string;
+  sectionId: string;
+};
+
+export async function inviteBulletinSectionPastor(
+  bulletinId: string,
+  sectionId: string,
+  body: { email: string; message?: string },
+): Promise<BulletinSectionPastorInvite> {
+  const res = await apiFetch(
+    `/v1/bulletins/${encodeURIComponent(bulletinId)}/sections/${encodeURIComponent(sectionId)}/invite`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  );
+  return parseJson<BulletinSectionPastorInvite>(res);
+}
+
+export type BulletinSectionInviteInfo = {
+  bulletinId: string;
+  serviceDate: string;
+  serviceTime: string;
+  sectionId: string;
+  hasPptxOverride: boolean;
+  expiresAtUnix: number;
+};
+
+export async function fetchBulletinSectionInvite(
+  token: string,
+): Promise<BulletinSectionInviteInfo> {
+  const res = await apiFetch(`/v1/bulletins/section-invite/${encodeURIComponent(token)}`);
+  return parseJson<BulletinSectionInviteInfo>(res);
+}
+
+export async function uploadBulletinSectionInvitePptx(
+  token: string,
+  file: File,
+): Promise<{ ok: true; blobId: string; sectionId: string }> {
+  const form = new FormData();
+  form.append('file', file);
+  const res = await apiFetch(`/v1/bulletins/section-invite/${encodeURIComponent(token)}/pptx`, {
+    method: 'POST',
+    body: form,
+  });
+  return parseJson<{ ok: true; blobId: string; sectionId: string }>(res);
+}
+
 export type BulletinWorshipPlaylistDetail = PlaylistDetail & {
   bulletin: { id: string; serviceDate: string; serviceTime: string };
   canEdit?: boolean;

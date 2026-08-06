@@ -32,6 +32,8 @@ import {
   users,
   weeklyBulletins,
   signPlaylistEditToken,
+  signBulletinSectionInviteToken,
+  BULLETIN_SECTION_INVITE_ALLOWED,
   formatUserDisplayName,
   normalizeHiddenSections,
   normalizeSlideTextOverrides,
@@ -595,6 +597,10 @@ function buildWorshipInviteUrl(webAppUrl: string, token: string): string {
   return `${webAppUrl}/#/worship-songs?invite=${encodeURIComponent(token)}`;
 }
 
+function buildBulletinSectionInviteUrl(webAppUrl: string, token: string): string {
+  return `${webAppUrl}/#/bulletin-section-invite?token=${encodeURIComponent(token)}`;
+}
+
 function isValidEmailAddress(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
@@ -644,6 +650,55 @@ async function sendWorshipPlaylistInviteEmail(opts: {
       '<p>打开链接后，你可以：</p>',
       '<ul><li>搜索并逐首添加歌曲</li><li>粘贴 YouTube 播放列表或单曲链接直接导入</li></ul>',
       `<p><a href="${inviteUrl.replace(/"/g, '&quot;')}">打开加歌页面</a></p>`,
+      `<p style="color:#666;font-size:13px;">链接 ${ttlDays} 天内有效。</p>`,
+    ]
+      .filter(Boolean)
+      .join(''),
+  });
+}
+
+async function sendBulletinSectionPastorInviteEmail(opts: {
+  mailConfig: NonNullable<ReturnType<typeof resolveMailConfig>>;
+  to: string;
+  senderName: string;
+  serviceDate: string;
+  sectionLabel: string;
+  inviteUrl: string;
+  optionalMessage?: string;
+  ttlDays: number;
+}): Promise<void> {
+  const {
+    mailConfig,
+    to,
+    senderName,
+    serviceDate,
+    sectionLabel,
+    inviteUrl,
+    optionalMessage,
+    ttlDays,
+  } = opts;
+  const subject = `${senderName} 邀请你为 ${serviceDate}「${sectionLabel}」上传 PPT`;
+  const textLines = [
+    `${senderName} 邀请你为 ${serviceDate} 主日周报的「${sectionLabel}」提供 PPT。`,
+    optionalMessage ? `\n附言：${optionalMessage}\n` : '',
+    '打开链接后，你可以上传 PPT，也可以选择暂不上传。',
+    inviteUrl,
+    '',
+    `链接 ${ttlDays} 天内有效。`,
+  ].filter((line) => line !== '');
+
+  await sendMail({
+    config: mailConfig,
+    to,
+    subject,
+    text: textLines.join('\n'),
+    html: [
+      `<p><strong>${senderName}</strong> 邀请你为 <strong>${serviceDate}</strong> 主日周报的「${sectionLabel}」提供 PPT。</p>`,
+      optionalMessage
+        ? `<p><strong>附言：</strong>${optionalMessage.replace(/</g, '&lt;')}</p>`
+        : '',
+      '<p>打开链接后，你可以上传 PPT，也可以选择暂不上传。</p>',
+      `<p><a href="${inviteUrl.replace(/"/g, '&quot;')}">打开上传页面</a></p>`,
       `<p style="color:#666;font-size:13px;">链接 ${ttlDays} 天内有效。</p>`,
     ]
       .filter(Boolean)
@@ -1638,6 +1693,83 @@ export function registerBulletinRoutes(
       emailed: emailedCount > 0 && !emailError,
       emailedCount,
       ...(emailError ? { emailError } : {}),
+    });
+  });
+
+  app.post<{
+    Params: { id: string; sectionId: string };
+    Body: { email?: string; message?: string };
+  }>('/v1/bulletins/:id/sections/:sectionId/invite', async (request, reply) => {
+    const user = requireUser(request);
+    if (!user || !canManageBulletin(user.role)) {
+      return reply.code(403).send({ error: 'bulletin_forbidden' });
+    }
+
+    const sectionId = request.params.sectionId?.trim();
+    if (!sectionId || !BULLETIN_SECTION_INVITE_ALLOWED.has(sectionId)) {
+      return reply.code(400).send({ error: 'section_invite_not_supported' });
+    }
+    if (!BULLETIN_SECTION_TEMPLATE_SLIDES[sectionId]?.length) {
+      return reply.code(400).send({ error: 'section_has_no_slides' });
+    }
+
+    const recipientEmail = request.body?.email?.trim().toLowerCase() ?? '';
+    if (!recipientEmail || !isValidEmailAddress(recipientEmail)) {
+      return reply.code(400).send({ error: 'invalid_email' });
+    }
+
+    const mailConfig = resolveMailConfig(env);
+    if (!mailConfig) {
+      return reply.code(503).send({ error: 'email_not_configured' });
+    }
+
+    const [bulletin] = await db
+      .select()
+      .from(weeklyBulletins)
+      .where(eq(weeklyBulletins.id, request.params.id));
+    if (!bulletin) return reply.code(404).send({ error: 'not_found' });
+
+    const expiresAtUnix = Math.floor(Date.now() / 1000) + env.SHARE_LINK_TTL_SECONDS;
+    const inviteToken = signBulletinSectionInviteToken({
+      secret: env.DOWNLOAD_HMAC_SECRET,
+      bulletinId: bulletin.id,
+      sectionId,
+      expiresAtUnix,
+    });
+    const webAppUrl = resolveWebAppUrl(env);
+    const inviteUrl = buildBulletinSectionInviteUrl(webAppUrl, inviteToken);
+    const ttlDays = Math.ceil(env.SHARE_LINK_TTL_SECONDS / 86_400);
+    const optionalMessage = request.body?.message?.trim();
+    const senderName = formatUserDisplayName(user) || user.email;
+    const sectionLabel = sectionId === 'message' ? '主日信息' : sectionId;
+
+    try {
+      await sendBulletinSectionPastorInviteEmail({
+        mailConfig,
+        to: recipientEmail,
+        senderName,
+        serviceDate: bulletin.serviceDate,
+        sectionLabel,
+        inviteUrl,
+        optionalMessage,
+        ttlDays,
+      });
+    } catch (e) {
+      request.log.error(e, 'bulletin section pastor invite email failed');
+      const emailError =
+        e instanceof Error && e.message === 'smtp_ip_unauthorized'
+          ? 'smtp_ip_unauthorized'
+          : 'email_send_failed';
+      return reply.code(502).send({ error: emailError });
+    }
+
+    return reply.send({
+      inviteToken,
+      inviteUrl,
+      expiresAtUnix,
+      emailed: true,
+      email: recipientEmail,
+      sectionId,
     });
   });
 
