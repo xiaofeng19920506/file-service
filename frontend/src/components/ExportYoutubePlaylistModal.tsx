@@ -220,17 +220,31 @@ export default function ExportYoutubePlaylistModal({
                       {friendlyError(status.dataApiError, t)}
                     </p>
                   )}
-                  {status?.dataApiReady === false && (
+                  {status?.dataApiReady === false && status.dataApiError === 'youtube_api_not_enabled' && (
                     <p className="export-youtube-hint">{t('playlists.exportYoutubeApiEnableHint')}</p>
                   )}
-                  <button
-                    type="button"
-                    className="btn-secondary btn-danger-outline"
-                    onClick={() => void handleDisconnect()}
-                    disabled={disconnecting || exporting}
-                  >
-                    {disconnecting ? t('playlists.exportYoutubeDisconnecting') : t('playlists.exportYoutubeDisconnect')}
-                  </button>
+                  <div className="export-youtube-account-actions">
+                    {status?.dataApiReady === false ? (
+                      <button
+                        type="button"
+                        className="btn-primary"
+                        onClick={() => void handleConnect()}
+                        disabled={connecting || disconnecting || exporting}
+                      >
+                        {connecting
+                          ? t('playlists.exportYoutubeConnecting')
+                          : t('playlists.exportYoutubeReconnect')}
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="btn-secondary btn-danger-outline"
+                      onClick={() => void handleDisconnect()}
+                      disabled={disconnecting || exporting || connecting}
+                    >
+                      {disconnecting ? t('playlists.exportYoutubeDisconnecting') : t('playlists.exportYoutubeDisconnect')}
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <button

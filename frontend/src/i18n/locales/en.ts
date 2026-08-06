@@ -476,6 +476,7 @@ const en: MessageTree = {
     worshipImportYoutubeEmpty: 'No playlists',
     worshipImportYoutubeUnavailable:
       'Can’t load your YouTube playlists (account linked, but the Data API is unavailable)',
+    worshipImportYoutubeReconnect: 'Reconnect YouTube',
     worshipImportYoutubeFallbackHint:
       'Use “Search / add songs” above, or paste a public YouTube playlist or video URL instead.',
     worshipImportYoutubeTrackCount: '{count} tracks',
@@ -802,6 +803,7 @@ const en: MessageTree = {
     exportYoutubeNotConfigured: 'YouTube export is not configured on this server. Contact an admin.',
     exportYoutubeConnect: 'Sign in with Google',
     exportYoutubeConnecting: 'Redirecting to Google…',
+    exportYoutubeReconnect: 'Reconnect YouTube',
     exportYoutubeConnected: 'YouTube account connected. You can export now.',
     exportYoutubeAccount: 'Connected account',
     exportYoutubeUnknownAccount: 'YouTube account',

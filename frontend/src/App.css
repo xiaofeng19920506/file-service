@@ -2904,6 +2904,13 @@
   background: var(--surface-muted, rgba(0, 0, 0, 0.02));
 }
 
+.export-youtube-account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
 .export-youtube-channel {
   margin: 0;
   font-size: 1rem;

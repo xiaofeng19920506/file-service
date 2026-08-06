@@ -193,6 +193,10 @@ export default function BulletinWorshipYoutubeImportPanel({
     const reason = status.dataApiError
       ? friendlyError(status.dataApiError, t)
       : t('bulletin.worshipImportYoutubeUnavailable');
+    const needsReconnect =
+      status.dataApiError === 'youtube_token_refresh_failed' ||
+      status.dataApiError === 'youtube_not_connected' ||
+      status.dataApiError === 'oauth_invalid_grant';
     return (
       <div className="bulletin-worship-youtube-import">
         {urlForm}
@@ -200,6 +204,18 @@ export default function BulletinWorshipYoutubeImportPanel({
           <p className="error-msg">{reason}</p>
           {status.dataApiError === 'youtube_api_not_enabled' ? (
             <p className="export-youtube-hint">{t('playlists.exportYoutubeApiEnableHint')}</p>
+          ) : null}
+          {needsReconnect ? (
+            <button
+              type="button"
+              className="btn-primary bulletin-worship-action-btn"
+              onClick={() => void handleConnect()}
+              disabled={connecting || addingUrl}
+            >
+              {connecting
+                ? t('playlists.exportYoutubeConnecting')
+                : t('bulletin.worshipImportYoutubeReconnect')}
+            </button>
           ) : null}
           <p className="playlists-muted">{t('bulletin.worshipImportYoutubeFallbackHint')}</p>
           {error && <p className="error-msg">{error}</p>}

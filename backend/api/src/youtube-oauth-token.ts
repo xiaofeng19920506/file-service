@@ -61,7 +61,15 @@ export async function getValidYoutubeAccessToken(
       })
       .where(eq(youtubeOAuthConnections.userId, userId));
     return { accessToken: refreshed.access_token };
-  } catch {
+  } catch (e) {
+    const msg = e instanceof Error ? e.message.toLowerCase() : '';
+    // refresh token 被撤销 / 过期：清掉本地绑定，避免 UI 卡在「已连接但不可用」
+    if (msg.includes('invalid_grant') || msg.includes('revoked')) {
+      await db
+        .delete(youtubeOAuthConnections)
+        .where(eq(youtubeOAuthConnections.userId, userId));
+      return { error: 'not_connected' };
+    }
     return { error: 'refresh_failed' };
   }
 }
