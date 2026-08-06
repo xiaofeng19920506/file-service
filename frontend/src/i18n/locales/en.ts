@@ -497,6 +497,7 @@ const en: MessageTree = {
     worshipSlideModePpt: 'Lyrics PPT',
     worshipSlideMaximize: 'Maximize',
     worshipSlideExitMaximize: 'Exit fullscreen',
+    worshipReturnToProjection: 'Close video, back to slides',
     worshipLyricsPptxTitle: 'Lyrics PPT',
     worshipLyricsPptxHint:
       'Upload a lyrics PPT, then while the playlist plays choose “Lyrics PPT”: music stays in the background while you advance slides with the arrow keys. Press Esc or Exit to leave.',

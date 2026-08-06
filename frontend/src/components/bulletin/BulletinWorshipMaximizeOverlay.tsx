@@ -232,6 +232,23 @@ export default function BulletinWorshipMaximizeOverlay({
     await requestElementFullscreen(el);
   }, []);
 
+  /** 关闭 YouTube 画面，回到歌词/周报投影；无可用投影则退出全屏敬拜 */
+  const returnToProjection = useCallback(async () => {
+    await exitDocumentFullscreen();
+    const canShowPpt = allowPpt && (Boolean(lyricsPptxBlobId) || !requireLyricsPptx);
+    if (canShowPpt) {
+      onModeChange('ppt');
+      const el = rootRef.current;
+      if (el && !isDocumentFullscreen()) {
+        window.setTimeout(() => {
+          void requestElementFullscreen(el);
+        }, 50);
+      }
+      return;
+    }
+    onClose();
+  }, [allowPpt, lyricsPptxBlobId, onClose, onModeChange, requireLyricsPptx]);
+
   const currentSlide = slides[slideIndex];
 
   return createPortal(
@@ -267,6 +284,15 @@ export default function BulletinWorshipMaximizeOverlay({
           ) : null}
         </div>
         <div className="bulletin-worship-maximize-topbar-actions">
+          {mode === 'youtube' ? (
+            <button
+              type="button"
+              className="btn-primary btn-sm bulletin-worship-return-projection"
+              onClick={() => void returnToProjection()}
+            >
+              {t('bulletin.worshipReturnToProjection')}
+            </button>
+          ) : null}
           <button type="button" className="btn-secondary btn-sm" onClick={() => void toggleStageFullscreen()}>
             {t('worship.projectFullscreen')}
           </button>
@@ -290,6 +316,15 @@ export default function BulletinWorshipMaximizeOverlay({
             canGoPrev={transport.canGoPrev}
             nativeControls
             autoEnterFullscreen={autoEnterFullscreen}
+            overlayChrome={
+              <button
+                type="button"
+                className="bulletin-worship-return-projection-fab"
+                onClick={() => void returnToProjection()}
+              >
+                {t('bulletin.worshipReturnToProjection')}
+              </button>
+            }
           />
         </div>
       ) : (

@@ -474,6 +474,7 @@ export default {
     worshipSlideModePpt: '歌词 PPT',
     worshipSlideMaximize: '最大化',
     worshipSlideExitMaximize: '退出全屏',
+    worshipReturnToProjection: '关闭视频，返回投影',
     worshipLyricsPptxTitle: '歌词 PPT',
     worshipLyricsPptxHint:
       '上传歌词 PPT 后，播放歌单时可点「歌词 PPT」：音乐在后台继续，主画面显示 PPT；用方向键翻页，Esc 或「退出全屏」离开。',

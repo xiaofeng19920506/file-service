@@ -6180,6 +6180,43 @@
   opacity: 0.85;
 }
 
+.youtube-player-overlay-chrome {
+  position: absolute;
+  top: 0.55rem;
+  left: 0.55rem;
+  z-index: 5;
+  display: flex;
+  gap: 0.4rem;
+  pointer-events: none;
+}
+
+.youtube-player-overlay-chrome > * {
+  pointer-events: auto;
+}
+
+.bulletin-worship-return-projection-fab {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.bulletin-worship-return-projection-fab:hover {
+  background: rgba(0, 0, 0, 0.88);
+  border-color: rgba(255, 255, 255, 0.55);
+}
+
+.bulletin-worship-maximize-topbar-actions .bulletin-worship-return-projection {
+  white-space: nowrap;
+}
+
 .bulletin-page {
   /* 与 shared/templates/bulletin/06_14_2026.pptx 的 p:sldSz（16:9）一致 */
   --bulletin-slide-aspect: 16 / 9;

@@ -44,6 +44,8 @@ type YoutubePlaylistPlayerProps = {
   nativeControls?: boolean;
   /** mount 后自动查找并点击自定义全屏按钮 */
   autoEnterFullscreen?: boolean;
+  /** 叠在原生播放器画面上的控件（全屏时仍可见） */
+  overlayChrome?: ReactNode;
 };
 
 type YtPlayer = {
@@ -178,6 +180,7 @@ export default function YoutubePlaylistPlayer({
   mobileChrome,
   nativeControls = true,
   autoEnterFullscreen = false,
+  overlayChrome,
 }: YoutubePlaylistPlayerProps) {
   const immersive = immersiveProp ?? mobileImmersive;
   const overlayMode = !nativeControls && (immersive || mobileInline);
@@ -1097,6 +1100,9 @@ export default function YoutubePlaylistPlayer({
               />
             </svg>
           </button>
+          {overlayChrome ? (
+            <div className="youtube-player-overlay-chrome">{overlayChrome}</div>
+          ) : null}
         </div>
         {playerError && <p className="error-msg">{playerError}</p>}
       </section>
