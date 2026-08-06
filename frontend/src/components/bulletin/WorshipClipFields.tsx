@@ -18,17 +18,28 @@ type DraftClip = {
   label: string;
 };
 
-function clipsToDraft(clips: PlayClip[]): DraftClip[] {
-  if (clips.length === 0) return [{ startSec: 0, endSec: null, label: '' }];
+function clipsToDraft(clips: PlayClip[], durationSec?: number | null): DraftClip[] {
+  const defaultEnd = durationSec != null && durationSec > 0 ? durationSec : null;
+  if (clips.length === 0) return [{ startSec: 0, endSec: defaultEnd, label: '' }];
   return clips.map((c) => ({
     startSec: c.startSec,
-    endSec: c.endSec,
+    endSec: c.endSec ?? defaultEnd,
     label: c.label ?? '',
   }));
 }
 
 function rangeInvalid(row: DraftClip): boolean {
   return row.endSec != null && row.endSec <= row.startSec;
+}
+
+/** 终点等于视频总长时视为「播到结尾」 */
+function normalizeEndForSave(
+  endSec: number | null,
+  durationSec: number | null,
+): number | null {
+  if (endSec == null) return null;
+  if (durationSec != null && endSec >= durationSec) return null;
+  return endSec;
 }
 
 type WorshipClipFieldsProps = {
@@ -66,10 +77,19 @@ export default function WorshipClipFields({
 
   useEffect(() => {
     const clips = resolvePlayClips(item);
-    setRows(clipsToDraft(clips));
+    setRows(clipsToDraft(clips, durationSec));
     setClipError(null);
     if (clips.length > 0 && openProp === undefined) setInternalOpen(true);
+    // durationSec 由下方 effect 单独回填终点，避免编辑中途被重置
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅跟随条目数据
   }, [item.id, item.playClips, item.playStartSec, item.playEndSec, openProp]);
+
+  useEffect(() => {
+    if (durationSec == null || durationSec <= 0) return;
+    setRows((prev) =>
+      prev.map((row) => (row.endSec == null ? { ...row, endSec: durationSec } : row)),
+    );
+  }, [durationSec]);
 
   useEffect(() => {
     if (!open || !item.youtubeVideoId) return;
@@ -111,12 +131,13 @@ export default function WorshipClipFields({
 
     const parsed: PlayClip[] = [];
     for (const row of nextRows) {
-      const blank = row.startSec === 0 && row.endSec == null && !row.label.trim();
+      const endSec = normalizeEndForSave(row.endSec, durationSec);
+      const blank = row.startSec === 0 && endSec == null && !row.label.trim();
       if (blank && nextRows.length === 1) continue;
       if (blank) continue;
       parsed.push({
         startSec: row.startSec,
-        endSec: row.endSec,
+        endSec,
         label: row.label.trim() || null,
       });
     }
@@ -167,11 +188,16 @@ export default function WorshipClipFields({
   const onEndChange = (index: number, value: string) => {
     const parsed = htmlTimeToSeconds(value);
     if (parsed === 'invalid') return;
+    // 清空终点 → 默认回到视频结尾
+    if (parsed == null) {
+      updateRow(index, { endSec: durationSec });
+      return;
+    }
     updateRow(index, { endSec: parsed });
   };
 
   const clearClips = async () => {
-    setRows([{ startSec: 0, endSec: null, label: '' }]);
+    setRows([{ startSec: 0, endSec: durationSec, label: '' }]);
     setOpen(false);
     setClipError(null);
     if (savedClips.length === 0) return;
@@ -186,7 +212,13 @@ export default function WorshipClipFields({
     }
   };
 
+  const addSegment = () => {
+    setRows((prev) => [...prev, { startSec: 0, endSec: durationSec, label: '' }]);
+  };
+
   if (!open && hideToggle) return null;
+
+  const endDisplayValue = (row: DraftClip) => secondsToHtmlTime(row.endSec ?? durationSec);
 
   return (
     <div className="bulletin-worship-clip-editor">
@@ -223,7 +255,7 @@ export default function WorshipClipFields({
                 type="button"
                 className="btn-secondary btn-sm"
                 disabled={disabled || saving || rows.length >= 40}
-                onClick={() => setRows((prev) => [...prev, { startSec: 0, endSec: null, label: '' }])}
+                onClick={addSegment}
               >
                 {t('bulletin.worshipClipAddSegment')}
               </button>
@@ -296,10 +328,17 @@ export default function WorshipClipFields({
                           ? 'bulletin-worship-clip-input is-invalid'
                           : 'bulletin-worship-clip-input'
                       }
-                      value={secondsToHtmlTime(row.endSec)}
+                      value={endDisplayValue(row)}
                       disabled={disabled || saving}
                       onChange={(e) => onEndChange(index, e.target.value)}
                       onBlur={blurCommit}
+                      title={
+                        durationSec != null
+                          ? t('bulletin.worshipClipEndDefaultHint', {
+                              duration: formatClipTime(durationSec) || String(durationSec),
+                            })
+                          : undefined
+                      }
                     />
                   </label>
                   {rows.length > 1 ? (
@@ -311,7 +350,7 @@ export default function WorshipClipFields({
                         const next = rows.filter((_, i) => i !== index);
                         const fallback = next.length
                           ? next
-                          : [{ startSec: 0, endSec: null, label: '' }];
+                          : [{ startSec: 0, endSec: durationSec, label: '' }];
                         setRows(fallback);
                         void commit(fallback);
                       }}

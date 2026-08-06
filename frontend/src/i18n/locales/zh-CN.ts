@@ -501,6 +501,7 @@ export default {
     worshipClipStart: '起点',
     worshipClipEnd: '终点',
     worshipClipEndPlaceholder: '',
+    worshipClipEndDefaultHint: '默认到视频结尾（{duration}）',
     worshipClipStartPlaceholder: '',
     worshipClipInvalid: '时间无效',
     worshipClipRangeInvalid: '终点须晚于起点',

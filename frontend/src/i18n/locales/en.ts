@@ -525,6 +525,7 @@ const en: MessageTree = {
     worshipClipStart: 'Start',
     worshipClipEnd: 'End',
     worshipClipEndPlaceholder: '',
+    worshipClipEndDefaultHint: 'Defaults to video end ({duration})',
     worshipClipStartPlaceholder: '',
     worshipClipInvalid: 'Invalid time',
     worshipClipRangeInvalid: 'End must be after start',
