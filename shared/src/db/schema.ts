@@ -296,6 +296,10 @@ export const weeklyBulletins = pgTable('weekly_bulletins', {
     .$type<Record<string, string>>()
     .notNull()
     .default({}),
+  /** 主日信息：牧师邮箱；每周一自动发上传邀请（可选） */
+  messagePastorEmail: text('message_pastor_email').notNull().default(''),
+  /** 已为哪个 serviceDate 发过周一邀请，避免重复 */
+  messagePastorInviteSentForDate: text('message_pastor_invite_sent_for_date').notNull().default(''),
   servicePlaylistId: uuid('service_playlist_id').references(() => playlists.id, { onDelete: 'set null' }),
   /** 敬拜赞美投影格式：ppt | youtube | ppt_youtube */
   worshipPresentationMode: text('worship_presentation_mode').notNull().default('youtube'),

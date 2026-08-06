@@ -470,19 +470,12 @@ const en: MessageTree = {
     worshipInviteSearchPlaceholder: 'Search by name or email…',
     worshipInviteNoMatch: 'No matching worship team members',
     worshipOpenInviteModal: 'Invite worship team member',
-    pastorInviteTitle: 'Invite pastor to upload Sunday message PPT',
-    pastorInviteHint:
-      'We’ll email an invite to upload a PPT for “Sunday message”. They can also open the link and skip uploading.',
     pastorInviteEmail: 'Pastor email',
     pastorInviteEmailPlaceholder: 'pastor@example.com',
-    pastorInviteMessage: 'Note (optional)',
-    pastorInviteMessagePlaceholder: 'e.g. Feel free to use your own sermon slides.',
-    pastorInviteSend: 'Send invite email',
-    pastorInviteSending: 'Sending…',
-    pastorInviteSent: 'Invite email sent to {email}',
-    pastorInviteOpenSection: 'Invite pastor to upload PPT',
     pastorInviteSectionIntro:
-      'The Sunday message slide comes from the template. Optionally invite the pastor to upload a custom PPT — sending the invite emails them.',
+      'Enter the pastor’s email. Every Monday the system emails an invite so they can optionally upload a “Sunday message” PPT.',
+    pastorInviteScheduleHint:
+      'Email goes out automatically Monday morning — no send button. Clear the email to stop invites.',
     pastorInviteLandingTitle: 'Sunday message PPT',
     pastorInviteLandingIntroSimple:
       'Optionally upload a PPT for the {date} Sunday bulletin “Sunday message” section.',

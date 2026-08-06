@@ -13,7 +13,6 @@ import BulletinCoverStep from '../components/bulletin/BulletinCoverStep';
 import BulletinWorshipStep from '../components/bulletin/BulletinWorshipStep';
 import BulletinPreviewPanel from '../components/bulletin/BulletinPreviewPanel';
 import BulletinSlideShowLauncher from '../components/bulletin/BulletinSlideShowLauncher';
-import BulletinMessagePastorInviteModal from '../components/bulletin/BulletinMessagePastorInviteModal';
 import {
   BulletinAnnouncementsStep,
   BulletinBirthdayStep,
@@ -117,6 +116,8 @@ function withHiddenSections(bulletin: WeeklyBulletin): WeeklyBulletin {
       bulletin.sectionPptxOverrides && typeof bulletin.sectionPptxOverrides === 'object'
         ? bulletin.sectionPptxOverrides
         : {},
+    messagePastorEmail: bulletin.messagePastorEmail ?? '',
+    messagePastorInviteSentForDate: bulletin.messagePastorInviteSentForDate ?? '',
   });
 }
 
@@ -158,7 +159,6 @@ export default function BulletinPage() {
   const [slideShowSessionId, setSlideShowSessionId] = useState<string | null>(null);
   const [worshipYoutubeOauthReady, setWorshipYoutubeOauthReady] = useState(false);
   const [worshipOauthError, setWorshipOauthError] = useState<string | null>(null);
-  const [pastorInviteOpen, setPastorInviteOpen] = useState(false);
   const [editSlidesSectionId, setEditSlidesSectionId] = useState<string | null>(() =>
     editSlidesSectionFromHash(),
   );
@@ -778,13 +778,18 @@ export default function BulletinPage() {
       return (
         <div className="bulletin-message-pastor-panel">
           <p className="bulletin-step-hint">{t('bulletin.pastorInviteSectionIntro')}</p>
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={() => setPastorInviteOpen(true)}
-          >
-            {t('bulletin.pastorInviteOpenSection')}
-          </button>
+          <label className="share-playlist-field">
+            <span>{t('bulletin.pastorInviteEmail')}</span>
+            <input
+              type="email"
+              className="playlists-text-input"
+              value={draft.messagePastorEmail ?? ''}
+              placeholder={t('bulletin.pastorInviteEmailPlaceholder')}
+              autoComplete="email"
+              onChange={(e) => patchField('messagePastorEmail', e.target.value)}
+            />
+          </label>
+          <p className="playlists-muted">{t('bulletin.pastorInviteScheduleHint')}</p>
         </div>
       );
     }
@@ -1041,17 +1046,6 @@ export default function BulletinPage() {
           </aside>
         </div>
       )}
-
-      {pastorInviteOpen && draft && canManage ? (
-        <BulletinMessagePastorInviteModal
-          bulletinId={draft.id}
-          onClose={() => setPastorInviteOpen(false)}
-          onInvited={({ email }) => {
-            setPastorInviteOpen(false);
-            setMessage(t('bulletin.pastorInviteSent', { email }));
-          }}
-        />
-      ) : null}
     </div>
   );
 }

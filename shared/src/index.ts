@@ -14,6 +14,7 @@ export * from './playlist-video-ids.js';
 export * from './playlist-share-token.js';
 export * from './playlist-edit-token.js';
 export * from './bulletin-section-invite-token.js';
+export * from './bulletin-pastor-invite.js';
 export * from './user-token.js';
 export * from './permissions.js';
 export * from './storage/index.js';

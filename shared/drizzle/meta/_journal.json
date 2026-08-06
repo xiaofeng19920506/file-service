@@ -239,6 +239,13 @@
       "when": 1754254800000,
       "tag": "0035_playlist_item_play_clips",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1754517600000,
+      "tag": "0036_bulletin_message_pastor_email",
+      "breakpoints": true
     }
   ]
 }

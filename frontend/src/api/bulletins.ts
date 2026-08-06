@@ -59,6 +59,10 @@ export type WeeklyBulletin = {
   slideTextOverrides: SlideTextOverride[];
   /** 分区迷你 PPTX blob（sectionId → blobId） */
   sectionPptxOverrides: Record<string, string>;
+  /** 主日信息牧师邮箱（每周一定时邀请上传 PPT） */
+  messagePastorEmail: string;
+  /** 已为哪个 serviceDate 发过周一邀请 */
+  messagePastorInviteSentForDate: string;
   outputBlobId: string | null;
   servicePlaylistId: string | null;
   /** 敬拜赞美投影格式 */
@@ -108,6 +112,7 @@ export type BulletinPatch = Partial<{
   hiddenSections: string[];
   slideTextOverrides: SlideTextOverride[];
   sectionPptxOverrides: Record<string, string>;
+  messagePastorEmail: string;
   outputBlobId: string | null;
   worshipPresentationMode: 'ppt' | 'youtube' | 'ppt_youtube';
   worshipLyricsPptxBlobId: string | null;

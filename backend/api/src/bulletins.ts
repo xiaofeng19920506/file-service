@@ -34,6 +34,9 @@ import {
   signPlaylistEditToken,
   signBulletinSectionInviteToken,
   BULLETIN_SECTION_INVITE_ALLOWED,
+  isMondayPastorInviteWindow,
+  isValidPastorEmail,
+  upcomingSundayIsoInTimeZone,
   formatUserDisplayName,
   normalizeHiddenSections,
   normalizeSlideTextOverrides,
@@ -417,6 +420,8 @@ export type WeeklyBulletinDto = {
   hiddenSections: string[];
   slideTextOverrides: { slide: number; textIndex: number; text: string }[];
   sectionPptxOverrides: Record<string, string>;
+  messagePastorEmail: string;
+  messagePastorInviteSentForDate: string;
   servicePlaylistId: string | null;
   worshipPresentationMode: WorshipPresentationMode;
   worshipLyricsPptxBlobId: string | null;
@@ -499,6 +504,8 @@ async function mapBulletin(
     hiddenSections: Array.isArray(row.hiddenSections) ? row.hiddenSections : [],
     slideTextOverrides: normalizeSlideTextOverrides(row.slideTextOverrides),
     sectionPptxOverrides: normalizeSectionPptxOverrides(row.sectionPptxOverrides),
+    messagePastorEmail: row.messagePastorEmail ?? '',
+    messagePastorInviteSentForDate: row.messagePastorInviteSentForDate ?? '',
     servicePlaylistId: row.servicePlaylistId,
     worshipPresentationMode: normalizeWorshipPresentationMode(row.worshipPresentationMode),
     worshipLyricsPptxBlobId: row.worshipLyricsPptxBlobId,
@@ -547,6 +554,7 @@ type BulletinPatchBody = Partial<{
   hiddenSections: string[];
   slideTextOverrides: { slide: number; textIndex: number; text: string }[];
   sectionPptxOverrides: Record<string, string>;
+  messagePastorEmail: string;
   worshipPresentationMode: WorshipPresentationMode;
   worshipLyricsPptxBlobId: string | null;
   outputBlobId: string | null;
@@ -891,6 +899,78 @@ export function registerBulletinRoutes(
       app.log.error(err, 'scripture preference purge failed'),
     );
   }, 24 * 60 * 60 * 1000);
+
+  const pastorInviteTz = process.env.PASTOR_INVITE_TZ?.trim() || 'America/New_York';
+  const pastorInviteHour = Number(process.env.PASTOR_INVITE_HOUR ?? '9');
+  const runMondayPastorInvites = async () => {
+    const now = new Date();
+    if (
+      !isMondayPastorInviteWindow(now, {
+        timeZone: pastorInviteTz,
+        hour: Number.isFinite(pastorInviteHour) ? pastorInviteHour : 9,
+      })
+    ) {
+      return;
+    }
+    const mailConfig = resolveMailConfig(env);
+    if (!mailConfig) {
+      app.log.warn('pastor invite skip: email_not_configured');
+      return;
+    }
+    const sunday = upcomingSundayIsoInTimeZone(now, pastorInviteTz);
+    const rows = await db
+      .select()
+      .from(weeklyBulletins)
+      .where(eq(weeklyBulletins.serviceDate, sunday));
+    const ttlDays = Math.ceil(env.SHARE_LINK_TTL_SECONDS / 86_400);
+    const webAppUrl = resolveWebAppUrl(env);
+    for (const bulletin of rows) {
+      const email = (bulletin.messagePastorEmail ?? '').trim().toLowerCase();
+      if (!email || !isValidPastorEmail(email)) continue;
+      if ((bulletin.messagePastorInviteSentForDate ?? '') === sunday) continue;
+
+      const expiresAtUnix = Math.floor(Date.now() / 1000) + env.SHARE_LINK_TTL_SECONDS;
+      const inviteToken = signBulletinSectionInviteToken({
+        secret: env.DOWNLOAD_HMAC_SECRET,
+        bulletinId: bulletin.id,
+        sectionId: 'message',
+        expiresAtUnix,
+      });
+      const inviteUrl = buildBulletinSectionInviteUrl(webAppUrl, inviteToken);
+      try {
+        await sendBulletinSectionPastorInviteEmail({
+          mailConfig,
+          to: email,
+          senderName: '主日周报',
+          serviceDate: bulletin.serviceDate,
+          sectionLabel: '主日信息',
+          inviteUrl,
+          ttlDays,
+        });
+        await db
+          .update(weeklyBulletins)
+          .set({
+            messagePastorInviteSentForDate: sunday,
+            updatedAt: new Date(),
+          })
+          .where(eq(weeklyBulletins.id, bulletin.id));
+        app.log.info(
+          { bulletinId: bulletin.id, serviceDate: sunday, email },
+          'pastor message invite emailed',
+        );
+      } catch (e) {
+        app.log.error(e, 'pastor message invite email failed');
+      }
+    }
+  };
+  void runMondayPastorInvites().catch((err) =>
+    app.log.error(err, 'pastor invite tick failed'),
+  );
+  setInterval(() => {
+    void runMondayPastorInvites().catch((err) =>
+      app.log.error(err, 'pastor invite tick failed'),
+    );
+  }, 15 * 60 * 1000);
 
   app.get('/v1/bulletins/template/slides', async (request, reply) => {
     const user = requireUser(request);
@@ -1442,6 +1522,13 @@ export function registerBulletinRoutes(
           }
         }
         patch.sectionPptxOverrides = next;
+      }
+      if (body.messagePastorEmail !== undefined) {
+        const email = String(body.messagePastorEmail).trim().toLowerCase();
+        if (email && !isValidPastorEmail(email)) {
+          return reply.code(400).send({ error: 'invalid_email' });
+        }
+        patch.messagePastorEmail = email;
       }
       if (body.outputBlobId !== undefined) {
         if (body.outputBlobId === null) {
