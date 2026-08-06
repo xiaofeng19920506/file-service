@@ -92,3 +92,33 @@ export function formatClipSummary(clip: PlayClip): string {
   const end = clip.endSec == null ? '—' : formatClipTime(clip.endSec) || '—';
   return clip.label ? `${clip.label} ${start}–${end}` : `${start}–${end}`;
 }
+
+export function clipExceedsDuration(
+  clip: { startSec: number; endSec: number | null },
+  durationSec: number,
+): boolean {
+  if (!Number.isFinite(durationSec) || durationSec <= 0) return false;
+  if (clip.startSec >= durationSec) return true;
+  if (clip.endSec != null && clip.endSec > durationSec) return true;
+  return false;
+}
+
+/** 播放/切歌时把片段起止限制在视频时长内 */
+export function clampPlaybackBounds(
+  startSeconds: number | null | undefined,
+  endSeconds: number | null | undefined,
+  durationSec: number,
+): { startSeconds: number; endSeconds: number | null } {
+  const duration = Math.max(0, Math.floor(durationSec));
+  const rawStart = Math.max(0, startSeconds ?? 0);
+  if (duration <= 0) {
+    return { startSeconds: rawStart, endSeconds: endSeconds ?? null };
+  }
+  let start = rawStart >= duration ? Math.max(0, duration - 1) : rawStart;
+  let end = endSeconds ?? null;
+  if (end != null) {
+    end = Math.min(end, duration);
+    if (end <= start) end = null;
+  }
+  return { startSeconds: start, endSeconds: end };
+}

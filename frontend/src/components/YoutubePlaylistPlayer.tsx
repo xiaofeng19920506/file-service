@@ -303,10 +303,18 @@ export default function YoutubePlaylistPlayer({
       setCurrentTime(Number.isFinite(nextTime) ? nextTime : 0);
       setDuration(Number.isFinite(nextDuration) && nextDuration > 0 ? nextDuration : 0);
 
-      const endSeconds = itemsRef.current[activeIndexRef.current]?.endSeconds;
+      const item = itemsRef.current[activeIndexRef.current];
+      const rawEnd = item?.endSeconds;
+      const trackDuration =
+        Number.isFinite(nextDuration) && nextDuration > 0 ? nextDuration : 0;
+      const endSeconds =
+        typeof rawEnd === 'number' && rawEnd > 0
+          ? trackDuration > 0
+            ? Math.min(rawEnd, trackDuration)
+            : rawEnd
+          : null;
       if (
-        typeof endSeconds === 'number' &&
-        endSeconds > 0 &&
+        endSeconds != null &&
         Number.isFinite(nextTime) &&
         nextTime >= endSeconds - 0.2
       ) {
@@ -327,16 +335,28 @@ export default function YoutubePlaylistPlayer({
       const videoId = item?.youtubeVideoId;
       if (!player || !readyRef.current || !videoId) return;
 
-      const startSeconds =
+      const trackDuration = (() => {
+        try {
+          const d = player.getDuration();
+          return Number.isFinite(d) && d > 0 ? d : 0;
+        } catch {
+          return 0;
+        }
+      })();
+
+      let startSeconds =
         typeof item.startSeconds === 'number' && item.startSeconds > 0
           ? item.startSeconds
           : 0;
+      if (trackDuration > 0 && startSeconds >= trackDuration) {
+        startSeconds = Math.max(0, trackDuration - 1);
+      }
 
       ignorePauseUntilRef.current = Date.now() + 3000;
       lastLoadedIndexRef.current = index;
       clipEndIndexRef.current = -1;
       setCurrentTime(startSeconds);
-      setDuration(0);
+      setDuration(trackDuration);
       scrubbingRef.current = false;
 
       if (autoplay) {
@@ -396,9 +416,24 @@ export default function YoutubePlaylistPlayer({
 
       if (trackDuration <= 0) return;
 
-      const target = clamped * trackDuration;
-      setCurrentTime(target);
-      player.seekTo(target, true);
+      const item = itemsRef.current[activeIndexRef.current];
+      const rawStart =
+        typeof item?.startSeconds === 'number' && item.startSeconds > 0
+          ? item.startSeconds
+          : 0;
+      const rawEnd =
+        typeof item?.endSeconds === 'number' && item.endSeconds > 0
+          ? item.endSeconds
+          : null;
+      const clipStart = Math.min(rawStart, Math.max(0, trackDuration - 1));
+      const clipEnd =
+        rawEnd != null ? Math.min(rawEnd, trackDuration) : trackDuration;
+      const span = Math.max(0, clipEnd - clipStart);
+      const target =
+        span > 0 ? clipStart + clamped * span : clamped * trackDuration;
+      const bounded = Math.min(trackDuration, Math.max(0, target));
+      setCurrentTime(bounded);
+      player.seekTo(bounded, true);
     },
     [duration, readPlayerDuration],
   );
@@ -508,10 +543,18 @@ export default function YoutubePlaylistPlayer({
                   const nextItem = itemsRef.current[nextIndex];
                   const nextId = nextItem?.youtubeVideoId;
                   if (nextId) {
-                    const start =
+                    let start =
                       typeof nextItem.startSeconds === 'number' && nextItem.startSeconds > 0
                         ? nextItem.startSeconds
                         : 0;
+                    try {
+                      const d = event.target.getDuration();
+                      if (Number.isFinite(d) && d > 0 && start >= d) {
+                        start = Math.max(0, d - 1);
+                      }
+                    } catch {
+                      /* ignore */
+                    }
                     ignorePauseUntilRef.current = Date.now() + 3000;
                     lastLoadedIndexRef.current = nextIndex;
                     clipEndIndexRef.current = -1;

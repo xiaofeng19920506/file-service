@@ -54,8 +54,10 @@ import {
   normalizeWorshipPresentationMode,
   parsePlayClipSeconds,
   assertClipRange,
+  assertClipsWithinDuration,
   parsePlayClips,
   clipsToLegacyStartEnd,
+  getYoutubeVideoDurationSecondsCached,
   type ApiEnv,
   type Db,
   type SlideTextOverride,
@@ -1957,6 +1959,9 @@ export function registerBulletinRoutes(
     if (body.playClips !== undefined) {
       const parsed = parsePlayClips(body.playClips);
       if (!parsed.ok) return reply.code(400).send({ error: parsed.error });
+      const durationSec = await getYoutubeVideoDurationSecondsCached(existing.youtubeVideoId);
+      const durationError = assertClipsWithinDuration(parsed.playClips, durationSec);
+      if (durationError) return reply.code(400).send({ error: durationError });
       const legacy = clipsToLegacyStartEnd(parsed.playClips);
       itemPatch.playClips = parsed.playClips;
       itemPatch.playStartSec = legacy.playStartSec;
@@ -1973,6 +1978,14 @@ export function registerBulletinRoutes(
       const nextEnd = clip.playEndSec !== undefined ? clip.playEndSec : existing.playEndSec;
       const rangeError = assertClipRange(nextStart, nextEnd);
       if (rangeError) return reply.code(400).send({ error: rangeError });
+      const durationSec = await getYoutubeVideoDurationSecondsCached(existing.youtubeVideoId);
+      const durationError = assertClipsWithinDuration(
+        nextStart == null && nextEnd == null
+          ? null
+          : [{ startSec: nextStart ?? 0, endSec: nextEnd ?? null }],
+        durationSec,
+      );
+      if (durationError) return reply.code(400).send({ error: durationError });
 
       if (clip.playStartSec !== undefined) itemPatch.playStartSec = clip.playStartSec;
       if (clip.playEndSec !== undefined) itemPatch.playEndSec = clip.playEndSec;

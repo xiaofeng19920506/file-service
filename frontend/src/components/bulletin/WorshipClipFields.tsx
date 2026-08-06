@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import type { PlaylistItem } from '../../api/playlists';
+import { getYoutubeAudioStatus } from '../../api/youtube-audio';
 import { friendlyError } from '../../lib/error-messages';
 import {
+  clipExceedsDuration,
+  formatClipTime,
   htmlTimeToSeconds,
   resolvePlayClips,
   secondsToHtmlTime,
@@ -59,6 +62,7 @@ export default function WorshipClipFields({
   const [rows, setRows] = useState<DraftClip[]>(() => clipsToDraft(savedClips));
   const [clipError, setClipError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [durationSec, setDurationSec] = useState<number | null>(null);
 
   useEffect(() => {
     const clips = resolvePlayClips(item);
@@ -67,9 +71,41 @@ export default function WorshipClipFields({
     if (clips.length > 0 && openProp === undefined) setInternalOpen(true);
   }, [item.id, item.playClips, item.playStartSec, item.playEndSec, openProp]);
 
+  useEffect(() => {
+    if (!open || !item.youtubeVideoId) return;
+    let cancelled = false;
+    void getYoutubeAudioStatus(item.youtubeVideoId)
+      .then((status) => {
+        if (cancelled) return;
+        const seconds = status.durationSeconds;
+        setDurationSec(
+          typeof seconds === 'number' && Number.isFinite(seconds) && seconds > 0
+            ? Math.floor(seconds)
+            : null,
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setDurationSec(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, item.youtubeVideoId]);
+
+  const exceedsDuration = (row: DraftClip): boolean =>
+    durationSec != null && clipExceedsDuration(row, durationSec);
+
   const commit = async (nextRows: DraftClip[]) => {
     if (nextRows.some(rangeInvalid)) {
       setClipError(t('bulletin.worshipClipRangeInvalid'));
+      return;
+    }
+    if (durationSec != null && nextRows.some((row) => clipExceedsDuration(row, durationSec))) {
+      setClipError(
+        t('bulletin.worshipClipExceedsDuration', {
+          duration: formatClipTime(durationSec) || String(durationSec),
+        }),
+      );
       return;
     }
 
@@ -211,9 +247,16 @@ export default function WorshipClipFields({
               ) : null}
             </div>
           </div>
+          {durationSec != null ? (
+            <p className="bulletin-worship-clip-duration-hint">
+              {t('bulletin.worshipClipVideoDuration', {
+                duration: formatClipTime(durationSec) || String(durationSec),
+              })}
+            </p>
+          ) : null}
           <ul className="bulletin-worship-clip-rows">
             {rows.map((row, index) => {
-              const badRange = rangeInvalid(row);
+              const badRange = rangeInvalid(row) || exceedsDuration(row);
               return (
                 <li key={index} className="bulletin-worship-clip-row">
                   <label className="bulletin-worship-clip-field bulletin-worship-clip-field--label">

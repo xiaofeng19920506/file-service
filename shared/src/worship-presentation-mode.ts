@@ -72,6 +72,48 @@ export function assertClipRange(
   return null;
 }
 
+export function clipExceedsDuration(
+  clip: { startSec: number; endSec: number | null },
+  durationSec: number,
+): boolean {
+  if (!Number.isFinite(durationSec) || durationSec <= 0) return false;
+  if (clip.startSec >= durationSec) return true;
+  if (clip.endSec != null && clip.endSec > durationSec) return true;
+  return false;
+}
+
+export function assertClipsWithinDuration(
+  clips: PlayClip[] | null | undefined,
+  durationSec: number | null | undefined,
+): string | null {
+  if (!clips?.length) return null;
+  if (durationSec == null || !Number.isFinite(durationSec) || durationSec <= 0) return null;
+  for (const clip of clips) {
+    if (clipExceedsDuration(clip, durationSec)) return 'play_clip_exceeds_duration';
+  }
+  return null;
+}
+
+/** 播放/切歌时把片段起止限制在视频时长内 */
+export function clampPlaybackBounds(
+  startSeconds: number | null | undefined,
+  endSeconds: number | null | undefined,
+  durationSec: number,
+): { startSeconds: number; endSeconds: number | null } {
+  const duration = Math.max(0, Math.floor(durationSec));
+  const rawStart = Math.max(0, startSeconds ?? 0);
+  if (duration <= 0) {
+    return { startSeconds: rawStart, endSeconds: endSeconds ?? null };
+  }
+  let start = rawStart >= duration ? Math.max(0, duration - 1) : rawStart;
+  let end: number | null = endSeconds ?? null;
+  if (end != null) {
+    end = Math.min(end, duration);
+    if (end <= start) end = null;
+  }
+  return { startSeconds: start, endSeconds: end };
+}
+
 function parseOneClip(raw: unknown): PlayClip | null {
   if (!raw || typeof raw !== 'object') return null;
   const row = raw as Record<string, unknown>;

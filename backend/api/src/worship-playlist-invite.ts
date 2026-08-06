@@ -13,8 +13,10 @@ import {
   YOUTUBE_SEARCH_MAX_PAGE_SIZE,
   parsePlayClipSeconds,
   assertClipRange,
+  assertClipsWithinDuration,
   parsePlayClips,
   clipsToLegacyStartEnd,
+  getYoutubeVideoDurationSecondsCached,
   type ApiEnv,
   type Db,
 } from '@file-service/shared';
@@ -362,6 +364,9 @@ export function registerWorshipPlaylistInviteRoutes(
     if (body.playClips !== undefined) {
       const parsedClips = parsePlayClips(body.playClips);
       if (!parsedClips.ok) return reply.code(400).send({ error: parsedClips.error });
+      const durationSec = await getYoutubeVideoDurationSecondsCached(existing.youtubeVideoId);
+      const durationError = assertClipsWithinDuration(parsedClips.playClips, durationSec);
+      if (durationError) return reply.code(400).send({ error: durationError });
       const legacy = clipsToLegacyStartEnd(parsedClips.playClips);
       itemPatch.playClips = parsedClips.playClips;
       itemPatch.playStartSec = legacy.playStartSec;
@@ -378,6 +383,14 @@ export function registerWorshipPlaylistInviteRoutes(
       const nextEnd = clip.playEndSec !== undefined ? clip.playEndSec : existing.playEndSec;
       const rangeError = assertClipRange(nextStart, nextEnd);
       if (rangeError) return reply.code(400).send({ error: rangeError });
+      const durationSec = await getYoutubeVideoDurationSecondsCached(existing.youtubeVideoId);
+      const durationError = assertClipsWithinDuration(
+        nextStart == null && nextEnd == null
+          ? null
+          : [{ startSec: nextStart ?? 0, endSec: nextEnd ?? null }],
+        durationSec,
+      );
+      if (durationError) return reply.code(400).send({ error: durationError });
 
       if (clip.playStartSec !== undefined) itemPatch.playStartSec = clip.playStartSec;
       if (clip.playEndSec !== undefined) itemPatch.playEndSec = clip.playEndSec;

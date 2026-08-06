@@ -7943,6 +7943,12 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   color: var(--text);
 }
 
+.bulletin-worship-clip-duration-hint {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
 .bulletin-worship-clip-error {
   margin: 0;
   font-size: 0.75rem;
