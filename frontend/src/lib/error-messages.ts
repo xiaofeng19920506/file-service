@@ -30,6 +30,7 @@ const MESSAGES: Record<string, string> = {
   login_failed: '登录失败，请稍后重试',
   invalid_credentials: '邮箱或密码错误',
   invalid_email: '请输入有效的邮箱地址',
+  verse_required: '请填写金句正文',
   weak_password: '密码至少需要 8 个字符',
   invalid_first_name: '名不能为空',
   invalid_last_name: '姓不能为空',

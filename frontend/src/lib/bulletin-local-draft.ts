@@ -37,6 +37,7 @@ export const BULLETIN_LOCAL_SYNC_KEYS = [
   'hiddenSections',
   'sectionPptxOverrides',
   'messagePastorEmail',
+  'versePastorEmail',
 ] as const satisfies ReadonlyArray<keyof BulletinPatch>;
 
 export type BulletinLocalSyncKey = (typeof BULLETIN_LOCAL_SYNC_KEYS)[number];

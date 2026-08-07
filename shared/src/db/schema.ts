@@ -300,6 +300,9 @@ export const weeklyBulletins = pgTable('weekly_bulletins', {
   messagePastorEmail: text('message_pastor_email').notNull().default(''),
   /** 已为哪个 serviceDate 发过周一邀请，避免重复 */
   messagePastorInviteSentForDate: text('message_pastor_invite_sent_for_date').notNull().default(''),
+  /** 本週金句：牧师邮箱；每周一自动发填写邀请（可选） */
+  versePastorEmail: text('verse_pastor_email').notNull().default(''),
+  versePastorInviteSentForDate: text('verse_pastor_invite_sent_for_date').notNull().default(''),
   servicePlaylistId: uuid('service_playlist_id').references(() => playlists.id, { onDelete: 'set null' }),
   /** 敬拜赞美投影格式：ppt | youtube | ppt_youtube */
   worshipPresentationMode: text('worship_presentation_mode').notNull().default('youtube'),

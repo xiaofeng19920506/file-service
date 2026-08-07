@@ -2,8 +2,8 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 
 const PREFIX = 'bulletin-section';
 
-/** 首版允许邀请上传的分区 */
-export const BULLETIN_SECTION_INVITE_ALLOWED = new Set(['message']);
+/** 允许牧师邀请链接的分区（message=PPT 上传；verse_of_week=填写金句） */
+export const BULLETIN_SECTION_INVITE_ALLOWED = new Set(['message', 'verse_of_week']);
 
 function encodePart(s: string): string {
   return Buffer.from(s, 'utf8').toString('base64url');

@@ -84,14 +84,52 @@ export function registerBulletinSectionInviteRoutes(
       serviceTime: resolved.bulletin.serviceTime,
       sectionId: resolved.sectionId,
       hasPptxOverride: Boolean(overrides[resolved.sectionId]),
+      verseOfWeek:
+        resolved.sectionId === 'verse_of_week' ? resolved.bulletin.verseOfWeek ?? '' : undefined,
       expiresAtUnix: resolved.expiresAtUnix,
     };
   });
 
-  app.post<{ Params: { '*': string } }>(
+  app.post<{ Params: { '*': string }; Body: { verseOfWeek?: string } }>(
     '/v1/bulletins/section-invite/*',
     async (request, reply) => {
       const parsed = parseBulletinSectionInviteRest(request.params['*'] ?? '');
+      if (parsed.kind === 'verse') {
+        const resolved = await resolveSectionInvite(db, env.DOWNLOAD_HMAC_SECRET, parsed.token);
+        if ('error' in resolved) return inviteError(reply, resolved.error);
+        if (resolved.sectionId !== 'verse_of_week') {
+          return reply.code(400).send({ error: 'section_invite_not_supported' });
+        }
+
+        const verseOfWeek =
+          typeof request.body?.verseOfWeek === 'string' ? request.body.verseOfWeek.trim() : '';
+        if (!verseOfWeek) {
+          return reply.code(400).send({ error: 'verse_required' });
+        }
+
+        const updatedAt = new Date();
+        await db
+          .update(weeklyBulletins)
+          .set({
+            verseOfWeek,
+            updatedAt,
+          })
+          .where(eq(weeklyBulletins.id, resolved.bulletin.id));
+
+        void notifyBulletinUpdated(redisUrl, resolved.bulletin.id, updatedAt.toISOString()).catch(
+          (err) => {
+            app.log.error(err, 'bulletin verse invite realtime notify failed');
+          },
+        );
+
+        return {
+          ok: true,
+          bulletinId: resolved.bulletin.id,
+          sectionId: resolved.sectionId,
+          verseOfWeek,
+        };
+      }
+
       if (parsed.kind !== 'pptx') {
         return reply.code(404).send({ error: 'not_found' });
       }

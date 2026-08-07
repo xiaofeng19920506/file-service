@@ -63,6 +63,9 @@ export type WeeklyBulletin = {
   messagePastorEmail: string;
   /** 已为哪个 serviceDate 发过周一邀请 */
   messagePastorInviteSentForDate: string;
+  /** 本週金句牧师邮箱（每周一定时邀请填写金句） */
+  versePastorEmail: string;
+  versePastorInviteSentForDate: string;
   outputBlobId: string | null;
   servicePlaylistId: string | null;
   /** 敬拜赞美投影格式 */
@@ -113,6 +116,7 @@ export type BulletinPatch = Partial<{
   slideTextOverrides: SlideTextOverride[];
   sectionPptxOverrides: Record<string, string>;
   messagePastorEmail: string;
+  versePastorEmail: string;
   outputBlobId: string | null;
   worshipPresentationMode: 'ppt' | 'youtube' | 'ppt_youtube';
   worshipLyricsPptxBlobId: string | null;
@@ -481,6 +485,7 @@ export type BulletinSectionInviteInfo = {
   serviceTime: string;
   sectionId: string;
   hasPptxOverride: boolean;
+  verseOfWeek?: string;
   expiresAtUnix: number;
 };
 
@@ -502,6 +507,18 @@ export async function uploadBulletinSectionInvitePptx(
     body: form,
   });
   return parseJson<{ ok: true; blobId: string; sectionId: string }>(res);
+}
+
+export async function submitBulletinSectionInviteVerse(
+  token: string,
+  verseOfWeek: string,
+): Promise<{ ok: true; verseOfWeek: string; sectionId: string }> {
+  const res = await apiFetch(`/v1/bulletins/section-invite/${encodeURIComponent(token)}/verse`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ verseOfWeek }),
+  });
+  return parseJson<{ ok: true; verseOfWeek: string; sectionId: string }>(res);
 }
 
 export type BulletinWorshipPlaylistDetail = PlaylistDetail & {

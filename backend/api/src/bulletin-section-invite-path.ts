@@ -3,6 +3,7 @@
 export type BulletinSectionInvitePath =
   | { kind: 'detail'; token: string }
   | { kind: 'pptx'; token: string }
+  | { kind: 'verse'; token: string }
   | { kind: 'unknown'; rest: string };
 
 export function parseBulletinSectionInviteRest(rest: string): BulletinSectionInvitePath {
@@ -16,5 +17,6 @@ export function parseBulletinSectionInviteRest(rest: string): BulletinSectionInv
   if (!token) return { kind: 'unknown', rest: raw };
   if (tail === '') return { kind: 'detail', token };
   if (tail === '/pptx') return { kind: 'pptx', token };
+  if (tail === '/verse') return { kind: 'verse', token };
   return { kind: 'unknown', rest: raw };
 }

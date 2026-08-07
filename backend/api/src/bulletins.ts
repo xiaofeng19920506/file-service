@@ -425,6 +425,8 @@ export type WeeklyBulletinDto = {
   sectionPptxOverrides: Record<string, string>;
   messagePastorEmail: string;
   messagePastorInviteSentForDate: string;
+  versePastorEmail: string;
+  versePastorInviteSentForDate: string;
   servicePlaylistId: string | null;
   worshipPresentationMode: WorshipPresentationMode;
   worshipLyricsPptxBlobId: string | null;
@@ -509,6 +511,8 @@ async function mapBulletin(
     sectionPptxOverrides: normalizeSectionPptxOverrides(row.sectionPptxOverrides),
     messagePastorEmail: row.messagePastorEmail ?? '',
     messagePastorInviteSentForDate: row.messagePastorInviteSentForDate ?? '',
+    versePastorEmail: row.versePastorEmail ?? '',
+    versePastorInviteSentForDate: row.versePastorInviteSentForDate ?? '',
     servicePlaylistId: row.servicePlaylistId,
     worshipPresentationMode: normalizeWorshipPresentationMode(row.worshipPresentationMode),
     worshipLyricsPptxBlobId: row.worshipLyricsPptxBlobId,
@@ -558,6 +562,7 @@ type BulletinPatchBody = Partial<{
   slideTextOverrides: { slide: number; textIndex: number; text: string }[];
   sectionPptxOverrides: Record<string, string>;
   messagePastorEmail: string;
+  versePastorEmail: string;
   worshipPresentationMode: WorshipPresentationMode;
   worshipLyricsPptxBlobId: string | null;
   outputBlobId: string | null;
@@ -677,6 +682,8 @@ async function sendBulletinSectionPastorInviteEmail(opts: {
   inviteUrl: string;
   optionalMessage?: string;
   ttlDays: number;
+  /** message=上传 PPT；verse=填写金句正文 */
+  inviteKind?: 'pptx' | 'verse';
 }): Promise<void> {
   const {
     mailConfig,
@@ -687,12 +694,20 @@ async function sendBulletinSectionPastorInviteEmail(opts: {
     inviteUrl,
     optionalMessage,
     ttlDays,
+    inviteKind = 'pptx',
   } = opts;
-  const subject = `${senderName} 邀请你为 ${serviceDate}「${sectionLabel}」上传 PPT`;
+  const isVerse = inviteKind === 'verse';
+  const subject = isVerse
+    ? `${senderName} 邀请你为 ${serviceDate}「${sectionLabel}」填写金句`
+    : `${senderName} 邀请你为 ${serviceDate}「${sectionLabel}」上传 PPT`;
+  const actionText = isVerse
+    ? '打开链接后，你可以填写本週金句正文。'
+    : '打开链接后，你可以上传 PPT，也可以选择暂不上传。';
+  const linkLabel = isVerse ? '打开填写页面' : '打开上传页面';
   const textLines = [
-    `${senderName} 邀请你为 ${serviceDate} 主日周报的「${sectionLabel}」提供 PPT。`,
+    `${senderName} 邀请你为 ${serviceDate} 主日周报的「${sectionLabel}」${isVerse ? '填写金句' : '提供 PPT'}。`,
     optionalMessage ? `\n附言：${optionalMessage}\n` : '',
-    '打开链接后，你可以上传 PPT，也可以选择暂不上传。',
+    actionText,
     inviteUrl,
     '',
     `链接 ${ttlDays} 天内有效。`,
@@ -704,12 +719,12 @@ async function sendBulletinSectionPastorInviteEmail(opts: {
     subject,
     text: textLines.join('\n'),
     html: [
-      `<p><strong>${senderName}</strong> 邀请你为 <strong>${serviceDate}</strong> 主日周报的「${sectionLabel}」提供 PPT。</p>`,
+      `<p><strong>${senderName}</strong> 邀请你为 <strong>${serviceDate}</strong> 主日周报的「${sectionLabel}」${isVerse ? '填写金句' : '提供 PPT'}。</p>`,
       optionalMessage
         ? `<p><strong>附言：</strong>${optionalMessage.replace(/</g, '&lt;')}</p>`
         : '',
-      '<p>打开链接后，你可以上传 PPT，也可以选择暂不上传。</p>',
-      `<p><a href="${inviteUrl.replace(/"/g, '&quot;')}">打开上传页面</a></p>`,
+      `<p>${actionText}</p>`,
+      `<p><a href="${inviteUrl.replace(/"/g, '&quot;')}">${linkLabel}</a></p>`,
       `<p style="color:#666;font-size:13px;">链接 ${ttlDays} 天内有效。</p>`,
     ]
       .filter(Boolean)
@@ -929,41 +944,59 @@ export function registerBulletinRoutes(
     const ttlDays = Math.ceil(env.SHARE_LINK_TTL_SECONDS / 86_400);
     const webAppUrl = resolveWebAppUrl(env);
     for (const bulletin of rows) {
-      const email = (bulletin.messagePastorEmail ?? '').trim().toLowerCase();
-      if (!email || !isValidPastorEmail(email)) continue;
-      if ((bulletin.messagePastorInviteSentForDate ?? '') === sunday) continue;
+      for (const sectionId of ['message', 'verse_of_week'] as const) {
+        const isVerse = sectionId === 'verse_of_week';
+        const email = (
+          isVerse ? bulletin.versePastorEmail : bulletin.messagePastorEmail
+        )
+          ?.trim()
+          .toLowerCase();
+        if (!email || !isValidPastorEmail(email)) continue;
+        const sentFor = isVerse
+          ? bulletin.versePastorInviteSentForDate
+          : bulletin.messagePastorInviteSentForDate;
+        if ((sentFor ?? '') === sunday) continue;
 
-      const expiresAtUnix = Math.floor(Date.now() / 1000) + env.SHARE_LINK_TTL_SECONDS;
-      const inviteToken = signBulletinSectionInviteToken({
-        secret: env.DOWNLOAD_HMAC_SECRET,
-        bulletinId: bulletin.id,
-        sectionId: 'message',
-        expiresAtUnix,
-      });
-      const inviteUrl = buildBulletinSectionInviteUrl(webAppUrl, inviteToken);
-      try {
-        await sendBulletinSectionPastorInviteEmail({
-          mailConfig,
-          to: email,
-          senderName: '主日周报',
-          serviceDate: bulletin.serviceDate,
-          sectionLabel: '主日信息',
-          inviteUrl,
-          ttlDays,
+        const expiresAtUnix = Math.floor(Date.now() / 1000) + env.SHARE_LINK_TTL_SECONDS;
+        const inviteToken = signBulletinSectionInviteToken({
+          secret: env.DOWNLOAD_HMAC_SECRET,
+          bulletinId: bulletin.id,
+          sectionId,
+          expiresAtUnix,
         });
-        await db
-          .update(weeklyBulletins)
-          .set({
-            messagePastorInviteSentForDate: sunday,
-            updatedAt: new Date(),
-          })
-          .where(eq(weeklyBulletins.id, bulletin.id));
-        app.log.info(
-          { bulletinId: bulletin.id, serviceDate: sunday, email },
-          'pastor message invite emailed',
-        );
-      } catch (e) {
-        app.log.error(e, 'pastor message invite email failed');
+        const inviteUrl = buildBulletinSectionInviteUrl(webAppUrl, inviteToken);
+        try {
+          await sendBulletinSectionPastorInviteEmail({
+            mailConfig,
+            to: email,
+            senderName: '主日周报',
+            serviceDate: bulletin.serviceDate,
+            sectionLabel: isVerse ? '本週金句' : '主日信息',
+            inviteUrl,
+            ttlDays,
+            inviteKind: isVerse ? 'verse' : 'pptx',
+          });
+          await db
+            .update(weeklyBulletins)
+            .set(
+              isVerse
+                ? {
+                    versePastorInviteSentForDate: sunday,
+                    updatedAt: new Date(),
+                  }
+                : {
+                    messagePastorInviteSentForDate: sunday,
+                    updatedAt: new Date(),
+                  },
+            )
+            .where(eq(weeklyBulletins.id, bulletin.id));
+          app.log.info(
+            { bulletinId: bulletin.id, serviceDate: sunday, email, sectionId },
+            'pastor section invite emailed',
+          );
+        } catch (e) {
+          app.log.error(e, `pastor ${sectionId} invite email failed`);
+        }
       }
     }
   };
@@ -1537,6 +1570,13 @@ export function registerBulletinRoutes(
         }
         patch.messagePastorEmail = email;
       }
+      if (body.versePastorEmail !== undefined) {
+        const email = String(body.versePastorEmail).trim().toLowerCase();
+        if (email && !isValidPastorEmail(email)) {
+          return reply.code(400).send({ error: 'invalid_email' });
+        }
+        patch.versePastorEmail = email;
+      }
       if (body.outputBlobId !== undefined) {
         if (body.outputBlobId === null) {
           patch.outputBlobId = null;
@@ -1813,9 +1853,12 @@ export function registerBulletinRoutes(
       .where(eq(weeklyBulletins.id, request.params.id));
     if (!bulletin) return reply.code(404).send({ error: 'not_found' });
 
+    const storedEmail =
+      sectionId === 'verse_of_week'
+        ? bulletin.versePastorEmail
+        : bulletin.messagePastorEmail;
     const recipientEmail =
-      request.body?.email?.trim().toLowerCase()
-      || (bulletin.messagePastorEmail ?? '').trim().toLowerCase();
+      request.body?.email?.trim().toLowerCase() || (storedEmail ?? '').trim().toLowerCase();
     if (!recipientEmail || !isValidEmailAddress(recipientEmail)) {
       return reply.code(400).send({ error: 'invalid_email' });
     }
@@ -1837,7 +1880,9 @@ export function registerBulletinRoutes(
     const ttlDays = Math.ceil(env.SHARE_LINK_TTL_SECONDS / 86_400);
     const optionalMessage = request.body?.message?.trim();
     const senderName = formatUserDisplayName(user) || user.email;
-    const sectionLabel = sectionId === 'message' ? '主日信息' : sectionId;
+    const sectionLabel =
+      sectionId === 'message' ? '主日信息' : sectionId === 'verse_of_week' ? '本週金句' : sectionId;
+    const inviteKind = sectionId === 'verse_of_week' ? 'verse' : 'pptx';
 
     try {
       await sendBulletinSectionPastorInviteEmail({
@@ -1849,6 +1894,7 @@ export function registerBulletinRoutes(
         inviteUrl,
         optionalMessage,
         ttlDays,
+        inviteKind,
       });
     } catch (e) {
       request.log.error(e, 'bulletin section pastor invite email failed');
@@ -1859,13 +1905,22 @@ export function registerBulletinRoutes(
       return reply.code(502).send({ error: emailError });
     }
 
+    const invitePatch =
+      sectionId === 'verse_of_week'
+        ? {
+            versePastorEmail: recipientEmail,
+            versePastorInviteSentForDate: bulletin.serviceDate,
+            updatedAt: new Date(),
+          }
+        : {
+            messagePastorEmail: recipientEmail,
+            messagePastorInviteSentForDate: bulletin.serviceDate,
+            updatedAt: new Date(),
+          };
+
     const [updated] = await db
       .update(weeklyBulletins)
-      .set({
-        messagePastorEmail: recipientEmail,
-        messagePastorInviteSentForDate: bulletin.serviceDate,
-        updatedAt: new Date(),
-      })
+      .set(invitePatch)
       .where(eq(weeklyBulletins.id, bulletin.id))
       .returning();
 

@@ -22,7 +22,6 @@ import {
   BulletinOfferingStep,
   BulletinPreServiceStep,
   BulletinScriptureStep,
-  BulletinVerseStep,
 } from '../components/bulletin/BulletinWizardSteps';
 import ProgressStepper from '../components/ProgressStepper';
 import BulletinSectionPptEditor from '../components/bulletin/BulletinSectionPptEditor';
@@ -113,6 +112,8 @@ function withHiddenSections(bulletin: WeeklyBulletin): WeeklyBulletin {
         : {},
     messagePastorEmail: bulletin.messagePastorEmail ?? '',
     messagePastorInviteSentForDate: bulletin.messagePastorInviteSentForDate ?? '',
+    versePastorEmail: bulletin.versePastorEmail ?? '',
+    versePastorInviteSentForDate: bulletin.versePastorInviteSentForDate ?? '',
   });
 }
 
@@ -861,37 +862,48 @@ export default function BulletinPage() {
     [canManage, draft, selectNavSection, t],
   );
 
-  const handleSendPastorInvite = useCallback(async () => {
-    if (!draft || !canManage || pastorInviteSending) return;
-    const email = (draft.messagePastorEmail ?? '').trim();
-    if (!email) {
-      setError(friendlyError('invalid_email', t));
-      return;
-    }
-    setPastorInviteSending(true);
-    setError(null);
-    try {
-      const result = await inviteBulletinSectionPastor(draft.id, 'message', { email });
-      if (result.bulletin) {
-        setDraft(withHiddenSections(result.bulletin));
-      } else {
-        setDraft((prev) =>
-          prev
-            ? {
-                ...prev,
-                messagePastorEmail: result.email,
-                messagePastorInviteSentForDate: prev.serviceDate,
-              }
-            : prev,
-        );
+  const handleSendPastorInvite = useCallback(
+    async (sectionId: 'message' | 'verse_of_week') => {
+      if (!draft || !canManage || pastorInviteSending) return;
+      const email = (
+        sectionId === 'verse_of_week' ? draft.versePastorEmail : draft.messagePastorEmail
+      )?.trim();
+      if (!email) {
+        setError(friendlyError('invalid_email', t));
+        return;
       }
-      setMessage(t('bulletin.pastorInviteSent', { email: result.email }));
-    } catch (err) {
-      setError(friendlyError(err instanceof Error ? err.message : 'email_send_failed', t));
-    } finally {
-      setPastorInviteSending(false);
-    }
-  }, [canManage, draft, pastorInviteSending, t]);
+      setPastorInviteSending(true);
+      setError(null);
+      try {
+        const result = await inviteBulletinSectionPastor(draft.id, sectionId, { email });
+        if (result.bulletin) {
+          setDraft(withHiddenSections(result.bulletin));
+        } else {
+          setDraft((prev) => {
+            if (!prev) return prev;
+            if (sectionId === 'verse_of_week') {
+              return {
+                ...prev,
+                versePastorEmail: result.email,
+                versePastorInviteSentForDate: prev.serviceDate,
+              };
+            }
+            return {
+              ...prev,
+              messagePastorEmail: result.email,
+              messagePastorInviteSentForDate: prev.serviceDate,
+            };
+          });
+        }
+        setMessage(t('bulletin.pastorInviteSent', { email: result.email }));
+      } catch (err) {
+        setError(friendlyError(err instanceof Error ? err.message : 'email_send_failed', t));
+      } finally {
+        setPastorInviteSending(false);
+      }
+    },
+    [canManage, draft, pastorInviteSending, t],
+  );
 
   const renderStepPanel = () => {
     if (!draft) return null;
@@ -918,7 +930,7 @@ export default function BulletinPage() {
               type="button"
               className="btn-primary"
               disabled={pastorInviteSending || !email}
-              onClick={() => void handleSendPastorInvite()}
+              onClick={() => void handleSendPastorInvite('message')}
             >
               {pastorInviteSending
                 ? t('bulletin.pastorInviteSending')
@@ -926,6 +938,60 @@ export default function BulletinPage() {
             </button>
           </div>
           <p className="playlists-muted">{t('bulletin.pastorInviteScheduleHint')}</p>
+        </div>
+      );
+    }
+
+    if (activeSectionId === 'verse_of_week') {
+      if (canManage) {
+        const email = (draft.versePastorEmail ?? '').trim();
+        return (
+          <div className="bulletin-message-pastor-panel">
+            <p className="bulletin-step-hint">{t('bulletin.versePastorInviteSectionIntro')}</p>
+            {draft.verseOfWeek?.trim() ? (
+              <div className="bulletin-verse-current">
+                <p className="bulletin-field-label">{t('bulletin.verseOfWeekCurrent')}</p>
+                <p className="bulletin-verse-current-text">{draft.verseOfWeek}</p>
+              </div>
+            ) : null}
+            <label className="share-playlist-field">
+              <span>{t('bulletin.pastorInviteEmail')}</span>
+              <input
+                type="email"
+                className="playlists-text-input"
+                value={draft.versePastorEmail ?? ''}
+                placeholder={t('bulletin.pastorInviteEmailPlaceholder')}
+                autoComplete="email"
+                disabled={pastorInviteSending}
+                onChange={(e) => patchField('versePastorEmail', e.target.value)}
+              />
+            </label>
+            <div className="bulletin-message-pastor-actions">
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={pastorInviteSending || !email}
+                onClick={() => void handleSendPastorInvite('verse_of_week')}
+              >
+                {pastorInviteSending
+                  ? t('bulletin.pastorInviteSending')
+                  : t('bulletin.versePastorInviteSendNow')}
+              </button>
+            </div>
+            <p className="playlists-muted">{t('bulletin.versePastorInviteScheduleHint')}</p>
+          </div>
+        );
+      }
+      return (
+        <div className="bulletin-verse-readonly-panel">
+          {draft.verseOfWeek?.trim() ? (
+            <>
+              <p className="bulletin-field-label">{t('bulletin.verseOfWeek')}</p>
+              <p className="bulletin-verse-current-text">{draft.verseOfWeek}</p>
+            </>
+          ) : (
+            <p className="playlists-muted">{t('bulletin.verseAwaitingPastor')}</p>
+          )}
         </div>
       );
     }
@@ -1003,8 +1069,6 @@ export default function BulletinPage() {
         );
       case 'baptism':
         return <BulletinBaptismStep {...common} />;
-      case 'verse':
-        return <BulletinVerseStep {...common} />;
       case 'more':
         return <BulletinMoreStep {...common} sectionId={activeSectionId} />;
       default:

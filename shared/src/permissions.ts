@@ -120,6 +120,7 @@ export function isBulletinSectionInvitePath(method: string, path: string): boole
   if (!path.startsWith('/v1/bulletins/section-invite/')) return false;
   if (method === 'GET' && /^\/v1\/bulletins\/section-invite\/[^/]+$/.test(path)) return true;
   if (method === 'POST' && /^\/v1\/bulletins\/section-invite\/[^/]+\/pptx$/.test(path)) return true;
+  if (method === 'POST' && /^\/v1\/bulletins\/section-invite\/[^/]+\/verse$/.test(path)) return true;
   return false;
 }
 

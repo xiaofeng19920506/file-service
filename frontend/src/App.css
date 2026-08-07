@@ -8241,6 +8241,29 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   gap: 0.5rem;
 }
 
+.bulletin-verse-current {
+  margin: 0 0 0.85rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 92%, #0b5394 8%);
+  border: 1px solid var(--border-light);
+}
+
+.bulletin-verse-current-text {
+  margin: 0.35rem 0 0;
+  white-space: pre-wrap;
+  line-height: 1.55;
+}
+
+.bulletin-verse-readonly-panel {
+  padding: 0.25rem 0;
+}
+
+.bulletin-verse-invite-textarea {
+  min-height: 8rem;
+  resize: vertical;
+}
+
 .bulletin-section-invite-page {
   min-height: 100vh;
   box-sizing: border-box;

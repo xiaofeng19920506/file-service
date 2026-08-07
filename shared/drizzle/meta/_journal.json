@@ -246,6 +246,13 @@
       "when": 1754517600000,
       "tag": "0036_bulletin_message_pastor_email",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1754604000000,
+      "tag": "0037_bulletin_verse_pastor_email",
+      "breakpoints": true
     }
   ]
 }

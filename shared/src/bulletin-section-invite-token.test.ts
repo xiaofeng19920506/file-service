@@ -23,6 +23,18 @@ describe('bulletin section invite token', () => {
     });
   });
 
+  it('round-trips valid verse invite', () => {
+    const expiresAtUnix = Math.floor(Date.now() / 1000) + 3600;
+    const token = signBulletinSectionInviteToken({
+      secret,
+      bulletinId: 'bul-2',
+      sectionId: 'verse_of_week',
+      expiresAtUnix,
+    });
+    const claims = verifyBulletinSectionInviteToken({ secret, token });
+    expect(claims?.sectionId).toBe('verse_of_week');
+  });
+
   it('rejects expired and disallowed sections', () => {
     const expired = signBulletinSectionInviteToken({
       secret,
