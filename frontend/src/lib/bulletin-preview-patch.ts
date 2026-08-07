@@ -126,9 +126,13 @@ export function bulletinSectionContentRev(
       // 同工会文字走 slideTextOverrides；结构指纹已含 overrides，此处占位避免误用 full
       return '';
     case 'announcements':
+    case 'special_thanks':
+    case 'family_joy':
       return (params.announcements ?? [])
         .map((a) => `${a.title}\u0002${a.body}`)
         .join('\u0001');
+    case 'baptism':
+      return '';
     case 'verse':
     case 'verse_of_week':
       return params.verseOfWeek ?? '';

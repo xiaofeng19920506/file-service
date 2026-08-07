@@ -94,18 +94,32 @@
       "monthLibrary": "birthday/month-01.pptx … month-12.pptx"
     },
     {
-      "id": "announcements",
-      "slides": [25, 26, 27],
+      "id": "special_thanks",
+      "slides": [25],
       "role": "special_announcement",
-      "titleFromSlide": "特別感謝 / 家有喜事 / 受洗典禮",
-      "notes": "P25 特别感谢；P26 家有喜事；P27 受洗典礼"
+      "titleFromSlide": "特別感謝",
+      "notes": "P25 特别感谢；每周无事可隐藏"
+    },
+    {
+      "id": "family_joy",
+      "slides": [26],
+      "role": "special_announcement",
+      "titleFromSlide": "家有喜事",
+      "notes": "P26 家有喜事；每周无事可隐藏"
+    },
+    {
+      "id": "baptism",
+      "slides": [27],
+      "role": "special_announcement",
+      "titleFromSlide": "受洗典禮",
+      "notes": "P27 受洗典礼；每周无事可隐藏"
     },
     {
       "id": "weekly_meetings",
       "slides": [28, 29, 30],
       "role": "variant_pick_one",
       "titleFromSlide": "教會本週聚會",
-      "notes": "P28–P30 三种本週聚会版式，每次只用其一"
+      "notes": "P28–P30 三种本週聚会版式，每次只用其一；未选时默认保留 P28"
     },
     {
       "id": "staff_meeting",

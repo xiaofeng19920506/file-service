@@ -24,7 +24,7 @@ export type BulletinNavNode = {
 /**
  * 嵌套导航树：message 之前保持扁平；
  * 「大家庭时间」下挂奉献/生日/公告/金句/部门报告/三一颂与祝福；
- * 「公告」再嵌套本周聚会、同工会、轮值、下主日见证、下主日服事。
+ * 「公告」为分组：特别感谢 / 家有喜事 / 受洗 / 本周聚会等。
  */
 export const BULLETIN_NAV_TREE: BulletinNavNode[] = [
   { id: 'cover', labelKey: 'bulletin.sections.cover', editableStepId: 'cover' },
@@ -45,10 +45,26 @@ export const BULLETIN_NAV_TREE: BulletinNavNode[] = [
       { id: 'offering', labelKey: 'bulletin.sections.offering', editableStepId: 'offering' },
       { id: 'birthday', labelKey: 'bulletin.sections.birthday', editableStepId: 'birthday' },
       {
-        id: 'announcements',
-        labelKey: 'bulletin.sections.announcements',
-        editableStepId: 'announcements',
+        id: 'announcements_group',
+        labelKey: 'bulletin.sections.announcements_group',
+        editableStepId: null,
+        groupOnly: true,
         children: [
+          {
+            id: 'special_thanks',
+            labelKey: 'bulletin.sections.special_thanks',
+            editableStepId: 'special_thanks',
+          },
+          {
+            id: 'family_joy',
+            labelKey: 'bulletin.sections.family_joy',
+            editableStepId: 'family_joy',
+          },
+          {
+            id: 'baptism',
+            labelKey: 'bulletin.sections.baptism',
+            editableStepId: 'baptism',
+          },
           {
             id: 'weekly_meetings',
             labelKey: 'bulletin.sections.weekly_meetings',

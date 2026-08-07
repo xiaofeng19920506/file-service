@@ -451,62 +451,109 @@ type AnnouncementsProps = BulletinStepPanelProps & {
   onAnnouncementsChange: (next: AnnouncementDraft[]) => void;
 };
 
+type FixedAnnouncementSlotProps = {
+  draft: WeeklyBulletin;
+  canEdit: boolean;
+  saving?: boolean;
+  /** 0 = 特别感谢(P25)，1 = 家有喜事(P26) */
+  slotIndex: 0 | 1;
+  announcements: AnnouncementDraft[];
+  onAnnouncementsChange: (next: AnnouncementDraft[]) => void;
+  onSave?: () => void;
+};
+
+function ensureAnnouncementSlots(list: AnnouncementDraft[]): AnnouncementDraft[] {
+  const next = [...list];
+  while (next.length < 2) {
+    next.push({
+      key: crypto.randomUUID(),
+      category: next.length === 0 ? 'thanks' : 'celebration',
+      title: '',
+      body: '',
+    });
+  }
+  return next.slice(0, 2);
+}
+
+/** 固定公告槽：特别感谢 / 家有喜事各一页，不可增删 */
+export function BulletinFixedAnnouncementStep({
+  canEdit,
+  saving,
+  slotIndex,
+  announcements,
+  onAnnouncementsChange,
+  onSave,
+}: FixedAnnouncementSlotProps) {
+  const { t } = useI18n();
+  const slots = ensureAnnouncementSlots(announcements);
+  const item = slots[slotIndex]!;
+
+  return (
+    <StepShell>
+      <TextField
+        label={t('bulletin.announcementTitle')}
+        value={item.title ?? ''}
+        disabled={!canEdit}
+        commitOnBlur
+        onChange={(v) => {
+          const next = ensureAnnouncementSlots(announcements);
+          next[slotIndex] = { ...next[slotIndex]!, title: v };
+          onAnnouncementsChange(next);
+        }}
+      />
+      <TextField
+        label={t('bulletin.announcementBody')}
+        value={item.body}
+        disabled={!canEdit}
+        multiline
+        commitOnBlur
+        onChange={(v) => {
+          const next = ensureAnnouncementSlots(announcements);
+          next[slotIndex] = { ...next[slotIndex]!, body: v };
+          onAnnouncementsChange(next);
+        }}
+      />
+      {canEdit && onSave ? (
+        <div className="bulletin-announcement-actions">
+          <button type="button" className="btn-primary" disabled={saving} onClick={onSave}>
+            {saving ? t('bulletin.saving') : t('bulletin.save')}
+          </button>
+        </div>
+      ) : null}
+    </StepShell>
+  );
+}
+
+/** @deprecated 使用 BulletinFixedAnnouncementStep */
 export function BulletinAnnouncementsStep({
   draft,
   canEdit,
   saving,
   announcements,
   onAnnouncementsChange,
-  onPatch,
   onSave,
 }: AnnouncementsProps) {
+  return (
+    <BulletinFixedAnnouncementStep
+      draft={draft}
+      canEdit={canEdit}
+      saving={saving}
+      slotIndex={0}
+      announcements={announcements}
+      onAnnouncementsChange={onAnnouncementsChange}
+      onSave={onSave}
+    />
+  );
+}
+
+export function BulletinBaptismStep({
+  draft,
+  canEdit,
+  onPatch,
+}: BulletinStepPanelProps) {
   const { t } = useI18n();
   return (
     <StepShell>
-      {announcements.map((item, index) => (
-        <div key={item.key} className="bulletin-announcement-block">
-          <div className="bulletin-announcement-block-header">
-            <span className="bulletin-announcement-block-label">
-              {t('bulletin.announcementItem', { n: index + 1 })}
-            </span>
-            {canEdit && announcements.length > 1 ? (
-              <button
-                type="button"
-                className="btn-secondary btn-sm"
-                disabled={saving}
-                onClick={() => {
-                  onAnnouncementsChange(announcements.filter((_, i) => i !== index));
-                }}
-              >
-                {t('bulletin.removeAnnouncement')}
-              </button>
-            ) : null}
-          </div>
-          <TextField
-            label={t('bulletin.announcementTitle')}
-            value={item.title ?? ''}
-            disabled={!canEdit}
-            commitOnBlur
-            onChange={(v) => {
-              const next = [...announcements];
-              next[index] = { ...item, title: v };
-              onAnnouncementsChange(next);
-            }}
-          />
-          <TextField
-            label={t('bulletin.announcementBody')}
-            value={item.body}
-            disabled={!canEdit}
-            multiline
-            commitOnBlur
-            onChange={(v) => {
-              const next = [...announcements];
-              next[index] = { ...item, body: v };
-              onAnnouncementsChange(next);
-            }}
-          />
-        </div>
-      ))}
       <TextField
         label={t('bulletin.baptism')}
         value={draft.baptismText}
@@ -514,28 +561,6 @@ export function BulletinAnnouncementsStep({
         commitOnBlur
         onChange={(v) => onPatch('baptismText', v)}
       />
-      {canEdit ? (
-        <div className="bulletin-announcement-actions">
-          <button
-            type="button"
-            className="btn-secondary btn-sm"
-            disabled={saving}
-            onClick={() => {
-              onAnnouncementsChange([
-                ...announcements,
-                { key: crypto.randomUUID(), category: 'general', title: '', body: '' },
-              ]);
-            }}
-          >
-            {t('bulletin.addAnnouncement')}
-          </button>
-          {onSave ? (
-            <button type="button" className="btn-primary" disabled={saving} onClick={onSave}>
-              {saving ? t('bulletin.saving') : t('bulletin.save')}
-            </button>
-          ) : null}
-        </div>
-      ) : null}
     </StepShell>
   );
 }

@@ -406,22 +406,30 @@ export function patchesForStep(stepId: string, bulletin: WeeklyBulletin): SlideT
         },
       ];
     }
-    case 'announcements': {
-      // 最终以 expandAnnouncementSlidesInPptx（shared P25 版式）为准；此处仅作早期占位
-      const announcementSlides = [25, 26];
-      return bulletin.announcements.flatMap((item, index) => {
-        const slideNum = announcementSlides[index];
-        if (!slideNum) return [];
-        const replacements: SlideTextReplacement[] = [];
-        if (item.title?.trim()) {
-          replacements.push({ textIndex: 0, text: item.title.trim() });
-        }
-        if (item.body?.trim()) {
-          replacements.push({ textIndex: 1, text: item.body.trim() });
-        }
-        if (!replacements.length) return [];
-        return [{ slideNumber: slideNum, replacements }];
-      });
+    case 'special_thanks':
+    case 'family_joy': {
+      const slot = stepId === 'special_thanks' ? 0 : 1;
+      const slideNum = stepId === 'special_thanks' ? 25 : 26;
+      const item = bulletin.announcements?.[slot];
+      if (!item) return [];
+      const replacements: SlideTextReplacement[] = [];
+      if (item.title?.trim()) {
+        replacements.push({ textIndex: 0, text: item.title.trim() });
+      }
+      if (item.body?.trim()) {
+        replacements.push({ textIndex: 1, text: item.body.trim() });
+      }
+      if (!replacements.length) return [];
+      return [{ slideNumber: slideNum, replacements }];
+    }
+    case 'baptism': {
+      if (!bulletin.baptismText.trim()) return [];
+      return [
+        {
+          slideNumber: 27,
+          replacements: [{ textIndex: 3, text: bulletin.baptismText.trim() }],
+        },
+      ];
     }
     case 'verse': {
       const verseReps = buildVerseOfWeekSlideReplacements(bulletin.verseOfWeek);
@@ -429,12 +437,6 @@ export function patchesForStep(stepId: string, bulletin: WeeklyBulletin): SlideT
     }
     case 'more': {
       const patches: SlideTextPatch[] = [];
-      if (bulletin.baptismText.trim()) {
-        patches.push({
-          slideNumber: 27,
-          replacements: [{ textIndex: 3, text: bulletin.baptismText.trim() }],
-        });
-      }
       const staffReps = buildStaffMeetingReplacements(bulletin);
       if (staffReps.length) {
         patches.push({ slideNumber: 31, replacements: staffReps });
@@ -593,7 +595,9 @@ export async function patchesFromBulletin(bulletin: WeeklyBulletin): Promise<{
     'scripture',
     'offering',
     'birthday',
-    'announcements',
+    'special_thanks',
+    'family_joy',
+    'baptism',
     'verse',
     'more',
   ] as const;

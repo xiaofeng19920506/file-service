@@ -48,4 +48,19 @@ describe('bulletin section visibility', () => {
     });
     expect(paths).toContain('ppt/slides/slide24.xml');
   });
+
+  it('defaults weekly meeting variant to slide 28 when unset', () => {
+    const paths = bulletinSlidePathsToDelete({
+      weeklyMeetingVariant: null,
+    });
+    expect(paths).not.toContain('ppt/slides/slide28.xml');
+    expect(paths).toContain('ppt/slides/slide29.xml');
+    expect(paths).toContain('ppt/slides/slide30.xml');
+  });
+
+  it('maps legacy announcements hidden id to special_thanks and family_joy', () => {
+    expect(resolveHiddenSections({ hiddenSections: ['announcements'] })).toEqual(
+      expect.arrayContaining(['special_thanks', 'family_joy']),
+    );
+  });
 });

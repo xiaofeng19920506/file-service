@@ -8,7 +8,7 @@ import {
 } from './bulletin-birthday-months.js';
 import { applyBirthdayMonthFromLibraryToPptx } from './bulletin-birthday-month-pptx.js';
 import { applyScripturePagesToZip } from './bulletin-scripture-pptx.js';
-import { duplicateSlideInZip, removeSlidesFromPptxZip } from './pptx-duplicate-slide.js';
+import { removeSlidesFromPptxZip } from './pptx-duplicate-slide.js';
 import { bulletinSlidePathsToDelete } from './bulletin-section-visibility.js';
 
 /** 圣餐英文正文页（模板文件号）；字号过大时 LO 预览会裁切 */
@@ -895,15 +895,14 @@ function writeAnnouncementTitleBody(xml: string, item: AnnouncementPageInput): s
 }
 
 /**
- * 公告页：一律用 P25「标题+正文」版式。
- * P26 模板是「家有喜事」多段正文 + 底部经文，只改 textIndex 0/1 会残留旧文并裁切。
- * 第 3 条起复制 P25，插在公告段末、P27（浸礼）之前。
+ * 公告页：固定写 P25（特别感谢）与 P26（家有喜事），不再按条数加页。
+ * 一律用 P25「标题+正文」版式写入两页，避免 P26 模板多段残留裁切。
  */
 export async function applyAnnouncementPagesToZip(
   zip: JSZip,
   items: readonly AnnouncementPageInput[],
 ): Promise<void> {
-  const pages = [...items];
+  const pages = items.slice(0, 2);
   if (!pages.length) return;
 
   const slide25Path = 'ppt/slides/slide25.xml';
@@ -912,26 +911,11 @@ export async function applyAnnouncementPagesToZip(
   if (!slide25) return;
 
   const layout = stabilizeAnnouncementSlideXml(await slide25.async('string'));
-  zip.file(slide25Path, writeAnnouncementTitleBody(layout, pages[0]));
-
-  if (pages.length === 1) {
-    // 清空第 2 页时也换成 P25 版式，避免留下「家有喜事」经文框
-    zip.file(slide26Path, writeAnnouncementTitleBody(layout, { title: ' ', body: ' ' }));
-    return;
-  }
-
-  zip.file(slide26Path, writeAnnouncementTitleBody(layout, pages[1]));
-
-  let lastPath = slide26Path;
-  for (let i = 2; i < pages.length; i++) {
-    lastPath = await duplicateSlideInZip(zip, slide25Path, {
-      insertAfterPath: lastPath,
-    });
-    const entry = zip.file(lastPath);
-    if (!entry) continue;
-    const xml = await entry.async('string');
-    zip.file(lastPath, writeAnnouncementTitleBody(xml, pages[i]));
-  }
+  zip.file(slide25Path, writeAnnouncementTitleBody(layout, pages[0] ?? { title: ' ', body: ' ' }));
+  zip.file(
+    slide26Path,
+    writeAnnouncementTitleBody(layout, pages[1] ?? { title: ' ', body: ' ' }),
+  );
 }
 
 /** 预览/导出用：封面 + 会前祷告 + 读经 + 生日/金句 + 按隐藏分区删页 */
@@ -1023,14 +1007,14 @@ export async function patchBulletinPreviewInPptx(
   await stabilizeTestimonySlideInZip(zip);
   await stabilizeServiceRosterSlideInZip(zip);
 
-  const hideAnnouncements = bulletinSlidePathsToDelete(input).some((p) =>
-    p.includes('slide25.xml'),
-  );
-  if (!hideAnnouncements && input.announcements?.length) {
+  const removePaths = bulletinSlidePathsToDelete(input);
+  const hideBothAnnouncementSlides =
+    removePaths.some((p) => p.includes('slide25.xml')) &&
+    removePaths.some((p) => p.includes('slide26.xml'));
+  if (!hideBothAnnouncementSlides && input.announcements?.length) {
     await applyAnnouncementPagesToZip(zip, input.announcements);
   }
 
-  const removePaths = bulletinSlidePathsToDelete(input);
   if (removePaths.length) {
     await removeSlidesFromPptxZip(zip, removePaths);
   }

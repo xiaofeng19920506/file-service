@@ -23,7 +23,12 @@ export const BULLETIN_SECTION_TEMPLATE_SLIDES: Record<string, readonly number[]>
   offering: [19, 20],
   /** 生日：主模板仅锚点 P24；各月完整页在 templates/bulletin/birthday/ */
   birthday: [...BIRTHDAY_MONTH_SLIDES],
-  announcements: [25, 26, 27],
+  /** 特别感谢 */
+  special_thanks: [25],
+  /** 家有喜事 */
+  family_joy: [26],
+  /** 受洗典礼 */
+  baptism: [27],
   weekly_meetings: [28, 29, 30],
   staff_meeting: [31],
   rotation: [32],
@@ -47,13 +52,26 @@ export const BULLETIN_ALWAYS_OMIT_SLIDE_FILES = [
 
 const WEEKLY_MEETING_VARIANTS = [28, 29, 30] as const;
 
+/** 旧 hiddenSections id → 新分区（拆分公告后兼容） */
+const LEGACY_HIDDEN_SECTION_ALIASES: Record<string, readonly string[]> = {
+  announcements: ['special_thanks', 'family_joy'],
+};
+
 export function normalizeHiddenSections(raw: unknown): string[] {
   if (!Array.isArray(raw)) return [];
   const out: string[] = [];
   for (const item of raw) {
     if (typeof item !== 'string') continue;
     const id = item.trim();
-    if (!id || !BULLETIN_SECTION_TEMPLATE_SLIDES[id]) continue;
+    if (!id) continue;
+    const aliases = LEGACY_HIDDEN_SECTION_ALIASES[id];
+    if (aliases) {
+      for (const alias of aliases) {
+        if (BULLETIN_SECTION_TEMPLATE_SLIDES[alias] && !out.includes(alias)) out.push(alias);
+      }
+      continue;
+    }
+    if (!BULLETIN_SECTION_TEMPLATE_SLIDES[id]) continue;
     if (!out.includes(id)) out.push(id);
   }
   return out;
@@ -124,9 +142,10 @@ export function bulletinSlidePathsToDelete(input: {
   }
 
   if (!hidden.includes('weekly_meetings')) {
-    const keep = input.weeklyMeetingVariant ?? null;
+    // 未选手动版式时默认保留 P28，避免 deck 无页导致左侧点不中
+    const keep = input.weeklyMeetingVariant ?? 28;
     for (const n of WEEKLY_MEETING_VARIANTS) {
-      if (keep === null || n !== keep) paths.add(slidePath(n));
+      if (n !== keep) paths.add(slidePath(n));
     }
   }
 

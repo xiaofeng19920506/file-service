@@ -76,7 +76,7 @@ export function fieldToSectionId(key: BulletinLocalSyncKey | string): string | n
     case 'offeringOtherAmount':
       return 'offering';
     case 'baptismText':
-      return 'announcements';
+      return 'baptism';
     case 'testimonyShareDate':
       return 'future_testimony';
     case 'serviceRosterText':

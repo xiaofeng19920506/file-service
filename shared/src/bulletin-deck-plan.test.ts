@@ -39,9 +39,9 @@ const CONTENT_SECTION_BY_FILE: Record<number, string> = {
   // 21–22 omitted (extra offering)
   // 23 omitted (birthday reminder)
   24: 'birthday',
-  25: 'announcements',
-  26: 'announcements',
-  27: 'announcements',
+  25: 'special_thanks',
+  26: 'family_joy',
+  27: 'baptism',
   28: 'weekly_meetings',
   29: 'weekly_meetings',
   30: 'weekly_meetings',

@@ -2,7 +2,6 @@ import type JSZip from 'jszip';
 import JSZipCtor from './jszip';
 import type { WeeklyBulletin } from '../api/bulletins';
 import { applyIndexedTextReplacementsToSlideXml } from './pptx-preview';
-import { duplicateSlideInZip } from './pptx-duplicate-slide';
 
 const PPTX_MIME =
   'application/vnd.openxmlformats-officedocument.presentationml.presentation';
@@ -83,36 +82,22 @@ async function applyAnnouncementPagesToZip(
   zip: JSZip,
   items: readonly AnnouncementPageInput[],
 ): Promise<void> {
-  const pages = [...items];
+  const pages = items.slice(0, 2);
   if (!pages.length) return;
 
   const slide25 = zip.file(SLIDE25_PATH);
   if (!slide25) return;
 
   const layout = stabilizeAnnouncementSlideXml(await slide25.async('string'));
-  zip.file(SLIDE25_PATH, writeAnnouncementTitleBody(layout, pages[0]));
-
-  if (pages.length === 1) {
-    zip.file(SLIDE26_PATH, writeAnnouncementTitleBody(layout, { title: ' ', body: ' ' }));
-    return;
-  }
-
-  zip.file(SLIDE26_PATH, writeAnnouncementTitleBody(layout, pages[1]));
-
-  let lastPath = SLIDE26_PATH;
-  for (let i = 2; i < pages.length; i++) {
-    lastPath = await duplicateSlideInZip(zip, SLIDE25_PATH, {
-      insertAfterPath: lastPath,
-    });
-    const entry = zip.file(lastPath);
-    if (!entry) continue;
-    const xml = await entry.async('string');
-    zip.file(lastPath, writeAnnouncementTitleBody(xml, pages[i]));
-  }
+  zip.file(SLIDE25_PATH, writeAnnouncementTitleBody(layout, pages[0] ?? { title: ' ', body: ' ' }));
+  zip.file(
+    SLIDE26_PATH,
+    writeAnnouncementTitleBody(layout, pages[1] ?? { title: ' ', body: ' ' }),
+  );
 }
 
 /**
- * 发布路径公告写入：P25 版式、加高正文；任意条数都重写（含第 2 页）。
+ * 发布路径公告写入：固定 P25/P26，不再按条数加页。
  */
 export async function expandAnnouncementSlidesInPptx(
   file: File,

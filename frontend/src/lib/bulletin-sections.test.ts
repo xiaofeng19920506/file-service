@@ -19,14 +19,17 @@ describe('bulletin-sections tree', () => {
     expect(family?.children?.map((c) => c.id)).toEqual([
       'offering',
       'birthday',
-      'announcements',
+      'announcements_group',
       'verse_of_week',
       'department_reports',
       'doxology_benediction',
     ]);
 
-    const announcements = findNavNode('announcements');
+    const announcements = findNavNode('announcements_group');
     expect(announcements?.children?.map((c) => c.id)).toEqual([
+      'special_thanks',
+      'family_joy',
+      'baptism',
       'weekly_meetings',
       'staff_meeting',
       'rotation',
@@ -41,13 +44,17 @@ describe('bulletin-sections tree', () => {
 
   it('resolves group-only nodes to the first concrete child', () => {
     expect(resolveNavTargetSectionId('doxology_benediction')).toBe('doxology');
+    expect(resolveNavTargetSectionId('announcements_group')).toBe('special_thanks');
     expect(resolveNavTargetSectionId('offering')).toBe('offering');
   });
 
   it('preserves leaf ids used by deck / hiddenSections', () => {
     const leafIds = BULLETIN_NAV_SECTIONS.filter((s) => !s.groupOnly).map((s) => s.id);
     expect(leafIds).toContain('family_time');
-    expect(leafIds).toContain('announcements');
+    expect(leafIds).toContain('special_thanks');
+    expect(leafIds).toContain('family_joy');
+    expect(leafIds).toContain('baptism');
+    expect(leafIds).not.toContain('announcements_group');
     expect(leafIds).not.toContain('doxology_benediction');
     expect(BULLETIN_NAV_TREE.length).toBe(10);
   });

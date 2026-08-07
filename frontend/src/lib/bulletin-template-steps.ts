@@ -14,7 +14,9 @@ export type BulletinWizardStep = {
     | 'bulletin.steps.worship'
     | 'bulletin.steps.offering'
     | 'bulletin.steps.birthday'
-    | 'bulletin.steps.announcements'
+    | 'bulletin.steps.special_thanks'
+    | 'bulletin.steps.family_joy'
+    | 'bulletin.steps.baptism'
     | 'bulletin.steps.verse'
     | 'bulletin.steps.more';
   /** 当前是否已实现编辑 UI */
@@ -67,10 +69,24 @@ export const BULLETIN_WIZARD_STEPS: BulletinWizardStep[] = [
     enabled: true,
   },
   {
-    id: 'announcements',
-    sectionId: 'announcements',
-    slides: [25, 26, 27],
-    labelKey: 'bulletin.steps.announcements',
+    id: 'special_thanks',
+    sectionId: 'special_thanks',
+    slides: [25],
+    labelKey: 'bulletin.steps.special_thanks',
+    enabled: true,
+  },
+  {
+    id: 'family_joy',
+    sectionId: 'family_joy',
+    slides: [26],
+    labelKey: 'bulletin.steps.family_joy',
+    enabled: true,
+  },
+  {
+    id: 'baptism',
+    sectionId: 'baptism',
+    slides: [27],
+    labelKey: 'bulletin.steps.baptism',
     enabled: true,
   },
   {
