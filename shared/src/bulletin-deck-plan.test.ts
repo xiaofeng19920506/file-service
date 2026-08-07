@@ -129,6 +129,29 @@ describe('bulletin deck plan from template content', () => {
     expect(ids.indexOf('youth_prayer')).toBeLessThan(ids.indexOf('message'));
   });
 
+  it('keeps weekly_meetings after two dynamic announcements', async () => {
+    const tpl = await readFile(templatePath);
+    const patched = await patchBulletinPreviewInPptx(tpl, {
+      serviceDate: '2026-07-26',
+      serviceTime: '11:00',
+      announcements: [
+        { title: '感谢', body: '甲' },
+        { title: '喜事', body: '乙' },
+      ],
+      visibleAnnouncementCount: 2,
+      hiddenSections: [],
+      weeklyMeetingVariant: null,
+    });
+    const ids = ['ann-a', 'ann-b'];
+    const plan = await buildBulletinDeckPlanFromPptxBytes(patched, ids);
+    const weekly = plan.sections.find((s) => s.id === 'weekly_meetings');
+    expect(weekly?.slides.length).toBe(1);
+    expect(plan.sections.filter((s) => s.id.startsWith('announcement:'))).toHaveLength(2);
+    const order = plan.sections.map((s) => s.id);
+    expect(order.indexOf('announcement:ann-a')).toBeLessThan(order.indexOf('baptism'));
+    expect(order.indexOf('baptism')).toBeLessThan(order.indexOf('weekly_meetings'));
+  });
+
   it('does not merge unknown into previous section', () => {
     const slides = assignSectionsInPresentationOrder([
       { index: 1, slideInFile: 10 },

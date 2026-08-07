@@ -77,7 +77,7 @@ describe('bulletin section visibility', () => {
   });
 
   it('keeps P28 when weeklyMeetingVariant is null or invalid', () => {
-    for (const weeklyMeetingVariant of [null, 0, 27, 99] as const) {
+    for (const weeklyMeetingVariant of [null, 0, 27, 99, '0', '99'] as const) {
       const paths = bulletinSlidePathsToDelete({
         visibleAnnouncementCount: 2,
         weeklyMeetingVariant,

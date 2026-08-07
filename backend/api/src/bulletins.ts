@@ -103,7 +103,7 @@ const patchedPptxCache = new Map<string, Buffer>();
 /** 预览补丁版本；v35=分区 override 支持增删页（splice 变长） */
 /** v52：圣餐英文经文略加大至 28pt，减少底部空白 */
 /** v64：生日月页外置到模板库，主模板仅 P24 锚点 */
-const SLIDE_PREVIEW_PATCH_REV = 'v64';
+const SLIDE_PREVIEW_PATCH_REV = 'v65';
 
 async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   const chunks: Buffer[] = [];

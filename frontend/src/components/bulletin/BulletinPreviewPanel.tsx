@@ -225,6 +225,11 @@ export default function BulletinPreviewPanel({
       (typeof busySectionId === 'string' && busySectionId.startsWith('announcement:')) ||
       busySectionId === 'baptism' ||
       busySectionId === 'more' ||
+      busySectionId === 'weekly_meetings' ||
+      busySectionId === 'staff_meeting' ||
+      busySectionId === 'rotation' ||
+      busySectionId === 'future_testimony' ||
+      busySectionId === 'service_roster' ||
       Boolean(bulletin.sectionPptxOverrides?.[busySectionId ?? '']));
 
   return (

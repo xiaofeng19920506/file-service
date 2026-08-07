@@ -1022,12 +1022,12 @@ export async function patchBulletinPreviewInPptx(
     ...input,
     visibleAnnouncementCount: announcementCount,
   });
-  if (announcementCount > 0 && input.announcements?.length) {
-    await applyAnnouncementPagesToZip(zip, input.announcements.slice(0, announcementCount));
-  }
-
+  // 先按模板文件号删页，再加公告复制页，避免复制后 slide 编号漂移误删
   if (removePaths.length) {
     await removeSlidesFromPptxZip(zip, removePaths);
+  }
+  if (announcementCount > 0 && input.announcements?.length) {
+    await applyAnnouncementPagesToZip(zip, input.announcements.slice(0, announcementCount));
   }
 
   return zip.generateAsync({ type: 'uint8array' });

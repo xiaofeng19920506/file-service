@@ -3,9 +3,11 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { patchBulletinPreviewInPptx } from '../../../shared/src/bulletin-pptx-patch.js';
 import { resolveScriptureSlideBodies } from '../../../shared/src/bible-text.js';
-import { buildBulletinDeckPlanFromFile, composeDeckSectionsForPreview, assignSectionsInPresentationOrder, firstSlideForSection, sectionIdForSlide } from './bulletin-deck-plan';
+import { buildBulletinDeckPlanFromFile, composeDeckSectionsForPreview, assignSectionsInPresentationOrder, firstSlideForSection, sectionIdForSlide, type BulletinDeckPlan } from './bulletin-deck-plan';
 import { buildPreviewMatchingPptx } from './bulletin-preview-pptx';
 import { listPptxSlidesInPresentationOrder } from './pptx-preview';
+import { buildBulletinNavSections } from './bulletin-sections';
+import { buildBulletinDeckPlanFromPptxBytes } from '../../../shared/src/bulletin-deck-plan.js';
 
 const templatePath = join(import.meta.dirname, '../../../shared/templates/bulletin/06_14_2026.pptx');
 
@@ -173,6 +175,36 @@ describe('bulletin deck plan', () => {
     expect(slides.filter((s) => s.sectionId === 'scripture').map((s) => s.slideInFile)).toEqual([
       4, 5, 6,
     ]);
+  });
+
+  it('composes weekly_meetings after dynamic announcements in nav order', async () => {
+    const tpl = await readFile(templatePath);
+    const patched = await patchBulletinPreviewInPptx(tpl, {
+      serviceDate: '2026-07-26',
+      serviceTime: '11:00',
+      announcements: [
+        { title: 'A', body: 'a' },
+        { title: 'B', body: 'b' },
+      ],
+      visibleAnnouncementCount: 2,
+      hiddenSections: [],
+      weeklyMeetingVariant: null,
+    });
+    const annIds = ['id-1', 'id-2'];
+    const core = await buildBulletinDeckPlanFromPptxBytes(patched, annIds);
+    const plan: BulletinDeckPlan = {
+      ...core,
+      wizardSteps: [],
+    };
+    const navOrder = buildBulletinNavSections(
+      annIds.map((id, i) => ({ id, title: i === 0 ? 'A' : 'B' })),
+    );
+    const composed = composeDeckSectionsForPreview(plan, navOrder);
+    const weekly = composed.find((s) => s.id === 'weekly_meetings');
+    expect(weekly?.slides.length).toBe(1);
+    const ids = composed.map((s) => s.id);
+    expect(ids.indexOf('announcement:id-1')).toBeLessThan(ids.indexOf('baptism'));
+    expect(ids.indexOf('baptism')).toBeLessThan(ids.indexOf('weekly_meetings'));
   });
 });
 

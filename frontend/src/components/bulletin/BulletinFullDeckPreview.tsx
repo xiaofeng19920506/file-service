@@ -113,7 +113,7 @@ const DeckSlideItem = memo(function DeckSlideItem({
         slideNumber={slideNumber}
         patch={slidePatch}
         sectionId={sectionId}
-        lazy
+        lazy={!highlight}
         priority={priority}
         rootMargin={rootMargin}
       />
@@ -212,8 +212,14 @@ export default function BulletinFullDeckPreview({
 
   const composedSections = useMemo(() => {
     if (!highlightSectionId) return allComposedSections.slice(0, 1);
-    return allComposedSections.filter((section) => section.id === highlightSectionId);
-  }, [allComposedSections, highlightSectionId]);
+    const filtered = allComposedSections.filter((section) => section.id === highlightSectionId);
+    if (filtered.length) return filtered;
+    // compose 漏排时仍显示 deck 里有的页（如动态公告后的本週聚会）
+    const direct = deckPlan?.sections.find(
+      (section) => section.id === highlightSectionId && section.slides.length,
+    );
+    return direct ? [{ id: direct.id, slides: [...direct.slides] }] : filtered;
+  }, [allComposedSections, highlightSectionId, deckPlan]);
 
   const sectionSlides = useMemo(
     () => composedSections.flatMap((section) => section.slides),

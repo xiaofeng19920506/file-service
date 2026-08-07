@@ -57,6 +57,15 @@ export const BULLETIN_ALWAYS_OMIT_SLIDE_FILES = [
 
 const WEEKLY_MEETING_VARIANTS = [28, 29, 30] as const;
 
+/** 本週聚会三版式之一；非法/缺省时保留 P28，避免三页全删 */
+export function resolveWeeklyMeetingKeepVariant(
+  raw: number | string | null | undefined,
+): (typeof WEEKLY_MEETING_VARIANTS)[number] {
+  const n = typeof raw === 'string' ? Number.parseInt(raw, 10) : raw;
+  if (n === 28 || n === 29 || n === 30) return n;
+  return 28;
+}
+
 export const ANNOUNCEMENT_SECTION_PREFIX = 'announcement:';
 
 export function isAnnouncementSectionId(sectionId: string): boolean {
@@ -161,7 +170,7 @@ export function bulletinSlidePathsToDelete(input: {
   hiddenSections?: string[] | null;
   skipTestimonyWeek?: boolean;
   skipDepartmentReports?: boolean;
-  weeklyMeetingVariant?: number | null;
+  weeklyMeetingVariant?: number | string | null;
   /** 保留参数以兼容调用方；不再用于删页 */
   birthdayMonth?: string | number | null;
   /** 未隐藏的公告条数；缺省视为「有公告页」（不因条数删 P25/P26） */
@@ -193,10 +202,7 @@ export function bulletinSlidePathsToDelete(input: {
   }
 
   if (!hidden.includes('weekly_meetings')) {
-    // 未选手动版式或不合法值时默认保留 P28，避免三页全删导致左侧点不中
-    const raw = input.weeklyMeetingVariant;
-    const keep =
-      raw === 28 || raw === 29 || raw === 30 ? raw : 28;
+    const keep = resolveWeeklyMeetingKeepVariant(input.weeklyMeetingVariant);
     for (const n of WEEKLY_MEETING_VARIANTS) {
       if (n !== keep) paths.add(slidePath(n));
     }
