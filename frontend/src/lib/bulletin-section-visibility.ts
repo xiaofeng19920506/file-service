@@ -184,8 +184,11 @@ export function bulletinSlidePathsToDelete(input: {
     for (const n of BULLETIN_ANNOUNCEMENT_TEMPLATE_SLIDES) {
       paths.add(slidePath(n));
     }
-  } else if (input.visibleAnnouncementCount === 1) {
-    // 仅一则时只用 P25，删掉模板 P26
+  } else if (
+    input.visibleAnnouncementCount != null &&
+    input.visibleAnnouncementCount > 0
+  ) {
+    // 公告一律用 P25 + 复制页；模板 P26（家有喜事 / layout12）必须删掉，否则黑屏
     paths.add(slidePath(26));
   }
 

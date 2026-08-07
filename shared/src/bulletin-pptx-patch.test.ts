@@ -258,7 +258,7 @@ describe('patchScriptureSlideInSlideXml', () => {
     expect(slide2).not.toContain('王凯弟兄');
   });
 
-  it('writes fixed announcement slides without expanding beyond P25–P26', async () => {
+  it('duplicates P25 for each extra announcement and drops template P26', async () => {
     const { listPptxSlidesInPresentationOrder } = await import('./pptx-presentation-order.js');
     const tpl = await readFile(templatePath);
     const patched = await patchBulletinPreviewInPptx(tpl, {
@@ -273,25 +273,33 @@ describe('patchScriptureSlideInSlideXml', () => {
     const order = await listPptxSlidesInPresentationOrder(patched);
     const paths = order.map((s) => s.slidePath);
     const i25 = paths.indexOf('ppt/slides/slide25.xml');
-    const i26 = paths.indexOf('ppt/slides/slide26.xml');
     const i27 = paths.indexOf('ppt/slides/slide27.xml');
     expect(i25).toBeGreaterThanOrEqual(0);
-    expect(i26).toBe(i25 + 1);
-    expect(i27).toBeGreaterThan(i26 + 1);
-    const extraPath = paths[i26 + 1];
-    expect(extraPath).toBeTruthy();
-    expect(extraPath).not.toBe('ppt/slides/slide27.xml');
+    expect(paths).not.toContain('ppt/slides/slide26.xml');
+    expect(i27).toBe(i25 + 3);
+    const secondPath = paths[i25 + 1]!;
+    const thirdPath = paths[i25 + 2]!;
+    expect(secondPath).not.toBe('ppt/slides/slide27.xml');
+    expect(thirdPath).not.toBe('ppt/slides/slide27.xml');
     const slide25 = await zip.file('ppt/slides/slide25.xml')!.async('string');
-    const slide26 = await zip.file('ppt/slides/slide26.xml')!.async('string');
-    const extra = await zip.file(extraPath!)!.async('string');
+    const second = await zip.file(secondPath)!.async('string');
+    const third = await zip.file(thirdPath)!.async('string');
     expect(slide25).toContain('特别感谢');
     expect(slide25).toContain('感谢甲');
-    expect(slide26).toContain('家有喜事');
-    expect(extra).toContain('新增公告');
-    expect(extra).toContain('第三条内容');
+    expect(second).toContain('家有喜事');
+    expect(second).toContain('恭喜乙');
+    expect(third).toContain('新增公告');
+    expect(third).toContain('第三条内容');
+    // 复制页必须沿用 P25 的 layout16，不能残留 P26 的 layout12
+    const secondRels = await zip
+      .file(secondPath.replace('ppt/slides/', 'ppt/slides/_rels/') + '.rels')!
+      .async('string');
+    expect(secondRels).toContain('slideLayout16');
+    expect(secondRels).not.toContain('slideLayout12');
   });
 
-  it('rewrites slide26 with P25 layout so leftover 家有喜事 body/verse is cleared', async () => {
+  it('second announcement is a P25 duplicate so 家有喜事 leftovers are gone', async () => {
+    const { listPptxSlidesInPresentationOrder } = await import('./pptx-presentation-order.js');
     const tpl = await readFile(templatePath);
     const longBody = [
       '第一行：教会感谢各位同工的摆上与服事。',
@@ -305,19 +313,29 @@ describe('patchScriptureSlideInSlideXml', () => {
         { title: '特别感谢', body: '短公告' },
         { title: '服事邀请', body: longBody },
       ],
+      visibleAnnouncementCount: 2,
     });
     const zip = await JSZip.loadAsync(patched);
-    const slide26 = await zip.file('ppt/slides/slide26.xml')!.async('string');
-    expect(slide26).toContain('服事邀请');
-    expect(slide26).toContain('第一行：教会感谢');
-    expect(slide26).toContain('第五行：详细内容');
+    const order = await listPptxSlidesInPresentationOrder(patched);
+    const paths = order.map((s) => s.slidePath);
+    expect(paths).not.toContain('ppt/slides/slide26.xml');
+    const i25 = paths.indexOf('ppt/slides/slide25.xml');
+    const secondPath = paths[i25 + 1]!;
+    const second = await zip.file(secondPath)!.async('string');
+    expect(second).toContain('服事邀请');
+    expect(second).toContain('第一行：教会感谢');
+    expect(second).toContain('第五行：详细内容');
     // 不再残留模板「家有喜事」正文 / 诗篇经文框
-    expect(slide26).not.toContain('Angelica');
-    expect(slide26).not.toContain('诗篇 127');
-    expect(slide26).not.toContain('Genevieve');
+    expect(second).not.toContain('Angelica');
+    expect(second).not.toContain('诗篇 127');
+    expect(second).not.toContain('Genevieve');
     // 正文框加高（y=1420500 → 贴近画幅底部）
-    expect(slide26).toContain('cy="3579500"');
-    expect(slide26).toContain('sz="2600"');
+    expect(second).toContain('cy="3579500"');
+    expect(second).toContain('sz="2600"');
+    const secondRels = await zip
+      .file(secondPath.replace('ppt/slides/', 'ppt/slides/_rels/') + '.rels')!
+      .async('string');
+    expect(secondRels).toContain('slideLayout16');
   });
 });
 

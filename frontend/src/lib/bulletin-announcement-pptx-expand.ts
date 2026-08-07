@@ -9,7 +9,6 @@ const PPTX_MIME =
   'application/vnd.openxmlformats-officedocument.presentationml.presentation';
 
 const SLIDE25_PATH = 'ppt/slides/slide25.xml';
-const SLIDE26_PATH = 'ppt/slides/slide26.xml';
 
 /** 与 shared/bulletin-pptx-patch 公告逻辑保持一致 */
 const ANNOUNCEMENT_BODY_BOTTOM_EMU = 5_000_000;
@@ -81,7 +80,7 @@ function writeAnnouncementTitleBody(xml: string, item: AnnouncementPageInput): s
 
 /**
  * 动态公告页：一律用 P25「标题+正文」版式。
- * 第 2 条写 P26；第 3 条起复制 P25，插在公告段末、P27（浸礼）之前。
+ * 第 1 条写 P25；第 2 条起复制 P25（含 layout rels）。勿覆写模板 P26（layout12 → 黑屏）。
  */
 export async function applyAnnouncementPagesToZip(
   zip: JSZip,
@@ -96,12 +95,8 @@ export async function applyAnnouncementPagesToZip(
   const layout = stabilizeAnnouncementSlideXml(await slide25.async('string'));
   zip.file(SLIDE25_PATH, writeAnnouncementTitleBody(layout, pages[0]!));
 
-  if (pages.length === 1) return;
-
-  zip.file(SLIDE26_PATH, writeAnnouncementTitleBody(layout, pages[1]!));
-
-  let lastPath = SLIDE26_PATH;
-  for (let i = 2; i < pages.length; i++) {
+  let lastPath = SLIDE25_PATH;
+  for (let i = 1; i < pages.length; i++) {
     lastPath = await duplicateSlideInZip(zip, SLIDE25_PATH, {
       insertAfterPath: lastPath,
     });

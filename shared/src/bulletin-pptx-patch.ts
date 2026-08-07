@@ -898,7 +898,8 @@ function writeAnnouncementTitleBody(xml: string, item: AnnouncementPageInput): s
 
 /**
  * 公告页：一律用 P25「标题+正文」版式。
- * 第 2 条写 P26；第 3 条起复制 P25，插在公告段末、P27（浸礼）之前。
+ * 第 1 条写 P25；第 2 条起复制 P25（含 layout rels），插在公告段末、P27 前。
+ * 勿把 P25 XML 塞进模板 P26：P26 仍指向 slideLayout12，预览会整页黑屏。
  */
 export async function applyAnnouncementPagesToZip(
   zip: JSZip,
@@ -908,19 +909,14 @@ export async function applyAnnouncementPagesToZip(
   if (!pages.length) return;
 
   const slide25Path = 'ppt/slides/slide25.xml';
-  const slide26Path = 'ppt/slides/slide26.xml';
   const slide25 = zip.file(slide25Path);
   if (!slide25) return;
 
   const layout = stabilizeAnnouncementSlideXml(await slide25.async('string'));
   zip.file(slide25Path, writeAnnouncementTitleBody(layout, pages[0]!));
 
-  if (pages.length === 1) return;
-
-  zip.file(slide26Path, writeAnnouncementTitleBody(layout, pages[1]!));
-
-  let lastPath = slide26Path;
-  for (let i = 2; i < pages.length; i++) {
+  let lastPath = slide25Path;
+  for (let i = 1; i < pages.length; i++) {
     lastPath = await duplicateSlideInZip(zip, slide25Path, {
       insertAfterPath: lastPath,
     });

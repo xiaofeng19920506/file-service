@@ -135,7 +135,7 @@
       ],
       "role": "dynamic_announcements",
       "titleFromSlide": "动态公告",
-      "notes": "P25/P26 为公告锚点；可见条数≥1 时用 P25 版式写入，第 3 条起加页；0 条时删 P25/P26；导航为 announcement:<id>"
+      "notes": "P25 为公告版式锚点；可见条数≥1 时写 P25，第 2 条起复制 P25（删模板 P26/layout12，否则黑屏）；0 条时删 P25/P26；导航为 announcement:<id>"
     },
     {
       "id": "baptism",
