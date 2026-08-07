@@ -452,8 +452,11 @@ export default {
     pastorInviteEmail: '牧师邮箱',
     pastorInviteEmailPlaceholder: 'pastor@example.com',
     pastorInviteSectionIntro:
-      '填写牧师邮箱后，系统会在每周一自动发送邀请邮件，对方可选择上传「主日信息」PPT 或跳过。',
-    pastorInviteScheduleHint: '邮件每周一上午自动发送（无需手动点发送）。清空邮箱则不再发送。',
+      '填写牧师邮箱。可点「立即发送」马上发邀请；未点发送时，系统仍会在每周一自动发送。',
+    pastorInviteSendNow: '立即发送邮件',
+    pastorInviteSending: '发送中…',
+    pastorInviteSent: '邀请邮件已发送至 {email}',
+    pastorInviteScheduleHint: '每周一上午也会自动发送（同一主日不会重复发）。清空邮箱则停止自动发送。',
     pastorInviteLandingTitle: '主日信息 PPT',
     pastorInviteLandingIntroSimple: '请为 {date} 主日周报上传「主日信息」PPT（可选）。',
     pastorInviteLandingChooseFile: '选择 PPT 文件',

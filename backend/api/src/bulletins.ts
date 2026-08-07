@@ -1800,7 +1800,15 @@ export function registerBulletinRoutes(
       return reply.code(400).send({ error: 'section_has_no_slides' });
     }
 
-    const recipientEmail = request.body?.email?.trim().toLowerCase() ?? '';
+    const [bulletin] = await db
+      .select()
+      .from(weeklyBulletins)
+      .where(eq(weeklyBulletins.id, request.params.id));
+    if (!bulletin) return reply.code(404).send({ error: 'not_found' });
+
+    const recipientEmail =
+      request.body?.email?.trim().toLowerCase()
+      || (bulletin.messagePastorEmail ?? '').trim().toLowerCase();
     if (!recipientEmail || !isValidEmailAddress(recipientEmail)) {
       return reply.code(400).send({ error: 'invalid_email' });
     }
@@ -1809,12 +1817,6 @@ export function registerBulletinRoutes(
     if (!mailConfig) {
       return reply.code(503).send({ error: 'email_not_configured' });
     }
-
-    const [bulletin] = await db
-      .select()
-      .from(weeklyBulletins)
-      .where(eq(weeklyBulletins.id, request.params.id));
-    if (!bulletin) return reply.code(404).send({ error: 'not_found' });
 
     const expiresAtUnix = Math.floor(Date.now() / 1000) + env.SHARE_LINK_TTL_SECONDS;
     const inviteToken = signBulletinSectionInviteToken({
@@ -1850,6 +1852,16 @@ export function registerBulletinRoutes(
       return reply.code(502).send({ error: emailError });
     }
 
+    const [updated] = await db
+      .update(weeklyBulletins)
+      .set({
+        messagePastorEmail: recipientEmail,
+        messagePastorInviteSentForDate: bulletin.serviceDate,
+        updatedAt: new Date(),
+      })
+      .where(eq(weeklyBulletins.id, bulletin.id))
+      .returning();
+
     return reply.send({
       inviteToken,
       inviteUrl,
@@ -1857,6 +1869,7 @@ export function registerBulletinRoutes(
       emailed: true,
       email: recipientEmail,
       sectionId,
+      bulletin: updated ? await mapBulletin(db, updated) : undefined,
     });
   });
 

@@ -456,19 +456,20 @@ export type BulletinSectionPastorInvite = {
   emailed: boolean;
   email: string;
   sectionId: string;
+  bulletin?: WeeklyBulletin;
 };
 
 export async function inviteBulletinSectionPastor(
   bulletinId: string,
   sectionId: string,
-  body: { email: string; message?: string },
+  body?: { email?: string; message?: string },
 ): Promise<BulletinSectionPastorInvite> {
   const res = await apiFetch(
     `/v1/bulletins/${encodeURIComponent(bulletinId)}/sections/${encodeURIComponent(sectionId)}/invite`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      body: JSON.stringify(body ?? {}),
     },
   );
   return parseJson<BulletinSectionPastorInvite>(res);

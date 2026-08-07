@@ -473,9 +473,12 @@ const en: MessageTree = {
     pastorInviteEmail: 'Pastor email',
     pastorInviteEmailPlaceholder: 'pastor@example.com',
     pastorInviteSectionIntro:
-      'Enter the pastor’s email. Every Monday the system emails an invite so they can optionally upload a “Sunday message” PPT.',
+      'Enter the pastor’s email. Use “Send now” for an immediate invite; otherwise Mondays still send automatically.',
+    pastorInviteSendNow: 'Send email now',
+    pastorInviteSending: 'Sending…',
+    pastorInviteSent: 'Invite email sent to {email}',
     pastorInviteScheduleHint:
-      'Email goes out automatically Monday morning — no send button. Clear the email to stop invites.',
+      'Also sent automatically Monday morning (once per Sunday service date). Clear the email to stop auto-sends.',
     pastorInviteLandingTitle: 'Sunday message PPT',
     pastorInviteLandingIntroSimple:
       'Optionally upload a PPT for the {date} Sunday bulletin “Sunday message” section.',

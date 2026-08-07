@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   createBulletin,
   getBulletin,
+  inviteBulletinSectionPastor,
   listBulletins,
   saveBulletinAnnouncements,
   updateBulletin,
@@ -159,6 +160,7 @@ export default function BulletinPage() {
   const [slideShowSessionId, setSlideShowSessionId] = useState<string | null>(null);
   const [worshipYoutubeOauthReady, setWorshipYoutubeOauthReady] = useState(false);
   const [worshipOauthError, setWorshipOauthError] = useState<string | null>(null);
+  const [pastorInviteSending, setPastorInviteSending] = useState(false);
   const [editSlidesSectionId, setEditSlidesSectionId] = useState<string | null>(() =>
     editSlidesSectionFromHash(),
   );
@@ -771,10 +773,43 @@ export default function BulletinPage() {
     [canManage, draft, selectNavSection, t],
   );
 
+  const handleSendPastorInvite = useCallback(async () => {
+    if (!draft || !canManage || pastorInviteSending) return;
+    const email = (draft.messagePastorEmail ?? '').trim();
+    if (!email) {
+      setError(friendlyError('invalid_email', t));
+      return;
+    }
+    setPastorInviteSending(true);
+    setError(null);
+    try {
+      const result = await inviteBulletinSectionPastor(draft.id, 'message', { email });
+      if (result.bulletin) {
+        setDraft(withHiddenSections(result.bulletin));
+      } else {
+        setDraft((prev) =>
+          prev
+            ? {
+                ...prev,
+                messagePastorEmail: result.email,
+                messagePastorInviteSentForDate: prev.serviceDate,
+              }
+            : prev,
+        );
+      }
+      setMessage(t('bulletin.pastorInviteSent', { email: result.email }));
+    } catch (err) {
+      setError(friendlyError(err instanceof Error ? err.message : 'email_send_failed', t));
+    } finally {
+      setPastorInviteSending(false);
+    }
+  }, [canManage, draft, pastorInviteSending, t]);
+
   const renderStepPanel = () => {
     if (!draft) return null;
 
     if (activeSectionId === 'message' && canManage) {
+      const email = (draft.messagePastorEmail ?? '').trim();
       return (
         <div className="bulletin-message-pastor-panel">
           <p className="bulletin-step-hint">{t('bulletin.pastorInviteSectionIntro')}</p>
@@ -786,9 +821,22 @@ export default function BulletinPage() {
               value={draft.messagePastorEmail ?? ''}
               placeholder={t('bulletin.pastorInviteEmailPlaceholder')}
               autoComplete="email"
+              disabled={pastorInviteSending}
               onChange={(e) => patchField('messagePastorEmail', e.target.value)}
             />
           </label>
+          <div className="bulletin-message-pastor-actions">
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={pastorInviteSending || !email}
+              onClick={() => void handleSendPastorInvite()}
+            >
+              {pastorInviteSending
+                ? t('bulletin.pastorInviteSending')
+                : t('bulletin.pastorInviteSendNow')}
+            </button>
+          </div>
           <p className="playlists-muted">{t('bulletin.pastorInviteScheduleHint')}</p>
         </div>
       );

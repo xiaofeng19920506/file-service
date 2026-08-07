@@ -8235,6 +8235,12 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   box-sizing: border-box;
 }
 
+.bulletin-message-pastor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .bulletin-section-invite-page {
   min-height: 100vh;
   box-sizing: border-box;
