@@ -406,21 +406,9 @@ export function patchesForStep(stepId: string, bulletin: WeeklyBulletin): SlideT
         },
       ];
     }
-    case 'special_thanks':
-    case 'family_joy': {
-      const slot = stepId === 'special_thanks' ? 0 : 1;
-      const slideNum = stepId === 'special_thanks' ? 25 : 26;
-      const item = bulletin.announcements?.[slot];
-      if (!item) return [];
-      const replacements: SlideTextReplacement[] = [];
-      if (item.title?.trim()) {
-        replacements.push({ textIndex: 0, text: item.title.trim() });
-      }
-      if (item.body?.trim()) {
-        replacements.push({ textIndex: 1, text: item.body.trim() });
-      }
-      if (!replacements.length) return [];
-      return [{ slideNumber: slideNum, replacements }];
+    case 'announcement_item': {
+      // 最终以 expandAnnouncementSlidesInPptx 为准；此处不按步打补丁
+      return [];
     }
     case 'baptism': {
       if (!bulletin.baptismText.trim()) return [];
@@ -595,8 +583,7 @@ export async function patchesFromBulletin(bulletin: WeeklyBulletin): Promise<{
     'scripture',
     'offering',
     'birthday',
-    'special_thanks',
-    'family_joy',
+    'announcement_item',
     'baptism',
     'verse',
     'more',

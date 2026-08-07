@@ -101,18 +101,41 @@ export function groupDeckSections(slides: BulletinDeckSlide[]): BulletinDeckSect
   return order.map((id) => ({ id, slides: byId.get(id)! }));
 }
 
-/** 从已与预览 PNG 同一套补丁的 PPTX 字节生成分区（页码与 PNG API 一致） */
-export async function buildBulletinDeckPlanFromPptxBytes(
-  pptx: Buffer | Uint8Array | ArrayBuffer,
-): Promise<BulletinDeckPlanCore> {
-  const parsed = await listPptxSlidesInPresentationOrder(pptx);
-  const slides = assignSectionsInPresentationOrder(parsed);
-  const sections = groupDeckSections(slides);
+/**
+ * 将 `_announcement_pool` 演示页按可见公告 id 顺序标成 `announcement:<id>`。
+ */
+export function remapAnnouncementPoolSections(
+  plan: BulletinDeckPlanCore,
+  visibleAnnouncementIds: readonly string[],
+): BulletinDeckPlanCore {
+  let ai = 0;
+  const slides = plan.slides.map((s) => {
+    if (s.sectionId !== '_announcement_pool') return s;
+    const id = visibleAnnouncementIds[ai++];
+    if (!id) return s;
+    return { ...s, sectionId: `announcement:${id}` };
+  });
   return {
     totalSlides: slides.length,
     slides,
-    sections,
+    sections: groupDeckSections(slides),
   };
+}
+
+/** 从已与预览 PNG 同一套补丁的 PPTX 字节生成分区（页码与 PNG API 一致） */
+export async function buildBulletinDeckPlanFromPptxBytes(
+  pptx: Buffer | Uint8Array | ArrayBuffer,
+  visibleAnnouncementIds: readonly string[] = [],
+): Promise<BulletinDeckPlanCore> {
+  const parsed = await listPptxSlidesInPresentationOrder(pptx);
+  const slides = assignSectionsInPresentationOrder(parsed);
+  const core = {
+    totalSlides: slides.length,
+    slides,
+    sections: groupDeckSections(slides),
+  };
+  if (!visibleAnnouncementIds.length) return core;
+  return remapAnnouncementPoolSections(core, visibleAnnouncementIds);
 }
 
 /** 校验：隐藏分区删页列表不会误删其它分区锚点 */

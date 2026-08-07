@@ -446,47 +446,39 @@ export type AnnouncementDraft = {
   body: string;
 };
 
-type AnnouncementsProps = BulletinStepPanelProps & {
-  announcements: AnnouncementDraft[];
-  onAnnouncementsChange: (next: AnnouncementDraft[]) => void;
-};
-
-type FixedAnnouncementSlotProps = {
-  draft: WeeklyBulletin;
+type AnnouncementItemStepProps = {
   canEdit: boolean;
   saving?: boolean;
-  /** 0 = 特别感谢(P25)，1 = 家有喜事(P26) */
-  slotIndex: 0 | 1;
+  /** announcement:<uuid> */
+  sectionId: string;
   announcements: AnnouncementDraft[];
   onAnnouncementsChange: (next: AnnouncementDraft[]) => void;
   onSave?: () => void;
 };
 
-function ensureAnnouncementSlots(list: AnnouncementDraft[]): AnnouncementDraft[] {
-  const next = [...list];
-  while (next.length < 2) {
-    next.push({
-      key: crypto.randomUUID(),
-      category: next.length === 0 ? 'thanks' : 'celebration',
-      title: '',
-      body: '',
-    });
-  }
-  return next.slice(0, 2);
-}
-
-/** 固定公告槽：特别感谢 / 家有喜事各一页，不可增删 */
-export function BulletinFixedAnnouncementStep({
+/** 单则动态公告：标题 + 正文 */
+export function BulletinAnnouncementItemStep({
   canEdit,
   saving,
-  slotIndex,
+  sectionId,
   announcements,
   onAnnouncementsChange,
   onSave,
-}: FixedAnnouncementSlotProps) {
+}: AnnouncementItemStepProps) {
   const { t } = useI18n();
-  const slots = ensureAnnouncementSlots(announcements);
-  const item = slots[slotIndex]!;
+  const itemId = sectionId.startsWith('announcement:')
+    ? sectionId.slice('announcement:'.length)
+    : '';
+  const index = announcements.findIndex((a) => a.key === itemId);
+  const item = index >= 0 ? announcements[index] : null;
+
+  if (!item) {
+    return (
+      <StepShell>
+        <p className="bulletin-step-placeholder">{t('bulletin.steps.comingSoon')}</p>
+      </StepShell>
+    );
+  }
 
   return (
     <StepShell>
@@ -496,8 +488,8 @@ export function BulletinFixedAnnouncementStep({
         disabled={!canEdit}
         commitOnBlur
         onChange={(v) => {
-          const next = ensureAnnouncementSlots(announcements);
-          next[slotIndex] = { ...next[slotIndex]!, title: v };
+          const next = [...announcements];
+          next[index] = { ...item, title: v };
           onAnnouncementsChange(next);
         }}
       />
@@ -508,8 +500,8 @@ export function BulletinFixedAnnouncementStep({
         multiline
         commitOnBlur
         onChange={(v) => {
-          const next = ensureAnnouncementSlots(announcements);
-          next[slotIndex] = { ...next[slotIndex]!, body: v };
+          const next = [...announcements];
+          next[index] = { ...item, body: v };
           onAnnouncementsChange(next);
         }}
       />
@@ -521,28 +513,6 @@ export function BulletinFixedAnnouncementStep({
         </div>
       ) : null}
     </StepShell>
-  );
-}
-
-/** @deprecated 使用 BulletinFixedAnnouncementStep */
-export function BulletinAnnouncementsStep({
-  draft,
-  canEdit,
-  saving,
-  announcements,
-  onAnnouncementsChange,
-  onSave,
-}: AnnouncementsProps) {
-  return (
-    <BulletinFixedAnnouncementStep
-      draft={draft}
-      canEdit={canEdit}
-      saving={saving}
-      slotIndex={0}
-      announcements={announcements}
-      onAnnouncementsChange={onAnnouncementsChange}
-      onSave={onSave}
-    />
   );
 }
 

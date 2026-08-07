@@ -4,175 +4,227 @@
   "sourceWeek": "2026-06-14",
   "totalSlides": 38,
   "nativeHiddenSlides": [],
-  "alwaysOmitSlideFiles": [3, 7, 9],
+  "alwaysOmitSlideFiles": [
+    3,
+    7,
+    9
+  ],
   "notes": "2026-07-21 读完全部 38 页正文后按主题分区。P3 会前名单、P7/P9 敬拜多余页始终省略，敬拜只留 P8。分区归属只认 slide 文件号；预览演示页码在删页/读经加页后会变，必须与 PNG API 使用同一套补丁。",
   "contentVerifiedAt": "2026-07-21",
   "sections": [
     {
       "id": "cover",
-      "slides": [1],
+      "slides": [
+        1
+      ],
       "role": "service_date",
       "titleFromSlide": "預備心靈敬拜 / 主日崇拜",
       "notes": "P1：主耶和華神在聖殿中…預備心靈敬拜 + 日期时间 + 教会名"
     },
     {
       "id": "pre_service",
-      "slides": [2],
+      "slides": [
+        2
+      ],
       "role": "chair_name",
       "titleFromSlide": "主席會前禱告",
       "notes": "P2：会前祷告标题页（可写主席姓名）。P3 同标题多人名单（唐毅/李振成/賴建平/王凱）永不进入 deck"
     },
     {
       "id": "scripture",
-      "slides": [4, 5, 6],
+      "slides": [
+        4,
+        5,
+        6
+      ],
       "role": "scripture_passage",
       "titleFromSlide": "讀經 / Scripture Reading",
       "notes": "P4 书名+经节；P5 中文正文；P6 英文正文。经文过长时在 5/6 后复制加页，仍属读经"
     },
     {
       "id": "worship",
-      "slides": [8],
+      "slides": [
+        8
+      ],
       "role": "worship_break",
       "titleFromSlide": "敬拜讚美",
       "notes": "只保留模板第 2 页敬拜（P8）。P7/P9 同为敬拜标题页，始终省略"
     },
     {
       "id": "communion",
-      "slides": [10, 11, 12, 13],
+      "slides": [
+        10,
+        11,
+        12,
+        13
+      ],
       "role": "static",
       "titleFromSlide": "聖餐 / 哥林多前書 11:23-31",
       "notes": "P10 圣餐标题；P11 中文林前；P12–P13 英文。不是欢迎、不是主日信息"
     },
     {
       "id": "welcome",
-      "slides": [14],
+      "slides": [
+        14
+      ],
       "role": "static",
       "titleFromSlide": "Welcome! / 歡迎新朋友",
       "notes": "P14：Welcome! 歡迎新朋友, 一次歡迎, 永遠歡迎。独立分区，介于圣餐与青少年祷告之间"
     },
     {
       "id": "youth_prayer",
-      "slides": [15],
+      "slides": [
+        15
+      ],
       "role": "static",
       "titleFromSlide": "為青少年與兒童祝福禱告",
       "notes": "P15：為青少年與兒童祝福禱告 / Prayer for Youth and Children。独立分区，介于欢迎与见证周之间"
     },
     {
       "id": "testimony_week",
-      "slides": [16],
+      "slides": [
+        16
+      ],
       "role": "optional",
       "titleFromSlide": "主日見證週 / Testimony Week",
       "notes": "P16，非见证周可隐藏"
     },
     {
       "id": "message",
-      "slides": [17],
+      "slides": [
+        17
+      ],
       "role": "static",
       "titleFromSlide": "主日信息",
       "notes": "P17：主日信息（仅此页）。不可与圣餐混淆"
     },
     {
       "id": "family_time",
-      "slides": [18],
+      "slides": [
+        18
+      ],
       "role": "static",
       "titleFromSlide": "大家庭時間",
       "notes": "P18"
     },
     {
       "id": "offering",
-      "slides": [19, 20],
+      "slides": [
+        19,
+        20
+      ],
       "role": "date_sensitive",
       "titleFromSlide": "奉獻報告 / Church Tithes and Offering",
       "notes": "只保留 P19 上週奉献、P20 林后 9 提醒；P21/P22 始终省略"
     },
     {
       "id": "birthday",
-      "slides": [24],
+      "slides": [
+        24
+      ],
       "role": "external_month_library",
       "titleFromSlide": "Birthday / 生日",
       "notes": "主模板仅 P24 锚点；1–12 月完整页在 templates/bulletin/birthday/month-NN.pptx，按 birthdayMonth splice；旧 P23 始终省略；按月覆盖存 section_pptx_overrides.birthday_N",
       "monthLibrary": "birthday/month-01.pptx … month-12.pptx"
     },
     {
-      "id": "special_thanks",
-      "slides": [25],
-      "role": "special_announcement",
-      "titleFromSlide": "特別感謝",
-      "notes": "P25 特别感谢；每周无事可隐藏"
-    },
-    {
-      "id": "family_joy",
-      "slides": [26],
-      "role": "special_announcement",
-      "titleFromSlide": "家有喜事",
-      "notes": "P26 家有喜事；每周无事可隐藏"
+      "id": "_announcement_pool",
+      "slides": [
+        25,
+        26
+      ],
+      "role": "dynamic_announcements",
+      "titleFromSlide": "动态公告",
+      "notes": "P25/P26 为公告锚点；可见条数≥1 时用 P25 版式写入，第 3 条起加页；0 条时删 P25/P26；导航为 announcement:<id>"
     },
     {
       "id": "baptism",
-      "slides": [27],
+      "slides": [
+        27
+      ],
       "role": "special_announcement",
       "titleFromSlide": "受洗典禮",
       "notes": "P27 受洗典礼；每周无事可隐藏"
     },
     {
       "id": "weekly_meetings",
-      "slides": [28, 29, 30],
+      "slides": [
+        28,
+        29,
+        30
+      ],
       "role": "variant_pick_one",
       "titleFromSlide": "教會本週聚會",
       "notes": "P28–P30 三种本週聚会版式，每次只用其一；未选时默认保留 P28"
     },
     {
       "id": "staff_meeting",
-      "slides": [31],
+      "slides": [
+        31
+      ],
       "role": "date_sensitive",
       "titleFromSlide": "同工會",
       "notes": "P31"
     },
     {
       "id": "rotation",
-      "slides": [32],
+      "slides": [
+        32
+      ],
       "role": "date_sensitive",
       "titleFromSlide": "清潔/服事輪值表",
       "notes": "P32"
     },
     {
       "id": "future_testimony",
-      "slides": [33],
+      "slides": [
+        33
+      ],
       "role": "date_sensitive",
       "titleFromSlide": "下主日見證分享",
       "notes": "P33"
     },
     {
       "id": "service_roster",
-      "slides": [34],
+      "slides": [
+        34
+      ],
       "role": "date_sensitive",
       "titleFromSlide": "下主日服事輪值",
       "notes": "P34"
     },
     {
       "id": "verse_of_week",
-      "slides": [35],
+      "slides": [
+        35
+      ],
       "role": "verse",
       "titleFromSlide": "本週金句 / Verse of the Week",
       "notes": "P35"
     },
     {
       "id": "department_reports",
-      "slides": [36],
+      "slides": [
+        36
+      ],
       "role": "optional",
       "titleFromSlide": "各部門同工報告與討論",
       "notes": "P36，可隐藏"
     },
     {
       "id": "doxology",
-      "slides": [37],
+      "slides": [
+        37
+      ],
       "role": "static",
       "titleFromSlide": "三一頌 / DOXOLOGY",
       "notes": "P37"
     },
     {
       "id": "benediction",
-      "slides": [38],
+      "slides": [
+        38
+      ],
       "role": "static",
       "titleFromSlide": "祝福禱告 / Blessing and Benediction",
       "notes": "P38"
@@ -182,73 +234,175 @@
     {
       "slide": 1,
       "fields": [
-        { "key": "serviceDate", "textIndex": 8, "example": "06/14/2026" },
-        { "key": "serviceTime", "textIndex": 9, "example": "11:00" }
+        {
+          "key": "serviceDate",
+          "textIndex": 8,
+          "example": "06/14/2026"
+        },
+        {
+          "key": "serviceTime",
+          "textIndex": 9,
+          "example": "11:00"
+        }
       ]
     },
     {
       "slide": 2,
       "fields": [
-        { "key": "showPreServiceChairName", "example": true },
-        { "key": "preServiceChairNames", "shapeId": "276", "example": "王凯弟兄" }
+        {
+          "key": "showPreServiceChairName",
+          "example": true
+        },
+        {
+          "key": "preServiceChairNames",
+          "shapeId": "276",
+          "example": "王凯弟兄"
+        }
       ]
     },
     {
       "slide": 4,
       "fields": [
-        { "key": "scriptureBook", "textIndex": 4, "example": "箴言 Proverbs" },
-        { "key": "scriptureReference", "textIndex": 5, "example": "15:1-11" }
+        {
+          "key": "scriptureBook",
+          "textIndex": 4,
+          "example": "箴言 Proverbs"
+        },
+        {
+          "key": "scriptureReference",
+          "textIndex": 5,
+          "example": "15:1-11"
+        }
       ]
     },
     {
       "slide": 19,
       "fields": [
-        { "key": "lastWeekOfferingDate", "textIndex": 7, "example": "06/07/2026" },
-        { "key": "offeringTitheAmount", "textIndex": 14, "example": "$3,260.00" },
-        { "key": "offeringOtherAmount", "textIndex": 18, "example": "$3,000.00" },
-        { "key": "offeringTotalAmount", "textIndex": 22, "example": "$6,260.00" }
+        {
+          "key": "lastWeekOfferingDate",
+          "textIndex": 7,
+          "example": "06/07/2026"
+        },
+        {
+          "key": "offeringTitheAmount",
+          "textIndex": 14,
+          "example": "$3,260.00"
+        },
+        {
+          "key": "offeringOtherAmount",
+          "textIndex": 18,
+          "example": "$3,000.00"
+        },
+        {
+          "key": "offeringTotalAmount",
+          "textIndex": 22,
+          "example": "$6,260.00"
+        }
       ]
     },
     {
       "slide": 39,
       "fields": [
-        { "key": "birthdayMonth", "example": "1", "notes": "存 1–12；从 birthday/month-NN.pptx 取出 splice 到 P24" },
-        { "key": "birthdayNames", "shapeId": "399", "layout": "grid", "example": "{\"1\":\"甲\\n乙\"}", "notes": "可选；名单优先在幻灯片上编辑" }
+        {
+          "key": "birthdayMonth",
+          "example": "1",
+          "notes": "存 1–12；从 birthday/month-NN.pptx 取出 splice 到 P24"
+        },
+        {
+          "key": "birthdayNames",
+          "shapeId": "399",
+          "layout": "grid",
+          "example": "{\"1\":\"甲\\n乙\"}",
+          "notes": "可选；名单优先在幻灯片上编辑"
+        }
       ]
     },
     {
       "slide": 25,
       "fields": [
-        { "key": "announcementTitle", "textIndex": 0, "example": "特別感謝" },
-        { "key": "announcementBody", "textIndex": 1, "example": "…" }
+        {
+          "key": "announcementTitle",
+          "textIndex": 0,
+          "example": "特別感謝"
+        },
+        {
+          "key": "announcementBody",
+          "textIndex": 1,
+          "example": "…"
+        }
       ]
     },
     {
       "slide": 26,
       "fields": [
-        { "key": "announcementTitle", "textIndex": 0, "example": "家有喜事" },
-        { "key": "announcementBody", "textIndex": 1, "example": "…" }
+        {
+          "key": "announcementTitle",
+          "textIndex": 0,
+          "example": "家有喜事"
+        },
+        {
+          "key": "announcementBody",
+          "textIndex": 1,
+          "example": "…"
+        }
       ]
     },
     {
       "slide": 27,
-      "fields": [{ "key": "baptismText", "textIndex": 3, "example": "7月5日主日" }]
+      "fields": [
+        {
+          "key": "baptismText",
+          "textIndex": 3,
+          "example": "7月5日主日"
+        }
+      ]
     },
     {
       "slide": 31,
       "fields": [
-        { "key": "staffMeetingYear", "textIndex": 0, "example": "2026", "notes": "与 month 拼成「2026年6」" },
-        { "key": "staffMeetingMonth", "textIndex": 0, "example": "6" },
-        { "key": "staffMeetingDate", "textIndex": 3, "example": "下主日(6/21/2026)", "notes": "清空碎片 4–5，index 6 改为「於」" },
-        { "key": "staffMeetingStartTime", "textIndex": 9, "example": "12:45 pm" },
-        { "key": "staffMeetingEndTime", "textIndex": 9, "example": "2:00 pm" }
+        {
+          "key": "staffMeetingYear",
+          "textIndex": 0,
+          "example": "2026",
+          "notes": "与 month 拼成「2026年6」"
+        },
+        {
+          "key": "staffMeetingMonth",
+          "textIndex": 0,
+          "example": "6"
+        },
+        {
+          "key": "staffMeetingDate",
+          "textIndex": 3,
+          "example": "下主日(6/21/2026)",
+          "notes": "清空碎片 4–5，index 6 改为「於」"
+        },
+        {
+          "key": "staffMeetingStartTime",
+          "textIndex": 9,
+          "example": "12:45 pm"
+        },
+        {
+          "key": "staffMeetingEndTime",
+          "textIndex": 9,
+          "example": "2:00 pm"
+        }
       ]
     },
     {
       "slide": 32,
       "fields": [
-        { "key": "rotationStartMonth", "textIndex": 0, "example": "7", "notes": "与 end 写入标题/正文「(7-9 月)」" },
-        { "key": "rotationEndMonth", "textIndex": 0, "example": "9" }
+        {
+          "key": "rotationStartMonth",
+          "textIndex": 0,
+          "example": "7",
+          "notes": "与 end 写入标题/正文「(7-9 月)」"
+        },
+        {
+          "key": "rotationEndMonth",
+          "textIndex": 0,
+          "example": "9"
+        }
       ]
     },
     {
@@ -265,19 +419,60 @@
     {
       "slide": 34,
       "fields": [
-        { "key": "serviceRosterNextDate", "textIndex": 0, "example": "6/21", "notes": "下主日(6/21)服事輪值" },
-        { "key": "serviceRosterText", "textIndex": 1, "example": "Michelle, 洪雪吟, 嘉文", "notes": "今日清洁多人" },
-        { "key": "serviceRosterChair", "textIndex": 4, "example": "賴建平" },
-        { "key": "serviceRosterWorship", "textIndex": 8, "example": "李麗婷" },
-        { "key": "serviceRosterUsher", "textIndex": 12, "example": "惠美" },
-        { "key": "serviceRosterCleanNames", "textIndex": 15, "example": "惠美, 悅心, Helen" },
-        { "key": "serviceRosterTodayDate", "textIndex": 16, "example": "6/14", "notes": "今日(6/14)清潔輪值" }
+        {
+          "key": "serviceRosterNextDate",
+          "textIndex": 0,
+          "example": "6/21",
+          "notes": "下主日(6/21)服事輪值"
+        },
+        {
+          "key": "serviceRosterText",
+          "textIndex": 1,
+          "example": "Michelle, 洪雪吟, 嘉文",
+          "notes": "今日清洁多人"
+        },
+        {
+          "key": "serviceRosterChair",
+          "textIndex": 4,
+          "example": "賴建平"
+        },
+        {
+          "key": "serviceRosterWorship",
+          "textIndex": 8,
+          "example": "李麗婷"
+        },
+        {
+          "key": "serviceRosterUsher",
+          "textIndex": 12,
+          "example": "惠美"
+        },
+        {
+          "key": "serviceRosterCleanNames",
+          "textIndex": 15,
+          "example": "惠美, 悅心, Helen"
+        },
+        {
+          "key": "serviceRosterTodayDate",
+          "textIndex": 16,
+          "example": "6/14",
+          "notes": "今日(6/14)清潔輪值"
+        }
       ]
     },
     {
       "slide": 35,
-      "fields": [{ "key": "verseOfWeek", "textIndex": 16, "example": "(以弗所書 2:8) …", "notes": "整句写入 16，并清空 17–19" }]
+      "fields": [
+        {
+          "key": "verseOfWeek",
+          "textIndex": 16,
+          "example": "(以弗所書 2:8) …",
+          "notes": "整句写入 16，并清空 17–19"
+        }
+      ]
     }
   ],
-  "specialAnnouncementSlides": [25, 26]
+  "specialAnnouncementSlides": [
+    25,
+    26
+  ]
 }

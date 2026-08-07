@@ -215,8 +215,7 @@ export default function BulletinPreviewPanel({
     planRefreshing &&
     (busySectionId == null ||
       busySectionId === 'scripture' ||
-      busySectionId === 'special_thanks' ||
-      busySectionId === 'family_joy' ||
+      (typeof busySectionId === 'string' && busySectionId.startsWith('announcement:')) ||
       busySectionId === 'baptism' ||
       busySectionId === 'more' ||
       Boolean(bulletin.sectionPptxOverrides?.[busySectionId ?? '']));

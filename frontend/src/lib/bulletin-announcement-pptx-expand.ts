@@ -2,6 +2,8 @@ import type JSZip from 'jszip';
 import JSZipCtor from './jszip';
 import type { WeeklyBulletin } from '../api/bulletins';
 import { applyIndexedTextReplacementsToSlideXml } from './pptx-preview';
+import { duplicateSlideInZip } from './pptx-duplicate-slide';
+import { filterVisibleAnnouncements } from './bulletin-section-visibility';
 
 const PPTX_MIME =
   'application/vnd.openxmlformats-officedocument.presentationml.presentation';
@@ -77,33 +79,47 @@ function writeAnnouncementTitleBody(xml: string, item: AnnouncementPageInput): s
   return out;
 }
 
-/** 与 shared.applyAnnouncementPagesToZip 保持一致（勿从 @file-service/shared 整包导入，会带入 pg） */
-async function applyAnnouncementPagesToZip(
+/**
+ * 动态公告页：一律用 P25「标题+正文」版式。
+ * 第 2 条写 P26；第 3 条起复制 P25，插在公告段末、P27（浸礼）之前。
+ */
+export async function applyAnnouncementPagesToZip(
   zip: JSZip,
   items: readonly AnnouncementPageInput[],
 ): Promise<void> {
-  const pages = items.slice(0, 2);
+  const pages = [...items];
   if (!pages.length) return;
 
   const slide25 = zip.file(SLIDE25_PATH);
   if (!slide25) return;
 
   const layout = stabilizeAnnouncementSlideXml(await slide25.async('string'));
-  zip.file(SLIDE25_PATH, writeAnnouncementTitleBody(layout, pages[0] ?? { title: ' ', body: ' ' }));
-  zip.file(
-    SLIDE26_PATH,
-    writeAnnouncementTitleBody(layout, pages[1] ?? { title: ' ', body: ' ' }),
-  );
+  zip.file(SLIDE25_PATH, writeAnnouncementTitleBody(layout, pages[0]!));
+
+  if (pages.length === 1) return;
+
+  zip.file(SLIDE26_PATH, writeAnnouncementTitleBody(layout, pages[1]!));
+
+  let lastPath = SLIDE26_PATH;
+  for (let i = 2; i < pages.length; i++) {
+    lastPath = await duplicateSlideInZip(zip, SLIDE25_PATH, {
+      insertAfterPath: lastPath,
+    });
+    const entry = zip.file(lastPath);
+    if (!entry) continue;
+    const xml = await entry.async('string');
+    zip.file(lastPath, writeAnnouncementTitleBody(xml, pages[i]!));
+  }
 }
 
 /**
- * 发布路径公告写入：固定 P25/P26，不再按条数加页。
+ * 发布路径公告写入：按可见条数加页（调用方已过滤隐藏项）。
  */
 export async function expandAnnouncementSlidesInPptx(
   file: File,
   bulletin: WeeklyBulletin,
 ): Promise<File> {
-  const items = bulletin.announcements ?? [];
+  const items = filterVisibleAnnouncements(bulletin.announcements, bulletin.hiddenSections);
   if (!items.length) return file;
 
   const zip = await JSZipCtor.loadAsync(file);

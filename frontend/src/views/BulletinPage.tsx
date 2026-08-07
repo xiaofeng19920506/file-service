@@ -15,8 +15,8 @@ import BulletinWorshipStep from '../components/bulletin/BulletinWorshipStep';
 import BulletinPreviewPanel from '../components/bulletin/BulletinPreviewPanel';
 import BulletinSlideShowLauncher from '../components/bulletin/BulletinSlideShowLauncher';
 import {
+  BulletinAnnouncementItemStep,
   BulletinBaptismStep,
-  BulletinFixedAnnouncementStep,
   BulletinBirthdayStep,
   BulletinMoreStep,
   BulletinOfferingStep,
@@ -46,10 +46,13 @@ import {
 } from '../lib/bulletin-section-pptx';
 import { withTemplateFieldDefaults } from '../lib/bulletin-template-field-defaults';
 import {
-  BULLETIN_NAV_SECTIONS,
+  announcementSectionId,
+  buildBulletinNavSections,
+  buildBulletinNavTree,
   isReadonlyNavSection,
   navSectionById,
   navSectionIndexById,
+  parseAnnouncementSectionId,
   resolveNavTargetSectionId,
 } from '../lib/bulletin-sections';
 import { BULLETIN_WIZARD_STEPS } from '../lib/bulletin-template-steps';
@@ -89,21 +92,12 @@ function bulletinIdFromHash(): string | null {
 }
 
 function toDrafts(bulletin: WeeklyBulletin): AnnouncementDraft[] {
-  const mapped = bulletin.announcements.map((item) => ({
+  return bulletin.announcements.map((item) => ({
     key: item.id,
     category: item.category || 'general',
     title: item.title,
     body: item.body,
   }));
-  while (mapped.length < 2) {
-    mapped.push({
-      key: crypto.randomUUID(),
-      category: mapped.length === 0 ? 'thanks' : 'celebration',
-      title: '',
-      body: '',
-    });
-  }
-  return mapped.slice(0, 2);
 }
 
 function withHiddenSections(bulletin: WeeklyBulletin): WeeklyBulletin {
@@ -140,10 +134,7 @@ export default function BulletinPage() {
   const [bulletins, setBulletins] = useState<WeeklyBulletin[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<WeeklyBulletin | null>(null);
-  const [announcements, setAnnouncements] = useState<AnnouncementDraft[]>(() => [
-    { key: crypto.randomUUID(), category: 'thanks', title: '', body: '' },
-    { key: crypto.randomUUID(), category: 'celebration', title: '', body: '' },
-  ]);
+  const [announcements, setAnnouncements] = useState<AnnouncementDraft[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -214,11 +205,26 @@ export default function BulletinPage() {
     };
   }, []);
 
+  const navSections = useMemo(
+    () =>
+      buildBulletinNavSections(announcements.map((a) => ({ id: a.key, title: a.title, body: a.body })), (n) =>
+        t('bulletin.announcementItem', { n }),
+      ),
+    [announcements, t],
+  );
+  const navTree = useMemo(
+    () =>
+      buildBulletinNavTree(announcements.map((a) => ({ id: a.key, title: a.title, body: a.body })), (n) =>
+        t('bulletin.announcementItem', { n }),
+      ),
+    [announcements, t],
+  );
+
   const stepperSteps = useMemo(
     () =>
-      BULLETIN_NAV_SECTIONS.map((section) => ({
+      navSections.map((section) => ({
         id: section.id,
-        label: t(section.labelKey),
+        label: section.label ?? t(section.labelKey),
         enabled: true,
         readonly: section.editableStepId == null || Boolean(section.groupOnly),
         visible: section.groupOnly
@@ -232,13 +238,13 @@ export default function BulletinPage() {
         hasTemplateSlides: (BULLETIN_SECTION_TEMPLATE_SLIDES[section.id]?.length ?? 0) > 0,
         hasPptxOverride: Boolean(draft?.sectionPptxOverrides?.[section.id]),
       })),
-    [t, draft],
+    [t, draft, navSections],
   );
 
-  const navCurrentIndex = navSectionIndexById(activeSectionId);
-  const navPreviewIndex = navSectionIndexById(previewSectionId);
+  const navCurrentIndex = navSectionIndexById(activeSectionId, navSections);
+  const navPreviewIndex = navSectionIndexById(previewSectionId, navSections);
   const currentStepDef = BULLETIN_WIZARD_STEPS[wizardStep];
-  const activeSectionReadonly = isReadonlyNavSection(activeSectionId);
+  const activeSectionReadonly = isReadonlyNavSection(activeSectionId, navSections);
 
   const handleVisibleSectionChange = useCallback((sectionId: string) => {
     // 预览滚动只更新高亮，不覆盖左侧编辑选中（否则无预览页的分区如未选版式时的本週聚会会被拽回）
@@ -268,21 +274,105 @@ export default function BulletinPage() {
     };
   }, [slideShowSessionId]);
 
-  const selectNavSection = useCallback((sectionId: string) => {
-    const targetId = resolveNavTargetSectionId(sectionId);
-    const section = navSectionById(targetId);
-    if (!section) return;
+  const selectNavSection = useCallback(
+    (sectionId: string) => {
+      const targetId = resolveNavTargetSectionId(sectionId, navTree);
+      const section = navSectionById(targetId, navSections);
+      if (!section) return;
 
-    setActiveSectionId(targetId);
-    setPreviewSectionId(targetId);
-    // 每次点左侧都 bump，确保右侧预览滚到对应分区（含重复点击）
-    setPreviewScrollBump((b) => b + 1);
+      setActiveSectionId(targetId);
+      setPreviewSectionId(targetId);
+      // 每次点左侧都 bump，确保右侧预览滚到对应分区（含重复点击）
+      setPreviewScrollBump((b) => b + 1);
 
-    if (section.editableStepId) {
-      const stepIdx = BULLETIN_WIZARD_STEPS.findIndex((s) => s.id === section.editableStepId);
-      if (stepIdx >= 0) setWizardStep(stepIdx);
-    }
+      if (section.editableStepId) {
+        const stepIdx = BULLETIN_WIZARD_STEPS.findIndex((s) => s.id === section.editableStepId);
+        if (stepIdx >= 0) setWizardStep(stepIdx);
+      }
+    },
+    [navSections, navTree],
+  );
+
+  const syncAnnouncementsToDraft = useCallback((next: AnnouncementDraft[]) => {
+    setAnnouncements(next);
+    setDraft((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        announcements: next.map((a, i) => ({
+          id: a.key,
+          sortOrder: i,
+          category: a.category ?? 'general',
+          title: a.title ?? '',
+          body: a.body,
+        })),
+      };
+    });
   }, []);
+
+  const handleAddAnnouncement = useCallback(() => {
+    const key = crypto.randomUUID();
+    const next = [
+      ...announcements,
+      { key, category: 'general', title: '', body: '' },
+    ];
+    syncAnnouncementsToDraft(next);
+    const sectionId = announcementSectionId(key);
+    window.setTimeout(() => selectNavSection(sectionId), 0);
+    if (!canManage || !draft) return;
+    void saveBulletinAnnouncements(
+      draft.id,
+      next.map((a, i) => ({
+        id: a.key,
+        sortOrder: i,
+        category: a.category ?? 'general',
+        title: a.title ?? '',
+        body: a.body,
+      })),
+    ).catch((err) => setError(err instanceof Error ? err.message : String(err)));
+  }, [announcements, canManage, draft, selectNavSection, syncAnnouncementsToDraft]);
+
+  const handleRemoveAnnouncement = useCallback(
+    (sectionId: string) => {
+      const itemId = parseAnnouncementSectionId(sectionId);
+      if (!itemId) return;
+      const next = announcements.filter((a) => a.key !== itemId);
+      syncAnnouncementsToDraft(next);
+      setDraft((prev) => {
+        if (!prev) return prev;
+        const hidden = (prev.hiddenSections ?? []).filter((id) => id !== sectionId);
+        return { ...prev, hiddenSections: hidden };
+      });
+      const fallback =
+        next[0] != null
+          ? announcementSectionId(next[0].key)
+          : 'baptism';
+      selectNavSection(fallback);
+      if (!canManage || !draft) return;
+      void saveBulletinAnnouncements(
+        draft.id,
+        next.map((a, i) => ({
+          id: a.key,
+          sortOrder: i,
+          category: a.category ?? 'general',
+          title: a.title ?? '',
+          body: a.body,
+        })),
+      )
+        .then(async () => {
+          const hiddenSections = setBulletinSectionVisible(draft.hiddenSections, sectionId, true);
+          // ensure removed id not in hidden
+          const cleaned = hiddenSections.filter((id) => id !== sectionId);
+          await updateBulletin(draft.id, {
+            hiddenSections: cleaned,
+            skipTestimonyWeek: cleaned.includes('testimony_week'),
+            skipDepartmentReports: cleaned.includes('department_reports'),
+          });
+        })
+        .catch((err) => setError(err instanceof Error ? err.message : String(err)));
+    },
+    [announcements, canManage, draft, selectNavSection, syncAnnouncementsToDraft],
+  );
 
   useEffect(() => {
     const hash = window.location.hash;
@@ -898,55 +988,14 @@ export default function BulletinPage() {
         return <BulletinOfferingStep {...common} />;
       case 'birthday':
         return <BulletinBirthdayStep {...common} />;
-      case 'special_thanks':
-      case 'family_joy':
+      case 'announcement_item':
         return (
-          <BulletinFixedAnnouncementStep
-            {...common}
-            slotIndex={currentStepDef.id === 'special_thanks' ? 0 : 1}
+          <BulletinAnnouncementItemStep
+            canEdit={canManage}
+            saving={saving}
+            sectionId={activeSectionId}
             announcements={announcements}
-            onAnnouncementsChange={(next) => {
-              const slots = next.slice(0, 2);
-              while (slots.length < 2) {
-                slots.push({
-                  key: crypto.randomUUID(),
-                  category: slots.length === 0 ? 'thanks' : 'celebration',
-                  title: '',
-                  body: '',
-                });
-              }
-              setAnnouncements(slots);
-              setDraft((prev) => {
-                if (!prev) return prev;
-                let updated: WeeklyBulletin = {
-                  ...prev,
-                  announcements: slots.map((a, i) => ({
-                    id: a.key,
-                    sortOrder: i,
-                    category: a.category ?? (i === 0 ? 'thanks' : 'celebration'),
-                    title: a.title ?? '',
-                    body: a.body,
-                  })),
-                };
-                const sectionKey =
-                  currentStepDef.id === 'special_thanks' ? 'special_thanks' : 'family_joy';
-                const slideNum = currentStepDef.id === 'special_thanks' ? 25 : 26;
-                if (updated.sectionPptxOverrides?.[sectionKey]) {
-                  const overrides = { ...updated.sectionPptxOverrides };
-                  delete overrides[sectionKey];
-                  // 兼容旧 key
-                  delete overrides.announcements;
-                  updated = { ...updated, sectionPptxOverrides: overrides };
-                }
-                if (updated.slideTextOverrides?.length) {
-                  const filtered = updated.slideTextOverrides.filter((o) => o.slide !== slideNum);
-                  if (filtered.length !== updated.slideTextOverrides.length) {
-                    updated = { ...updated, slideTextOverrides: filtered };
-                  }
-                }
-                return updated;
-              });
-            }}
+            onAnnouncementsChange={syncAnnouncementsToDraft}
             onSave={() => void handleSaveFields({}, true)}
           />
         );
@@ -1055,8 +1104,10 @@ export default function BulletinPage() {
               onReplacePptx={handleReplaceSectionPptx}
               onResetPptx={handleResetSectionPptx}
               onStepVisibilityChange={handleSectionVisibilityChange}
+              onAddAnnouncement={handleAddAnnouncement}
+              onRemoveAnnouncement={handleRemoveAnnouncement}
               onStepSelect={(index) => {
-                const section = BULLETIN_NAV_SECTIONS[index];
+                const section = navSections[index];
                 if (!section) return;
                 selectNavSection(section.id);
               }}

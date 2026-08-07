@@ -3,6 +3,8 @@
 export type BulletinNavSection = {
   id: string;
   labelKey: `bulletin.sections.${string}`;
+  /** 动态公告等：直接显示的文案（优先于 labelKey） */
+  label?: string;
   /** 对应可编辑向导步；null 表示模板固定页，仅导航预览 */
   editableStepId: string | null;
   /** 树形缩进深度（0 = 顶层） */
@@ -16,15 +18,32 @@ export type BulletinNavSection = {
 export type BulletinNavNode = {
   id: string;
   labelKey: `bulletin.sections.${string}`;
+  label?: string;
   editableStepId: string | null;
   groupOnly?: boolean;
   children?: BulletinNavNode[];
 };
 
+export const ANNOUNCEMENT_SECTION_PREFIX = 'announcement:';
+
+export function announcementSectionId(itemId: string): string {
+  return `${ANNOUNCEMENT_SECTION_PREFIX}${itemId}`;
+}
+
+export function parseAnnouncementSectionId(sectionId: string): string | null {
+  if (!sectionId.startsWith(ANNOUNCEMENT_SECTION_PREFIX)) return null;
+  const id = sectionId.slice(ANNOUNCEMENT_SECTION_PREFIX.length).trim();
+  return id || null;
+}
+
+export function isAnnouncementSectionId(sectionId: string): boolean {
+  return parseAnnouncementSectionId(sectionId) != null;
+}
+
 /**
  * 嵌套导航树：message 之前保持扁平；
  * 「大家庭时间」下挂奉献/生日/公告/金句/部门报告/三一颂与祝福；
- * 「公告」为分组：特别感谢 / 家有喜事 / 受洗 / 本周聚会等。
+ * 「公告」为分组：动态公告项 + 受洗 + 本周聚会等（公告项由 buildBulletinNavTree 注入）。
  */
 export const BULLETIN_NAV_TREE: BulletinNavNode[] = [
   { id: 'cover', labelKey: 'bulletin.sections.cover', editableStepId: 'cover' },
@@ -34,7 +53,6 @@ export const BULLETIN_NAV_TREE: BulletinNavNode[] = [
   { id: 'communion', labelKey: 'bulletin.sections.communion', editableStepId: null },
   { id: 'welcome', labelKey: 'bulletin.sections.welcome', editableStepId: null },
   { id: 'youth_prayer', labelKey: 'bulletin.sections.youth_prayer', editableStepId: null },
-  // P16 标题页，无可编辑表单字段；同工会/见证分享等属于公告区后续分区
   { id: 'testimony_week', labelKey: 'bulletin.sections.testimony_week', editableStepId: null },
   { id: 'message', labelKey: 'bulletin.sections.message', editableStepId: null },
   {
@@ -51,16 +69,6 @@ export const BULLETIN_NAV_TREE: BulletinNavNode[] = [
         groupOnly: true,
         children: [
           {
-            id: 'special_thanks',
-            labelKey: 'bulletin.sections.special_thanks',
-            editableStepId: 'special_thanks',
-          },
-          {
-            id: 'family_joy',
-            labelKey: 'bulletin.sections.family_joy',
-            editableStepId: 'family_joy',
-          },
-          {
             id: 'baptism',
             labelKey: 'bulletin.sections.baptism',
             editableStepId: 'baptism',
@@ -75,7 +83,6 @@ export const BULLETIN_NAV_TREE: BulletinNavNode[] = [
             labelKey: 'bulletin.sections.staff_meeting',
             editableStepId: 'more',
           },
-          // 轮值表：开始/结束月份
           { id: 'rotation', labelKey: 'bulletin.sections.rotation', editableStepId: 'more' },
           {
             id: 'future_testimony',
@@ -113,6 +120,12 @@ export const BULLETIN_NAV_TREE: BulletinNavNode[] = [
   },
 ];
 
+export type BulletinAnnouncementNavItem = {
+  id: string;
+  title?: string | null;
+  body?: string | null;
+};
+
 function flattenNavTree(nodes: BulletinNavNode[], depth = 0): BulletinNavSection[] {
   const out: BulletinNavSection[] = [];
   for (const node of nodes) {
@@ -120,6 +133,7 @@ function flattenNavTree(nodes: BulletinNavNode[], depth = 0): BulletinNavSection
     out.push({
       id: node.id,
       labelKey: node.labelKey,
+      label: node.label,
       editableStepId: node.editableStepId,
       depth,
       groupOnly: node.groupOnly,
@@ -132,9 +146,50 @@ function flattenNavTree(nodes: BulletinNavNode[], depth = 0): BulletinNavSection
   return out;
 }
 
+function cloneNavTree(nodes: BulletinNavNode[]): BulletinNavNode[] {
+  return nodes.map((node) => ({
+    ...node,
+    children: node.children ? cloneNavTree(node.children) : undefined,
+  }));
+}
+
 /**
- * 按模板/树 DFS 顺序的全部分区（含分组节点）。
- * 点击后滚到预览该分区首页；有 editableStepId 时切换左侧编辑面板。
+ * 注入动态公告子项后的导航树。
+ * `announcementLabel`：无标题时的「公告 {n}」文案。
+ */
+export function buildBulletinNavTree(
+  announcements: readonly BulletinAnnouncementNavItem[] | null | undefined,
+  announcementLabel: (n: number) => string = (n) => `Announcement ${n}`,
+): BulletinNavNode[] {
+  const tree = cloneNavTree(BULLETIN_NAV_TREE);
+  const group = findNavNode('announcements_group', tree);
+  if (!group) return tree;
+
+  const items = announcements ?? [];
+  const dynamicChildren: BulletinNavNode[] = items.map((item, index) => {
+    const title = (item.title ?? '').trim();
+    return {
+      id: announcementSectionId(item.id),
+      labelKey: 'bulletin.sections.announcement_item',
+      label: title || announcementLabel(index + 1),
+      editableStepId: 'announcement_item',
+    };
+  });
+
+  group.children = [...dynamicChildren, ...(group.children ?? [])];
+  return tree;
+}
+
+export function buildBulletinNavSections(
+  announcements: readonly BulletinAnnouncementNavItem[] | null | undefined,
+  announcementLabel?: (n: number) => string,
+): BulletinNavSection[] {
+  return flattenNavTree(buildBulletinNavTree(announcements, announcementLabel));
+}
+
+/**
+ * 按模板/树 DFS 顺序的全部分区（含分组节点；不含动态公告项）。
+ * 编辑页请用 buildBulletinNavSections(draft.announcements)。
  */
 export const BULLETIN_NAV_SECTIONS: BulletinNavSection[] = flattenNavTree(BULLETIN_NAV_TREE);
 
@@ -153,8 +208,11 @@ export function findNavNode(
 }
 
 /** 分组节点点选时落到第一个可预览子分区 */
-export function resolveNavTargetSectionId(sectionId: string): string {
-  const node = findNavNode(sectionId);
+export function resolveNavTargetSectionId(
+  sectionId: string,
+  nodes: BulletinNavNode[] = BULLETIN_NAV_TREE,
+): string {
+  const node = findNavNode(sectionId, nodes);
   if (!node?.groupOnly || !node.children?.length) return sectionId;
   const stack = [...node.children];
   while (stack.length) {
@@ -165,17 +223,26 @@ export function resolveNavTargetSectionId(sectionId: string): string {
   return sectionId;
 }
 
-export function navSectionIndexById(sectionId: string): number {
-  const idx = BULLETIN_NAV_SECTIONS.findIndex((s) => s.id === sectionId);
+export function navSectionIndexById(
+  sectionId: string,
+  sections: BulletinNavSection[] = BULLETIN_NAV_SECTIONS,
+): number {
+  const idx = sections.findIndex((s) => s.id === sectionId);
   return idx >= 0 ? idx : 0;
 }
 
-export function navSectionById(sectionId: string): BulletinNavSection | undefined {
-  return BULLETIN_NAV_SECTIONS.find((s) => s.id === sectionId);
+export function navSectionById(
+  sectionId: string,
+  sections: BulletinNavSection[] = BULLETIN_NAV_SECTIONS,
+): BulletinNavSection | undefined {
+  return sections.find((s) => s.id === sectionId);
 }
 
-export function isReadonlyNavSection(sectionId: string): boolean {
-  const section = navSectionById(sectionId);
+export function isReadonlyNavSection(
+  sectionId: string,
+  sections: BulletinNavSection[] = BULLETIN_NAV_SECTIONS,
+): boolean {
+  const section = navSectionById(sectionId, sections);
   if (!section) return true;
   if (section.groupOnly) return true;
   return section.editableStepId == null;

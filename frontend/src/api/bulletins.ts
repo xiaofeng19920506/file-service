@@ -299,8 +299,8 @@ export type BulletinSlidePreviewParams = {
   birthdayMonth?: string;
   birthdayNames?: string;
   verseOfWeek?: string;
-  /** 特别公告：超出 2 条时在浸礼页前加页 */
-  announcements?: { title: string; body: string }[];
+  /** 动态公告（已过滤隐藏项；可带 id 供 deck remap） */
+  announcements?: { id?: string; title: string; body: string }[];
   hiddenSections?: string[];
   weeklyMeetingVariant?: number | null;
   /** 草稿文字覆盖（与预览/导出一致） */

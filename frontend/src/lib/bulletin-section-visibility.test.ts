@@ -58,9 +58,21 @@ describe('bulletin section visibility', () => {
     expect(paths).toContain('ppt/slides/slide30.xml');
   });
 
-  it('maps legacy announcements hidden id to special_thanks and family_joy', () => {
-    expect(resolveHiddenSections({ hiddenSections: ['announcements'] })).toEqual(
-      expect.arrayContaining(['special_thanks', 'family_joy']),
+  it('maps legacy announcements hidden id to noop', () => {
+    expect(resolveHiddenSections({ hiddenSections: ['announcements', 'special_thanks'] })).toEqual(
+      [],
     );
+  });
+
+  it('keeps announcement:uuid in hiddenSections', () => {
+    expect(
+      resolveHiddenSections({ hiddenSections: ['announcement:abc'] }),
+    ).toEqual(['announcement:abc']);
+  });
+
+  it('deletes announcement template slides when visible count is 0', () => {
+    const paths = bulletinSlidePathsToDelete({ visibleAnnouncementCount: 0 });
+    expect(paths).toContain('ppt/slides/slide25.xml');
+    expect(paths).toContain('ppt/slides/slide26.xml');
   });
 });

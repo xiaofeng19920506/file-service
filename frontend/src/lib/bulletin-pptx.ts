@@ -16,7 +16,7 @@ import {
   resolveBirthdayMonthOverrideBlobId,
   slideNumberForBirthdayMonth,
 } from './bulletin-birthday-months';
-import { bulletinSlidePathsToDelete } from './bulletin-section-visibility';
+import { bulletinSlidePathsToDelete, filterVisibleAnnouncements } from './bulletin-section-visibility';
 import { BULLETIN_SECTION_TEMPLATE_SLIDES } from './bulletin-section-visibility';
 import { deleteSlidesFromPptx } from './pptx-preview';
 import { spliceAllSectionOverridesIntoPptx, spliceSectionSlidesIntoPptx } from './pptx-splice-section';
@@ -25,7 +25,14 @@ const PPTX_MIME =
   'application/vnd.openxmlformats-officedocument.presentationml.presentation';
 
 export function slidesToDelete(bulletin: WeeklyBulletin): string[] {
-  return bulletinSlidePathsToDelete(bulletin);
+  const visibleCount = filterVisibleAnnouncements(
+    bulletin.announcements,
+    bulletin.hiddenSections,
+  ).length;
+  return bulletinSlidePathsToDelete({
+    ...bulletin,
+    visibleAnnouncementCount: visibleCount,
+  });
 }
 
 function formFieldReapplySkipFromSectionBlobs(sectionBlobs: Record<string, Blob> | undefined): {

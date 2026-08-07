@@ -231,12 +231,14 @@ type PreviewQueryFields = {
   birthdayMonth: string;
   birthdayNames: string;
   verseOfWeek: string;
-  announcements: { title: string; body: string }[];
+  announcements: { id?: string; title: string; body: string }[];
   hiddenSections: string[];
   weeklyMeetingVariant: number | null;
 };
 
-function parseAnnouncementsQuery(raw: string | undefined): { title: string; body: string }[] {
+function parseAnnouncementsQuery(
+  raw: string | undefined,
+): { id?: string; title: string; body: string }[] {
   if (!raw?.trim()) return [];
   try {
     const parsed = JSON.parse(raw) as unknown;
@@ -244,6 +246,7 @@ function parseAnnouncementsQuery(raw: string | undefined): { title: string; body
     return parsed
       .filter((item): item is Record<string, unknown> => !!item && typeof item === 'object')
       .map((item) => ({
+        id: typeof item.id === 'string' && item.id.trim() ? item.id.trim() : undefined,
         title: typeof item.title === 'string' ? item.title : '',
         body: typeof item.body === 'string' ? item.body : '',
       }));
@@ -784,6 +787,7 @@ async function buildPatchedBulletinPptxBuf(opts: {
         birthdayNames: query.birthdayNames,
         verseOfWeek: query.verseOfWeek,
         announcements: query.announcements,
+        visibleAnnouncementCount: query.announcements.length,
         hiddenSections: query.hiddenSections,
         weeklyMeetingVariant: query.weeklyMeetingVariant,
         slideTextOverrides,
@@ -1195,7 +1199,10 @@ export function registerBulletinRoutes(
         bulletinId,
       });
 
-      const plan = await buildBulletinDeckPlanFromPptxBytes(pptxBuf);
+      const announcementIds = q.announcements
+        .map((a) => a.id)
+        .filter((id): id is string => Boolean(id));
+      const plan = await buildBulletinDeckPlanFromPptxBytes(pptxBuf, announcementIds);
       // 不再预热第 1 页：会与当前编辑页抢 LibreOffice 槽，拖慢生日等内容预览
       return reply.header('Cache-Control', 'private, no-store').send({
         rev: SLIDE_PREVIEW_PATCH_REV,

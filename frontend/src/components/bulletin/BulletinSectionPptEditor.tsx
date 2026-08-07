@@ -82,6 +82,7 @@ export default function BulletinSectionPptEditor({
         birthdayNames: draft.birthdayNames,
         verseOfWeek: draft.verseOfWeek,
         announcements: (draft.announcements ?? []).map((a) => ({
+          id: a.id,
           title: a.title ?? '',
           body: a.body,
         })),

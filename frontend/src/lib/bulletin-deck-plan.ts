@@ -5,7 +5,7 @@ import {
 import { listPptxSlidesInPresentationOrder } from './pptx-preview';
 import { BULLETIN_WIZARD_STEPS } from './bulletin-template-steps';
 import { BULLETIN_NAV_SECTIONS } from './bulletin-sections';
-import { resolveHiddenSections } from './bulletin-section-visibility';
+import { filterVisibleAnnouncements, resolveHiddenSections } from './bulletin-section-visibility';
 import { sectionPptxOverridesKey } from './bulletin-preview-patch';
 import {
   bulletinDynamicTextOverrides,
@@ -45,8 +45,7 @@ export const BULLETIN_TEMPLATE_SLIDE_SECTIONS: TemplateSlideSection[] = [
   { id: 'family_time', slides: [18] },
   { id: 'offering', slides: [19, 20] },
   { id: 'birthday', slides: [...BIRTHDAY_MONTH_SLIDES] },
-  { id: 'special_thanks', slides: [25] },
-  { id: 'family_joy', slides: [26] },
+  { id: '_announcement_pool', slides: [25, 26] },
   { id: 'baptism', slides: [27] },
   { id: 'weekly_meetings', slides: [28, 29, 30] },
   { id: 'staff_meeting', slides: [31] },
@@ -67,8 +66,7 @@ export const WIZARD_STEP_SECTION_IDS: Record<string, readonly string[]> = {
   worship: ['worship'],
   offering: ['offering'],
   birthday: ['birthday'],
-  special_thanks: ['special_thanks'],
-  family_joy: ['family_joy'],
+  announcement_item: [], // 动态 announcement:<id>，见 deck remap
   baptism: ['baptism'],
   verse: ['verse_of_week'],
   more: ['weekly_meetings', 'staff_meeting', 'rotation', 'future_testimony', 'service_roster'],
@@ -201,6 +199,7 @@ export async function buildBulletinDeckPlan(bulletin: WeeklyBulletin): Promise<B
     bulletinDynamicTextOverrides(bulletin),
     bulletin.slideTextOverrides,
   );
+  const visible = filterVisibleAnnouncements(bulletin.announcements, hiddenSections);
   const dto = await fetchBulletinDeckPlan({
     serviceDate: bulletin.serviceDate,
     serviceTime: bulletin.serviceTime || '11:00',
@@ -211,6 +210,7 @@ export async function buildBulletinDeckPlan(bulletin: WeeklyBulletin): Promise<B
     birthdayMonth: bulletin.birthdayMonth,
     birthdayNames: bulletin.birthdayNames,
     verseOfWeek: bulletin.verseOfWeek,
+    announcements: visible.map((a) => ({ id: a.id, title: a.title, body: a.body })),
     hiddenSections,
     weeklyMeetingVariant: bulletin.weeklyMeetingVariant,
     slideTextOverrides,
@@ -232,11 +232,14 @@ export async function buildBulletinDeckPlan(bulletin: WeeklyBulletin): Promise<B
 }
 
 /** 按导航顺序拼装预览分区（像 code splitting 后再 compose） */
-export function composeDeckSectionsForPreview(plan: BulletinDeckPlan): BulletinDeckSection[] {
+export function composeDeckSectionsForPreview(
+  plan: BulletinDeckPlan,
+  navOrder: { id: string }[] = BULLETIN_NAV_SECTIONS,
+): BulletinDeckSection[] {
   const byId = new Map(plan.sections.map((s) => [s.id, s]));
   const ordered: BulletinDeckSection[] = [];
 
-  for (const nav of BULLETIN_NAV_SECTIONS) {
+  for (const nav of navOrder) {
     const section = byId.get(nav.id);
     if (section?.slides.length) {
       ordered.push({ id: section.id, slides: [...section.slides] });
@@ -244,9 +247,10 @@ export function composeDeckSectionsForPreview(plan: BulletinDeckPlan): BulletinD
     }
   }
 
-  // unknown 单独保留，绝不并入上一分区（否则欢迎等内容会被误标）
+  // 动态公告等未在静态导航中的分区：按 plan.sections 原序插入
   for (const leftover of byId.values()) {
     if (!leftover.slides.length) continue;
+    if (leftover.id === '_announcement_pool') continue;
     ordered.push({ id: leftover.id, slides: [...leftover.slides] });
   }
 

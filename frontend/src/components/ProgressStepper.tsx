@@ -31,6 +31,8 @@ type ProgressStepperProps = {
   onReplacePptx?: (sectionId: string, file: File) => void | Promise<void>;
   onResetPptx?: (sectionId: string) => void | Promise<void>;
   onStepVisibilityChange?: (sectionId: string, visible: boolean) => void;
+  onAddAnnouncement?: () => void;
+  onRemoveAnnouncement?: (sectionId: string) => void;
   canManage?: boolean;
   orientation?: 'horizontal' | 'vertical';
 };
@@ -64,6 +66,10 @@ function clampMenuPosition(x: number, y: number, menu: HTMLElement) {
   };
 }
 
+function isAnnouncementItemId(sectionId: string): boolean {
+  return sectionId.startsWith('announcement:');
+}
+
 export default function ProgressStepper({
   steps,
   currentIndex,
@@ -73,6 +79,8 @@ export default function ProgressStepper({
   onReplacePptx,
   onResetPptx,
   onStepVisibilityChange,
+  onAddAnnouncement,
+  onRemoveAnnouncement,
   canManage = false,
   orientation = 'horizontal',
 }: ProgressStepperProps) {
@@ -127,12 +135,20 @@ export default function ProgressStepper({
   const openMenu = (sectionId: string, clientX: number, clientY: number) => {
     if (!canManage) return;
     const step = steps.find((s) => s.id === sectionId);
-    if (!step || step.groupOnly) return;
+    if (!step) return;
+    // 普通 groupOnly 无菜单；公告分组允许「添加公告」
+    if (step.groupOnly && sectionId !== 'announcements_group') return;
     setMenu({ sectionId, x: clientX, y: clientY });
   };
 
   const activeStep = menu ? steps.find((s) => s.id === menu.sectionId) : null;
-  const canSlides = Boolean(activeStep?.hasTemplateSlides);
+  const isAnnouncementsGroup = menu?.sectionId === 'announcements_group';
+  const isAnnouncementItem = Boolean(menu && isAnnouncementItemId(menu.sectionId));
+  const canSlides = Boolean(activeStep?.hasTemplateSlides) && !isAnnouncementsGroup;
+  const canVisibility =
+    Boolean(onStepVisibilityChange) &&
+    !isAnnouncementsGroup &&
+    (canSlides || isAnnouncementItem);
   const isHidden = activeStep?.visible === false;
   const hasOverride = Boolean(activeStep?.hasPptxOverride);
 
@@ -178,7 +194,8 @@ export default function ProgressStepper({
           const isGroup = Boolean(step.groupOnly);
           const canSelect = !isDisabled && Boolean(onStepSelect);
           const isSectionHidden = step.visible === false;
-          const showMenuTrigger = canManage && !isGroup;
+          const showMenuTrigger =
+            canManage && (!isGroup || step.id === 'announcements_group');
           const topLevelNumber =
             depth === 0
               ? steps.slice(0, index + 1).filter((s) => (s.depth ?? 0) === 0).length
@@ -245,6 +262,17 @@ export default function ProgressStepper({
               aria-label={t('bulletin.sectionContextMenu')}
             >
               <p className="progress-stepper-context-menu-title">{activeStep.label}</p>
+              {isAnnouncementsGroup && onAddAnnouncement ? (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="progress-stepper-context-menu-item"
+                  disabled={menuBusy}
+                  onClick={() => void runAction(() => onAddAnnouncement())}
+                >
+                  {t('bulletin.addAnnouncement')}
+                </button>
+              ) : null}
               {canSlides && onEditSlides ? (
                 <button
                   type="button"
@@ -288,7 +316,7 @@ export default function ProgressStepper({
                   {t('bulletin.editSlidesReset')}
                 </button>
               ) : null}
-              {canSlides && onStepVisibilityChange ? (
+              {canVisibility ? (
                 <>
                   <div className="progress-stepper-context-menu-sep" role="separator" />
                   <button
@@ -298,7 +326,7 @@ export default function ProgressStepper({
                     disabled={menuBusy}
                     onClick={() =>
                       void runAction(() => {
-                        onStepVisibilityChange(menu.sectionId, isHidden);
+                        onStepVisibilityChange?.(menu.sectionId, isHidden);
                       })
                     }
                   >
@@ -308,7 +336,25 @@ export default function ProgressStepper({
                   </button>
                 </>
               ) : null}
-              {!canSlides ? (
+              {isAnnouncementItem && onRemoveAnnouncement ? (
+                <>
+                  <div className="progress-stepper-context-menu-sep" role="separator" />
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="progress-stepper-context-menu-item"
+                    disabled={menuBusy}
+                    onClick={() =>
+                      void runAction(() => onRemoveAnnouncement(menu.sectionId))
+                    }
+                  >
+                    {t('bulletin.removeAnnouncement')}
+                  </button>
+                </>
+              ) : null}
+              {!isAnnouncementsGroup &&
+              !canSlides &&
+              !isAnnouncementItem ? (
                 <p className="progress-stepper-context-menu-empty">
                   {t('bulletin.sectionContextMenuEmpty')}
                 </p>

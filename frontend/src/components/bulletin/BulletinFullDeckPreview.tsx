@@ -250,6 +250,7 @@ export default function BulletinFullDeckPreview({
       birthdayNames: bulletin.birthdayNames,
       verseOfWeek: bulletin.verseOfWeek,
       announcements: (bulletin.announcements ?? []).map((a) => ({
+        id: a.id,
         title: a.title ?? '',
         body: a.body,
       })),

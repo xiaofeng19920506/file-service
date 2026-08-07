@@ -1,5 +1,8 @@
 import type { BulletinSlidePreviewParams } from '../api/bulletins';
-import { resolveHiddenSections } from './bulletin-section-visibility';
+import {
+  filterVisibleAnnouncements,
+  resolveHiddenSections,
+} from './bulletin-section-visibility';
 
 export type BulletinPreviewPatchFields = {
   serviceDate: string;
@@ -11,7 +14,7 @@ export type BulletinPreviewPatchFields = {
   birthdayMonth?: string;
   birthdayNames?: string;
   verseOfWeek?: string;
-  announcements?: { title: string; body: string }[];
+  announcements?: { id: string; title: string; body: string }[];
   hiddenSections?: string[];
   skipTestimonyWeek?: boolean;
   skipDepartmentReports?: boolean;
@@ -41,6 +44,7 @@ export function sectionPptxOverridesKey(
  */
 export function previewPatchFull(full: BulletinPreviewPatchFields): BulletinSlidePreviewParams {
   const hidden = resolveHiddenSections(full);
+  const visible = filterVisibleAnnouncements(full.announcements, hidden);
   return {
     serviceDate: full.serviceDate,
     serviceTime: full.serviceTime || '11:00',
@@ -51,7 +55,7 @@ export function previewPatchFull(full: BulletinPreviewPatchFields): BulletinSlid
     birthdayMonth: full.birthdayMonth,
     birthdayNames: full.birthdayNames,
     verseOfWeek: full.verseOfWeek,
-    announcements: full.announcements,
+    announcements: visible.map((a) => ({ id: a.id, title: a.title, body: a.body })),
     hiddenSections: hidden,
     weeklyMeetingVariant: full.weeklyMeetingVariant ?? null,
     slideTextOverrides: full.slideTextOverrides,
@@ -126,8 +130,7 @@ export function bulletinSectionContentRev(
       // 同工会文字走 slideTextOverrides；结构指纹已含 overrides，此处占位避免误用 full
       return '';
     case 'announcements':
-    case 'special_thanks':
-    case 'family_joy':
+    case 'announcement_item':
       return (params.announcements ?? [])
         .map((a) => `${a.title}\u0002${a.body}`)
         .join('\u0001');
@@ -143,6 +146,11 @@ export function bulletinSectionContentRev(
       // 这些区主要靠 slideTextOverrides / 结构；内容字段不并入
       return '';
     default:
+      if (sectionId.startsWith('announcement:')) {
+        return (params.announcements ?? [])
+          .map((a) => `${a.title}\u0002${a.body}`)
+          .join('\u0001');
+      }
       return fullContentRev(params);
   }
 }
@@ -150,7 +158,7 @@ export function bulletinSectionContentRev(
 /**
  * 前端 PNG 缓存代数：与后端 SLIDE_PREVIEW_PATCH_REV 对齐 bump，避免错页缓存残留。
  */
-export const BULLETIN_PREVIEW_BLOB_GEN = 'v62';
+export const BULLETIN_PREVIEW_BLOB_GEN = 'v63';
 
 /**
  * 前端 PNG 缓存 key：结构 + 本分区内容 + 本页文字覆盖。
