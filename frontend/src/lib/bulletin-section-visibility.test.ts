@@ -75,4 +75,16 @@ describe('bulletin section visibility', () => {
     expect(paths).toContain('ppt/slides/slide25.xml');
     expect(paths).toContain('ppt/slides/slide26.xml');
   });
+
+  it('keeps P28 when weeklyMeetingVariant is null or invalid', () => {
+    for (const weeklyMeetingVariant of [null, 0, 27, 99] as const) {
+      const paths = bulletinSlidePathsToDelete({
+        visibleAnnouncementCount: 2,
+        weeklyMeetingVariant,
+      });
+      expect(paths).not.toContain('ppt/slides/slide28.xml');
+      expect(paths).toContain('ppt/slides/slide29.xml');
+      expect(paths).toContain('ppt/slides/slide30.xml');
+    }
+  });
 });

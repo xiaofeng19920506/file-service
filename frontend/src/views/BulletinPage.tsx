@@ -235,7 +235,9 @@ export default function BulletinPage() {
         depth: section.depth,
         groupOnly: section.groupOnly,
         hasChildren: section.hasChildren,
-        hasTemplateSlides: (BULLETIN_SECTION_TEMPLATE_SLIDES[section.id]?.length ?? 0) > 0,
+        hasTemplateSlides:
+          section.id.startsWith('announcement:') ||
+          (BULLETIN_SECTION_TEMPLATE_SLIDES[section.id]?.length ?? 0) > 0,
         hasPptxOverride: Boolean(draft?.sectionPptxOverrides?.[section.id]),
       })),
     [t, draft, navSections],
@@ -1142,6 +1144,7 @@ export default function BulletinPage() {
               scrollToPresentationSlide={previewScrollToSlide}
               busySectionId={busySectionId}
               bulletin={draft}
+              navOrder={navSections}
               worshipRefreshKey={worshipPreviewRevision}
               onVisibleSectionChange={handleVisibleSectionChange}
               onDeckMetaChange={(meta) => {

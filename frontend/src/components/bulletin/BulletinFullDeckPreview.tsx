@@ -13,7 +13,7 @@ import {
   sectionPptxOverridesKey,
   type BulletinPreviewPatchFields,
 } from '../../lib/bulletin-preview-patch';
-import { navSectionById } from '../../lib/bulletin-sections';
+import { navSectionById, type BulletinNavSection } from '../../lib/bulletin-sections';
 import { upcomingSundayIso } from '../../lib/bulletin-date';
 import {
   bulletinDynamicTextOverrides,
@@ -174,6 +174,8 @@ type BulletinFullDeckPreviewProps = {
   /** 仅该分区显示同步/刷新 loading，其它分区保持现有预览 */
   busySectionId?: string | null;
   scrollRequest?: BulletinPreviewScrollRequest | null;
+  /** 左侧动态导航顺序（含 announcement:<id>）；用于预览分区编排 */
+  navOrder?: BulletinNavSection[];
   worshipItems?: PlaylistItem[];
   worshipPlaylistTitle?: string;
   onVisibleSlideChange?: (slideNumber: number) => void;
@@ -189,6 +191,7 @@ export default function BulletinFullDeckPreview({
   highlightSectionId = '',
   busySectionId = null,
   scrollRequest = null,
+  navOrder,
   worshipItems = [],
   worshipPlaylistTitle = '',
   onVisibleSlideChange,
@@ -203,8 +206,8 @@ export default function BulletinFullDeckPreview({
   const worshipFirstSlide = worshipFirstPresentationSlide(deckPlan);
 
   const allComposedSections = useMemo(
-    () => (deckPlan ? composeDeckSectionsForPreview(deckPlan) : []),
-    [deckPlan],
+    () => (deckPlan ? composeDeckSectionsForPreview(deckPlan, navOrder) : []),
+    [deckPlan, navOrder],
   );
 
   const composedSections = useMemo(() => {
@@ -464,7 +467,7 @@ export default function BulletinFullDeckPreview({
         })}
         {highlightSectionId &&
         !allComposedSections.some((s) => s.id === highlightSectionId) &&
-        navSectionById(highlightSectionId) ? (
+        navSectionById(highlightSectionId, navOrder) ? (
           <section
             className="bulletin-deck-section bulletin-deck-section--hidden-placeholder"
             data-section={highlightSectionId}

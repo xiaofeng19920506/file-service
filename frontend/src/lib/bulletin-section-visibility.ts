@@ -193,8 +193,10 @@ export function bulletinSlidePathsToDelete(input: {
   }
 
   if (!hidden.includes('weekly_meetings')) {
-    // 未选手动版式时默认保留 P28，避免 deck 无页导致左侧点不中
-    const keep = input.weeklyMeetingVariant ?? 28;
+    // 未选手动版式或不合法值时默认保留 P28，避免三页全删导致左侧点不中
+    const raw = input.weeklyMeetingVariant;
+    const keep =
+      raw === 28 || raw === 29 || raw === 30 ? raw : 28;
     for (const n of WEEKLY_MEETING_VARIANTS) {
       if (n !== keep) paths.add(slidePath(n));
     }

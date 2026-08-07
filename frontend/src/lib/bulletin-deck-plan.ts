@@ -238,8 +238,33 @@ export function composeDeckSectionsForPreview(
 ): BulletinDeckSection[] {
   const byId = new Map(plan.sections.map((s) => [s.id, s]));
   const ordered: BulletinDeckSection[] = [];
+  let announcementsHandledInNav = false;
+
+  const flushAnnouncementPool = () => {
+    for (const section of plan.sections) {
+      if (!section.id.startsWith('announcement:')) continue;
+      const hit = byId.get(section.id);
+      if (!hit?.slides.length) continue;
+      ordered.push({ id: hit.id, slides: [...hit.slides] });
+      byId.delete(section.id);
+    }
+  };
 
   for (const nav of navOrder) {
+    if (nav.id.startsWith('announcement:')) {
+      announcementsHandledInNav = true;
+      const section = byId.get(nav.id);
+      if (section?.slides.length) {
+        ordered.push({ id: section.id, slides: [...section.slides] });
+        byId.delete(nav.id);
+      }
+      continue;
+    }
+    // 静态导航无动态公告节点：在受洗前按 deck 顺序插入
+    if (nav.id === 'baptism' && !announcementsHandledInNav) {
+      flushAnnouncementPool();
+      announcementsHandledInNav = true;
+    }
     const section = byId.get(nav.id);
     if (section?.slides.length) {
       ordered.push({ id: section.id, slides: [...section.slides] });
@@ -247,10 +272,15 @@ export function composeDeckSectionsForPreview(
     }
   }
 
-  // 动态公告等未在静态导航中的分区：按 plan.sections 原序插入
+  if (!announcementsHandledInNav) flushAnnouncementPool();
+
   for (const leftover of byId.values()) {
     if (!leftover.slides.length) continue;
     if (leftover.id === '_announcement_pool') continue;
+    if (leftover.id.startsWith('announcement:')) {
+      ordered.push({ id: leftover.id, slides: [...leftover.slides] });
+      continue;
+    }
     ordered.push({ id: leftover.id, slides: [...leftover.slides] });
   }
 

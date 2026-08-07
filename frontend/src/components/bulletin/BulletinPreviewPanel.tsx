@@ -9,6 +9,7 @@ import {
   type BulletinDeckPlan,
 } from '../../lib/bulletin-deck-plan';
 import { sectionPptxOverridesKey } from '../../lib/bulletin-preview-patch';
+import type { BulletinNavSection } from '../../lib/bulletin-sections';
 import BulletinFullDeckPreview, {
   type BulletinPreviewScrollRequest,
 } from './BulletinFullDeckPreview';
@@ -24,6 +25,8 @@ type BulletinPreviewPanelProps = {
   /** 正在同步/刷新的分区（仅该区显示 loading，不影响整页） */
   busySectionId?: string | null;
   bulletin: WeeklyBulletin;
+  /** 含动态公告的左侧导航，用于预览分区顺序 */
+  navOrder?: BulletinNavSection[];
   worshipRefreshKey?: number;
   onVisibleSectionChange?: (sectionId: string) => void;
   /** 供左侧「投影」使用实际页数 */
@@ -37,6 +40,7 @@ export default function BulletinPreviewPanel({
   scrollToPresentationSlide = null,
   busySectionId = null,
   bulletin,
+  navOrder,
   worshipRefreshKey = 0,
   onVisibleSectionChange,
   onDeckMetaChange,
@@ -60,6 +64,9 @@ export default function BulletinPreviewPanel({
   // 否则预览列表会被反复重置、后面的页一直停在加载中。
   const hiddenSectionsKey = (bulletin.hiddenSections ?? []).join(',');
   const sectionPptxKey = sectionPptxOverridesKey(bulletin.sectionPptxOverrides);
+  const announcementsStructureKey = (bulletin.announcements ?? [])
+    .map((a) => a.id)
+    .join(',');
 
   useEffect(() => {
     let cancelled = false;
@@ -95,8 +102,8 @@ export default function BulletinPreviewPanel({
     bulletin.skipTestimonyWeek,
     bulletin.skipDepartmentReports,
     bulletin.weeklyMeetingVariant,
-    // 仅条数影响加页结构；正文改动不重建 plan
-    (bulletin.announcements ?? []).length,
+    // 条数 + id 顺序影响加页与 remap；正文改动不重建 plan
+    announcementsStructureKey,
     sectionPptxKey,
   ]);
 
@@ -229,6 +236,7 @@ export default function BulletinPreviewPanel({
         highlightSectionId={scrollToSectionId}
         busySectionId={busySectionId ?? (structureRefreshing ? scrollToSectionId : null)}
         scrollRequest={scrollRequest}
+        navOrder={navOrder}
         worshipItems={worshipItems}
         worshipPlaylistTitle={worshipPlaylistTitle}
         onVisibleSlideChange={handleVisibleSlide}
