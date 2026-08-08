@@ -52,6 +52,7 @@ import {
   resolveServiceRosterFromSchedule,
   setServiceRotationSchedules,
 } from '../lib/bulletin-service-rotation';
+import { BULLETIN_DRIVE_DATA_REFRESHED } from '../hooks/useBulletinDrivePoll';
 import {
   announcementSectionId,
   buildBulletinNavSections,
@@ -528,6 +529,18 @@ export default function BulletinPage() {
     return () => {
       cancelled = true;
     };
+  }, [canManage]);
+
+  useEffect(() => {
+    const onRefreshed = () => {
+      setDraft((prev) => (prev ? withHiddenSections(prev) : prev));
+      if (!canManage) return;
+      void fetchBulletinDriveSyncStatus()
+        .then(setDriveSyncStatus)
+        .catch(() => undefined);
+    };
+    window.addEventListener(BULLETIN_DRIVE_DATA_REFRESHED, onRefreshed);
+    return () => window.removeEventListener(BULLETIN_DRIVE_DATA_REFRESHED, onRefreshed);
   }, [canManage]);
 
   useEffect(() => {

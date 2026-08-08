@@ -15,6 +15,7 @@ import BulletinSlideShowProjectorPage from './views/BulletinSlideShowProjectorPa
 import VipVideoPage from './views/VipVideoPage';
 import UploadConfirmPage from './views/UploadConfirmPage';
 import { useLibraryUpload } from './hooks/useLibraryUpload';
+import { useBulletinDrivePoll } from './hooks/useBulletinDrivePoll';
 import PageNavTabs from './components/PageNavTabs';
 import { CloseIcon, ChevronLeftIcon, MenuIcon, MoonIcon, SunIcon } from './components/icons';
 import { useAppPage } from './hooks/useAppPage';
@@ -37,6 +38,10 @@ function AppShellInner({
 }) {
   const { t, locale, setLocale } = useI18n();
   const { user, loading, logout, permissions, isAdmin } = useAuth();
+  useBulletinDrivePoll({
+    enabled: Boolean(user) && permissions.canViewBulletin,
+    canManage: permissions.canManageBulletin,
+  });
   const {
     page,
     playlistId,
