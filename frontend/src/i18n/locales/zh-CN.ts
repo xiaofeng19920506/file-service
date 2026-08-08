@@ -262,14 +262,16 @@ export default {
     baptism: '受洗公告',
     slideOptions: '幻灯片选项',
     sectionVisible: '显示此分区',
-    sectionVisibleHint: '隐藏后，本分区不会出现在预览与导出的 PPT 中；更改会立即更新预览并自动保存。',
+    sectionVisibleHint:
+      '隐藏后，预览仍会显示本分区并标注「已隐藏」；投影放映时会自动跳过。导出/下载的 PPT 仍会去掉隐藏分区。更改会立即更新预览并自动保存。',
     sectionShow: '显示本区',
     sectionHide: '隐藏本区',
     sectionContextMenu: '分区操作',
     sectionContextMenuHint: '右键打开分区菜单（修改幻灯片、上传替换、显示/隐藏等）',
     sectionContextMenuEmpty: '此分区暂无可操作项',
+    previewHiddenSlideBadge: '已隐藏 · 投影时跳过',
     previewSectionHiddenHint:
-      '此分区当前已隐藏，因此预览里没有对应页。请在左侧分区上右键选择「显示本区」——例如圣餐是模板第 10–13 页，欢迎新朋友是第 14 页，两者不会混用。',
+      '此分区当前已隐藏。预览仍可查看内容；投影放映时会跳过。请在左侧分区上右键选择「显示本区」以参与放映。',
     sectionVisibleNavHint:
       '在左侧分区上右键（或点 ⋯）可修改幻灯片、上传 PPT 替换本区、恢复原版，以及显示/隐藏本区。',
     editSlidesOpenEditor: '打开幻灯片编辑器',

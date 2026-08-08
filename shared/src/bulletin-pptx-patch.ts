@@ -638,6 +638,10 @@ export type BulletinPreviewPatchInput = {
   skipTestimonyWeek?: boolean;
   skipDepartmentReports?: boolean;
   weeklyMeetingVariant?: number | null;
+  /**
+   * 预览默认 true：隐藏分区仍留在 deck 里供标注；导出勿传。
+   */
+  retainHiddenSections?: boolean;
   /** 幻灯片文字覆盖（slide 文件号 + textIndex） */
   slideTextOverrides?: SlideTextOverride[];
 };
@@ -956,7 +960,13 @@ export async function patchBulletinPreviewInPptx(
 
   const book = input.scriptureBook?.trim() ?? '';
   const reference = input.scriptureReference?.trim() ?? '';
-  const hideScripture = bulletinSlidePathsToDelete(input).some((p) => p.includes('slide4.xml'));
+  const deleteProbe = {
+    ...input,
+    retainHiddenSections: input.retainHiddenSections ?? true,
+  };
+  const hideScripture = bulletinSlidePathsToDelete(deleteProbe).some((p) =>
+    p.includes('slide4.xml'),
+  );
 
   let zip = await JSZip.loadAsync(buf);
 
@@ -986,7 +996,7 @@ export async function patchBulletinPreviewInPptx(
     await applySlideTextOverridesToZip(zip, overrides);
   }
 
-  const hideBirthday = bulletinSlidePathsToDelete(input).some((p) =>
+  const hideBirthday = bulletinSlidePathsToDelete(deleteProbe).some((p) =>
     p.includes(`slide${BIRTHDAY_ANCHOR_SLIDE}.xml`),
   );
   if (!hideBirthday) {
@@ -1021,6 +1031,7 @@ export async function patchBulletinPreviewInPptx(
   const removePaths = bulletinSlidePathsToDelete({
     ...input,
     visibleAnnouncementCount: announcementCount,
+    retainHiddenSections: input.retainHiddenSections ?? true,
   });
   // 先按模板文件号删页，再加公告复制页，避免复制后 slide 编号漂移误删
   if (removePaths.length) {

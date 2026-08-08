@@ -4,6 +4,7 @@ import type { PlaylistItem } from '../../api/playlists';
 import {
   buildBulletinDeckPlan,
   firstSlideForSection,
+  presentationSlidesToSkipInShow,
   sectionIdForSlide,
   slidesForSection,
   type BulletinDeckPlan,
@@ -29,8 +30,8 @@ type BulletinPreviewPanelProps = {
   navOrder?: BulletinNavSection[];
   worshipRefreshKey?: number;
   onVisibleSectionChange?: (sectionId: string) => void;
-  /** 供左侧「投影」使用实际页数 */
-  onDeckMetaChange?: (meta: { totalSlides: number } | null) => void;
+  /** 供左侧「投影」使用实际页数与跳过页 */
+  onDeckMetaChange?: (meta: { totalSlides: number; skipSlides: number[] } | null) => void;
   onWorshipPresentationModeChange?: (mode: WorshipPresentationMode) => void;
 };
 
@@ -109,9 +110,21 @@ export default function BulletinPreviewPanel({
 
   useEffect(() => {
     if (!onDeckMetaChange) return;
-    if (deckPlan) onDeckMetaChange({ totalSlides: deckPlan.totalSlides });
-    else onDeckMetaChange(null);
-  }, [deckPlan, onDeckMetaChange]);
+    if (deckPlan) {
+      onDeckMetaChange({
+        totalSlides: deckPlan.totalSlides,
+        skipSlides: presentationSlidesToSkipInShow(deckPlan, bulletin),
+      });
+    } else {
+      onDeckMetaChange(null);
+    }
+  }, [
+    deckPlan,
+    onDeckMetaChange,
+    bulletin.hiddenSections,
+    bulletin.skipTestimonyWeek,
+    bulletin.skipDepartmentReports,
+  ]);
 
   // 区分「点击左侧分区」与「预览滚动跟随」：后者也会改 scrollToSectionId，
   // 若照样回滚预览，用户手动下滚会被不断拽回当前分区，永远滚不到后面的页。

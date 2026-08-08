@@ -6652,6 +6652,30 @@
   background: var(--surface);
 }
 
+.bulletin-deck-slide--hidden {
+  opacity: 0.72;
+}
+
+.bulletin-deck-slide--hidden .bulletin-slide-preview-frame {
+  outline: 2px dashed color-mix(in srgb, var(--text-secondary) 55%, transparent);
+  outline-offset: -2px;
+}
+
+.bulletin-deck-slide-hidden-badge {
+  position: absolute;
+  z-index: 2;
+  top: 0.55rem;
+  left: 0.55rem;
+  padding: 0.28rem 0.55rem;
+  border-radius: 6px;
+  background: color-mix(in srgb, #1a1a1a 82%, transparent);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  pointer-events: none;
+}
+
 .bulletin-deck-section-title {
   margin: 0;
   font-size: 0.88rem;
@@ -6669,6 +6693,7 @@
 }
 
 .bulletin-deck-slide {
+  position: relative;
   /* 按预览窗口实际宽高分别拉伸铺满：完整显示、不裁切、不留黑边 */
   display: flex;
   flex-direction: column;

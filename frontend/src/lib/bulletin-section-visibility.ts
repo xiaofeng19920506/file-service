@@ -162,9 +162,9 @@ function slidePath(n: number): string {
 /**
  * 需要从 PPTX 删除的 slide 路径：
  * - 始终删 P3 / P7/P9 / P21/P22 / 旧生日提醒 P23
- * - 隐藏分区对应页（含生日锚点 P24）
+ * - 隐藏分区对应页（含生日锚点 P24）；`retainHiddenSections` 时保留供预览标注
  * - 可见公告为 0 时删 P25/P26
- * - 本週聚会未选中的版式页
+ * - 本週聚会未选中的版式页（预览保留隐藏分区时仍只留一版）
  */
 export function bulletinSlidePathsToDelete(input: {
   hiddenSections?: string[] | null;
@@ -175,18 +175,26 @@ export function bulletinSlidePathsToDelete(input: {
   birthdayMonth?: string | number | null;
   /** 未隐藏的公告条数；缺省视为「有公告页」（不因条数删 P25/P26） */
   visibleAnnouncementCount?: number | null;
+  /**
+   * 预览/投影：保留隐藏分区页（UI 标「已隐藏」，投影导航跳过）。
+   * 导出 PPT 勿开此开关。
+   */
+  retainHiddenSections?: boolean;
 }): string[] {
   const hidden = resolveHiddenSections(input);
+  const retainHidden = Boolean(input.retainHiddenSections);
   const paths = new Set<string>(
     BULLETIN_ALWAYS_OMIT_SLIDE_FILES.map((n) => slidePath(n)),
   );
 
-  for (const sectionId of hidden) {
-    if (isAnnouncementSectionId(sectionId)) continue;
-    if (sectionId === '_announcement_pool') continue;
-    const slides = BULLETIN_SECTION_TEMPLATE_SLIDES[sectionId];
-    if (!slides) continue;
-    for (const n of slides) paths.add(slidePath(n));
+  if (!retainHidden) {
+    for (const sectionId of hidden) {
+      if (isAnnouncementSectionId(sectionId)) continue;
+      if (sectionId === '_announcement_pool') continue;
+      const slides = BULLETIN_SECTION_TEMPLATE_SLIDES[sectionId];
+      if (!slides) continue;
+      for (const n of slides) paths.add(slidePath(n));
+    }
   }
 
   if (input.visibleAnnouncementCount === 0) {
@@ -201,7 +209,8 @@ export function bulletinSlidePathsToDelete(input: {
     paths.add(slidePath(26));
   }
 
-  if (!hidden.includes('weekly_meetings')) {
+  // 导出且隐藏本週聚会：上面已删三页。预览保留时仍只留所选版式。
+  if (retainHidden || !hidden.includes('weekly_meetings')) {
     const keep = resolveWeeklyMeetingKeepVariant(input.weeklyMeetingVariant);
     for (const n of WEEKLY_MEETING_VARIANTS) {
       if (n !== keep) paths.add(slidePath(n));

@@ -5,7 +5,7 @@ import {
 import { listPptxSlidesInPresentationOrder } from './pptx-preview';
 import { BULLETIN_WIZARD_STEPS } from './bulletin-template-steps';
 import { BULLETIN_NAV_SECTIONS } from './bulletin-sections';
-import { filterVisibleAnnouncements, resolveHiddenSections } from './bulletin-section-visibility';
+import { resolveHiddenSections } from './bulletin-section-visibility';
 import { sectionPptxOverridesKey } from './bulletin-preview-patch';
 import {
   bulletinDynamicTextOverrides,
@@ -199,7 +199,8 @@ export async function buildBulletinDeckPlan(bulletin: WeeklyBulletin): Promise<B
     bulletinDynamicTextOverrides(bulletin),
     bulletin.slideTextOverrides,
   );
-  const visible = filterVisibleAnnouncements(bulletin.announcements, hiddenSections);
+  // 预览保留隐藏公告页（标「已隐藏」）；导出仍用 filterVisibleAnnouncements
+  const announcementsForPreview = bulletin.announcements ?? [];
   const dto = await fetchBulletinDeckPlan({
     serviceDate: bulletin.serviceDate,
     serviceTime: bulletin.serviceTime || '11:00',
@@ -210,7 +211,11 @@ export async function buildBulletinDeckPlan(bulletin: WeeklyBulletin): Promise<B
     birthdayMonth: bulletin.birthdayMonth,
     birthdayNames: bulletin.birthdayNames,
     verseOfWeek: bulletin.verseOfWeek,
-    announcements: visible.map((a) => ({ id: a.id, title: a.title, body: a.body })),
+    announcements: announcementsForPreview.map((a) => ({
+      id: a.id,
+      title: a.title,
+      body: a.body,
+    })),
     hiddenSections,
     weeklyMeetingVariant: bulletin.weeklyMeetingVariant,
     slideTextOverrides,
@@ -229,6 +234,21 @@ export async function buildBulletinDeckPlan(bulletin: WeeklyBulletin): Promise<B
     sections,
     wizardSteps: buildWizardSteps(sections),
   };
+}
+
+/** 投影时跳过的演示页（隐藏分区） */
+export function presentationSlidesToSkipInShow(
+  plan: BulletinDeckPlan | null | undefined,
+  bulletin: {
+    hiddenSections?: string[] | null;
+    skipTestimonyWeek?: boolean;
+    skipDepartmentReports?: boolean;
+  },
+): number[] {
+  if (!plan) return [];
+  const hidden = new Set(resolveHiddenSections(bulletin));
+  if (!hidden.size) return [];
+  return plan.slides.filter((s) => hidden.has(s.sectionId)).map((s) => s.index);
 }
 
 /** 按导航顺序拼装预览分区（像 code splitting 后再 compose） */

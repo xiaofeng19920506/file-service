@@ -208,7 +208,7 @@ describe('bulletin deck plan', () => {
   });
 });
 
-  it('does not put welcome under worship when communion is hidden', async () => {
+  it('keeps communion slides when section is hidden (preview retain)', async () => {
     const tpl = await readFile(templatePath);
     const { buildPreviewMatchingPptx } = await import('./bulletin-preview-pptx');
     const file = await buildPreviewMatchingPptx(
@@ -225,13 +225,17 @@ describe('bulletin deck plan', () => {
     );
     const plan = await buildBulletinDeckPlanFromFile(file);
     const worship = plan.sections.find((s) => s.id === 'worship');
+    const communion = plan.sections.find((s) => s.id === 'communion');
     const welcome = plan.sections.find((s) => s.id === 'welcome');
     const order = await listPptxSlidesInPresentationOrder(file);
     const welcomeFile = order.find((s) => s.slideInFile === 14);
     expect(welcomeFile).toBeDefined();
     expect(sectionIdForSlide(welcomeFile!.index, plan)).toBe('welcome');
     expect(worship?.slides ?? []).not.toContain(welcomeFile!.index);
-    expect(order.some((s) => [10, 11, 12, 13].includes(s.slideInFile))).toBe(false);
+    // 预览保留隐藏分区页，便于标注；导出路径仍会删页
+    expect(order.some((s) => [10, 11, 12, 13].includes(s.slideInFile))).toBe(true);
+    expect(communion?.slides.length).toBeGreaterThanOrEqual(1);
+    expect(welcome?.slides.length).toBe(1);
   });
 
   it('worship section only contains template slide 8 even with long scripture', async () => {

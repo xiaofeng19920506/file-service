@@ -48,7 +48,12 @@ export async function buildPreviewMatchingPptx(
   filename = 'bulletin-preview.pptx',
 ): Promise<File> {
   const zip = await JSZip.loadAsync(await templateBlob.arrayBuffer());
-  const removePaths = bulletinSlidePathsToDelete(bulletin);
+  // 与 patchBulletinPreviewInPptx 一致：未传公告时按 0 条处理（删 P25/P26）
+  const removePaths = bulletinSlidePathsToDelete({
+    ...bulletin,
+    retainHiddenSections: true,
+    visibleAnnouncementCount: 0,
+  });
   const hideScripture = removePaths.includes('ppt/slides/slide4.xml');
 
   if (bulletin.serviceDate) {

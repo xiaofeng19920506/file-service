@@ -110,7 +110,8 @@ const patchedPptxCache = new Map<string, Buffer>();
 /** 预览补丁版本；v35=分区 override 支持增删页（splice 变长） */
 /** v52：圣餐英文经文略加大至 28pt，减少底部空白 */
 /** v64：生日月页外置到模板库，主模板仅 P24 锚点 */
-const SLIDE_PREVIEW_PATCH_REV = 'v66';
+/** v67：预览保留隐藏分区页（投影再跳过） */
+const SLIDE_PREVIEW_PATCH_REV = 'v67';
 
 /** 生日月库 / 服事轮值磁盘指纹（Drive 同步后变化，使预览缓存失效） */
 function previewLibraryRev(): string {
@@ -822,6 +823,7 @@ async function buildPatchedBulletinPptxBuf(opts: {
         visibleAnnouncementCount: query.announcements.length,
         hiddenSections: query.hiddenSections,
         weeklyMeetingVariant: query.weeklyMeetingVariant,
+        retainHiddenSections: true,
         slideTextOverrides,
       }),
     );

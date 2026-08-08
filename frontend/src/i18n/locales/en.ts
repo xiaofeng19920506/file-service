@@ -272,15 +272,16 @@ const en: MessageTree = {
     slideOptions: 'Slide options',
     sectionVisible: 'Show this section',
     sectionVisibleHint:
-      'When hidden, this section is omitted from the preview and exported PPT. Changes update the preview immediately and auto-save.',
+      'When hidden, the preview still shows this section with a “Hidden” badge; slideshow projection skips it. Downloaded/exported PPT still omits hidden sections. Changes update the preview immediately and auto-save.',
     sectionShow: 'Show section',
     sectionHide: 'Hide section',
     sectionContextMenu: 'Section actions',
     sectionContextMenuHint:
       'Right-click for section actions (edit slides, upload replace, show/hide, etc.)',
     sectionContextMenuEmpty: 'No actions for this section',
+    previewHiddenSlideBadge: 'Hidden · skipped in projection',
     previewSectionHiddenHint:
-      'This section is hidden, so it has no slides in the preview. Right-click the section on the left and choose “Show section” — Communion is template slides 10–13; Welcome is slide 14. They are never mixed.',
+      'This section is hidden. You can still preview it; projection skips it. Right-click the section on the left and choose “Show section” to include it in the show.',
     sectionVisibleNavHint:
       'Right-click a section on the left (or tap ⋯) to edit slides, upload a PPT to replace it, restore the template, or show/hide it.',
     editSlidesOpenEditor: 'Open slide editor',

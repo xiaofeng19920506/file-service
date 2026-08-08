@@ -14,6 +14,7 @@ import {
   type BulletinPreviewPatchFields,
 } from '../../lib/bulletin-preview-patch';
 import { navSectionById, type BulletinNavSection } from '../../lib/bulletin-sections';
+import { resolveHiddenSections } from '../../lib/bulletin-section-visibility';
 import { upcomingSundayIso } from '../../lib/bulletin-date';
 import {
   bulletinDynamicTextOverrides,
@@ -38,6 +39,8 @@ type DeckSlideItemProps = {
   highlight: boolean;
   /** 相邻分区：低优先级提前一点点加载 */
   prefetch: boolean;
+  /** 分区已隐藏：预览仍显示，叠「已隐藏」标记 */
+  sectionHidden: boolean;
   bulletinId: string;
   worshipPlaylistId: string | null;
   worshipPlaylistTitle: string;
@@ -54,6 +57,7 @@ function deckSlidePropsEqual(prev: DeckSlideItemProps, next: DeckSlideItemProps)
     prev.sectionId !== next.sectionId ||
     prev.highlight !== next.highlight ||
     prev.prefetch !== next.prefetch ||
+    prev.sectionHidden !== next.sectionHidden ||
     prev.bulletinId !== next.bulletinId ||
     prev.worshipPlaylistId !== next.worshipPlaylistId ||
     prev.worshipPlaylistTitle !== next.worshipPlaylistTitle ||
@@ -84,6 +88,7 @@ const DeckSlideItem = memo(function DeckSlideItem({
   patch,
   highlight,
   prefetch,
+  sectionHidden,
   bulletinId,
   worshipPlaylistId,
   worshipPlaylistTitle,
@@ -93,11 +98,12 @@ const DeckSlideItem = memo(function DeckSlideItem({
   worshipPresentationMode,
   onWorshipPresentationModeChange,
 }: DeckSlideItemProps) {
+  const { t } = useI18n();
   const slidePatch = useMemo(() => previewPatchFull(patch), [patch]);
   const presentationMode = normalizeWorshipPresentationMode(worshipPresentationMode);
 
   const showWorshipDock =
-    worshipFirstSlide != null && slideNumber === worshipFirstSlide;
+    worshipFirstSlide != null && slideNumber === worshipFirstSlide && !sectionHidden;
 
   // 一律懒加载：视口内升 high；当前分区近距也 high；相邻分区 low，避免抢带宽
   const priority = highlight ? 'high' : prefetch ? 'low' : 'normal';
@@ -105,10 +111,18 @@ const DeckSlideItem = memo(function DeckSlideItem({
 
   return (
     <div
-      className={`bulletin-deck-slide${highlight ? ' bulletin-deck-slide--highlight' : ''}${showWorshipDock ? ' bulletin-deck-slide--worship' : ''}`}
+      className={`bulletin-deck-slide${highlight ? ' bulletin-deck-slide--highlight' : ''}${
+        showWorshipDock ? ' bulletin-deck-slide--worship' : ''
+      }${sectionHidden ? ' bulletin-deck-slide--hidden' : ''}`}
       data-slide={slideNumber}
       data-section-slide={sectionId}
+      data-section-hidden={sectionHidden ? '1' : undefined}
     >
+      {sectionHidden ? (
+        <div className="bulletin-deck-slide-hidden-badge" role="status">
+          {t('bulletin.previewHiddenSlideBadge')}
+        </div>
+      ) : null}
       <BulletinPptSlidePreview
         slideNumber={slideNumber}
         patch={slidePatch}
@@ -202,6 +216,14 @@ export default function BulletinFullDeckPreview({
   const scrollRootRef = useRef<HTMLDivElement>(null);
   const scrollSyncUntilRef = useRef(0);
   const highlightSet = useMemo(() => new Set(highlightSlides), [highlightSlides]);
+  const hiddenSectionIds = useMemo(
+    () => new Set(resolveHiddenSections(bulletin)),
+    [
+      bulletin.hiddenSections,
+      bulletin.skipTestimonyWeek,
+      bulletin.skipDepartmentReports,
+    ],
+  );
 
   const worshipFirstSlide = worshipFirstPresentationSlide(deckPlan);
 
@@ -434,12 +456,13 @@ export default function BulletinFullDeckPreview({
       <div ref={scrollRootRef} className="bulletin-deck-preview bulletin-deck-preview--current-section">
         {composedSections.map((section) => {
           const sectionBusy = busySectionId === section.id;
+          const sectionHidden = hiddenSectionIds.has(section.id);
           return (
             <section
               key={section.id}
               className={`bulletin-deck-section bulletin-deck-section--active${
                 sectionBusy ? ' bulletin-deck-section--busy' : ''
-              }`}
+              }${sectionHidden ? ' bulletin-deck-section--hidden' : ''}`}
               data-section={section.id}
             >
               {sectionBusy ? (
@@ -457,6 +480,7 @@ export default function BulletinFullDeckPreview({
                     patch={fullPatch}
                     highlight={highlightSet.has(page)}
                     prefetch={prefetchSectionIds.has(section.id)}
+                    sectionHidden={sectionHidden}
                     bulletinId={bulletin.id}
                     worshipPlaylistId={bulletin.servicePlaylistId}
                     worshipPlaylistTitle={worshipPlaylistTitle}

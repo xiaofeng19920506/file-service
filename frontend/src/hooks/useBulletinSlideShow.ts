@@ -1,10 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   fetchBulletinSlidePreviewPng,
   type BulletinSlidePreviewParams,
 } from '../api/bulletins';
 import { createSlideShowBus, type SlideShowRole } from '../lib/bulletin-slideshow-bus';
 import { removeSlideShowSession } from '../lib/bulletin-slideshow-session';
+import {
+  coercePresentableSlide,
+  normalizeSkipSlides,
+  stepPresentableSlide,
+} from '../lib/bulletin-slideshow-navigation';
 
 const FALLBACK_TOTAL_SLIDES = 38;
 
@@ -14,16 +19,29 @@ export function useBulletinSlideShow(opts: {
   patch: BulletinSlidePreviewParams;
   initialSlide: number;
   initialTotalSlides?: number;
+  skipSlides?: number[];
 }) {
-  const { sessionId, role, patch, initialSlide, initialTotalSlides = FALLBACK_TOTAL_SLIDES } = opts;
+  const {
+    sessionId,
+    role,
+    patch,
+    initialSlide,
+    initialTotalSlides = FALLBACK_TOTAL_SLIDES,
+    skipSlides,
+  } = opts;
+  const skipSet = useMemo(() => normalizeSkipSlides(skipSlides), [skipSlides]);
   const urlCacheRef = useRef<Map<number, string>>(new Map());
   const [totalSlides, setTotalSlides] = useState(initialTotalSlides);
-  const [currentSlide, setCurrentSlide] = useState(initialSlide);
+  const [currentSlide, setCurrentSlide] = useState(() =>
+    coercePresentableSlide(initialSlide, initialTotalSlides, normalizeSkipSlides(skipSlides)),
+  );
   const [slideUrls, setSlideUrls] = useState<Record<number, string>>({});
   const [loadingSlides, setLoadingSlides] = useState<Set<number>>(new Set());
   const [failedSlides, setFailedSlides] = useState<Set<number>>(new Set());
-  const stateRef = useRef({ currentSlide: initialSlide, totalSlides: initialTotalSlides });
+  const stateRef = useRef({ currentSlide, totalSlides });
   stateRef.current = { currentSlide, totalSlides };
+  const skipRef = useRef(skipSet);
+  skipRef.current = skipSet;
 
   const revokeCache = useCallback(() => {
     for (const url of urlCacheRef.current.values()) {
@@ -66,10 +84,22 @@ export function useBulletinSlideShow(opts: {
 
   useEffect(() => {
     void loadSlide(currentSlide).catch(() => undefined);
-    for (const nearby of [currentSlide - 1, currentSlide + 1, currentSlide + 2]) {
-      if (nearby >= 1 && nearby <= totalSlides) {
-        void loadSlide(nearby).catch(() => undefined);
-      }
+    const skip = skipRef.current;
+    const nearby: number[] = [];
+    let probe = currentSlide;
+    for (let i = 0; i < 3; i++) {
+      probe = stepPresentableSlide(probe, 1, totalSlides, skip);
+      if (probe === nearby[nearby.length - 1] || probe === currentSlide) break;
+      nearby.push(probe);
+    }
+    probe = currentSlide;
+    for (let i = 0; i < 1; i++) {
+      probe = stepPresentableSlide(probe, -1, totalSlides, skip);
+      if (probe === currentSlide) break;
+      nearby.push(probe);
+    }
+    for (const n of nearby) {
+      void loadSlide(n).catch(() => undefined);
     }
   }, [currentSlide, loadSlide, totalSlides]);
 
@@ -129,24 +159,38 @@ export function useBulletinSlideShow(opts: {
   );
 
   const goPrev = useCallback(() => {
-    const next = Math.max(1, stateRef.current.currentSlide - 1);
+    const next = stepPresentableSlide(
+      stateRef.current.currentSlide,
+      -1,
+      stateRef.current.totalSlides,
+      skipRef.current,
+    );
     setCurrentSlide(next);
     publishSync(next);
   }, [publishSync]);
 
   const goNext = useCallback(() => {
-    const next = Math.min(totalSlides, stateRef.current.currentSlide + 1);
+    const next = stepPresentableSlide(
+      stateRef.current.currentSlide,
+      1,
+      stateRef.current.totalSlides,
+      skipRef.current,
+    );
     setCurrentSlide(next);
     publishSync(next);
-  }, [publishSync, totalSlides]);
+  }, [publishSync]);
 
   const goToSlide = useCallback(
     (slide: number) => {
-      const next = Math.min(totalSlides, Math.max(1, slide));
+      const next = coercePresentableSlide(
+        slide,
+        stateRef.current.totalSlides,
+        skipRef.current,
+      );
       setCurrentSlide(next);
       publishSync(next);
     },
-    [publishSync, totalSlides],
+    [publishSync],
   );
 
   const endShow = useCallback(() => {
@@ -167,7 +211,10 @@ export function useBulletinSlideShow(opts: {
   return {
     totalSlides,
     currentSlide,
-    nextSlide: currentSlide < totalSlides ? currentSlide + 1 : null,
+    nextSlide: (() => {
+      const n = stepPresentableSlide(currentSlide, 1, totalSlides, skipSet);
+      return n === currentSlide ? null : n;
+    })(),
     slideUrls,
     loadingSlides,
     failedSlides,

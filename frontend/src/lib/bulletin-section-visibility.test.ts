@@ -41,6 +41,21 @@ describe('bulletin section visibility', () => {
     expect(paths).not.toContain('ppt/slides/slide24.xml');
   });
 
+  it('retains hidden section slides when retainHiddenSections is set', () => {
+    const paths = bulletinSlidePathsToDelete({
+      hiddenSections: ['communion', 'birthday', 'weekly_meetings'],
+      weeklyMeetingVariant: 29,
+      retainHiddenSections: true,
+    });
+    expect(paths).not.toContain('ppt/slides/slide10.xml');
+    expect(paths).not.toContain('ppt/slides/slide24.xml');
+    // 预览保留隐藏本週聚会时仍只留所选版式
+    expect(paths).not.toContain('ppt/slides/slide29.xml');
+    expect(paths).toContain('ppt/slides/slide28.xml');
+    expect(paths).toContain('ppt/slides/slide30.xml');
+    expect(paths).toContain('ppt/slides/slide3.xml');
+  });
+
   it('deletes birthday anchor when birthday section is hidden', () => {
     const paths = bulletinSlidePathsToDelete({
       hiddenSections: ['birthday'],

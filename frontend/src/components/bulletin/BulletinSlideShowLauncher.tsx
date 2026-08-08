@@ -18,6 +18,8 @@ type BulletinSlideShowLauncherProps = {
   initialSlide?: number;
   /** 当前 deck plan 实际页数；不传则回退模板页数 */
   totalSlides?: number;
+  /** 投影时跳过的演示页（隐藏分区） */
+  skipSlides?: number[];
   className?: string;
   disabled?: boolean;
   /** 投影会话已打开（主页可跟随翻页同步左侧分区） */
@@ -28,6 +30,7 @@ export default function BulletinSlideShowLauncher({
   bulletin,
   initialSlide = 1,
   totalSlides,
+  skipSlides,
   className,
   disabled = false,
   onSessionStarted,
@@ -90,7 +93,7 @@ export default function BulletinSlideShowLauncher({
   const onStart = () => {
     setStarting(true);
     setError(null);
-    void startBulletinSlideShow({ patch, initialSlide, totalSlides })
+    void startBulletinSlideShow({ patch, initialSlide, totalSlides, skipSlides })
       .then((result) => {
         if (!result.ok) {
           setError(t('bulletin.slideShowPopupBlocked'));

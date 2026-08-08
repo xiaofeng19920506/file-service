@@ -13,6 +13,8 @@ export async function startBulletinSlideShow(opts: {
   initialSlide?: number;
   /** 当前 deck 的实际总页数（隐藏分区/读经加页后会变化）；必须是整份周报，不是单分区 */
   totalSlides?: number;
+  /** 投影时跳过的演示页（隐藏分区） */
+  skipSlides?: number[];
 }): Promise<
   { ok: true; sessionId: string } | { ok: false; reason: 'popup_blocked' }
 > {
@@ -29,7 +31,7 @@ export async function startBulletinSlideShow(opts: {
     }
   }
 
-  // 整份周报放映：默认从第 1 页起，可翻到 totalSlides
+  // 整份周报放映：默认从第 1 页起，可翻到 totalSlides；隐藏页在导航层跳过
   const initialSlide = Math.min(
     totalSlides,
     Math.max(1, opts.initialSlide ?? 1),
@@ -39,6 +41,7 @@ export async function startBulletinSlideShow(opts: {
     patch: opts.patch,
     initialSlide,
     totalSlides,
+    skipSlides: opts.skipSlides,
   });
 
   const { projector } = openSlideShowWindows(sessionId);

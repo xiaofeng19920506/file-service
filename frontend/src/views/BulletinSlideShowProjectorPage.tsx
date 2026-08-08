@@ -31,6 +31,7 @@ export default function BulletinSlideShowProjectorPage({ sessionId }: BulletinSl
     patch: session?.patch ?? {},
     initialSlide: session?.initialSlide ?? 1,
     initialTotalSlides: session?.totalSlides,
+    skipSlides: session?.skipSlides,
   });
 
   const enterFullscreen = async (): Promise<boolean> => {

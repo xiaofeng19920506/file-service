@@ -62,6 +62,7 @@ export default function BulletinSlideShowPresenterPage({ sessionId }: BulletinSl
     patch: session?.patch ?? {},
     initialSlide: session?.initialSlide ?? 1,
     initialTotalSlides: session?.totalSlides,
+    skipSlides: session?.skipSlides,
   });
 
   useEffect(() => {

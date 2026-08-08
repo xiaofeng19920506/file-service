@@ -162,6 +162,7 @@ export default function BulletinPage() {
   } | null>(null);
   const [worshipPreviewRevision, setWorshipPreviewRevision] = useState(0);
   const [previewTotalSlides, setPreviewTotalSlides] = useState<number | undefined>();
+  const [previewSkipSlides, setPreviewSkipSlides] = useState<number[]>([]);
   const [slideShowSessionId, setSlideShowSessionId] = useState<string | null>(null);
   const [worshipYoutubeOauthReady, setWorshipYoutubeOauthReady] = useState(false);
   const [worshipOauthError, setWorshipOauthError] = useState<string | null>(null);
@@ -1194,6 +1195,7 @@ export default function BulletinPage() {
               <BulletinSlideShowLauncher
                 bulletin={draft}
                 totalSlides={previewTotalSlides}
+                skipSlides={previewSkipSlides}
                 className="btn-secondary bulletin-slideshow-start"
                 disabled={!permissions.canViewBulletin}
                 onSessionStarted={setSlideShowSessionId}
@@ -1312,6 +1314,7 @@ export default function BulletinPage() {
               onVisibleSectionChange={handleVisibleSectionChange}
               onDeckMetaChange={(meta) => {
                 setPreviewTotalSlides(meta?.totalSlides);
+                setPreviewSkipSlides(meta?.skipSlides ?? []);
               }}
               onWorshipPresentationModeChange={(mode) => {
                 void persistWorshipPresentationMode(mode).catch((err) => {

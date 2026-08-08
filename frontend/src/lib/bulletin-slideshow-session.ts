@@ -8,6 +8,8 @@ export type BulletinSlideShowSession = {
   patch: BulletinSlidePreviewParams;
   initialSlide: number;
   totalSlides: number;
+  /** 投影导航跳过的演示页（隐藏分区）；与预览页码一致 */
+  skipSlides?: number[];
   createdAt: number;
 };
 
@@ -28,12 +30,14 @@ export function createSlideShowSession(input: {
   patch: BulletinSlidePreviewParams;
   initialSlide: number;
   totalSlides: number;
+  skipSlides?: number[];
 }): string {
   const sessionId = crypto.randomUUID();
   const session: BulletinSlideShowSession = {
     patch: input.patch,
     initialSlide: input.initialSlide,
     totalSlides: input.totalSlides,
+    skipSlides: input.skipSlides?.length ? [...new Set(input.skipSlides)] : undefined,
     createdAt: Date.now(),
   };
   slideshowStorage().setItem(storageKey(sessionId), JSON.stringify(session));
