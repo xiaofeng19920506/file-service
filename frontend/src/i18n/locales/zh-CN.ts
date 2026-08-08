@@ -234,6 +234,8 @@ export default {
     rotationStartMonth: '开始月份',
     rotationEndMonth: '结束月份',
     rotationMonthsHint: '将同步更新标题与正文里的「本季度(开始-结束 月)」。',
+    serviceRotationScheduleHint:
+      '本季度名单来自入库的服事轮值表，随主日自动更新；手动修改后，再次打开或更换同一表内主日时会按表覆盖。',
     testimonyShare: '见证日期',
     testimonyShareHint: '填写如 8/30，将同步更新标题「下主日8/30見證分享」与正文大号日期。',
     serviceRoster: '下主日服事轮值',

@@ -44,6 +44,7 @@ import {
   replaceBulletinSectionPptx,
 } from '../lib/bulletin-section-pptx';
 import { withTemplateFieldDefaults } from '../lib/bulletin-template-field-defaults';
+import { resolveServiceRosterFromSchedule } from '../lib/bulletin-service-rotation';
 import {
   announcementSectionId,
   buildBulletinNavSections,
@@ -523,6 +524,26 @@ export default function BulletinPage() {
     setDraft((prev) => {
       if (!prev) return prev;
       let next: WeeklyBulletin = { ...prev, [key]: value };
+      if (key === 'serviceDate' && typeof value === 'string') {
+        const fromSchedule = resolveServiceRosterFromSchedule(value);
+        if (fromSchedule) {
+          next = { ...next, ...fromSchedule };
+          // 换主日后服事轮值来自季度表，清掉可能挡住预览的分区 PPT
+          if (next.sectionPptxOverrides) {
+            const overrides = { ...next.sectionPptxOverrides };
+            delete overrides.service_roster;
+            delete overrides.rotation;
+            next = { ...next, sectionPptxOverrides: overrides };
+          }
+          if (next.slideTextOverrides?.length) {
+            const drop = new Set([32, 34]);
+            next = {
+              ...next,
+              slideTextOverrides: next.slideTextOverrides.filter((o) => !drop.has(o.slide)),
+            };
+          }
+        }
+      }
       // 表单驱动分区：改字段时清掉该区自定义 PPT / 幻灯片文字覆盖，避免旧快照挡住预览
       const sectionForField: Partial<Record<keyof WeeklyBulletin, string>> = {
         birthdayMonth: 'birthday',

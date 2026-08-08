@@ -243,6 +243,8 @@ const en: MessageTree = {
     rotationStartMonth: 'Start month',
     rotationEndMonth: 'End month',
     rotationMonthsHint: 'Updates “(start-end 月)” in both the title and body.',
+    serviceRotationScheduleHint:
+      'Names come from the saved quarterly service rotation schedule and update with the service date. Manual edits are overwritten when you reopen or switch to a date covered by the schedule.',
     testimonyShare: 'Testimony date',
     testimonyShareHint: 'Enter e.g. 8/30 — updates the title and the large date on the slide.',
     serviceRoster: 'Next Sunday roster',

@@ -7,6 +7,7 @@ import {
   resolveBirthdayFields,
   serializeBirthdayNamesByMonth,
 } from './bulletin-birthday-months';
+import { resolveServiceRosterFromSchedule } from './bulletin-service-rotation';
 
 /**
  * 原版模板 `06_14_2026.pptx` 上对应表单字段的默认文字。
@@ -95,6 +96,9 @@ export function withTemplateFieldDefaults(bulletin: WeeklyBulletin): WeeklyBulle
     serviceDate: bulletin.serviceDate,
   });
 
+  // 命中季度服事表时始终覆盖 P34/P32；否则沿用库字段或模板默认
+  const fromSchedule = resolveServiceRosterFromSchedule(bulletin.serviceDate);
+
   return {
     ...bulletin,
     birthdayMonth: String(birthdayResolved.month),
@@ -126,34 +130,33 @@ export function withTemplateFieldDefaults(bulletin: WeeklyBulletin): WeeklyBulle
         BULLETIN_TEMPLATE_FIELD_DEFAULTS.testimonyShareDate,
       ),
     ),
-    serviceRosterText: pickText(
-      bulletin.serviceRosterText,
-      BULLETIN_TEMPLATE_FIELD_DEFAULTS.serviceRosterText,
-    ),
-    serviceRosterTodayDate: pickText(
-      bulletin.serviceRosterTodayDate,
-      defaultTodayRosterDate(bulletin.serviceDate),
-    ),
-    serviceRosterNextDate: pickText(
-      bulletin.serviceRosterNextDate,
-      defaultNextRosterDate(bulletin.serviceDate),
-    ),
-    serviceRosterChair: pickText(
-      bulletin.serviceRosterChair,
-      BULLETIN_TEMPLATE_FIELD_DEFAULTS.serviceRosterChair,
-    ),
-    serviceRosterWorship: pickText(
-      bulletin.serviceRosterWorship,
-      BULLETIN_TEMPLATE_FIELD_DEFAULTS.serviceRosterWorship,
-    ),
-    serviceRosterUsher: pickText(
-      bulletin.serviceRosterUsher,
-      BULLETIN_TEMPLATE_FIELD_DEFAULTS.serviceRosterUsher,
-    ),
-    serviceRosterCleanNames: pickText(
-      bulletin.serviceRosterCleanNames,
-      BULLETIN_TEMPLATE_FIELD_DEFAULTS.serviceRosterCleanNames,
-    ),
+    serviceRosterText: fromSchedule
+      ? fromSchedule.serviceRosterText
+      : pickText(bulletin.serviceRosterText, BULLETIN_TEMPLATE_FIELD_DEFAULTS.serviceRosterText),
+    serviceRosterTodayDate: fromSchedule
+      ? fromSchedule.serviceRosterTodayDate
+      : pickText(bulletin.serviceRosterTodayDate, defaultTodayRosterDate(bulletin.serviceDate)),
+    serviceRosterNextDate: fromSchedule
+      ? fromSchedule.serviceRosterNextDate
+      : pickText(bulletin.serviceRosterNextDate, defaultNextRosterDate(bulletin.serviceDate)),
+    serviceRosterChair: fromSchedule
+      ? fromSchedule.serviceRosterChair
+      : pickText(bulletin.serviceRosterChair, BULLETIN_TEMPLATE_FIELD_DEFAULTS.serviceRosterChair),
+    serviceRosterWorship: fromSchedule
+      ? fromSchedule.serviceRosterWorship
+      : pickText(
+          bulletin.serviceRosterWorship,
+          BULLETIN_TEMPLATE_FIELD_DEFAULTS.serviceRosterWorship,
+        ),
+    serviceRosterUsher: fromSchedule
+      ? fromSchedule.serviceRosterUsher
+      : pickText(bulletin.serviceRosterUsher, BULLETIN_TEMPLATE_FIELD_DEFAULTS.serviceRosterUsher),
+    serviceRosterCleanNames: fromSchedule
+      ? fromSchedule.serviceRosterCleanNames
+      : pickText(
+          bulletin.serviceRosterCleanNames,
+          BULLETIN_TEMPLATE_FIELD_DEFAULTS.serviceRosterCleanNames,
+        ),
     baptismText: pickText(bulletin.baptismText, BULLETIN_TEMPLATE_FIELD_DEFAULTS.baptismText),
     staffMeetingYear: pickText(
       bulletin.staffMeetingYear,
@@ -175,14 +178,15 @@ export function withTemplateFieldDefaults(bulletin: WeeklyBulletin): WeeklyBulle
       bulletin.staffMeetingEndTime,
       BULLETIN_TEMPLATE_FIELD_DEFAULTS.staffMeetingEndTime,
     ),
-    rotationStartMonth: pickText(
-      bulletin.rotationStartMonth,
-      BULLETIN_TEMPLATE_FIELD_DEFAULTS.rotationStartMonth,
-    ),
-    rotationEndMonth: pickText(
-      bulletin.rotationEndMonth,
-      BULLETIN_TEMPLATE_FIELD_DEFAULTS.rotationEndMonth,
-    ),
+    rotationStartMonth: fromSchedule
+      ? fromSchedule.rotationStartMonth
+      : pickText(
+          bulletin.rotationStartMonth,
+          BULLETIN_TEMPLATE_FIELD_DEFAULTS.rotationStartMonth,
+        ),
+    rotationEndMonth: fromSchedule
+      ? fromSchedule.rotationEndMonth
+      : pickText(bulletin.rotationEndMonth, BULLETIN_TEMPLATE_FIELD_DEFAULTS.rotationEndMonth),
     announcements,
   };
 }

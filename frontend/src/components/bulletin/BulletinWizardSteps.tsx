@@ -607,6 +607,7 @@ export function BulletinMoreStep({
       ) : null}
       {show('rotation') ? (
         <>
+          <p className="bulletin-step-hint">{t('bulletin.serviceRotationScheduleHint')}</p>
           <TextField
             label={t('bulletin.rotationStartMonth')}
             value={draft.rotationStartMonth ?? ''}
@@ -636,6 +637,7 @@ export function BulletinMoreStep({
       ) : null}
       {show('service_roster') ? (
         <>
+          <p className="bulletin-step-hint">{t('bulletin.serviceRotationScheduleHint')}</p>
           <TextField
             label={t('bulletin.serviceRosterTodayDate')}
             value={draft.serviceRosterTodayDate ?? ''}

@@ -89,4 +89,19 @@ describe('withTemplateFieldDefaults offeringTotalAmount', () => {
       BULLETIN_TEMPLATE_FIELD_DEFAULTS.offeringTotalAmount,
     );
   });
+
+  it('overlays service roster from quarterly schedule when serviceDate matches', () => {
+    const out = withTemplateFieldDefaults(
+      baseBulletin({
+        serviceDate: '2026-07-12',
+        serviceRosterChair: '应被覆盖',
+      }),
+    );
+    expect(out.serviceRosterTodayDate).toBe('7/12');
+    expect(out.serviceRosterNextDate).toBe('7/19');
+    expect(out.serviceRosterChair).toBe('唐毅');
+    expect(out.serviceRosterWorship).toBe('潘奕丞');
+    expect(out.rotationStartMonth).toBe('7');
+    expect(out.rotationEndMonth).toBe('9');
+  });
 });
