@@ -8703,6 +8703,42 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  position: relative;
+  background: #000;
+}
+
+/* 敬拜最大化/全屏：盖过桌面观看页的 56vh 半屏限制，视频铺满剩余区域 */
+.bulletin-worship-maximize-youtube .youtube-player-section,
+.bulletin-worship-maximize-youtube .youtube-player-section--native,
+.bulletin-worship-maximize-youtube .youtube-player-section--desktop-watch {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.bulletin-worship-maximize-youtube .youtube-player-frame-wrap,
+.bulletin-worship-maximize-youtube
+  .youtube-player-section--native.youtube-player-section--desktop-watch
+  .youtube-player-frame-wrap {
+  flex: 1;
+  width: 100% !important;
+  height: 100% !important;
+  max-height: none !important;
+  aspect-ratio: auto !important;
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+.bulletin-worship-maximize-youtube .youtube-player-video-shell,
+.bulletin-worship-maximize-youtube .youtube-player-frame,
+.bulletin-worship-maximize-youtube .youtube-player-frame iframe {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-height: none !important;
 }
 
 .bulletin-worship-maximize-ppt {

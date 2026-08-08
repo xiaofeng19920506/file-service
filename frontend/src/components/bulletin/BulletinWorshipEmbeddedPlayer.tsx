@@ -88,29 +88,26 @@ export default function BulletinWorshipEmbeddedPlayer({
     }
   };
 
-  /** 点播放：开播 + 最大化；YouTube 原生播放器 mount 后自动点全屏按钮 */
+  /** 点播放：开播 + 最大化，并在同一次点击手势内请求浏览器全屏 */
   const handlePlay = () => {
     if (!showSlidePlay) return;
     const nextLive: WorshipLiveMode = mode === 'youtube' ? 'youtube' : 'ppt';
     flushSync(() => {
       openLive(nextLive);
     });
-    if (nextLive === 'youtube') {
-      const btn = document.querySelector(
-        '.bulletin-worship-maximize .youtube-player-fullscreen-btn',
-      ) as HTMLButtonElement | null;
-      if (btn) {
-        btn.click();
-        return;
-      }
-      const wrap = document.querySelector(
-        '.bulletin-worship-maximize .youtube-player-frame-wrap',
-      ) as HTMLElement | null;
-      void requestElementFullscreen(wrap);
+    const stage = document.querySelector('.bulletin-worship-maximize') as HTMLElement | null;
+    if (stage) {
+      void requestElementFullscreen(stage).then((ok) => {
+        if (ok) return;
+        // 回退：全屏视频容器（仍比半屏桌面观看布局大）
+        const wrap = document.querySelector(
+          '.bulletin-worship-maximize .youtube-player-frame-wrap',
+        ) as HTMLElement | null;
+        if (wrap) void requestElementFullscreen(wrap);
+      });
       return;
     }
-    const stage = document.querySelector('.bulletin-worship-maximize') as HTMLElement | null;
-    void requestElementFullscreen(stage ?? document.documentElement);
+    void requestElementFullscreen(document.documentElement);
   };
 
   const handleCloseLive = () => {

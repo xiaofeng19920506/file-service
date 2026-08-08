@@ -163,9 +163,10 @@ export default function BulletinWorshipMaximizeOverlay({
   }, []);
 
   useEffect(() => {
-    if (!autoEnterFullscreen || mode !== 'ppt') return;
+    if (!autoEnterFullscreen) return;
     if (isDocumentFullscreen()) return;
-    const el = rootRef.current ?? document.documentElement;
+    // YouTube / PPT：优先全屏整个敬拜舞台（含黑底），避免只全到 16:9 半屏区域
+    const el = rootRef.current ?? stageRef.current ?? document.documentElement;
     void requestElementFullscreen(el);
   }, [autoEnterFullscreen, mode]);
 
