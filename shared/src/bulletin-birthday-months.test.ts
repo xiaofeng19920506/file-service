@@ -32,6 +32,25 @@ describe('bulletin birthday months', () => {
     expect(july!.byteLength).toBeGreaterThan(1000);
   });
 
+  it('month library slides include names from Jan-Dec source', async () => {
+    const JSZip = (await import('jszip')).default;
+    const july = readBirthdayMonthLibraryPptx(7)!;
+    const zip = await JSZip.loadAsync(july);
+    const slidePath = Object.keys(zip.files).find((n) => /^ppt\/slides\/slide\d+\.xml$/.test(n));
+    expect(slidePath).toBeTruthy();
+    const xml = await zip.file(slidePath!)!.async('string');
+    expect(xml).toContain('孫强');
+    expect(xml).toContain('邱春林');
+    expect(xml).toContain('Andrew Wang');
+
+    const jan = readBirthdayMonthLibraryPptx(1)!;
+    const janZip = await JSZip.loadAsync(jan);
+    const janPath = Object.keys(janZip.files).find((n) => /^ppt\/slides\/slide\d+\.xml$/.test(n));
+    const janXml = await janZip.file(janPath!)!.async('string');
+    expect(janXml).toContain('盧牧師');
+    expect(janXml).toContain('張嘉文');
+  });
+
   it('parses JSON by month and migrates flat legacy names', () => {
     expect(parseBirthdayNamesByMonth('{"7":"甲\\n乙"}')).toEqual({ '7': '甲\n乙' });
     const resolved = resolveBirthdayFields({

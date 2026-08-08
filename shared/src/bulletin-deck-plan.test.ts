@@ -94,12 +94,14 @@ describe('bulletin deck plan from template content', () => {
       24,
     ]);
 
-    // 不同月份 splice 后生日页正文应不同（标题含月份）
+    // 不同月份 splice 后生日页正文应不同（标题含月份；新月库标题可能拆成「3」+「月份…」）
     const JSZip = (await import('jszip')).default;
     const julyXml = await (await JSZip.loadAsync(july)).file('ppt/slides/slide24.xml')!.async('string');
     const marchXml = await (await JSZip.loadAsync(march)).file('ppt/slides/slide24.xml')!.async('string');
-    expect(julyXml).toContain('7月份');
-    expect(marchXml).toContain('3月份');
+    expect(julyXml).toMatch(/7\s*月份|7月份/);
+    expect(julyXml).toContain('孫强');
+    expect(marchXml).toMatch(/3\s*月份|3月份|>3</);
+    expect(marchXml).toContain('李清');
     expect(julyXml).not.toEqual(marchXml);
   });
 
