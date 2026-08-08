@@ -63,6 +63,8 @@ import {
   parsePlayClips,
   clipsToLegacyStartEnd,
   getYoutubeVideoDurationSecondsCached,
+  loadBundledServiceRotationSchedules,
+  bulletinLibraryContentRev,
   type ApiEnv,
   type Db,
   type SlideTextOverride,
@@ -79,6 +81,11 @@ import {
   readBulletinPreviewDiskCache,
   writeBulletinPreviewDiskCache,
 } from './bulletin-preview-disk-cache.js';
+import {
+  readBulletinDriveSyncState,
+  startBulletinDriveSyncScheduler,
+  type BulletinDriveSyncResult,
+} from './bulletin-drive-sync.js';
 
 function resolveBulletinTemplateDir(): string {
   const here = dirname(fileURLToPath(import.meta.url));
@@ -104,6 +111,15 @@ const patchedPptxCache = new Map<string, Buffer>();
 /** v52：圣餐英文经文略加大至 28pt，减少底部空白 */
 /** v64：生日月页外置到模板库，主模板仅 P24 锚点 */
 const SLIDE_PREVIEW_PATCH_REV = 'v66';
+
+/** 生日月库 / 服事轮值磁盘指纹（Drive 同步后变化，使预览缓存失效） */
+function previewLibraryRev(): string {
+  try {
+    return bulletinLibraryContentRev();
+  } catch {
+    return 'na';
+  }
+}
 
 async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   const chunks: Buffer[] = [];
@@ -764,8 +780,9 @@ async function buildPatchedBulletinPptxBuf(opts: {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([k, v]) => `${k}:${v}`)
     .join('|');
-  const patchKey = `${SLIDE_PREVIEW_PATCH_REV}:pptx:${previewPatchCacheSuffix(q, overridesKey)}:sec:${sectionKey}`;
-  const stableKey = `${SLIDE_PREVIEW_PATCH_REV}:pptx-stable:${previewPatchStableSuffix(q, overridesKey)}:sec:${sectionKey}`;
+  const libRev = previewLibraryRev();
+  const patchKey = `${SLIDE_PREVIEW_PATCH_REV}:lib:${libRev}:pptx:${previewPatchCacheSuffix(q, overridesKey)}:sec:${sectionKey}`;
+  const stableKey = `${SLIDE_PREVIEW_PATCH_REV}:lib:${libRev}:pptx-stable:${previewPatchStableSuffix(q, overridesKey)}:sec:${sectionKey}`;
   let pptxBuf: Buffer | undefined = patchedPptxCache.get(patchKey);
   if (!pptxBuf) {
     const fromDisk = await readBulletinPreviewDiskCache(patchKey);
@@ -1009,6 +1026,57 @@ export function registerBulletinRoutes(
     );
   }, 15 * 60 * 1000);
 
+  const driveSync = startBulletinDriveSyncScheduler({
+    env,
+    log: {
+      info: (obj, msg) => app.log.info(obj as object, msg),
+      warn: (obj, msg) => app.log.warn(obj as object, msg),
+      error: (obj, msg) => app.log.error(obj as object, msg),
+    },
+  });
+
+  app.get('/v1/bulletins/service-rotation/schedule', async (request, reply) => {
+    const user = requireUser(request);
+    if (!user || !canViewBulletin(user.role)) {
+      return reply.code(403).send({ error: 'bulletin_forbidden' });
+    }
+    const schedules = loadBundledServiceRotationSchedules();
+    return reply.header('Cache-Control', 'private, no-store').send({
+      schedules,
+      libraryRev: previewLibraryRev(),
+    });
+  });
+
+  app.get('/v1/bulletins/drive-sync/status', async (request, reply) => {
+    const user = requireUser(request);
+    if (!user || !canViewBulletin(user.role)) {
+      return reply.code(403).send({ error: 'bulletin_forbidden' });
+    }
+    const state = readBulletinDriveSyncState();
+    return reply.header('Cache-Control', 'private, no-store').send({
+      ...state,
+      libraryRev: previewLibraryRev(),
+    });
+  });
+
+  app.post('/v1/bulletins/drive-sync/sync', async (request, reply) => {
+    const user = requireUser(request);
+    if (!user || !canManageBulletin(user.role)) {
+      return reply.code(403).send({ error: 'bulletin_forbidden' });
+    }
+    let result: BulletinDriveSyncResult;
+    try {
+      result = await driveSync.runNow(true);
+    } catch (e) {
+      request.log.error(e, 'drive sync force failed');
+      return reply.code(500).send({ error: 'drive_sync_failed' });
+    }
+    return reply.send({
+      ...result,
+      libraryRev: previewLibraryRev(),
+    });
+  });
+
   app.get('/v1/bulletins/template/slides', async (request, reply) => {
     const user = requireUser(request);
     if (!user || !canViewBulletin(user.role)) {
@@ -1238,7 +1306,7 @@ export function registerBulletinRoutes(
       const plan = await buildBulletinDeckPlanFromPptxBytes(pptxBuf, announcementIds);
       // 不再预热第 1 页：会与当前编辑页抢 LibreOffice 槽，拖慢生日等内容预览
       return reply.header('Cache-Control', 'private, no-store').send({
-        rev: SLIDE_PREVIEW_PATCH_REV,
+        rev: `${SLIDE_PREVIEW_PATCH_REV}:lib:${previewLibraryRev()}`,
         totalSlides: plan.totalSlides,
         slides: plan.slides,
         sections: plan.sections,
@@ -1305,7 +1373,7 @@ export function registerBulletinRoutes(
         slideTextOverridesProvided,
         bulletinId,
       });
-      const cacheKey = `${SLIDE_PREVIEW_PATCH_REV}:${slideNumber}:${previewPatchCacheSuffix(q, overridesKey)}:sec:${sectionKey}`;
+      const cacheKey = `${SLIDE_PREVIEW_PATCH_REV}:lib:${previewLibraryRev()}:${slideNumber}:${previewPatchCacheSuffix(q, overridesKey)}:sec:${sectionKey}`;
       let cached = slidePreviewCache.get(cacheKey);
       if (!cached) {
         const fromDisk = await readBulletinPreviewDiskCache(cacheKey);

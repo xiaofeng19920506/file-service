@@ -70,6 +70,18 @@ const apiFs = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().min(3).optional(),
+  /** Google Drive 服务账号 JSON 文件路径，或整段 JSON 字符串 */
+  GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON: z.string().min(2).optional(),
+  /** 服事轮值 .xlsx 的 Drive fileId */
+  BULLETIN_DRIVE_ROTATION_FILE_ID: z.string().min(5).optional(),
+  /** Jan–Dec 生日 PPTX 的 Drive fileId */
+  BULLETIN_DRIVE_BIRTHDAY_PPTX_FILE_ID: z.string().min(5).optional(),
+  /** Drive 同步间隔（毫秒），默认 6 小时 */
+  BULLETIN_DRIVE_SYNC_INTERVAL_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(21_600_000),
 });
 
 const apiS3 = z.object({
@@ -128,6 +140,18 @@ const apiS3 = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().min(3).optional(),
+  /** Google Drive 服务账号 JSON 文件路径，或整段 JSON 字符串 */
+  GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON: z.string().min(2).optional(),
+  /** 服事轮值 .xlsx 的 Drive fileId */
+  BULLETIN_DRIVE_ROTATION_FILE_ID: z.string().min(5).optional(),
+  /** Jan–Dec 生日 PPTX 的 Drive fileId */
+  BULLETIN_DRIVE_BIRTHDAY_PPTX_FILE_ID: z.string().min(5).optional(),
+  /** Drive 同步间隔（毫秒），默认 6 小时 */
+  BULLETIN_DRIVE_SYNC_INTERVAL_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(21_600_000),
 });
 
 export const apiSchema = z.discriminatedUnion('STORAGE_BACKEND', [

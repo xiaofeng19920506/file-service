@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   createBulletin,
+  fetchBulletinDriveSyncStatus,
+  fetchServiceRotationSchedule,
   getBulletin,
   inviteBulletinSectionPastor,
   listBulletins,
   saveBulletinAnnouncements,
+  triggerBulletinDriveSync,
   updateBulletin,
   type AnnouncementInput,
+  type BulletinDriveSyncStatus,
   type WeeklyBulletin,
 } from '../api/bulletins';
 import { useAuth } from '../auth/AuthContext';
@@ -44,7 +48,10 @@ import {
   replaceBulletinSectionPptx,
 } from '../lib/bulletin-section-pptx';
 import { withTemplateFieldDefaults } from '../lib/bulletin-template-field-defaults';
-import { resolveServiceRosterFromSchedule } from '../lib/bulletin-service-rotation';
+import {
+  resolveServiceRosterFromSchedule,
+  setServiceRotationSchedules,
+} from '../lib/bulletin-service-rotation';
 import {
   announcementSectionId,
   buildBulletinNavSections,
@@ -143,6 +150,8 @@ export default function BulletinPage() {
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [driveSyncStatus, setDriveSyncStatus] = useState<BulletinDriveSyncStatus | null>(null);
+  const [driveSyncing, setDriveSyncing] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
   const [activeSectionId, setActiveSectionId] = useState('cover');
   const [previewSectionId, setPreviewSectionId] = useState('cover');
@@ -497,6 +506,30 @@ export default function BulletinPage() {
   }, [refreshList, canManage]);
 
   useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { schedules } = await fetchServiceRotationSchedule();
+        if (cancelled) return;
+        setServiceRotationSchedules(schedules);
+        setDraft((prev) => (prev ? withHiddenSections(prev) : prev));
+      } catch {
+        // 回退 bundled JSON
+      }
+      if (!canManage) return;
+      try {
+        const status = await fetchBulletinDriveSyncStatus();
+        if (!cancelled) setDriveSyncStatus(status);
+      } catch {
+        // 忽略
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [canManage]);
+
+  useEffect(() => {
     if (!selectedId) {
       setDraft(null);
       return;
@@ -684,6 +717,28 @@ export default function BulletinPage() {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDriveSync = async () => {
+    if (!canManage || driveSyncing) return;
+    try {
+      setDriveSyncing(true);
+      setError(null);
+      const result = await triggerBulletinDriveSync();
+      setDriveSyncStatus(result.state);
+      try {
+        const { schedules } = await fetchServiceRotationSchedule();
+        setServiceRotationSchedules(schedules);
+        setDraft((prev) => (prev ? withHiddenSections(prev) : prev));
+      } catch {
+        // ignore
+      }
+      setMessage(t('bulletin.driveSyncDone'));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setDriveSyncing(false);
     }
   };
 
@@ -1173,6 +1228,29 @@ export default function BulletinPage() {
 
       {error && <p className="form-error">{error}</p>}
       {message && <p className="form-success">{message}</p>}
+      {canManage && driveSyncStatus ? (
+        <p className="playlists-muted bulletin-drive-sync-status">
+          {!driveSyncStatus.configured
+            ? t('bulletin.driveSyncNotConfigured')
+            : driveSyncStatus.lastError
+              ? t('bulletin.driveSyncError', { error: driveSyncStatus.lastError })
+              : t('bulletin.driveSyncLastRun', {
+                  time: driveSyncStatus.lastRunAt
+                    ? new Date(driveSyncStatus.lastRunAt).toLocaleString()
+                    : '—',
+                })}{' '}
+          {driveSyncStatus.configured ? (
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={driveSyncing}
+              onClick={() => void handleDriveSync()}
+            >
+              {driveSyncing ? t('bulletin.driveSyncing') : t('bulletin.driveSyncNow')}
+            </button>
+          ) : null}
+        </p>
+      ) : null}
 
       {!draft ? (
         <p className="bulletin-empty">{t('bulletin.selectWeek')}</p>

@@ -3,7 +3,7 @@
  * 数据源：templates/bulletin/service-rotation/*.json
  */
 
-import { readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -111,11 +111,13 @@ function resolveScheduleDir(): string {
   return join(here, '../templates/bulletin/service-rotation');
 }
 
-/** 读取仓库内已入库的季度表（Node） */
+/** 读取仓库内已入库的季度表（Node；扫描目录，跳过 active.json） */
 export function loadBundledServiceRotationSchedules(): ServiceRotationSchedule[] {
   const dir = resolveScheduleDir();
-  // 目前仅 2026 Q3；后续季度追加文件即可
-  const files = ['2026-q3.json'];
+  if (!existsSync(dir)) return [];
+  const files = readdirSync(dir)
+    .filter((n) => n.endsWith('.json') && n !== 'active.json')
+    .sort();
   const out: ServiceRotationSchedule[] = [];
   for (const name of files) {
     try {

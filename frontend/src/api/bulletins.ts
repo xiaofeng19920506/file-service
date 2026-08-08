@@ -140,6 +140,67 @@ export async function getBulletin(id: string): Promise<WeeklyBulletin> {
   return data.bulletin;
 }
 
+export type ServiceRotationScheduleDto = {
+  source?: string;
+  quarter: {
+    year: number;
+    startMonth: number;
+    endMonth: number;
+  };
+  weeks: Array<{
+    date: string;
+    chair: string;
+    usher: string;
+    worship: string;
+    cleaning: string;
+    scripture?: string;
+    communionOrTestimony?: string;
+    sound?: string;
+  }>;
+};
+
+export async function fetchServiceRotationSchedule(): Promise<{
+  schedules: ServiceRotationScheduleDto[];
+  libraryRev: string;
+}> {
+  const res = await apiFetch('/v1/bulletins/service-rotation/schedule');
+  return parseJson(res);
+}
+
+export type BulletinDriveSyncStatus = {
+  configured: boolean;
+  lastRunAt?: string;
+  lastError?: string | null;
+  libraryRev?: string;
+  rotation: {
+    modifiedTime?: string;
+    name?: string;
+    lastSyncedAt?: string;
+    lastError?: string | null;
+  };
+  birthday: {
+    modifiedTime?: string;
+    name?: string;
+    lastSyncedAt?: string;
+    lastError?: string | null;
+  };
+};
+
+export async function fetchBulletinDriveSyncStatus(): Promise<BulletinDriveSyncStatus> {
+  const res = await apiFetch('/v1/bulletins/drive-sync/status');
+  return parseJson(res);
+}
+
+export async function triggerBulletinDriveSync(): Promise<{
+  rotationUpdated: boolean;
+  birthdayUpdated: boolean;
+  state: BulletinDriveSyncStatus;
+  libraryRev?: string;
+}> {
+  const res = await apiFetch('/v1/bulletins/drive-sync/sync', { method: 'POST' });
+  return parseJson(res);
+}
+
 export async function createBulletin(serviceDate: string): Promise<WeeklyBulletin> {
   const res = await apiFetch('/v1/bulletins', {
     method: 'POST',

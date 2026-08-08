@@ -1,6 +1,8 @@
 /**
  * 季度服事轮值表（前端）：与 shared/bulletin-service-rotation 同逻辑，
  * 避免从 @file-service/shared 整包引入 Node 依赖。
+ *
+ * 优先使用 API 拉取的 schedule；失败时回退 bundled JSON。
  */
 
 import schedule2026q3 from '../../../shared/templates/bulletin/service-rotation/2026-q3.json';
@@ -42,6 +44,20 @@ const BUNDLED_SCHEDULES: ServiceRotationSchedule[] = [
   schedule2026q3 as ServiceRotationSchedule,
 ];
 
+let runtimeSchedules: ServiceRotationSchedule[] | null = null;
+
+/** 由页面在加载时注入 API 返回的 schedule */
+export function setServiceRotationSchedules(
+  schedules: ServiceRotationSchedule[] | null,
+): void {
+  runtimeSchedules =
+    schedules && schedules.length > 0 ? schedules : null;
+}
+
+export function getServiceRotationSchedules(): ServiceRotationSchedule[] {
+  return runtimeSchedules ?? BUNDLED_SCHEDULES;
+}
+
 export function formatServiceRosterShortDate(isoDate: string): string {
   const [y, m, d] = isoDate.split('-');
   if (!y || !m || !d) return isoDate;
@@ -78,7 +94,7 @@ function findScheduleForDate(
 
 export function resolveServiceRosterFromSchedule(
   serviceDate: string,
-  schedules: readonly ServiceRotationSchedule[] = BUNDLED_SCHEDULES,
+  schedules: readonly ServiceRotationSchedule[] = getServiceRotationSchedules(),
 ): ServiceRosterFromSchedule | null {
   const hit = findScheduleForDate(serviceDate, schedules);
   if (!hit) return null;
