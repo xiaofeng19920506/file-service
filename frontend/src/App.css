@@ -8015,6 +8015,38 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   font-variant-numeric: tabular-nums;
 }
 
+.worship-track-clip-tag-remove {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin: 0;
+  margin-left: 0.05rem;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted, #64748b);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.worship-track-clip-tag-remove:hover:not(:disabled),
+.worship-track-clip-tag-remove:focus-visible {
+  background: color-mix(in srgb, var(--danger, #b42318) 12%, transparent);
+  color: var(--danger, #b42318);
+  outline: none;
+}
+
+.worship-track-clip-tag-remove:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .worship-track-card-actions {
   display: flex;
   flex-wrap: wrap;
