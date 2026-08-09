@@ -228,16 +228,24 @@ export default function WorshipTrackActions({
             ) : null}
 
             <div className="worship-track-card-actions">
-              {hasClips || (!readOnly && onClipSave) ? (
+              {canEditClips ? (
                 <button
                   type="button"
                   className="btn-secondary btn-sm"
                   disabled={disabled}
                   onClick={openClipsModal}
                 >
-                  {hasClips
-                    ? t('bulletin.worshipClipView')
-                    : t('bulletin.worshipClipAdd')}
+                  {t('bulletin.worshipClipAdd')}
+                </button>
+              ) : null}
+              {hasClips ? (
+                <button
+                  type="button"
+                  className="btn-secondary btn-sm"
+                  disabled={disabled}
+                  onClick={openClipsModal}
+                >
+                  {t('bulletin.worshipClipView')}
                 </button>
               ) : null}
             </div>
