@@ -10,7 +10,7 @@ import {
   type PlayClip,
 } from '../../lib/worship-presentation-mode';
 import { useI18n } from '../../i18n';
-import { ChevronDownIcon, ChevronRightIcon, PencilIcon } from '../icons';
+import { PencilIcon } from '../icons';
 import ClipTimeSelect from './ClipTimeSelect';
 
 type DraftClip = {
@@ -86,6 +86,8 @@ type WorshipClipFieldsProps = {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   hideToggle?: boolean;
+  /** 列表限高约 2 条，多余纵向滚动 */
+  compactList?: boolean;
 };
 
 export default function WorshipClipFields({
@@ -95,6 +97,7 @@ export default function WorshipClipFields({
   open: openProp,
   onOpenChange,
   hideToggle = false,
+  compactList = false,
 }: WorshipClipFieldsProps) {
   const { t } = useI18n();
   const savedClips = resolvePlayClips(item);
@@ -110,12 +113,9 @@ export default function WorshipClipFields({
   const [saving, setSaving] = useState(false);
   const [durationSec, setDurationSec] = useState<number | null>(null);
   const [editingLabelIndex, setEditingLabelIndex] = useState<number | null>(null);
-  /** 默认全部收起（含第一段）；用户点击展开图标后再打开对应片段 */
-  const [expandedSegmentIndex, setExpandedSegmentIndex] = useState<number | null>(null);
   const labelInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setExpandedSegmentIndex(null);
     setEditingLabelIndex(null);
   }, [item.id]);
 
@@ -124,12 +124,6 @@ export default function WorshipClipFields({
     setRows(clipsToDraft(clips, durationSec).map((row) => clampClipRow(row, durationSec)));
     setClipError(null);
     setEditingLabelIndex(null);
-    // 保存回写时保留当前展开段，避免「加一段」后面板被立刻收起
-    setExpandedSegmentIndex((prev) => {
-      const count = Math.max(clips.length, 1);
-      if (prev == null || prev < 0 || prev >= count) return null;
-      return prev;
-    });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅跟随条目数据
   }, [item.id, item.playClips, item.playStartSec, item.playEndSec]);
 
@@ -254,8 +248,6 @@ export default function WorshipClipFields({
       ),
     ];
     setRows(nextRows);
-    // 新加的一段默认展开，便于立刻改时间
-    setExpandedSegmentIndex(nextRows.length - 1);
     // 立刻持久化，避免只改本地 state、刷新后丢失
     void commit(nextRows);
   };
@@ -283,7 +275,7 @@ export default function WorshipClipFields({
   const fallbackMax = 23 * 3600 + 59 * 60 + 59;
 
   return (
-    <div className="bulletin-worship-clip-editor">
+    <div className={`bulletin-worship-clip-editor${compactList ? ' is-compact' : ''}`}>
       {!hideToggle ? (
         <div className="bulletin-worship-clip-toggle-row">
           <button
@@ -308,213 +300,153 @@ export default function WorshipClipFields({
         </div>
       ) : null}
 
-      <>
-          <div className="bulletin-worship-clip-editor-head">
-            <span className="bulletin-worship-clip-editor-label">{t('bulletin.worshipClipSegments')}</span>
-            <div className="bulletin-worship-clip-editor-head-actions">
-              <button
-                type="button"
-                className="btn-secondary btn-sm"
-                disabled={disabled || saving || rows.length >= 40}
-                onClick={addSegment}
-              >
-                {t('bulletin.worshipClipAddSegment')}
-              </button>
-              {!hideToggle ? (
-                <button
-                  type="button"
-                  className="btn-secondary btn-sm"
-                  disabled={disabled || saving}
-                  onClick={() => setOpen(false)}
-                >
-                  {t('bulletin.worshipClipHide')}
-                </button>
-              ) : null}
-              {savedClips.length > 0 ? (
-                <button
-                  type="button"
-                  className="btn-secondary btn-sm"
-                  disabled={disabled || saving}
-                  onClick={() => void clearClips()}
-                >
-                  {t('bulletin.worshipClipClear')}
-                </button>
-              ) : null}
-            </div>
-          </div>
-          {durationSec != null ? (
-            <p className="bulletin-worship-clip-duration-hint">
-              {t('bulletin.worshipClipVideoDuration', {
-                duration: formatClipTime(durationSec) || String(durationSec),
-              })}
-            </p>
-          ) : (
-            <p className="bulletin-worship-clip-duration-hint">
-              {t('bulletin.worshipClipDurationLoading')}
-            </p>
-          )}
-          <ul className="bulletin-worship-clip-rows">
-            {rows.map((row, index) => {
-              const endSec = row.endSec ?? durationSec ?? fallbackMax;
-              const startMax = Math.max(0, endSec - 1);
-              const startMin = 0;
-              const endMin = row.startSec + 1;
-              const endMax = durationSec ?? fallbackMax;
-              const editingLabel = editingLabelIndex === index;
-              const segmentOpen = expandedSegmentIndex === index;
-              const panelId = `worship-clip-segment-${item.id}-${index}`;
-              const displayLabel =
-                row.label.trim() || t('bulletin.worshipClipUntitled', { n: index + 1 });
-              const timeSummary = `${formatClipTime(row.startSec) || '0:00'}–${
-                formatClipTime(endSec) || '—'
-              }`;
-              const toggleLabel = segmentOpen
-                ? t('bulletin.worshipClipCollapseSegment')
-                : t('bulletin.worshipClipExpandSegment');
+      <div className="bulletin-worship-clip-editor-head">
+        <div className="bulletin-worship-clip-editor-head-actions">
+          <button
+            type="button"
+            className="btn-secondary btn-sm"
+            disabled={disabled || saving || rows.length >= 40}
+            onClick={addSegment}
+          >
+            {t('bulletin.worshipClipAddSegment')}
+          </button>
+          {savedClips.length > 0 ? (
+            <button
+              type="button"
+              className="btn-secondary btn-sm"
+              disabled={disabled || saving}
+              onClick={() => void clearClips()}
+            >
+              {t('bulletin.worshipClipClear')}
+            </button>
+          ) : null}
+        </div>
+      </div>
+      {durationSec != null ? (
+        <p className="bulletin-worship-clip-duration-hint">
+          {t('bulletin.worshipClipVideoDuration', {
+            duration: formatClipTime(durationSec) || String(durationSec),
+          })}
+        </p>
+      ) : (
+        <p className="bulletin-worship-clip-duration-hint">
+          {t('bulletin.worshipClipDurationLoading')}
+        </p>
+      )}
+      <ul
+        className={`bulletin-worship-clip-rows${compactList ? ' bulletin-worship-clip-rows--scroll' : ''}`}
+      >
+        {rows.map((row, index) => {
+          const endSec = row.endSec ?? durationSec ?? fallbackMax;
+          const startMax = Math.max(0, endSec - 1);
+          const startMin = 0;
+          const endMin = row.startSec + 1;
+          const endMax = durationSec ?? fallbackMax;
+          const editingLabel = editingLabelIndex === index;
+          const displayLabel =
+            row.label.trim() || t('bulletin.worshipClipUntitled', { n: index + 1 });
 
-              return (
-                <li
-                  key={index}
-                  className={`bulletin-worship-clip-row${segmentOpen ? ' is-open' : ''}`}
-                >
-                  <div className="bulletin-worship-clip-name-row">
+          return (
+            <li key={index} className="bulletin-worship-clip-row">
+              <div className="bulletin-worship-clip-name-row">
+                {editingLabel ? (
+                  <input
+                    ref={labelInputRef}
+                    type="text"
+                    className="bulletin-worship-clip-label-input"
+                    value={row.label}
+                    disabled={disabled || saving}
+                    placeholder={t('bulletin.worshipClipLabelPlaceholder')}
+                    aria-label={t('bulletin.worshipClipLabel')}
+                    onChange={(e) => updateRow(index, { label: e.target.value })}
+                    onBlur={() => {
+                      setEditingLabelIndex(null);
+                      blurCommit();
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        (e.target as HTMLInputElement).blur();
+                      } else if (e.key === 'Escape') {
+                        e.preventDefault();
+                        const saved = resolvePlayClips(item)[index];
+                        updateRow(index, { label: saved?.label ?? '' });
+                        setEditingLabelIndex(null);
+                      }
+                    }}
+                  />
+                ) : (
+                  <>
                     <button
                       type="button"
-                      className="bulletin-worship-clip-segment-toggle"
+                      className="bulletin-worship-clip-edit-label-btn"
                       disabled={disabled || saving}
-                      aria-expanded={segmentOpen}
-                      aria-controls={panelId}
-                      aria-label={toggleLabel}
-                      title={toggleLabel}
-                      onClick={() =>
-                        setExpandedSegmentIndex((prev) => (prev === index ? null : index))
-                      }
+                      aria-label={t('bulletin.worshipClipEditLabel')}
+                      title={t('bulletin.worshipClipEditLabel')}
+                      onClick={() => setEditingLabelIndex(index)}
                     >
-                      <span className="bulletin-worship-clip-segment-chevron" aria-hidden>
-                        {segmentOpen ? <ChevronDownIcon /> : <ChevronRightIcon />}
-                      </span>
+                      <PencilIcon />
                     </button>
-                    {editingLabel ? (
-                      <input
-                        ref={labelInputRef}
-                        type="text"
-                        className="bulletin-worship-clip-label-input"
-                        value={row.label}
-                        disabled={disabled || saving}
-                        placeholder={t('bulletin.worshipClipLabelPlaceholder')}
-                        aria-label={t('bulletin.worshipClipLabel')}
-                        onChange={(e) => updateRow(index, { label: e.target.value })}
-                        onBlur={() => {
-                          setEditingLabelIndex(null);
-                          blurCommit();
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            (e.target as HTMLInputElement).blur();
-                          } else if (e.key === 'Escape') {
-                            e.preventDefault();
-                            const saved = resolvePlayClips(item)[index];
-                            updateRow(index, { label: saved?.label ?? '' });
-                            setEditingLabelIndex(null);
-                          }
-                        }}
-                      />
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          className="bulletin-worship-clip-edit-label-btn"
-                          disabled={disabled || saving}
-                          aria-label={t('bulletin.worshipClipEditLabel')}
-                          title={t('bulletin.worshipClipEditLabel')}
-                          onClick={() => setEditingLabelIndex(index)}
-                        >
-                          <PencilIcon />
-                        </button>
-                        <span className="bulletin-worship-clip-name-label" title={displayLabel}>
-                          {displayLabel}
-                        </span>
-                        {!segmentOpen ? (
-                          <span
-                            className="bulletin-worship-clip-time-summary"
-                            title={timeSummary}
-                          >
-                            {timeSummary}
-                          </span>
-                        ) : null}
-                      </>
-                    )}
-                    {rows.length > 1 ? (
-                      <button
-                        type="button"
-                        className="btn-secondary btn-sm bulletin-worship-clip-remove-btn"
-                        disabled={disabled || saving}
-                        onClick={() => {
-                          const next = rows.filter((_, i) => i !== index);
-                          const fallback = next.length
-                            ? next
-                            : [
-                                clampClipRow(
-                                  { startSec: 0, endSec: durationSec, label: '' },
-                                  durationSec,
-                                ),
-                              ];
-                          setEditingLabelIndex(null);
-                          setExpandedSegmentIndex((prev) => {
-                            if (prev == null) return null;
-                            if (prev === index) return null;
-                            if (prev > index) return prev - 1;
-                            return prev;
-                          });
-                          setRows(fallback);
-                          void commit(fallback);
-                        }}
-                      >
-                        {t('bulletin.worshipClipRemoveSegment')}
-                      </button>
-                    ) : null}
-                  </div>
-                  <div
-                    id={panelId}
-                    className="bulletin-worship-clip-segment-panel"
-                    hidden={!segmentOpen}
+                    <span className="bulletin-worship-clip-name-label" title={displayLabel}>
+                      {displayLabel}
+                    </span>
+                  </>
+                )}
+                {rows.length > 1 ? (
+                  <button
+                    type="button"
+                    className="btn-secondary btn-sm bulletin-worship-clip-remove-btn"
+                    disabled={disabled || saving}
+                    onClick={() => {
+                      const next = rows.filter((_, i) => i !== index);
+                      const fallback = next.length
+                        ? next
+                        : [
+                            clampClipRow(
+                              { startSec: 0, endSec: durationSec, label: '' },
+                              durationSec,
+                            ),
+                          ];
+                      setEditingLabelIndex(null);
+                      setRows(fallback);
+                      void commit(fallback);
+                    }}
                   >
-                    {segmentOpen ? (
-                      <div className="bulletin-worship-clip-time-row">
-                        <div className="bulletin-worship-clip-field">
-                          <span>{t('bulletin.worshipClipStart')}</span>
-                          <ClipTimeSelect
-                            aria-label={t('bulletin.worshipClipStart')}
-                            valueSec={row.startSec}
-                            minSec={startMin}
-                            maxSec={startMax}
-                            disabled={disabled || saving || durationSec == null}
-                            onChange={(sec) => updateRow(index, { startSec: sec })}
-                            onCommit={blurCommit}
-                          />
-                        </div>
-                        <div className="bulletin-worship-clip-field">
-                          <span>{t('bulletin.worshipClipEnd')}</span>
-                          <ClipTimeSelect
-                            aria-label={t('bulletin.worshipClipEnd')}
-                            valueSec={endSec}
-                            minSec={endMin}
-                            maxSec={endMax}
-                            disabled={disabled || saving || durationSec == null}
-                            onChange={(sec) => updateRow(index, { endSec: sec })}
-                            onCommit={blurCommit}
-                          />
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-          {clipError ? <span className="bulletin-worship-clip-error">{clipError}</span> : null}
-      </>
+                    {t('bulletin.worshipClipRemoveSegment')}
+                  </button>
+                ) : null}
+              </div>
+              <div className="bulletin-worship-clip-time-row">
+                <div className="bulletin-worship-clip-field">
+                  <span>{t('bulletin.worshipClipStart')}</span>
+                  <ClipTimeSelect
+                    aria-label={t('bulletin.worshipClipStart')}
+                    valueSec={row.startSec}
+                    minSec={startMin}
+                    maxSec={startMax}
+                    disabled={disabled || saving || durationSec == null}
+                    onChange={(sec) => updateRow(index, { startSec: sec })}
+                    onCommit={blurCommit}
+                  />
+                </div>
+                <div className="bulletin-worship-clip-field">
+                  <span>{t('bulletin.worshipClipEnd')}</span>
+                  <ClipTimeSelect
+                    aria-label={t('bulletin.worshipClipEnd')}
+                    valueSec={endSec}
+                    minSec={endMin}
+                    maxSec={endMax}
+                    disabled={disabled || saving || durationSec == null}
+                    onChange={(sec) => updateRow(index, { endSec: sec })}
+                    onCommit={blurCommit}
+                  />
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      {clipError ? <span className="bulletin-worship-clip-error">{clipError}</span> : null}
     </div>
   );
 }

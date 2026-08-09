@@ -20,7 +20,6 @@ import {
 import PlaylistYoutubeSearchPanel from '../PlaylistYoutubeSearchPanel';
 import { useSortableVerticalList } from '../../hooks/useSortableVerticalList';
 import WorshipTrackActions from './WorshipTrackActions';
-import WorshipTrackThumbnail from './WorshipTrackThumbnail';
 import { friendlyError } from '../../lib/error-messages';
 import type { PlayClip } from '../../lib/worship-presentation-mode';
 import { useI18n } from '../../i18n';
@@ -298,15 +297,12 @@ export default function WorshipSongsEditor({
                   style={trackSortable.getItemStyle(index)}
                   {...trackSortable.bindDragHandle(index, { ignoreInteractive: true })}
                 >
-                  <WorshipTrackThumbnail videoId={item.youtubeVideoId} title={item.title} />
-                  <div className="worship-songs-track-main">
-                    <WorshipTrackActions
-                      item={item}
-                      title={item.title}
-                      onRemove={() => handleRemove(item)}
-                      onClipSave={(patch) => handleClipSave(item.id, patch)}
-                    />
-                  </div>
+                  <WorshipTrackActions
+                    item={item}
+                    title={item.title}
+                    onRemove={() => handleRemove(item)}
+                    onClipSave={(patch) => handleClipSave(item.id, patch)}
+                  />
                 </li>
               ))}
             </ol>

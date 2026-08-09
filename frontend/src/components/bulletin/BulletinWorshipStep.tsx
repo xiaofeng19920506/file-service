@@ -13,9 +13,7 @@ import BulletinWorshipAddSongsModal from './BulletinWorshipAddSongsModal';
 import BulletinWorshipInviteModal from './BulletinWorshipInviteModal';
 import { friendlyError } from '../../lib/error-messages';
 import {
-  formatClipSummary,
   normalizeWorshipPresentationMode,
-  resolvePlayClips,
   worshipNeedsLyricsPptx,
   worshipNeedsPlaylist,
   type PlayClip,
@@ -24,7 +22,6 @@ import {
 import { useI18n } from '../../i18n';
 import { useSortableVerticalList } from '../../hooks/useSortableVerticalList';
 import WorshipTrackActions from '../worship/WorshipTrackActions';
-import WorshipTrackThumbnail from '../worship/WorshipTrackThumbnail';
 
 type BulletinWorshipStepProps = {
   draft: WeeklyBulletin;
@@ -357,28 +354,15 @@ export default function BulletinWorshipStep({
                       ? trackSortable.bindDragHandle(index, { ignoreInteractive: true })
                       : {})}
                   >
-                    <WorshipTrackThumbnail videoId={item.youtubeVideoId} title={item.title} />
-                    <div className="bulletin-worship-track-preview-main">
-                      {canAddSongs ? (
-                        <WorshipTrackActions
-                          item={item}
-                          title={item.title}
-                          onRemove={() => handleRemove(item)}
-                          onClipSave={(patch) => handleClipSave(item.id, patch)}
-                        />
-                      ) : (
-                        <div className="bulletin-worship-track-preview-text">
-                          <span className="bulletin-worship-track-preview-title" title={item.title}>
-                            {item.title}
-                          </span>
-                          {resolvePlayClips(item).length > 0 ? (
-                            <span className="bulletin-worship-clip-summary">
-                              {resolvePlayClips(item).map((c) => formatClipSummary(c)).join(' · ')}
-                            </span>
-                          ) : null}
-                        </div>
-                      )}
-                    </div>
+                    <WorshipTrackActions
+                      item={item}
+                      title={item.title}
+                      readOnly={!canAddSongs}
+                      onRemove={canAddSongs ? () => handleRemove(item) : undefined}
+                      onClipSave={
+                        canAddSongs ? (patch) => handleClipSave(item.id, patch) : undefined
+                      }
+                    />
                   </li>
                 ))}
               </ol>
