@@ -7854,6 +7854,45 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   padding-top: 0.1rem;
 }
 
+.worship-track-accordion-trigger {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0.2rem 0.35rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.worship-track-accordion-trigger:hover:not(:disabled),
+.worship-track-accordion-trigger:focus-visible {
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--surface-elevated, #fff) 82%, var(--border));
+}
+
+.worship-track-accordion-trigger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.worship-track-accordion-chevron {
+  flex-shrink: 0;
+  width: 0.9rem;
+  color: var(--text-muted, #64748b);
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.worship-track-actions.is-open .worship-track-accordion-trigger {
+  background: color-mix(in srgb, var(--surface-muted, rgba(0, 0, 0, 0.03)) 100%, transparent);
+}
+
 .worship-track-actions-title {
   flex: 1;
   min-width: 0;
@@ -7872,6 +7911,15 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 9rem;
+}
+
+.worship-track-accordion-panel {
+  width: 100%;
+  min-width: 0;
+}
+
+.worship-track-accordion-panel[hidden] {
+  display: none;
 }
 
 .worship-track-more {

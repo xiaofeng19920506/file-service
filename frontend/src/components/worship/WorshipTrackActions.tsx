@@ -12,7 +12,7 @@ type WorshipTrackActionsProps = {
   onClipSave: (patch: { playClips: PlayClip[] | null }) => Promise<void>;
 };
 
-/** 歌名 + ⋯（剪切 / 移除）+ 按需展开的剪切编辑 */
+/** 歌名 accordion（展开/收起剪切）+ ⋯（移除） */
 export default function WorshipTrackActions({
   item,
   title,
@@ -22,13 +22,12 @@ export default function WorshipTrackActions({
 }: WorshipTrackActionsProps) {
   const { t } = useI18n();
   const savedClips = resolvePlayClips(item);
+  const hasClips = savedClips.length > 0;
   const [menuOpen, setMenuOpen] = useState(false);
-  const [clipOpen, setClipOpen] = useState(() => savedClips.length > 0);
+  /** 有剪切时默认展开；之后完全由用户 accordion 控制，不被数据刷新强制打开 */
+  const [clipOpen, setClipOpen] = useState(() => hasClips);
   const rootRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (resolvePlayClips(item).length > 0) setClipOpen(true);
-  }, [item.id, item.playClips, item.playStartSec, item.playEndSec]);
+  const panelId = `worship-clip-panel-${item.id}`;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -46,17 +45,33 @@ export default function WorshipTrackActions({
     };
   }, [menuOpen]);
 
+  const summary = hasClips
+    ? savedClips.map((c) => formatClipSummary(c)).join(' · ')
+    : t('bulletin.worshipClipSegments');
+
   return (
-    <div className="worship-track-actions" ref={rootRef}>
+    <div className={`worship-track-actions${clipOpen ? ' is-open' : ''}`} ref={rootRef}>
       <div className="worship-track-actions-bar">
-        <span className="worship-track-actions-title" title={title}>
-          {title}
-        </span>
-        {!clipOpen && savedClips.length > 0 ? (
-          <span className="bulletin-worship-clip-summary worship-track-actions-clip-hint">
-            {savedClips.map((c) => formatClipSummary(c)).join(' · ')}
+        <button
+          type="button"
+          className="worship-track-accordion-trigger"
+          disabled={disabled}
+          aria-expanded={clipOpen}
+          aria-controls={panelId}
+          onClick={() => setClipOpen((v) => !v)}
+        >
+          <span className="worship-track-accordion-chevron" aria-hidden>
+            {clipOpen ? '▾' : '▸'}
           </span>
-        ) : null}
+          <span className="worship-track-actions-title" title={title}>
+            {title}
+          </span>
+          {!clipOpen ? (
+            <span className="bulletin-worship-clip-summary worship-track-actions-clip-hint" title={summary}>
+              {summary}
+            </span>
+          ) : null}
+        </button>
         <div className="worship-track-more">
           <button
             type="button"
@@ -78,11 +93,11 @@ export default function WorshipTrackActions({
                 className="worship-track-more-item"
                 disabled={disabled}
                 onClick={() => {
-                  setClipOpen(true);
+                  setClipOpen((v) => !v);
                   setMenuOpen(false);
                 }}
               >
-                {t('bulletin.worshipClipShow')}
+                {clipOpen ? t('bulletin.worshipClipHide') : t('bulletin.worshipClipShow')}
               </button>
               <button
                 type="button"
@@ -101,14 +116,24 @@ export default function WorshipTrackActions({
         </div>
       </div>
 
-      <WorshipClipFields
-        item={item}
-        disabled={disabled}
-        open={clipOpen}
-        onOpenChange={setClipOpen}
-        hideToggle
-        onSave={onClipSave}
-      />
+      <div
+        id={panelId}
+        className="worship-track-accordion-panel"
+        hidden={!clipOpen}
+        role="region"
+        aria-label={t('bulletin.worshipClipSegments')}
+      >
+        {clipOpen ? (
+          <WorshipClipFields
+            item={item}
+            disabled={disabled}
+            open
+            onOpenChange={setClipOpen}
+            hideToggle
+            onSave={onClipSave}
+          />
+        ) : null}
+      </div>
     </div>
   );
 }

@@ -113,9 +113,9 @@ export default function WorshipClipFields({
     const clips = resolvePlayClips(item);
     setRows(clipsToDraft(clips, durationSec).map((row) => clampClipRow(row, durationSec)));
     setClipError(null);
-    if (clips.length > 0 && openProp === undefined) setInternalOpen(true);
+    // 非受控模式：首次有剪切时默认展开；之后不强制打开，避免盖住用户收起
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅跟随条目数据
-  }, [item.id, item.playClips, item.playStartSec, item.playEndSec, openProp]);
+  }, [item.id, item.playClips, item.playStartSec, item.playEndSec]);
 
   useEffect(() => {
     if (durationSec == null || durationSec <= 0) return;
@@ -231,7 +231,24 @@ export default function WorshipClipFields({
     ]);
   };
 
-  if (!open && hideToggle) return null;
+  if (!open) {
+    if (hideToggle) return null;
+    return (
+      <div className="bulletin-worship-clip-editor">
+        <div className="bulletin-worship-clip-toggle-row">
+          <button
+            type="button"
+            className="btn-secondary btn-sm"
+            disabled={disabled || saving}
+            aria-expanded={false}
+            onClick={() => setOpen(true)}
+          >
+            {t('bulletin.worshipClipShow')}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   /** 时长未就绪时先给宽上限，避免下拉为空 */
   const fallbackMax = 23 * 3600 + 59 * 60 + 59;
@@ -244,12 +261,12 @@ export default function WorshipClipFields({
             type="button"
             className="btn-secondary btn-sm"
             disabled={disabled || saving}
-            aria-expanded={open}
-            onClick={() => setOpen(!open)}
+            aria-expanded
+            onClick={() => setOpen(false)}
           >
-            {open ? t('bulletin.worshipClipHide') : t('bulletin.worshipClipShow')}
+            {t('bulletin.worshipClipHide')}
           </button>
-          {open && savedClips.length > 0 ? (
+          {savedClips.length > 0 ? (
             <button
               type="button"
               className="btn-secondary btn-sm"
@@ -262,8 +279,7 @@ export default function WorshipClipFields({
         </div>
       ) : null}
 
-      {open ? (
-        <>
+      <>
           <div className="bulletin-worship-clip-editor-head">
             <span className="bulletin-worship-clip-editor-label">{t('bulletin.worshipClipSegments')}</span>
             <div className="bulletin-worship-clip-editor-head-actions">
@@ -275,14 +291,16 @@ export default function WorshipClipFields({
               >
                 {t('bulletin.worshipClipAddSegment')}
               </button>
-              <button
-                type="button"
-                className="btn-secondary btn-sm"
-                disabled={disabled || saving}
-                onClick={() => setOpen(false)}
-              >
-                {t('bulletin.worshipClipHide')}
-              </button>
+              {!hideToggle ? (
+                <button
+                  type="button"
+                  className="btn-secondary btn-sm"
+                  disabled={disabled || saving}
+                  onClick={() => setOpen(false)}
+                >
+                  {t('bulletin.worshipClipHide')}
+                </button>
+              ) : null}
               {savedClips.length > 0 ? (
                 <button
                   type="button"
@@ -378,8 +396,7 @@ export default function WorshipClipFields({
             })}
           </ul>
           {clipError ? <span className="bulletin-worship-clip-error">{clipError}</span> : null}
-        </>
-      ) : null}
+      </>
     </div>
   );
 }
