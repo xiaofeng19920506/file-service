@@ -7489,6 +7489,18 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
     justify-content: center;
     text-align: center;
   }
+
+  .bulletin-header-btn-group > .bulletin-slideshow-launcher {
+    flex: 1 1 calc(50% - 0.35rem);
+    min-width: 0;
+  }
+
+  .bulletin-header-btn-group > .bulletin-slideshow-launcher > .btn-primary,
+  .bulletin-header-btn-group > .bulletin-slideshow-launcher > .btn-secondary {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
 }
 
 /* 矮屏但仍够宽：保持三栏，由各栏 overflow 滚动 */
@@ -7556,10 +7568,36 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
     align-items: stretch;
   }
 
+  /* 手机：两列等宽网格（含投影 launcher），避免一排满宽或半排空缺 */
+  .bulletin-header-btn-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
   .bulletin-header-btn-group > .btn-primary,
   .bulletin-header-btn-group > .btn-secondary,
-  .bulletin-header-btn-group > a.btn-secondary {
-    flex: 1 1 100%;
+  .bulletin-header-btn-group > a.btn-secondary,
+  .bulletin-header-btn-group > .bulletin-slideshow-launcher {
+    flex: none;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .bulletin-header-btn-group > .bulletin-slideshow-launcher {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .bulletin-header-btn-group > .bulletin-slideshow-launcher > .btn-primary,
+  .bulletin-header-btn-group > .bulletin-slideshow-launcher > .btn-secondary {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
   }
 
   .bulletin-deck-preview {
@@ -7579,6 +7617,37 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
 
 /* 手机：分区列表 ↔ 预览 两级导航（与 MOBILE_MEDIA_QUERY 对齐） */
 @media (max-width: 900px) {
+  .bulletin-header-btn-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .bulletin-header-btn-group > .btn-primary,
+  .bulletin-header-btn-group > .btn-secondary,
+  .bulletin-header-btn-group > a.btn-secondary,
+  .bulletin-header-btn-group > .bulletin-slideshow-launcher {
+    flex: none;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .bulletin-header-btn-group > .bulletin-slideshow-launcher {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .bulletin-header-btn-group > .bulletin-slideshow-launcher > .btn-primary,
+  .bulletin-header-btn-group > .bulletin-slideshow-launcher > .btn-secondary {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
   .bulletin-workspace[data-mobile-view='sections'] .bulletin-workspace-form,
   .bulletin-workspace[data-mobile-view='sections'] .bulletin-workspace-preview {
     display: none;
