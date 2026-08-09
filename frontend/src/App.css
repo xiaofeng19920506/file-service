@@ -8071,6 +8071,80 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   min-width: 0;
 }
 
+.bulletin-worship-clip-segment-toggle {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 1.85rem;
+  margin: 0;
+  padding: 0.15rem 0.45rem 0.15rem 0.25rem;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--accent, #3b82f6) 28%, var(--border));
+  background: color-mix(in srgb, var(--accent, #3b82f6) 14%, var(--surface));
+  color: color-mix(in srgb, var(--accent, #3b82f6) 72%, var(--text));
+  cursor: pointer;
+}
+
+.bulletin-worship-clip-segment-toggle:hover:not(:disabled),
+.bulletin-worship-clip-segment-toggle:focus-visible {
+  background: color-mix(in srgb, var(--accent, #3b82f6) 22%, var(--surface));
+  outline: none;
+}
+
+.bulletin-worship-clip-segment-toggle:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.bulletin-worship-clip-segment-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.3rem;
+  height: 1.3rem;
+}
+
+.bulletin-worship-clip-segment-chevron .nav-back-icon,
+.bulletin-worship-clip-segment-chevron .player-chrome-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+  stroke-width: 2.4;
+}
+
+.bulletin-worship-clip-segment-action {
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.bulletin-worship-clip-time-summary {
+  flex-shrink: 1;
+  min-width: 0;
+  margin-left: 0.15rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-muted, #64748b);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bulletin-worship-clip-segment-panel {
+  width: 100%;
+  min-width: 0;
+}
+
+.bulletin-worship-clip-segment-panel[hidden] {
+  display: none;
+}
+
+.bulletin-worship-clip-row.is-open {
+  border-color: color-mix(in srgb, var(--accent, #3b82f6) 35%, var(--border));
+  background: color-mix(in srgb, var(--accent, #3b82f6) 5%, var(--surface));
+}
+
 .bulletin-worship-clip-edit-label-btn {
   flex-shrink: 0;
   display: inline-flex;

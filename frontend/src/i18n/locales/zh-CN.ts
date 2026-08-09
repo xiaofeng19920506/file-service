@@ -565,6 +565,8 @@ export default {
     worshipClipHide: '收起',
     worshipClipExpand: '展开剪切',
     worshipClipCollapse: '收起剪切',
+    worshipClipExpandSegment: '展开片段',
+    worshipClipCollapseSegment: '收起片段',
     worshipClipClear: '清除剪切',
     worshipTrackMore: '更多',
     worshipClipAddSegment: '加一段',

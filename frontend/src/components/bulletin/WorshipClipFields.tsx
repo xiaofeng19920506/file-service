@@ -10,7 +10,7 @@ import {
   type PlayClip,
 } from '../../lib/worship-presentation-mode';
 import { useI18n } from '../../i18n';
-import { PencilIcon } from '../icons';
+import { ChevronDownIcon, ChevronRightIcon, PencilIcon } from '../icons';
 import ClipTimeSelect from './ClipTimeSelect';
 
 type DraftClip = {
@@ -110,6 +110,8 @@ export default function WorshipClipFields({
   const [saving, setSaving] = useState(false);
   const [durationSec, setDurationSec] = useState<number | null>(null);
   const [editingLabelIndex, setEditingLabelIndex] = useState<number | null>(null);
+  /** 默认全部收起（含第一段）；用户点击展开图标后再打开对应片段 */
+  const [expandedSegmentIndex, setExpandedSegmentIndex] = useState<number | null>(null);
   const labelInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -117,6 +119,7 @@ export default function WorshipClipFields({
     setRows(clipsToDraft(clips, durationSec).map((row) => clampClipRow(row, durationSec)));
     setClipError(null);
     setEditingLabelIndex(null);
+    setExpandedSegmentIndex(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅跟随条目数据
   }, [item.id, item.playClips, item.playStartSec, item.playEndSec]);
 
@@ -233,6 +236,7 @@ export default function WorshipClipFields({
     }
     const nextStart = last ? defaultNextClipStartSec(last, durationSec) : 0;
     setClipError(null);
+    const nextIndex = rows.length;
     setRows((prev) => [
       ...prev,
       clampClipRow(
@@ -240,6 +244,8 @@ export default function WorshipClipFields({
         durationSec,
       ),
     ]);
+    // 新加的一段默认展开，便于立刻改时间
+    setExpandedSegmentIndex(nextIndex);
   };
 
   if (!open) {
@@ -343,12 +349,39 @@ export default function WorshipClipFields({
               const endMin = row.startSec + 1;
               const endMax = durationSec ?? fallbackMax;
               const editingLabel = editingLabelIndex === index;
+              const segmentOpen = expandedSegmentIndex === index;
+              const panelId = `worship-clip-segment-${item.id}-${index}`;
               const displayLabel =
                 row.label.trim() || t('bulletin.worshipClipUntitled', { n: index + 1 });
+              const timeSummary = `${formatClipTime(row.startSec) || '0:00'}–${
+                formatClipTime(endSec) || '—'
+              }`;
+              const toggleLabel = segmentOpen
+                ? t('bulletin.worshipClipCollapseSegment')
+                : t('bulletin.worshipClipExpandSegment');
 
               return (
-                <li key={index} className="bulletin-worship-clip-row">
+                <li
+                  key={index}
+                  className={`bulletin-worship-clip-row${segmentOpen ? ' is-open' : ''}`}
+                >
                   <div className="bulletin-worship-clip-name-row">
+                    <button
+                      type="button"
+                      className="bulletin-worship-clip-segment-toggle"
+                      disabled={disabled || saving}
+                      aria-expanded={segmentOpen}
+                      aria-controls={panelId}
+                      title={toggleLabel}
+                      onClick={() =>
+                        setExpandedSegmentIndex((prev) => (prev === index ? null : index))
+                      }
+                    >
+                      <span className="bulletin-worship-clip-segment-chevron" aria-hidden>
+                        {segmentOpen ? <ChevronDownIcon /> : <ChevronRightIcon />}
+                      </span>
+                      <span className="bulletin-worship-clip-segment-action">{toggleLabel}</span>
+                    </button>
                     {editingLabel ? (
                       <input
                         ref={labelInputRef}
@@ -390,6 +423,14 @@ export default function WorshipClipFields({
                         <span className="bulletin-worship-clip-name-label" title={displayLabel}>
                           {displayLabel}
                         </span>
+                        {!segmentOpen ? (
+                          <span
+                            className="bulletin-worship-clip-time-summary"
+                            title={timeSummary}
+                          >
+                            {timeSummary}
+                          </span>
+                        ) : null}
                       </>
                     )}
                     {rows.length > 1 ? (
@@ -408,6 +449,12 @@ export default function WorshipClipFields({
                                 ),
                               ];
                           setEditingLabelIndex(null);
+                          setExpandedSegmentIndex((prev) => {
+                            if (prev == null) return null;
+                            if (prev === index) return null;
+                            if (prev > index) return prev - 1;
+                            return prev;
+                          });
                           setRows(fallback);
                           void commit(fallback);
                         }}
@@ -416,31 +463,39 @@ export default function WorshipClipFields({
                       </button>
                     ) : null}
                   </div>
-                  <div className="bulletin-worship-clip-time-row">
-                    <div className="bulletin-worship-clip-field">
-                      <span>{t('bulletin.worshipClipStart')}</span>
-                      <ClipTimeSelect
-                        aria-label={t('bulletin.worshipClipStart')}
-                        valueSec={row.startSec}
-                        minSec={startMin}
-                        maxSec={startMax}
-                        disabled={disabled || saving || durationSec == null}
-                        onChange={(sec) => updateRow(index, { startSec: sec })}
-                        onCommit={blurCommit}
-                      />
-                    </div>
-                    <div className="bulletin-worship-clip-field">
-                      <span>{t('bulletin.worshipClipEnd')}</span>
-                      <ClipTimeSelect
-                        aria-label={t('bulletin.worshipClipEnd')}
-                        valueSec={endSec}
-                        minSec={endMin}
-                        maxSec={endMax}
-                        disabled={disabled || saving || durationSec == null}
-                        onChange={(sec) => updateRow(index, { endSec: sec })}
-                        onCommit={blurCommit}
-                      />
-                    </div>
+                  <div
+                    id={panelId}
+                    className="bulletin-worship-clip-segment-panel"
+                    hidden={!segmentOpen}
+                  >
+                    {segmentOpen ? (
+                      <div className="bulletin-worship-clip-time-row">
+                        <div className="bulletin-worship-clip-field">
+                          <span>{t('bulletin.worshipClipStart')}</span>
+                          <ClipTimeSelect
+                            aria-label={t('bulletin.worshipClipStart')}
+                            valueSec={row.startSec}
+                            minSec={startMin}
+                            maxSec={startMax}
+                            disabled={disabled || saving || durationSec == null}
+                            onChange={(sec) => updateRow(index, { startSec: sec })}
+                            onCommit={blurCommit}
+                          />
+                        </div>
+                        <div className="bulletin-worship-clip-field">
+                          <span>{t('bulletin.worshipClipEnd')}</span>
+                          <ClipTimeSelect
+                            aria-label={t('bulletin.worshipClipEnd')}
+                            valueSec={endSec}
+                            minSec={endMin}
+                            maxSec={endMax}
+                            disabled={disabled || saving || durationSec == null}
+                            onChange={(sec) => updateRow(index, { endSec: sec })}
+                            onCommit={blurCommit}
+                          />
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 </li>
               );
