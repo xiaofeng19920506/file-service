@@ -115,11 +115,21 @@ export default function WorshipClipFields({
   const labelInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    setExpandedSegmentIndex(null);
+    setEditingLabelIndex(null);
+  }, [item.id]);
+
+  useEffect(() => {
     const clips = resolvePlayClips(item);
     setRows(clipsToDraft(clips, durationSec).map((row) => clampClipRow(row, durationSec)));
     setClipError(null);
     setEditingLabelIndex(null);
-    setExpandedSegmentIndex(null);
+    // 保存回写时保留当前展开段，避免「加一段」后面板被立刻收起
+    setExpandedSegmentIndex((prev) => {
+      const count = Math.max(clips.length, 1);
+      if (prev == null || prev < 0 || prev >= count) return null;
+      return prev;
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅跟随条目数据
   }, [item.id, item.playClips, item.playStartSec, item.playEndSec]);
 
@@ -236,16 +246,18 @@ export default function WorshipClipFields({
     }
     const nextStart = last ? defaultNextClipStartSec(last, durationSec) : 0;
     setClipError(null);
-    const nextIndex = rows.length;
-    setRows((prev) => [
-      ...prev,
+    const nextRows = [
+      ...rows.map((row) => clampClipRow(row, durationSec)),
       clampClipRow(
         { startSec: nextStart, endSec: durationSec, label: '' },
         durationSec,
       ),
-    ]);
+    ];
+    setRows(nextRows);
     // 新加的一段默认展开，便于立刻改时间
-    setExpandedSegmentIndex(nextIndex);
+    setExpandedSegmentIndex(nextRows.length - 1);
+    // 立刻持久化，避免只改本地 state、刷新后丢失
+    void commit(nextRows);
   };
 
   if (!open) {
