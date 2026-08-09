@@ -8093,6 +8093,31 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
+  padding: 0.25rem 0;
+}
+
+.bulletin-doxology-panel .bulletin-step-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 650;
+}
+
+.bulletin-doxology-panel .bulletin-step-hint {
+  margin: 0;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.bulletin-doxology-panel .share-playlist-field {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.bulletin-doxology-panel .share-playlist-field .playlists-text-input {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .bulletin-worship-dock {

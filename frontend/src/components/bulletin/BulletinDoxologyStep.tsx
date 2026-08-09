@@ -39,11 +39,13 @@ export default function BulletinDoxologyStep({ draft, canEdit, onPatch }: Bullet
 
   return (
     <div className="bulletin-doxology-panel">
+      <h3 className="bulletin-step-title">{t('bulletin.sections.doxology')}</h3>
       <p className="bulletin-step-hint">{t('bulletin.doxologyYoutubeHint')}</p>
       <label className="share-playlist-field">
-        <span className="bulletin-field-label">{t('bulletin.doxologyYoutubeLabel')}</span>
+        <span>{t('bulletin.doxologyYoutubeLabel')}</span>
         <input
           type="url"
+          className="playlists-text-input"
           inputMode="url"
           autoComplete="off"
           spellCheck={false}

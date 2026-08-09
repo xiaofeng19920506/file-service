@@ -259,7 +259,10 @@ export default function BulletinPage() {
         id: section.id,
         label: section.label ?? t(section.labelKey),
         enabled: true,
-        readonly: section.editableStepId == null || Boolean(section.groupOnly),
+        readonly:
+          section.id === 'doxology'
+            ? false
+            : section.editableStepId == null || Boolean(section.groupOnly),
         visible: section.groupOnly
           ? undefined
           : draft
