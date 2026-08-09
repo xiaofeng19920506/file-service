@@ -20,7 +20,7 @@ import {
   type MetadataSnapshot,
 } from './blob-metadata.js';
 export class ContentAlreadyExistsError extends Error {
-  constructor() {
+  constructor(readonly existingBlobId?: string) {
     super('content_already_exists');
     this.name = 'ContentAlreadyExistsError';
   }
@@ -51,6 +51,11 @@ export async function persistBlobFromBuffer(opts: {
   author?: string | null;
   notes?: string | null;
   uploadedBy?: string;
+  /**
+   * 诗库上传默认抛 ContentAlreadyExistsError（409）。
+   * 周报邀请等场景设为 true：复用已有 blobId，便于同文件再传/换周绑定。
+   */
+  reuseExisting?: boolean;
 }): Promise<PersistBlobResult> {
   const { db, storage, buf, mimeType, filename, ext, composer, author, notes } = opts;
   const incoming: BlobMetadataInput = {
@@ -115,7 +120,19 @@ export async function persistBlobFromBuffer(opts: {
     throw new Error('blob_insert_race');
   }
 
-  throw new ContentAlreadyExistsError();
+  if (opts.reuseExisting) {
+    return {
+      blobId: existing.id,
+      sha256: shaHex,
+      deduplicated: true,
+      metadataUpdated: false,
+      metadataFilled: [],
+      metadataConflicts: [],
+      existingMetadata: pickMetadataSnapshot(existing),
+    };
+  }
+
+  throw new ContentAlreadyExistsError(existing.id);
 }
 
 export async function updateBlobMetadata(opts: {

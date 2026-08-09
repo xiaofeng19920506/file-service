@@ -220,6 +220,7 @@ export function registerBulletinSectionInviteRoutes(
       }
 
       const downloadName = `周报-${resolved.bulletin.serviceDate}-主日信息.pptx`;
+      // 同内容再传（或诗库已有该文件）时复用 blob，避免 content_already_exists → 500
       const persisted = await persistBlobFromBuffer({
         db,
         storage,
@@ -229,6 +230,7 @@ export function registerBulletinSectionInviteRoutes(
         ext: 'pptx',
         title: `周报主日信息 ${resolved.bulletin.serviceDate}`,
         notes: `bulletin section invite pptx ${resolved.bulletin.id} ${resolved.sectionId}`,
+        reuseExisting: true,
       });
 
       const nextOverrides = setSectionPptxOverride(
