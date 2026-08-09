@@ -68,6 +68,12 @@ import { buildBulletinPptxFile, publishBulletinPptx } from '../lib/bulletin-publ
 import { friendlyError } from '../lib/error-messages';
 import { isLocalBulletinDraftDirty } from '../lib/bulletin-local-draft';
 import {
+  addWeeklyMeetingTemplate,
+  parseWeeklyMeetingSelectValue,
+  selectBuiltinWeeklyMeeting,
+  selectCustomWeeklyMeeting,
+} from '../lib/bulletin-weekly-meeting-templates';
+import {
   normalizeWorshipPresentationMode,
   type WorshipPresentationMode,
 } from '../lib/worship-presentation-mode';
@@ -119,6 +125,10 @@ function withHiddenSections(bulletin: WeeklyBulletin): WeeklyBulletin {
       bulletin.sectionPptxOverrides && typeof bulletin.sectionPptxOverrides === 'object'
         ? bulletin.sectionPptxOverrides
         : {},
+    weeklyMeetingTemplates: Array.isArray(bulletin.weeklyMeetingTemplates)
+      ? bulletin.weeklyMeetingTemplates
+      : [],
+    weeklyMeetingTemplateId: bulletin.weeklyMeetingTemplateId ?? null,
     messagePastorEmail: bulletin.messagePastorEmail ?? '',
     messagePastorInviteSentForDate: bulletin.messagePastorInviteSentForDate ?? '',
     versePastorEmail: bulletin.versePastorEmail ?? '',
@@ -167,6 +177,7 @@ export default function BulletinPage() {
   const [slideShowSessionId, setSlideShowSessionId] = useState<string | null>(null);
   const [worshipYoutubeOauthReady, setWorshipYoutubeOauthReady] = useState(false);
   const [worshipOauthError, setWorshipOauthError] = useState<string | null>(null);
+  const [weeklyMeetingBusy, setWeeklyMeetingBusy] = useState(false);
   const [pastorInviteSending, setPastorInviteSending] = useState(false);
   const [editSlidesSectionId, setEditSlidesSectionId] = useState<string | null>(() =>
     editSlidesSectionFromHash(),
@@ -955,6 +966,55 @@ export default function BulletinPage() {
     [draft],
   );
 
+  const handleWeeklyMeetingChange = useCallback(
+    (selectValue: string) => {
+      if (!draft) return;
+      const parsed = parseWeeklyMeetingSelectValue(selectValue);
+      const patch =
+        parsed.kind === 'builtin'
+          ? selectBuiltinWeeklyMeeting(draft, parsed.variant)
+          : selectCustomWeeklyMeeting(draft, parsed.templateId);
+      if (!patch) {
+        setError(friendlyError('invalid_meeting_template', t));
+        return;
+      }
+      setDraft((prev) => (prev ? { ...prev, ...patch } : prev));
+      if (!canManage) return;
+      void updateBulletin(draft.id, patch)
+        .then((updated) => {
+          setDraft(withHiddenSections(updated));
+          setMessage(t('bulletin.saved'));
+        })
+        .catch((err) => {
+          setError(err instanceof Error ? err.message : String(err));
+        });
+    },
+    [canManage, draft, t],
+  );
+
+  const handleAddWeeklyMeetingTemplate = useCallback(
+    async (file: File) => {
+      if (!draft || !canManage || weeklyMeetingBusy) return;
+      setWeeklyMeetingBusy(true);
+      setError(null);
+      try {
+        const updated = await addWeeklyMeetingTemplate(draft, file);
+        setDraft(withHiddenSections(updated));
+        setMessage(t('bulletin.saved'));
+        window.setTimeout(() => setPreviewScrollBump((b) => b + 1), 280);
+      } catch (err) {
+        setError(friendlyError(err instanceof Error ? err.message : 'upload_failed', t));
+      } finally {
+        setWeeklyMeetingBusy(false);
+      }
+    },
+    [canManage, draft, t, weeklyMeetingBusy],
+  );
+
+  const handleEditWeeklyMeeting = useCallback(() => {
+    openEditSlides('weekly_meetings');
+  }, [openEditSlides]);
+
   const handleReplaceSectionPptx = useCallback(
     async (sectionId: string, file: File) => {
       if (!draft || !canManage) return;
@@ -1192,7 +1252,16 @@ export default function BulletinPage() {
       case 'baptism':
         return <BulletinBaptismStep {...common} />;
       case 'more':
-        return <BulletinMoreStep {...common} sectionId={activeSectionId} />;
+        return (
+          <BulletinMoreStep
+            {...common}
+            sectionId={activeSectionId}
+            onWeeklyMeetingChange={handleWeeklyMeetingChange}
+            onAddWeeklyMeetingTemplate={handleAddWeeklyMeetingTemplate}
+            onEditWeeklyMeeting={handleEditWeeklyMeeting}
+            weeklyMeetingBusy={weeklyMeetingBusy}
+          />
+        );
       default:
         return <p className="bulletin-step-placeholder">{t('bulletin.steps.comingSoon')}</p>;
     }

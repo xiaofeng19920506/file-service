@@ -41,6 +41,8 @@ import {
   normalizeHiddenSections,
   normalizeSlideTextOverrides,
   normalizeSectionPptxOverrides,
+  normalizeWeeklyMeetingTemplates,
+  normalizeWeeklyMeetingTemplateId,
   formFieldReapplyOptionsForSectionOverrides,
   BULLETIN_SECTION_TEMPLATE_SLIDES,
   BIRTHDAY_ANCHOR_SLIDE,
@@ -436,6 +438,8 @@ export type WeeklyBulletinDto = {
   scriptureReference: string;
   verseOfWeek: string;
   weeklyMeetingVariant: number | null;
+  weeklyMeetingTemplates: { id: string; label: string; blobId: string }[];
+  weeklyMeetingTemplateId: string | null;
   skipTestimonyWeek: boolean;
   skipDepartmentReports: boolean;
   hiddenSections: string[];
@@ -522,6 +526,11 @@ async function mapBulletin(
     scriptureReference: row.scriptureReference,
     verseOfWeek: row.verseOfWeek,
     weeklyMeetingVariant: row.weeklyMeetingVariant,
+    weeklyMeetingTemplates: normalizeWeeklyMeetingTemplates(row.weeklyMeetingTemplates),
+    weeklyMeetingTemplateId: normalizeWeeklyMeetingTemplateId(
+      row.weeklyMeetingTemplateId,
+      normalizeWeeklyMeetingTemplates(row.weeklyMeetingTemplates),
+    ),
     skipTestimonyWeek: row.skipTestimonyWeek,
     skipDepartmentReports: row.skipDepartmentReports,
     hiddenSections: Array.isArray(row.hiddenSections) ? row.hiddenSections : [],
@@ -574,6 +583,8 @@ type BulletinPatchBody = Partial<{
   scriptureReference: string;
   verseOfWeek: string;
   weeklyMeetingVariant: number | null;
+  weeklyMeetingTemplates: { id: string; label: string; blobId: string }[];
+  weeklyMeetingTemplateId: string | null;
   skipTestimonyWeek: boolean;
   skipDepartmentReports: boolean;
   hiddenSections: string[];
@@ -768,6 +779,8 @@ async function buildPatchedBulletinPptxBuf(opts: {
       .select({
         slideTextOverrides: weeklyBulletins.slideTextOverrides,
         sectionPptxOverrides: weeklyBulletins.sectionPptxOverrides,
+        weeklyMeetingTemplates: weeklyBulletins.weeklyMeetingTemplates,
+        weeklyMeetingTemplateId: weeklyBulletins.weeklyMeetingTemplateId,
       })
       .from(weeklyBulletins)
       .where(eq(weeklyBulletins.id, bulletinId))
@@ -776,6 +789,14 @@ async function buildPatchedBulletinPptxBuf(opts: {
       slideTextOverrides = normalizeSlideTextOverrides(row?.slideTextOverrides);
     }
     sectionOverrides = normalizeSectionPptxOverrides(row?.sectionPptxOverrides);
+    const templates = normalizeWeeklyMeetingTemplates(row?.weeklyMeetingTemplates);
+    const templateId = normalizeWeeklyMeetingTemplateId(row?.weeklyMeetingTemplateId, templates);
+    if (templateId) {
+      const hit = templates.find((t) => t.id === templateId);
+      if (hit) {
+        sectionOverrides = { ...sectionOverrides, weekly_meetings: hit.blobId };
+      }
+    }
   }
   const overridesKey = slideOverridesCacheKey(slideTextOverrides);
   const sectionKey = Object.entries(sectionOverrides)
@@ -1623,6 +1644,52 @@ export function registerBulletinRoutes(
           return reply.code(400).send({ error: 'invalid_meeting_variant' });
         }
         patch.weeklyMeetingVariant = v;
+      }
+      if (body.weeklyMeetingTemplates !== undefined) {
+        const templates = normalizeWeeklyMeetingTemplates(body.weeklyMeetingTemplates);
+        for (const item of templates) {
+          const [blob] = await db.select({ id: blobs.id }).from(blobs).where(eq(blobs.id, item.blobId));
+          if (!blob) {
+            return reply.code(400).send({ error: 'invalid_blob_id' });
+          }
+        }
+        patch.weeklyMeetingTemplates = templates;
+        if (body.weeklyMeetingTemplateId === undefined) {
+          const currentId =
+            typeof patch.weeklyMeetingTemplateId === 'string'
+              ? patch.weeklyMeetingTemplateId
+              : undefined;
+          // 列表变更后校验已选 id（若本次未单独传 templateId）
+          const [existing] = await db
+            .select({ weeklyMeetingTemplateId: weeklyBulletins.weeklyMeetingTemplateId })
+            .from(weeklyBulletins)
+            .where(eq(weeklyBulletins.id, request.params.id))
+            .limit(1);
+          const keep = normalizeWeeklyMeetingTemplateId(
+            currentId ?? existing?.weeklyMeetingTemplateId,
+            templates,
+          );
+          patch.weeklyMeetingTemplateId = keep;
+        }
+      }
+      if (body.weeklyMeetingTemplateId !== undefined) {
+        const templates =
+          body.weeklyMeetingTemplates !== undefined
+            ? normalizeWeeklyMeetingTemplates(body.weeklyMeetingTemplates)
+            : normalizeWeeklyMeetingTemplates(
+                (
+                  await db
+                    .select({ weeklyMeetingTemplates: weeklyBulletins.weeklyMeetingTemplates })
+                    .from(weeklyBulletins)
+                    .where(eq(weeklyBulletins.id, request.params.id))
+                    .limit(1)
+                )[0]?.weeklyMeetingTemplates,
+              );
+        const nextId = normalizeWeeklyMeetingTemplateId(body.weeklyMeetingTemplateId, templates);
+        if (body.weeklyMeetingTemplateId && !nextId) {
+          return reply.code(400).send({ error: 'invalid_meeting_template' });
+        }
+        patch.weeklyMeetingTemplateId = nextId;
       }
       if (body.skipTestimonyWeek !== undefined) patch.skipTestimonyWeek = body.skipTestimonyWeek;
       if (body.skipDepartmentReports !== undefined) {

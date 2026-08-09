@@ -13,6 +13,7 @@ import {
   joinRosterNames,
   parseRosterNames,
 } from '../../lib/bulletin-roster';
+import { weeklyMeetingSelectValue } from '../../lib/bulletin-weekly-meeting-templates';
 
 type StepShellProps = {
   children: ReactNode;
@@ -560,9 +561,20 @@ export function BulletinMoreStep({
   canEdit,
   onPatch,
   sectionId,
-}: BulletinStepPanelProps & { sectionId?: string }) {
+  onWeeklyMeetingChange,
+  onAddWeeklyMeetingTemplate,
+  onEditWeeklyMeeting,
+  weeklyMeetingBusy = false,
+}: BulletinStepPanelProps & {
+  sectionId?: string;
+  onWeeklyMeetingChange?: (selectValue: string) => void;
+  onAddWeeklyMeetingTemplate?: (file: File) => void | Promise<void>;
+  onEditWeeklyMeeting?: () => void;
+  weeklyMeetingBusy?: boolean;
+}) {
   const { t } = useI18n();
   const show = (id: string) => !sectionId || sectionId === id;
+  const addTemplateRef = useRef<HTMLInputElement>(null);
 
   return (
     <StepShell>
@@ -688,21 +700,59 @@ export function BulletinMoreStep({
         </>
       ) : null}
       {show('weekly_meetings') ? (
-        <label className="bulletin-field">
-          {t('bulletin.meetingVariant')}
-          <select
-            value={draft.weeklyMeetingVariant ?? ''}
-            disabled={!canEdit}
-            onChange={(e) =>
-              onPatch('weeklyMeetingVariant', e.target.value ? Number(e.target.value) : null)
-            }
-          >
-            <option value="">{t('bulletin.meetingVariantDefault')}</option>
-            <option value="28">{t('bulletin.meetingVariant28')}</option>
-            <option value="29">{t('bulletin.meetingVariant29')}</option>
-            <option value="30">{t('bulletin.meetingVariant30')}</option>
-          </select>
-        </label>
+        <div className="bulletin-weekly-meeting-fields">
+          <label className="bulletin-field">
+            {t('bulletin.meetingVariant')}
+            <select
+              value={weeklyMeetingSelectValue(draft)}
+              disabled={!canEdit || weeklyMeetingBusy}
+              onChange={(e) => onWeeklyMeetingChange?.(e.target.value)}
+            >
+              <option value="28">{t('bulletin.meetingVariant28')}</option>
+              <option value="29">{t('bulletin.meetingVariant29')}</option>
+              <option value="30">{t('bulletin.meetingVariant30')}</option>
+              {(draft.weeklyMeetingTemplates ?? []).map((item) => (
+                <option key={item.id} value={`t:${item.id}`}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+            <span className="bulletin-field-hint">{t('bulletin.meetingVariantCustomHint')}</span>
+          </label>
+          {canEdit ? (
+            <div className="bulletin-weekly-meeting-actions">
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={weeklyMeetingBusy}
+                onClick={() => onEditWeeklyMeeting?.()}
+              >
+                {t('bulletin.meetingVariantEdit')}
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={weeklyMeetingBusy}
+                onClick={() => addTemplateRef.current?.click()}
+              >
+                {weeklyMeetingBusy
+                  ? t('bulletin.meetingVariantAdding')
+                  : t('bulletin.meetingVariantAdd')}
+              </button>
+              <input
+                ref={addTemplateRef}
+                type="file"
+                accept=".pptx,.ppt,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                hidden
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = '';
+                  if (file) void onAddWeeklyMeetingTemplate?.(file);
+                }}
+              />
+            </div>
+          ) : null}
+        </div>
       ) : null}
     </StepShell>
   );

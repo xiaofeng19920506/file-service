@@ -6518,6 +6518,25 @@
   display: none;
 }
 
+.bulletin-weekly-meeting-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.bulletin-weekly-meeting-fields .bulletin-field-hint {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--muted, #666);
+}
+
+.bulletin-weekly-meeting-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .bulletin-deck-preview {
   width: 100%;
   flex: 1;

@@ -33,6 +33,11 @@ function valueFingerprint(key: BulletinLocalSyncKey, draft: WeeklyBulletin): str
   if (key === 'hiddenSections') {
     return (draft.hiddenSections ?? []).slice().sort().join(',');
   }
+  if (key === 'weeklyMeetingTemplates') {
+    return (draft.weeklyMeetingTemplates ?? [])
+      .map((item) => `${item.id}:${item.blobId}:${item.label}`)
+      .join('|');
+  }
   return JSON.stringify(draft[key] ?? null);
 }
 
@@ -293,6 +298,8 @@ export function useBulletinLocalDraftSync(
     draft?.serviceRosterUsher,
     draft?.serviceRosterCleanNames,
     draft?.weeklyMeetingVariant,
+    draft?.weeklyMeetingTemplates,
+    draft?.weeklyMeetingTemplateId,
     draft?.hiddenSections,
     draft?.sectionPptxOverrides,
     draft?.updatedAt,

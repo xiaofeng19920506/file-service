@@ -40,6 +40,8 @@ function baseBulletin(overrides: Partial<WeeklyBulletin> = {}): WeeklyBulletin {
     scriptureReference: '',
     verseOfWeek: '',
     weeklyMeetingVariant: null,
+    weeklyMeetingTemplates: [],
+    weeklyMeetingTemplateId: null,
     skipTestimonyWeek: false,
     skipDepartmentReports: false,
     hiddenSections: [],

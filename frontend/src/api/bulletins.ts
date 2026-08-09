@@ -51,6 +51,10 @@ export type WeeklyBulletin = {
   scriptureReference: string;
   verseOfWeek: string;
   weeklyMeetingVariant: number | null;
+  /** 本周报内自定义本週聚会模版 */
+  weeklyMeetingTemplates: { id: string; label: string; blobId: string }[];
+  /** 选中的自定义模版 id；有值时优先于 variant */
+  weeklyMeetingTemplateId: string | null;
   skipTestimonyWeek: boolean;
   skipDepartmentReports: boolean;
   /** 不显示的分区 id */
@@ -110,6 +114,8 @@ export type BulletinPatch = Partial<{
   scriptureReference: string;
   verseOfWeek: string;
   weeklyMeetingVariant: number | null;
+  weeklyMeetingTemplates: { id: string; label: string; blobId: string }[];
+  weeklyMeetingTemplateId: string | null;
   skipTestimonyWeek: boolean;
   skipDepartmentReports: boolean;
   hiddenSections: string[];

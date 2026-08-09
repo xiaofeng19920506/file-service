@@ -56,6 +56,7 @@ export * from './pptx-repack-presentation-order.js';
 export * from './pptx-splice-section.js';
 export * from './pptx-integrity.js';
 export * from './bulletin-section-pptx-overrides.js';
+export * from './bulletin-weekly-meeting-templates.js';
 export * from './bulletin-offering.js';
 export * from './bulletin-birthday.js';
 export * from './bulletin-birthday-months.js';

@@ -276,6 +276,13 @@ export const weeklyBulletins = pgTable('weekly_bulletins', {
   scriptureReference: text('scripture_reference').notNull().default(''),
   verseOfWeek: text('verse_of_week').notNull().default(''),
   weeklyMeetingVariant: integer('weekly_meeting_variant'),
+  /** 自定义本週聚会模版列表（本周报内） */
+  weeklyMeetingTemplates: jsonb('weekly_meeting_templates')
+    .$type<{ id: string; label: string; blobId: string }[]>()
+    .notNull()
+    .default([]),
+  /** 选中的自定义模版 id；有值时优先于 weeklyMeetingVariant */
+  weeklyMeetingTemplateId: text('weekly_meeting_template_id'),
   skipTestimonyWeek: boolean('skip_testimony_week').notNull().default(false),
   skipDepartmentReports: boolean('skip_department_reports').notNull().default(false),
   /** 不进入 PPT / 预览的分区 id 列表（与 BULLETIN_NAV_SECTIONS id 对齐） */

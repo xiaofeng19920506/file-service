@@ -58,10 +58,32 @@ export async function replaceBulletinSectionPptx(
   }
 
   const updated = await updateBulletin(draft.id, { sectionPptxOverrides: nextOverrides });
-  return {
+  let result: WeeklyBulletin = {
     ...updated,
     sectionPptxOverrides: updated.sectionPptxOverrides ?? nextOverrides,
   };
+
+  // 自定义本週聚会模版：同步列表里的 blobId
+  const templateId = draft.weeklyMeetingTemplateId?.trim();
+  if (sectionId === 'weekly_meetings' && templateId) {
+    const templates = (draft.weeklyMeetingTemplates ?? []).map((item) =>
+      item.id === templateId ? { ...item, blobId: uploaded.blobId } : item,
+    );
+    if (templates.some((item) => item.id === templateId)) {
+      result = await updateBulletin(draft.id, {
+        weeklyMeetingTemplates: templates,
+        weeklyMeetingTemplateId: templateId,
+        sectionPptxOverrides: result.sectionPptxOverrides,
+      });
+      result = {
+        ...result,
+        weeklyMeetingTemplates: result.weeklyMeetingTemplates ?? templates,
+        weeklyMeetingTemplateId: result.weeklyMeetingTemplateId ?? templateId,
+      };
+    }
+  }
+
+  return result;
 }
 
 export async function clearBulletinSectionPptx(
