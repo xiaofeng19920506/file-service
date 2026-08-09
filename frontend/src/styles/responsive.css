@@ -106,6 +106,15 @@ body {
     padding-bottom: calc(1.25rem + var(--bottom-nav-height));
   }
 
+  /* 周报：交给 .app-content 纵向滚动；勿再锁死 100% 高度 */
+  .app-content > .bulletin-page.bulletin-page--workspace {
+    flex: 0 0 auto;
+    min-height: 0;
+    max-height: none;
+    height: auto;
+    overflow: visible;
+  }
+
   /* 模态框：底部 sheet，全宽可点按钮 */
   .metadata-modal-overlay {
     align-items: flex-end;

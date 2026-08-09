@@ -1495,6 +1495,39 @@
     height: 2.875rem;
   }
 
+  /* ── 周报工作区：整页由 .app-content 滚动，避免 overflow:hidden 裁切 ── */
+  .app-content > .bulletin-page.bulletin-page--workspace {
+    flex: 0 0 auto;
+    max-height: none;
+    height: auto;
+    overflow: visible;
+    padding-bottom: calc(1.25rem + var(--bottom-nav-height));
+  }
+
+  .bulletin-page.bulletin-page--workspace .bulletin-cover-step-fields,
+  .bulletin-page.bulletin-page--workspace .bulletin-wizard-step {
+    min-width: 0;
+  }
+
+  .bulletin-page.bulletin-page--workspace .bulletin-field,
+  .bulletin-page.bulletin-page--workspace .bulletin-field input,
+  .bulletin-page.bulletin-page--workspace .bulletin-field select,
+  .bulletin-page.bulletin-page--workspace .bulletin-field textarea,
+  .bulletin-page.bulletin-page--workspace .playlists-text-input {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .bulletin-weekly-meeting-actions {
+    width: 100%;
+  }
+
+  .bulletin-weekly-meeting-actions .btn-secondary {
+    flex: 1 1 calc(50% - 0.25rem);
+    min-width: 0;
+    justify-content: center;
+  }
+
   /* ── 管理：表格 → 卡片 ── */
   .admin-page {
     padding: 0.75rem var(--page-gutter) 1.5rem;
