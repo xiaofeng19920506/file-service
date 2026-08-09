@@ -110,6 +110,33 @@ export function defaultNextClipStartSec(
   return Math.max(0, Math.floor(previous.startSec) + 1);
 }
 
+/**
+ * 是否还能再加一段：上一段结束后至少还需 1 秒可用时长。
+ * 上一段已到片尾（end 为空或等于总时长）时返回 false。
+ */
+export function canAddNextClipSegment(
+  previous: { startSec: number; endSec: number | null } | null | undefined,
+  durationSec?: number | null,
+): boolean {
+  if (!previous) {
+    if (durationSec == null || !Number.isFinite(durationSec)) return true;
+    return Math.floor(durationSec) > 1;
+  }
+  // 未设结束且不知总时长：视为已到片尾，无法再切
+  if (
+    previous.endSec == null
+    && (durationSec == null || !Number.isFinite(durationSec) || durationSec <= 0)
+  ) {
+    return false;
+  }
+  if (durationSec == null || !Number.isFinite(durationSec) || durationSec <= 0) {
+    return true;
+  }
+  const duration = Math.floor(durationSec);
+  const nextStart = defaultNextClipStartSec(previous, duration);
+  return nextStart <= duration - 1;
+}
+
 export function clipExceedsDuration(
   clip: { startSec: number; endSec: number | null },
   durationSec: number,

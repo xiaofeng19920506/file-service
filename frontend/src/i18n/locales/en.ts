@@ -592,6 +592,7 @@ const en: MessageTree = {
     worshipClipClear: 'Clear clip',
     worshipTrackMore: 'More',
     worshipClipAddSegment: 'Add',
+    worshipClipNoRemaining: 'No remaining time to clip (the previous segment already reaches the end)',
     worshipClipRemoveSegment: 'Remove',
     worshipClipLabel: 'Name',
     worshipClipLabelPlaceholder: '',

@@ -566,6 +566,7 @@ export default {
     worshipClipClear: '清除剪切',
     worshipTrackMore: '更多',
     worshipClipAddSegment: '加一段',
+    worshipClipNoRemaining: '没有剩余片段可以切片了（上一段已到视频结尾）',
     worshipClipRemoveSegment: '删除',
     worshipClipLabel: '名称',
     worshipClipLabelPlaceholder: '',

@@ -4,6 +4,7 @@ import { getYoutubeAudioStatus } from '../../api/youtube-audio';
 import { friendlyError } from '../../lib/error-messages';
 import {
   formatClipTime,
+  canAddNextClipSegment,
   defaultNextClipStartSec,
   resolvePlayClips,
   type PlayClip,
@@ -214,19 +215,20 @@ export default function WorshipClipFields({
   };
 
   const addSegment = () => {
-    setRows((prev) => {
-      const last = prev[prev.length - 1];
-      const nextStart = last
-        ? defaultNextClipStartSec(last, durationSec)
-        : 0;
-      return [
-        ...prev,
-        clampClipRow(
-          { startSec: nextStart, endSec: durationSec, label: '' },
-          durationSec,
-        ),
-      ];
-    });
+    const last = rows[rows.length - 1];
+    if (!canAddNextClipSegment(last, durationSec)) {
+      setClipError(t('bulletin.worshipClipNoRemaining'));
+      return;
+    }
+    const nextStart = last ? defaultNextClipStartSec(last, durationSec) : 0;
+    setClipError(null);
+    setRows((prev) => [
+      ...prev,
+      clampClipRow(
+        { startSec: nextStart, endSec: durationSec, label: '' },
+        durationSec,
+      ),
+    ]);
   };
 
   if (!open && hideToggle) return null;
