@@ -5,6 +5,7 @@ import { useI18n } from '../../i18n';
 import type { BulletinDeckPlan } from '../../lib/bulletin-deck-plan';
 import {
   composeDeckSectionsForPreview,
+  firstSlideForSection,
   worshipFirstPresentationSlide,
 } from '../../lib/bulletin-deck-plan';
 import {
@@ -23,6 +24,7 @@ import {
 } from '../../lib/bulletin-pptx-patches';
 import { ChevronLeftIcon, ChevronRightIcon } from '../icons';
 import BulletinPptSlidePreview from './BulletinPptSlidePreview';
+import BulletinDoxologyEmbeddedPlayer from './BulletinDoxologyEmbeddedPlayer';
 import BulletinWorshipEmbeddedPlayer from './BulletinWorshipEmbeddedPlayer';
 import { normalizeWorshipPresentationMode, type WorshipPresentationMode } from '../../lib/worship-presentation-mode';
 
@@ -49,6 +51,8 @@ type DeckSlideItemProps = {
   worshipLyricsPptxBlobId: string | null;
   worshipPresentationMode: string;
   onWorshipPresentationModeChange?: (mode: WorshipPresentationMode) => void;
+  doxologyFirstSlide: number | null;
+  doxologyYoutubeVideoId: string;
 };
 
 function deckSlidePropsEqual(prev: DeckSlideItemProps, next: DeckSlideItemProps): boolean {
@@ -65,7 +69,9 @@ function deckSlidePropsEqual(prev: DeckSlideItemProps, next: DeckSlideItemProps)
     prev.worshipLyricsPptxBlobId !== next.worshipLyricsPptxBlobId ||
     prev.worshipPresentationMode !== next.worshipPresentationMode ||
     prev.onWorshipPresentationModeChange !== next.onWorshipPresentationModeChange ||
-    prev.worshipItems !== next.worshipItems
+    prev.worshipItems !== next.worshipItems ||
+    prev.doxologyFirstSlide !== next.doxologyFirstSlide ||
+    prev.doxologyYoutubeVideoId !== next.doxologyYoutubeVideoId
   ) {
     return false;
   }
@@ -97,6 +103,8 @@ const DeckSlideItem = memo(function DeckSlideItem({
   worshipLyricsPptxBlobId,
   worshipPresentationMode,
   onWorshipPresentationModeChange,
+  doxologyFirstSlide,
+  doxologyYoutubeVideoId,
 }: DeckSlideItemProps) {
   const { t } = useI18n();
   const slidePatch = useMemo(() => previewPatchFull(patch), [patch]);
@@ -104,6 +112,8 @@ const DeckSlideItem = memo(function DeckSlideItem({
 
   const showWorshipDock =
     worshipFirstSlide != null && slideNumber === worshipFirstSlide && !sectionHidden;
+  const showDoxologyDock =
+    doxologyFirstSlide != null && slideNumber === doxologyFirstSlide && !sectionHidden;
 
   // 一律懒加载：视口内升 high；当前分区近距也 high；相邻分区 low，避免抢带宽
   const priority = highlight ? 'high' : prefetch ? 'low' : 'normal';
@@ -113,7 +123,9 @@ const DeckSlideItem = memo(function DeckSlideItem({
     <div
       className={`bulletin-deck-slide${highlight ? ' bulletin-deck-slide--highlight' : ''}${
         showWorshipDock ? ' bulletin-deck-slide--worship' : ''
-      }${sectionHidden ? ' bulletin-deck-slide--hidden' : ''}`}
+      }${showDoxologyDock ? ' bulletin-deck-slide--doxology' : ''}${
+        sectionHidden ? ' bulletin-deck-slide--hidden' : ''
+      }`}
       data-slide={slideNumber}
       data-section-slide={sectionId}
       data-section-hidden={sectionHidden ? '1' : undefined}
@@ -141,6 +153,9 @@ const DeckSlideItem = memo(function DeckSlideItem({
           presentationMode={presentationMode}
           onPresentationModeChange={onWorshipPresentationModeChange}
         />
+      ) : null}
+      {showDoxologyDock ? (
+        <BulletinDoxologyEmbeddedPlayer youtubeVideoId={doxologyYoutubeVideoId} />
       ) : null}
     </div>
   );
@@ -226,6 +241,7 @@ export default function BulletinFullDeckPreview({
   );
 
   const worshipFirstSlide = worshipFirstPresentationSlide(deckPlan);
+  const doxologyFirstSlide = firstSlideForSection('doxology', deckPlan);
 
   const allComposedSections = useMemo(
     () => (deckPlan ? composeDeckSectionsForPreview(deckPlan, navOrder) : []),
@@ -489,6 +505,8 @@ export default function BulletinFullDeckPreview({
                     worshipLyricsPptxBlobId={bulletin.worshipLyricsPptxBlobId}
                     worshipPresentationMode={bulletin.worshipPresentationMode}
                     onWorshipPresentationModeChange={onWorshipPresentationModeChange}
+                    doxologyFirstSlide={doxologyFirstSlide}
+                    doxologyYoutubeVideoId={bulletin.doxologyYoutubeVideoId ?? ''}
                   />
                 ))}
               </div>

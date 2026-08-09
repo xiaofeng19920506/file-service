@@ -6726,11 +6726,13 @@
   position: relative;
 }
 
-.bulletin-deck-slide--worship {
+.bulletin-deck-slide--worship,
+.bulletin-deck-slide--doxology {
   /* 幻灯片 + 底部操作条：操作条在流式布局里，不盖住幻灯片内容 */
 }
 
-.bulletin-deck-slide--worship .bulletin-slide-preview {
+.bulletin-deck-slide--worship .bulletin-slide-preview,
+.bulletin-deck-slide--doxology .bulletin-slide-preview {
   flex: 1 1 auto;
   min-height: 0;
   height: auto;
@@ -8067,6 +8069,30 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
 
 .bulletin-deck-slide--worship {
   position: relative;
+}
+
+.bulletin-deck-slide--doxology {
+  position: relative;
+}
+
+.bulletin-doxology-dock-btn {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 0.72rem;
+  padding: 0.2rem 0.55rem;
+  cursor: pointer;
+}
+
+.bulletin-doxology-dock-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.bulletin-doxology-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
 }
 
 .bulletin-worship-dock {

@@ -71,6 +71,7 @@ function baseBulletin(over: Partial<WeeklyBulletin> = {}): WeeklyBulletin {
     servicePlaylistId: null,
     worshipPresentationMode: 'youtube',
     worshipLyricsPptxBlobId: null,
+    doxologyYoutubeVideoId: '',
     createdByUserId: 'u1',
     createdAt: '2026-07-01T00:00:00.000Z',
     updatedAt: '2026-07-01T00:00:00.000Z',

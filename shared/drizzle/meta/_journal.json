@@ -260,6 +260,13 @@
       "when": 1754700000000,
       "tag": "0038_bulletin_weekly_meeting_templates",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1754750000000,
+      "tag": "0039_bulletin_doxology_youtube",
+      "breakpoints": true
     }
   ]
 }

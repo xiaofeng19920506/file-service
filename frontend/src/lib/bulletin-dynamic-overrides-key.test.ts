@@ -50,6 +50,7 @@ function baseBulletin(overrides: Partial<WeeklyBulletin> = {}): WeeklyBulletin {
     servicePlaylistId: null,
     worshipPresentationMode: 'youtube',
     worshipLyricsPptxBlobId: null,
+    doxologyYoutubeVideoId: '',
     outputBlobId: null,
     createdByUserId: 'u1',
     createdAt: new Date().toISOString(),

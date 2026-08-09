@@ -15,6 +15,7 @@ import {
 } from '../api/bulletins';
 import { useAuth } from '../auth/AuthContext';
 import BulletinCoverStep from '../components/bulletin/BulletinCoverStep';
+import BulletinDoxologyStep from '../components/bulletin/BulletinDoxologyStep';
 import BulletinWorshipStep from '../components/bulletin/BulletinWorshipStep';
 import BulletinPreviewPanel from '../components/bulletin/BulletinPreviewPanel';
 import BulletinSlideShowLauncher from '../components/bulletin/BulletinSlideShowLauncher';
@@ -1251,6 +1252,16 @@ export default function BulletinPage() {
             <p className="playlists-muted">{t('bulletin.verseAwaitingPastor')}</p>
           )}
         </div>
+      );
+    }
+
+    if (activeSectionId === 'doxology') {
+      return (
+        <BulletinDoxologyStep
+          draft={draft}
+          canEdit={canManage}
+          onPatch={patchField}
+        />
       );
     }
 

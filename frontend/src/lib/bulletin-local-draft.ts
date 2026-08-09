@@ -40,6 +40,7 @@ export const BULLETIN_LOCAL_SYNC_KEYS = [
   'sectionPptxOverrides',
   'messagePastorEmail',
   'versePastorEmail',
+  'doxologyYoutubeVideoId',
 ] as const satisfies ReadonlyArray<keyof BulletinPatch>;
 
 export type BulletinLocalSyncKey = (typeof BULLETIN_LOCAL_SYNC_KEYS)[number];
@@ -106,6 +107,8 @@ export function fieldToSectionId(key: BulletinLocalSyncKey | string): string | n
       return 'more';
     case 'sectionPptxOverrides':
       return null;
+    case 'doxologyYoutubeVideoId':
+      return 'doxology';
     default:
       return null;
   }

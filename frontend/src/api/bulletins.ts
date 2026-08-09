@@ -76,6 +76,8 @@ export type WeeklyBulletin = {
   worshipPresentationMode: 'ppt' | 'youtube' | 'ppt_youtube';
   /** 敬拜赞美歌词 PPT blob */
   worshipLyricsPptxBlobId: string | null;
+  /** 三一颂背景播放 YouTube video id */
+  doxologyYoutubeVideoId: string;
   createdByUserId: string;
   createdAt: string;
   updatedAt: string | null;
@@ -126,6 +128,7 @@ export type BulletinPatch = Partial<{
   outputBlobId: string | null;
   worshipPresentationMode: 'ppt' | 'youtube' | 'ppt_youtube';
   worshipLyricsPptxBlobId: string | null;
+  doxologyYoutubeVideoId: string;
 }>;
 
 export type AnnouncementInput = {

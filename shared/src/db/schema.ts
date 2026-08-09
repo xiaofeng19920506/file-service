@@ -317,6 +317,8 @@ export const weeklyBulletins = pgTable('weekly_bulletins', {
   worshipLyricsPptxBlobId: uuid('worship_lyrics_pptx_blob_id').references(() => blobs.id, {
     onDelete: 'set null',
   }),
+  /** 三一颂背景播放用 YouTube video id（幻灯片上点播放，仅音频） */
+  doxologyYoutubeVideoId: text('doxology_youtube_video_id').notNull().default(''),
   outputBlobId: uuid('output_blob_id').references(() => blobs.id, { onDelete: 'set null' }),
   createdByUserId: uuid('created_by_user_id')
     .notNull()

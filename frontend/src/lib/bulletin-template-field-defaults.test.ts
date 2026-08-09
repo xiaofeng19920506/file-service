@@ -50,6 +50,7 @@ function baseBulletin(over: Partial<WeeklyBulletin> = {}): WeeklyBulletin {
     worshipLyricsPptxBlobId: null,
     servicePlaylistId: null,
     worshipPresentationMode: 'youtube',
+    doxologyYoutubeVideoId: '',
     outputBlobId: null,
     announcements: [],
     createdAt: '2026-08-01T00:00:00.000Z',

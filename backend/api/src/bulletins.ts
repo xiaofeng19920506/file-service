@@ -60,6 +60,7 @@ import {
   isWorshipPresentationMode,
   sectionPptxOverrideAppendsAfter,
   normalizeWorshipPresentationMode,
+  normalizeYoutubeVideoId,
   parsePlayClipSeconds,
   assertClipRange,
   assertClipsWithinDuration,
@@ -463,6 +464,8 @@ export type WeeklyBulletinDto = {
   servicePlaylistId: string | null;
   worshipPresentationMode: WorshipPresentationMode;
   worshipLyricsPptxBlobId: string | null;
+  /** 三一颂背景播放 YouTube video id */
+  doxologyYoutubeVideoId: string;
   outputBlobId: string | null;
   createdByUserId: string;
   createdAt: string;
@@ -554,6 +557,7 @@ async function mapBulletin(
     servicePlaylistId: row.servicePlaylistId,
     worshipPresentationMode: normalizeWorshipPresentationMode(row.worshipPresentationMode),
     worshipLyricsPptxBlobId: row.worshipLyricsPptxBlobId,
+    doxologyYoutubeVideoId: (row.doxologyYoutubeVideoId ?? '').trim(),
     outputBlobId: row.outputBlobId,
     createdByUserId: row.createdByUserId,
     createdAt: row.createdAt.toISOString(),
@@ -605,6 +609,7 @@ type BulletinPatchBody = Partial<{
   versePastorEmail: string;
   worshipPresentationMode: WorshipPresentationMode;
   worshipLyricsPptxBlobId: string | null;
+  doxologyYoutubeVideoId: string;
   outputBlobId: string | null;
 }>;
 
@@ -1771,6 +1776,19 @@ export function registerBulletinRoutes(
             return reply.code(400).send({ error: 'invalid_blob_id' });
           }
           patch.worshipLyricsPptxBlobId = body.worshipLyricsPptxBlobId;
+        }
+      }
+      if (body.doxologyYoutubeVideoId !== undefined) {
+        const raw =
+          typeof body.doxologyYoutubeVideoId === 'string' ? body.doxologyYoutubeVideoId.trim() : '';
+        if (!raw) {
+          patch.doxologyYoutubeVideoId = '';
+        } else {
+          const videoId = normalizeYoutubeVideoId(raw);
+          if (!videoId) {
+            return reply.code(400).send({ error: 'invalid_youtube_video_id' });
+          }
+          patch.doxologyYoutubeVideoId = videoId;
         }
       }
 
