@@ -289,7 +289,7 @@ export default function PlaylistAudioPlayer({
     if (!videoId || isReady) return;
     const timer = window.setInterval(() => {
       void refreshAudioStatus(videoId);
-    }, 3000);
+    }, 5000);
     return () => window.clearInterval(timer);
   }, [current?.youtubeVideoId, isReady, refreshAudioStatus]);
 
