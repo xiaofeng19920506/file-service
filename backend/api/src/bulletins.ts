@@ -58,6 +58,7 @@ import {
   computeOfferingTotalAmount,
   normalizeOfferingAmountInput,
   isWorshipPresentationMode,
+  sectionPptxOverrideAppendsAfter,
   normalizeWorshipPresentationMode,
   parsePlayClipSeconds,
   assertClipRange,
@@ -203,7 +204,11 @@ async function applySectionPptxOverridesToBuf(
       skippedSectionIds.push(sectionId);
       continue;
     }
-    sections.push({ slideInFiles: slides, miniPptx: mini });
+    sections.push({
+      slideInFiles: slides,
+      miniPptx: mini,
+      appendAfter: sectionPptxOverrideAppendsAfter(sectionId),
+    });
   }
 
   // 仅有 birthday_N、没有 birthday 键时仍要应用当月覆盖

@@ -300,7 +300,9 @@ export default function ProgressStepper({
                     fileInputRef.current?.click();
                   }}
                 >
-                  {t('bulletin.editSlidesReplaceUpload')}
+                  {menu.sectionId === 'message'
+                    ? t('bulletin.editSlidesAppendUpload')
+                    : t('bulletin.editSlidesReplaceUpload')}
                 </button>
               ) : null}
               {canSlides && hasOverride && onResetPptx ? (

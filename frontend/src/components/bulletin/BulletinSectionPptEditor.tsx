@@ -277,7 +277,9 @@ export default function BulletinSectionPptEditor({
               className="btn-primary btn-sm"
               onClick={() => replaceInputRef.current?.click()}
             >
-              {t('bulletin.editSlidesReplaceUpload')}
+              {sectionId === 'message'
+                ? t('bulletin.editSlidesAppendUpload')
+                : t('bulletin.editSlidesReplaceUpload')}
             </button>
           </div>
         </div>

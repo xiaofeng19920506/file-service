@@ -21,6 +21,9 @@ import { BULLETIN_SECTION_TEMPLATE_SLIDES } from './bulletin-section-visibility'
 import { deleteSlidesFromPptx } from './pptx-preview';
 import { spliceAllSectionOverridesIntoPptx, spliceSectionSlidesIntoPptx } from './pptx-splice-section';
 
+/** 与 shared `BULLETIN_SECTION_PPTX_APPEND_AFTER` 一致：主日信息追加而非替换 */
+const SECTION_PPTX_APPEND_AFTER = new Set(['message']);
+
 const PPTX_MIME =
   'application/vnd.openxmlformats-officedocument.presentationml.presentation';
 
@@ -47,6 +50,7 @@ function formFieldReapplySkipFromSectionBlobs(sectionBlobs: Record<string, Blob>
   const skipSlides = new Set<number>();
   for (const sectionId of ids) {
     if (formDriven.has(sectionId)) continue;
+    if (SECTION_PPTX_APPEND_AFTER.has(sectionId)) continue;
     for (const slide of BULLETIN_SECTION_TEMPLATE_SLIDES[sectionId] ?? []) {
       skipSlides.add(slide);
     }
@@ -109,12 +113,20 @@ export async function generateBulletinPptx(
     file = await deleteSlidesFromPptx(file, deletePaths);
   }
 
-  const sections: { slideInFiles: readonly number[]; miniPptx: Blob }[] = [];
+  const sections: {
+    slideInFiles: readonly number[];
+    miniPptx: Blob;
+    appendAfter?: boolean;
+  }[] = [];
   for (const [sectionId, mini] of Object.entries(sectionBlobs ?? {})) {
     if (sectionId === 'birthday' || sectionId.startsWith('birthday_')) continue;
     const slideInFiles = BULLETIN_SECTION_TEMPLATE_SLIDES[sectionId];
     if (!slideInFiles?.length || !mini) continue;
-    sections.push({ slideInFiles, miniPptx: mini });
+    sections.push({
+      slideInFiles,
+      miniPptx: mini,
+      appendAfter: SECTION_PPTX_APPEND_AFTER.has(sectionId),
+    });
   }
   if (sections.length) {
     const buf = await spliceAllSectionOverridesIntoPptx(file, sections);

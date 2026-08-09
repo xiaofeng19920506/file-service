@@ -9,6 +9,16 @@ import {
 /** sectionId → blobId；另支持 birthday_1…birthday_12 按月覆盖 */
 export type SectionPptxOverrides = Record<string, string>;
 
+/**
+ * 这些分区上传 PPT 时：保留模板原页，把上传页插在后面（非整段替换）。
+ * 目前仅主日信息。
+ */
+export const BULLETIN_SECTION_PPTX_APPEND_AFTER = new Set(['message']);
+
+export function sectionPptxOverrideAppendsAfter(sectionId: string): boolean {
+  return BULLETIN_SECTION_PPTX_APPEND_AFTER.has(sectionId);
+}
+
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -66,8 +76,9 @@ export function clearBirthdayMonthPptxOverride(
   return setBirthdayMonthPptxOverride(existing, month, null);
 }
 
-/** 已整段替换的分区：splice 后不要再回写该区「自由文字覆盖」；
- * 封面/会前/生日/金句仍由表单驱动，必须回写，否则中间改了右侧预览不变。 */
+  /** 已整段替换的分区：splice 后不要再回写该区「自由文字覆盖」；
+ * 封面/会前/生日/金句仍由表单驱动，必须回写，否则中间改了右侧预览不变。
+ * 追加模式（主日信息）仍保留模板锚点页，不跳过其表单回写。 */
 export function formFieldReapplyOptionsForSectionOverrides(
   overrides: SectionPptxOverrides | null | undefined,
 ): BulletinFormFieldReapplyOptions {
@@ -79,6 +90,7 @@ export function formFieldReapplyOptionsForSectionOverrides(
   const skipSlideNumbers = new Set<number>();
   for (const sectionId of ids) {
     if (formDriven.has(sectionId)) continue;
+    if (sectionPptxOverrideAppendsAfter(sectionId)) continue;
     for (const slide of BULLETIN_SECTION_TEMPLATE_SLIDES[sectionId] ?? []) {
       skipSlideNumbers.add(slide);
     }

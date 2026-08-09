@@ -292,12 +292,18 @@ const en: MessageTree = {
       'Edit text and images in the browser, or upload a PPTX to replace this whole section (page count may change).',
     editSlidesReplaceUpload: 'Upload PPT to replace section',
     editSlidesReplaceUploadShort: 'Replace section',
+    editSlidesAppendUpload: 'Upload PPT to append after section',
+    editSlidesAppendUploadShort: 'Append slides',
     editSlidesReplaceUploadHint:
       'Pick a local .pptx to replace this section (preview and export update immediately)',
+    editSlidesAppendUploadHint:
+      'Pick a local .pptx to keep the original message slide and insert uploaded slides after it',
     editSlidesReplaceHint:
       'Upload a PPTX to replace this section. For in-browser editing, use “Edit slides” in the section menu.',
     editSlidesReplacedHint:
       'This section uses a custom PPT. Keep editing via the section menu, or restore the template.',
+    editSlidesAppendedHint:
+      'Custom slides were appended after the original message slide. Re-upload to change them, or restore the template to remove appends.',
     skipTestimony: 'Skip testimony week slide (16)',
     skipDepartment: 'Skip department reports slide (36)',
     meetingVariant: 'Weekly meeting layout',
@@ -520,19 +526,20 @@ const en: MessageTree = {
       'Also sent automatically Monday morning (once per Sunday service date). Clear the email to stop auto-sends.',
     pastorInviteLandingTitle: 'Sunday message PPT',
     pastorInviteLandingIntroSimple:
-      'Optionally upload a PPT for the {date} Sunday bulletin “Sunday message” section.',
+      'Optionally upload a PPT for the {date} Sunday bulletin “Sunday message” section. The original message slide is kept; your slides are inserted after it.',
     pastorInviteLandingChooseFile: 'Choose PPT file',
-    pastorInviteLandingReplaceFile: 'Choose a new file to replace',
+    pastorInviteLandingReplaceFile: 'Choose a new file to change the appended slides',
     pastorInviteLandingUpload: 'Upload PPT',
-    pastorInviteLandingReplace: 'Replace upload',
+    pastorInviteLandingReplace: 'Replace appended PPT',
     pastorInviteLandingUploading: 'Uploading…',
     pastorInviteLandingSkip: 'Skip upload and finish',
     pastorInviteLandingDone: 'Done',
-    pastorInviteLandingUploaded: 'PPT uploaded. The “Sunday message” section is updated.',
+    pastorInviteLandingUploaded: 'PPT uploaded and appended after the original message slide.',
     pastorInviteLandingUploadedKeepEditing:
-      'PPT saved. You can reopen this same link anytime to download or replace it.',
+      'PPT saved. You can reopen this same link anytime to download or change the appended slides.',
     pastorInviteLandingSkipped: 'You’re all set. You can return with the same link to upload later.',
-    pastorInviteLandingHasOverride: 'This section already has a custom PPT; uploading again will replace it.',
+    pastorInviteLandingHasOverride:
+      'This section already has appended slides; uploading again replaces the append (the template slide stays).',
     pastorInviteLandingCurrentFile: 'Uploaded file',
     pastorInviteLandingNoFileYet:
       'No file uploaded yet. After you upload, you can return via this link to change it.',

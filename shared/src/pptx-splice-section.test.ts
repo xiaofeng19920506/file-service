@@ -52,4 +52,24 @@ describe('spliceSectionSlidesIntoPptx variable length', () => {
     expect(after.some((s) => s.slideInFile === 25)).toBe(true);
     expect(after.some((s) => s.slideInFile === 26)).toBe(true);
   });
+
+  it('appendAfter keeps anchor slides and inserts mini after them', async () => {
+    const tpl = await readFile(templatePath);
+    const before = await listPptxSlidesInPresentationOrder(tpl);
+    const mini = await extractSlidesByFileNumbersAsPptx(tpl, [25, 26]);
+    expect(await listPptxSlidesInPresentationOrder(mini)).toHaveLength(2);
+
+    const spliced = await spliceSectionSlidesIntoPptx(tpl, mini, [17], { appendAfter: true });
+    const after = await listPptxSlidesInPresentationOrder(spliced);
+    expect(after.length).toBe(before.length + 2);
+
+    const idx17 = after.findIndex((s) => s.slideInFile === 17);
+    expect(idx17).toBeGreaterThanOrEqual(0);
+    // 原 P17 仍在；其后两页为新插入（文件号 > 模板最大）
+    expect(after[idx17 + 1]?.slideInFile).toBeGreaterThan(38);
+    expect(after[idx17 + 2]?.slideInFile).toBeGreaterThan(38);
+    // 大家庭时间 P18 仍在追加页之后
+    const idx18 = after.findIndex((s) => s.slideInFile === 18);
+    expect(idx18).toBe(idx17 + 3);
+  });
 });

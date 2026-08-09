@@ -78,14 +78,18 @@ async function writeMiniSlideOntoBase(
 
 /**
  * 将迷你 PPT（分区编辑结果）按顺序对齐到 base 中指定文件号的幻灯片。
- * - 页数相同：逐页替换 XML + media
- * - mini 更多：在锚点末尾之后 duplicate 插入新页（文件号 > 现有 max，deck-plan 会归属本分区）
- * - mini 更少：按序覆盖前 n 页，并删除锚点尾部多余模板页
+ * - 默认（替换）：页数相同逐页覆盖；mini 更多则在锚点末尾后插入；mini 更少则删锚点尾部
+ * - appendAfter：保留全部锚点原页，把 mini 全部插在锚点末页之后（主日信息）
  */
+export type SpliceSectionOptions = {
+  appendAfter?: boolean;
+};
+
 export async function spliceSectionSlidesIntoPptx(
   basePptx: PptxBytes,
   sectionMiniPptx: PptxBytes,
   targetSlideInFiles: readonly number[],
+  options?: SpliceSectionOptions,
 ): Promise<Uint8Array> {
   const targets = targetSlideInFiles
     .filter((n) => Number.isFinite(n) && n >= 1)
@@ -107,6 +111,16 @@ export async function spliceSectionSlidesIntoPptx(
   // 只保留 base 里仍存在的锚点页（可能已被隐藏分区删掉）
   const liveTargets = targets.filter((fileNum) => Boolean(baseZip.file(slidePathForFile(fileNum))));
   if (!liveTargets.length) {
+    return baseZip.generateAsync({ type: 'uint8array' });
+  }
+
+  if (options?.appendAfter) {
+    let lastPath = slidePathForFile(liveTargets[liveTargets.length - 1]!);
+    for (let i = 0; i < n; i++) {
+      const newPath = await duplicateSlideInZip(baseZip, lastPath, { insertAfterPath: lastPath });
+      await writeMiniSlideOntoBase(baseZip, miniZip, newPath, miniOrder[i]!.slidePath);
+      lastPath = newPath;
+    }
     return baseZip.generateAsync({ type: 'uint8array' });
   }
 
@@ -144,12 +158,18 @@ export async function spliceSectionSlidesIntoPptx(
 /** 对多个分区依次 splice（后写覆盖同页冲突） */
 export async function spliceAllSectionOverridesIntoPptx(
   basePptx: PptxBytes,
-  sections: { slideInFiles: readonly number[]; miniPptx: PptxBytes }[],
+  sections: {
+    slideInFiles: readonly number[];
+    miniPptx: PptxBytes;
+    appendAfter?: boolean;
+  }[],
 ): Promise<Uint8Array> {
   let buf: PptxBytes = basePptx;
   for (const section of sections) {
     if (!section.slideInFiles.length) continue;
-    buf = await spliceSectionSlidesIntoPptx(buf, section.miniPptx, section.slideInFiles);
+    buf = await spliceSectionSlidesIntoPptx(buf, section.miniPptx, section.slideInFiles, {
+      appendAfter: section.appendAfter,
+    });
   }
   return buf instanceof Uint8Array
     ? buf

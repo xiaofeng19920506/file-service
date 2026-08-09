@@ -87,12 +87,18 @@ async function writeMiniSlideOntoBase(
 
 /**
  * 将迷你 PPT（分区编辑结果）按顺序对齐到 base。
- * 页数不同时：多则插入、少则删掉锚点尾部（与 shared 实现一致）。
+ * - 默认：页数不同时多则插入、少则删锚点尾部（与 shared 一致）
+ * - appendAfter：保留锚点原页，把 mini 全部插在锚点末页之后
  */
+export type SpliceSectionOptions = {
+  appendAfter?: boolean;
+};
+
 export async function spliceSectionSlidesIntoPptx(
   basePptx: PptxBytes,
   sectionMiniPptx: PptxBytes,
   targetSlideInFiles: readonly number[],
+  options?: SpliceSectionOptions,
 ): Promise<Uint8Array> {
   const targets = targetSlideInFiles
     .filter((n) => Number.isFinite(n) && n >= 1)
@@ -114,6 +120,16 @@ export async function spliceSectionSlidesIntoPptx(
 
   const liveTargets = targets.filter((fileNum) => Boolean(baseZip.file(slidePathForFile(fileNum))));
   if (!liveTargets.length) {
+    return baseZip.generateAsync({ type: 'uint8array' });
+  }
+
+  if (options?.appendAfter) {
+    let lastPath = slidePathForFile(liveTargets[liveTargets.length - 1]!);
+    for (let i = 0; i < n; i++) {
+      const newPath = await duplicateSlideInZip(baseZip, lastPath, { insertAfterPath: lastPath });
+      await writeMiniSlideOntoBase(baseZip, miniZip, newPath, miniOrder[i]!.slidePath);
+      lastPath = newPath;
+    }
     return baseZip.generateAsync({ type: 'uint8array' });
   }
 
@@ -148,12 +164,18 @@ export async function spliceSectionSlidesIntoPptx(
 /** 对多个分区依次 splice */
 export async function spliceAllSectionOverridesIntoPptx(
   basePptx: PptxBytes,
-  sections: { slideInFiles: readonly number[]; miniPptx: PptxBytes }[],
+  sections: {
+    slideInFiles: readonly number[];
+    miniPptx: PptxBytes;
+    appendAfter?: boolean;
+  }[],
 ): Promise<Uint8Array> {
   let buf: PptxBytes = basePptx;
   for (const section of sections) {
     if (!section.slideInFiles.length) continue;
-    buf = await spliceSectionSlidesIntoPptx(buf, section.miniPptx, section.slideInFiles);
+    buf = await spliceSectionSlidesIntoPptx(buf, section.miniPptx, section.slideInFiles, {
+      appendAfter: section.appendAfter,
+    });
   }
   return buf instanceof Uint8Array ? buf : new Uint8Array(await toArrayBuffer(buf));
 }
