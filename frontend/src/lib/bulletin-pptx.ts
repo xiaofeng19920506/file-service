@@ -20,9 +20,7 @@ import { bulletinSlidePathsToDelete, filterVisibleAnnouncements } from './bullet
 import { BULLETIN_SECTION_TEMPLATE_SLIDES } from './bulletin-section-visibility';
 import { deleteSlidesFromPptx } from './pptx-preview';
 import { spliceAllSectionOverridesIntoPptx, spliceSectionSlidesIntoPptx } from './pptx-splice-section';
-
-/** 与 shared `BULLETIN_SECTION_PPTX_APPEND_AFTER` 一致：主日信息追加而非替换 */
-const SECTION_PPTX_APPEND_AFTER = new Set(['message']);
+import { SECTION_PPTX_APPEND_AFTER } from './bulletin-section-pptx';
 
 const PPTX_MIME =
   'application/vnd.openxmlformats-officedocument.presentationml.presentation';

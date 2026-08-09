@@ -12,6 +12,7 @@ export async function uploadFileChunked(
     composer?: string;
     author?: string;
     notes?: string;
+    reuseExisting?: boolean;
   },
   onProgress?: (p: UploadProgress) => void,
 ): Promise<UploadResult> {
@@ -26,6 +27,7 @@ export async function uploadFileChunked(
   if (metadata?.composer) initBody.composer = metadata.composer;
   if (metadata?.author) initBody.author = metadata.author;
   if (metadata?.notes) initBody.notes = metadata.notes;
+  if (metadata?.reuseExisting) initBody.reuseExisting = true;
 
   const initRes = await apiFetch('/v1/uploads/init', {
     method: 'POST',

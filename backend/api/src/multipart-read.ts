@@ -45,6 +45,9 @@ export function readUploadMetadata(request: FastifyRequest) {
     composer: readMultipartTextField(request, 'composer'),
     author: readMultipartTextField(request, 'author'),
     notes: readMultipartTextField(request, 'notes'),
+    reuseExisting:
+      readMultipartTextField(request, 'reuseExisting') === '1' ||
+      readMultipartTextField(request, 'reuseExisting') === 'true',
   };
 }
 

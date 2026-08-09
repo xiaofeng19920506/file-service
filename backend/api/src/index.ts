@@ -465,8 +465,15 @@ async function buildApp() {
         mimeType: mimetype,
         filename,
         ext,
-        ...meta,
+        title: meta.title,
+        titleEn: meta.titleEn,
+        titleZhCn: meta.titleZhCn,
+        titleZhTw: meta.titleZhTw,
+        composer: meta.composer,
+        author: meta.author,
+        notes: meta.notes,
         uploadedBy: getActor(request),
+        reuseExisting: meta.reuseExisting,
       });
     } catch (err) {
       if (err instanceof ContentAlreadyExistsError) {

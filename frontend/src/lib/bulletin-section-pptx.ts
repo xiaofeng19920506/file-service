@@ -6,14 +6,62 @@ import {
 } from './bulletin-birthday-months';
 import { BULLETIN_SECTION_TEMPLATE_SLIDES } from './bulletin-section-visibility';
 import { navSectionById } from './bulletin-sections';
+import {
+  extractPresentationSlidesAsPptx,
+} from './pptx-extract-slide';
 import { pptxSlidesAreWellFormed } from './pptx-integrity';
+import { listPptxSlidesInPresentationOrder } from './pptx-preview';
+import { spliceSectionSlidesIntoPptx } from './pptx-splice-section';
 
 const PPTX_MIME =
   'application/vnd.openxmlformats-officedocument.presentationml.presentation';
 
+/** 与 shared `BULLETIN_SECTION_PPTX_APPEND_AFTER` 一致 */
+export const SECTION_PPTX_APPEND_AFTER = new Set(['message']);
+
+export function sectionPptxAppendsAfter(sectionId: string): boolean {
+  return SECTION_PPTX_APPEND_AFTER.has(sectionId);
+}
+
 export function isPptxFileName(name: string): boolean {
   const lower = name.toLowerCase();
   return lower.endsWith('.pptx') || lower.endsWith('.ppt');
+}
+
+/**
+ * 追加模式分区：编辑器应展示「模板锚点页 + 上传页」。
+ * override 仅存上传段；保存时需再剥掉锚点页。
+ */
+export async function buildAppendSectionEditorPptx(opts: {
+  anchorPptx: Blob;
+  overridePptx: Blob | null;
+  anchorSlideInFiles: readonly number[];
+  fileName: string;
+}): Promise<File> {
+  const { anchorPptx, overridePptx, anchorSlideInFiles, fileName } = opts;
+  if (!overridePptx) {
+    return new File([anchorPptx], fileName, { type: PPTX_MIME });
+  }
+  const buf = await spliceSectionSlidesIntoPptx(anchorPptx, overridePptx, anchorSlideInFiles, {
+    appendAfter: true,
+  });
+  const copy = new Uint8Array(buf.byteLength);
+  copy.set(buf);
+  return new File([copy.buffer], fileName, { type: PPTX_MIME });
+}
+
+/** 从编辑器合并稿中去掉模板锚点页，得到应持久化的「仅追加段」 */
+export async function stripAppendSectionAnchorSlides(
+  combined: Blob,
+  anchorSlideCount: number,
+): Promise<File | null> {
+  const order = await listPptxSlidesInPresentationOrder(combined);
+  if (order.length <= anchorSlideCount) return null;
+  const keep = order.slice(anchorSlideCount).map((s) => s.index);
+  const bytes = await extractPresentationSlidesAsPptx(combined, keep);
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return new File([copy.buffer], 'append.pptx', { type: PPTX_MIME });
 }
 
 /** 把本机 PPTX 存为分区整段覆盖（预览/导出会 splice 进周报） */
@@ -38,6 +86,7 @@ export async function replaceBulletinSectionPptx(
   const uploaded = await uploadFile(named, {
     title: `周报分区 ${sectionLabel} ${draft.serviceDate}`,
     notes: `bulletin section pptx ${draft.id} ${sectionId}`,
+    reuseExisting: true,
   });
 
   let nextOverrides = {

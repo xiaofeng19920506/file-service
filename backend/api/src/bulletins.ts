@@ -115,7 +115,8 @@ const patchedPptxCache = new Map<string, Buffer>();
 /** v52：圣餐英文经文略加大至 28pt，减少底部空白 */
 /** v64：生日月页外置到模板库，主模板仅 P24 锚点 */
 /** v67：预览保留隐藏分区页（投影再跳过） */
-const SLIDE_PREVIEW_PATCH_REV = 'v67';
+/** 含主日信息 appendAfter；升版本以作废旧「整段替换」预览缓存 */
+const SLIDE_PREVIEW_PATCH_REV = 'v68-message-append';
 
 /** 生日月库 / 服事轮值磁盘指纹（Drive 同步后变化，使预览缓存失效） */
 function previewLibraryRev(): string {
@@ -164,7 +165,11 @@ async function applySectionPptxOverridesToBuf(
 ): Promise<{ buf: Buffer; skippedSectionIds: string[] }> {
   const entries = Object.entries(sectionOverrides);
   if (!entries.length) return { buf: base, skippedSectionIds: [] };
-  const sections: { slideInFiles: readonly number[]; miniPptx: Buffer }[] = [];
+  const sections: {
+    slideInFiles: readonly number[];
+    miniPptx: Buffer;
+    appendAfter?: boolean;
+  }[] = [];
   const skippedSectionIds: string[] = [];
   const { month } = resolveBirthdayFields({ birthdayMonth, serviceDate });
   const birthdayBlobId = resolveBirthdayMonthOverrideBlobId(sectionOverrides, month);
@@ -204,10 +209,11 @@ async function applySectionPptxOverridesToBuf(
       skippedSectionIds.push(sectionId);
       continue;
     }
+    const appendAfter = sectionPptxOverrideAppendsAfter(sectionId);
     sections.push({
       slideInFiles: slides,
       miniPptx: mini,
-      appendAfter: sectionPptxOverrideAppendsAfter(sectionId),
+      appendAfter,
     });
   }
 

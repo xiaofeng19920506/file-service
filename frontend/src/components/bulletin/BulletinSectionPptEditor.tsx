@@ -10,9 +10,12 @@ import { useI18n } from '../../i18n';
 import { buildBulletinDeckPlan, slidesForSection } from '../../lib/bulletin-deck-plan';
 import { buildPatchedBulletinForSectionExtract } from '../../lib/bulletin-pptx';
 import {
+  buildAppendSectionEditorPptx,
   bulletinSectionLabel,
   clearBulletinSectionPptx,
   replaceBulletinSectionPptx,
+  sectionPptxAppendsAfter,
+  stripAppendSectionAnchorSlides,
 } from '../../lib/bulletin-section-pptx';
 import {
   resolveBirthdayFields,
@@ -141,6 +144,32 @@ export default function BulletinSectionPptEditor({
       return new File([library], downloadName, { type: PPTX_MIME });
     }
 
+    const slideNums = BULLETIN_SECTION_TEMPLATE_SLIDES[sectionId];
+    if (!slideNums?.length) throw new Error('section_has_no_slides');
+    const template = await fetchBulletinTemplateFile();
+    const patched = await buildPatchedBulletinForSectionExtract(template, snap);
+    const anchorBytes = await extractSlidesByFileNumbersAsPptx(patched, slideNums);
+    const anchorCopy = new Uint8Array(anchorBytes.byteLength);
+    anchorCopy.set(anchorBytes);
+    const anchorFile = new File([anchorCopy.buffer], downloadName, { type: PPTX_MIME });
+
+    // 追加模式（主日信息）：始终保留模板锚点页，上传段接在后面；勿只打开上传包（会像「原页被盖掉」）
+    if (sectionPptxAppendsAfter(sectionId)) {
+      const existingBlobId = forceTemplate ? undefined : snap.sectionPptxOverrides?.[sectionId];
+      let overrideBlob: Blob | null = null;
+      if (existingBlobId) {
+        const blob = await fetchBlobContent(existingBlobId);
+        if (await pptxSlidesAreWellFormed(blob)) overrideBlob = blob;
+        else console.warn(`section pptx override ${existingBlobId} is malformed, using template only`);
+      }
+      return buildAppendSectionEditorPptx({
+        anchorPptx: anchorFile,
+        overridePptx: overrideBlob,
+        anchorSlideInFiles: slideNums,
+        fileName: downloadName,
+      });
+    }
+
     const existingBlobId = forceTemplate ? undefined : snap.sectionPptxOverrides?.[sectionId];
     if (existingBlobId) {
       const blob = await fetchBlobContent(existingBlobId);
@@ -149,14 +178,7 @@ export default function BulletinSectionPptEditor({
       }
       console.warn(`section pptx override ${existingBlobId} is malformed, rebuilding from draft`);
     }
-    const slideNums = BULLETIN_SECTION_TEMPLATE_SLIDES[sectionId];
-    if (!slideNums?.length) throw new Error('section_has_no_slides');
-    const template = await fetchBulletinTemplateFile();
-    const patched = await buildPatchedBulletinForSectionExtract(template, snap);
-    const bytes = await extractSlidesByFileNumbersAsPptx(patched, slideNums);
-    const copy = new Uint8Array(bytes.byteLength);
-    copy.set(bytes);
-    return new File([copy.buffer], downloadName, { type: PPTX_MIME });
+    return anchorFile;
   }, [downloadName, sectionId]);
 
   useEffect(() => {
@@ -199,6 +221,24 @@ export default function BulletinSectionPptEditor({
   }, [onClose]);
 
   const persistSectionFile = async (file: File) => {
+    // 追加模式：编辑器里是「原页+追加」；落库只存追加段，避免再 splice 时叠一份原页
+    if (sectionPptxAppendsAfter(sectionId)) {
+      const anchorCount = BULLETIN_SECTION_TEMPLATE_SLIDES[sectionId]?.length ?? 0;
+      const appendOnly = await stripAppendSectionAnchorSlides(file, anchorCount);
+      if (!appendOnly) {
+        const updated = await clearBulletinSectionPptx(draft, sectionId);
+        onSaved(updated);
+        return;
+      }
+      const updated = await replaceBulletinSectionPptx(
+        draft,
+        sectionId,
+        appendOnly,
+        sectionLabel,
+      );
+      onSaved(updated);
+      return;
+    }
     const updated = await replaceBulletinSectionPptx(draft, sectionId, file, sectionLabel);
     onSaved(updated);
   };

@@ -18,6 +18,8 @@ export async function uploadFile(
     composer?: string;
     author?: string;
     notes?: string;
+    /** 周报分区等：同内容复用已有 blob，避免 409 */
+    reuseExisting?: boolean;
   },
   onProgress?: (p: UploadProgress) => void,
 ): Promise<UploadResult> {
@@ -34,6 +36,7 @@ export async function uploadFile(
   if (metadata?.composer) form.append('composer', metadata.composer);
   if (metadata?.author) form.append('author', metadata.author);
   if (metadata?.notes) form.append('notes', metadata.notes);
+  if (metadata?.reuseExisting) form.append('reuseExisting', '1');
   const res = await postFormWithProgress('/v1/uploads', form, onProgress);
   return parseUploadJson<UploadResult>(res);
 }

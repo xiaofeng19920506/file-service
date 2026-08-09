@@ -31,6 +31,7 @@ type UploadSession = {
   composer?: string | null;
   author?: string | null;
   notes?: string | null;
+  reuseExisting?: boolean;
 };
 
 const sessions = new Map<string, UploadSession>();
@@ -94,6 +95,7 @@ export function registerChunkUploadRoutes(
     composer?: string;
     author?: string;
     notes?: string;
+    reuseExisting?: boolean;
   };
 
   app.post<{ Body: InitBody }>('/v1/uploads/init', async (request, reply) => {
@@ -131,6 +133,7 @@ export function registerChunkUploadRoutes(
       composer: typeof body.composer === 'string' ? body.composer.trim() : null,
       author: typeof body.author === 'string' ? body.author.trim() : null,
       notes: typeof body.notes === 'string' ? body.notes.trim() : null,
+      reuseExisting: body.reuseExisting === true,
     });
 
     return { uploadId, chunkSize, totalChunks };
@@ -199,6 +202,7 @@ export function registerChunkUploadRoutes(
           author: session.author,
           notes: session.notes,
           uploadedBy: deps.getActor(request),
+          reuseExisting: session.reuseExisting,
         });
 
         return result;
