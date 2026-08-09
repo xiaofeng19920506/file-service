@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   bulletinSectionInvitePptxDownloadUrl,
   fetchBulletinSectionInvite,
@@ -6,6 +6,7 @@ import {
   uploadBulletinSectionInvitePptx,
   type BulletinSectionInviteInfo,
 } from '../api/bulletins';
+import BulletinSectionInvitePreview from '../components/bulletin/BulletinSectionInvitePreview';
 import { friendlyError } from '../lib/error-messages';
 import { isPptxFileName } from '../lib/bulletin-section-pptx';
 import { useI18n } from '../i18n';
@@ -23,6 +24,7 @@ export default function BulletinSectionInvitePage({ token }: BulletinSectionInvi
   const [info, setInfo] = useState<BulletinSectionInviteInfo | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [verseDraft, setVerseDraft] = useState('');
+  const [previewVerse, setPreviewVerse] = useState('');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -31,7 +33,9 @@ export default function BulletinSectionInvitePage({ token }: BulletinSectionInvi
     const data = await fetchBulletinSectionInvite(token);
     setInfo(data);
     if (data.sectionId === 'verse_of_week') {
-      setVerseDraft(data.verseOfWeek ?? '');
+      const verse = data.verseOfWeek ?? '';
+      setVerseDraft(verse);
+      setPreviewVerse(verse);
     }
     return data;
   }, [token]);
@@ -60,6 +64,13 @@ export default function BulletinSectionInvitePage({ token }: BulletinSectionInvi
       cancelled = true;
     };
   }, [reload, t]);
+
+  // 金句输入停顿后再刷新预览，避免每字打 LibreOffice
+  useEffect(() => {
+    if (info?.sectionId !== 'verse_of_week') return;
+    const timer = window.setTimeout(() => setPreviewVerse(verseDraft), 700);
+    return () => window.clearTimeout(timer);
+  }, [verseDraft, info?.sectionId]);
 
   const handleUpload = async () => {
     if (!file || uploading) return;
@@ -108,6 +119,10 @@ export default function BulletinSectionInvitePage({ token }: BulletinSectionInvi
 
   const isVerse = info?.sectionId === 'verse_of_week';
   const downloadUrl = bulletinSectionInvitePptxDownloadUrl(token);
+  const pptxCacheKey = useMemo(
+    () => `${info?.pptxBlobId ?? ''}:${info?.pptxUploadedAt ?? ''}`,
+    [info?.pptxBlobId, info?.pptxUploadedAt],
+  );
 
   return (
     <main className="bulletin-section-invite-page">
@@ -135,6 +150,26 @@ export default function BulletinSectionInvitePage({ token }: BulletinSectionInvi
                 })}
               </p>
               <p className="playlists-muted">{t('bulletin.pastorInviteLandingRevisitHint')}</p>
+
+              {info.verseOfWeek?.trim() ? (
+                <div className="bulletin-section-invite-existing">
+                  <p className="bulletin-section-invite-existing-title">
+                    {t('bulletin.versePastorInviteLandingCurrent')}
+                  </p>
+                  <p className="bulletin-verse-current-text">{info.verseOfWeek}</p>
+                </div>
+              ) : (
+                <p className="playlists-muted">{t('bulletin.versePastorInviteLandingEmpty')}</p>
+              )}
+
+              <BulletinSectionInvitePreview
+                token={token}
+                slideCount={info.previewSlideCount ?? 1}
+                verseOfWeek={previewVerse}
+                cacheKey={previewVerse}
+                title={t('bulletin.versePastorInviteLandingPreview')}
+              />
+
               <label className="share-playlist-field">
                 <span>{t('bulletin.versePastorInviteLandingBodyLabel')}</span>
                 <textarea
@@ -200,6 +235,14 @@ export default function BulletinSectionInvitePage({ token }: BulletinSectionInvi
               ) : (
                 <p className="playlists-muted">{t('bulletin.pastorInviteLandingNoFileYet')}</p>
               )}
+
+              {info.hasPptxOverride && (info.previewSlideCount ?? 0) > 0 ? (
+                <BulletinSectionInvitePreview
+                  token={token}
+                  slideCount={info.previewSlideCount ?? 0}
+                  cacheKey={pptxCacheKey}
+                />
+              ) : null}
 
               <label className="share-playlist-field">
                 <span>

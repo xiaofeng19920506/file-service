@@ -559,6 +559,9 @@ export type BulletinSectionInviteInfo = {
   pptxFileName?: string | null;
   pptxUploadedAt?: string | null;
   verseOfWeek?: string;
+  /** none=无预览；uploaded_pptx=已上传 PPT 各页；verse_slide=金句投影页 */
+  previewMode?: 'none' | 'uploaded_pptx' | 'verse_slide';
+  previewSlideCount?: number;
   expiresAtUnix: number;
 };
 
@@ -573,6 +576,22 @@ export async function fetchBulletinSectionInvite(
 export function bulletinSectionInvitePptxDownloadUrl(token: string): string {
   const base = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '');
   return `${base}/v1/bulletins/section-invite/${encodeURIComponent(token)}/pptx`;
+}
+
+/** 邀请页幻灯片预览 PNG（公开，凭 token）；金句可带 verseOfWeek 做即时预览 */
+export function bulletinSectionInvitePreviewUrl(
+  token: string,
+  slide: number,
+  opts?: { verseOfWeek?: string; cacheKey?: string },
+): string {
+  const base = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '');
+  const qs = new URLSearchParams();
+  if (opts?.verseOfWeek !== undefined) qs.set('verseOfWeek', opts.verseOfWeek);
+  if (opts?.cacheKey) qs.set('v', opts.cacheKey);
+  const query = qs.toString();
+  return `${base}/v1/bulletins/section-invite/${encodeURIComponent(token)}/preview/${slide}.png${
+    query ? `?${query}` : ''
+  }`;
 }
 
 export async function uploadBulletinSectionInvitePptx(

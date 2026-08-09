@@ -206,6 +206,9 @@ const en: MessageTree = {
     versePastorInviteLandingSubmitted: 'Verse submitted. The bulletin preview will update automatically.',
     versePastorInviteLandingSubmittedKeepEditing:
       'Verse saved. You can reopen this same link anytime to edit.',
+    versePastorInviteLandingCurrent: 'Saved verse',
+    versePastorInviteLandingEmpty: 'No verse yet. Enter text below to preview the slide.',
+    versePastorInviteLandingPreview: 'Verse slide preview',
     readonlyHint: 'Worship team can view and download; dates and announcements are edited by bulletin editors or admins.',
     serviceDate: 'Service date',
     serviceTime: 'Service time',
@@ -547,6 +550,9 @@ const en: MessageTree = {
     pastorInviteLandingUploadedAt: 'Uploaded: {time}',
     pastorInviteLandingRevisitHint:
       'Bookmark this link: you can reopen it to view and edit what you submitted (until it expires).',
+    pastorInviteLandingPreview: 'Uploaded slides preview',
+    pastorInviteLandingPreviewSlide: 'Slide {n}',
+    pastorInviteLandingPreviewUnavailable: 'Preview unavailable',
     pastorInviteLandingInvalid: 'Invite link is invalid or expired',
     pastorInviteLandingLoading: 'Loading invite…',
     worshipImportYoutubeTitle: 'Pick a YouTube playlist',

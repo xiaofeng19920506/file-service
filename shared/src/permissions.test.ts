@@ -47,6 +47,9 @@ describe('resolvePathAccessLevel', () => {
     expect(resolvePathAccessLevel('GET', `/v1/bulletins/section-invite/${token}/pptx`)).toBe(
       'public',
     );
+    expect(
+      resolvePathAccessLevel('GET', `/v1/bulletins/section-invite/${token}/preview/1.png`),
+    ).toBe('public');
     expect(resolvePathAccessLevel('POST', `/v1/bulletins/section-invite/${token}/pptx`)).toBe(
       'public',
     );

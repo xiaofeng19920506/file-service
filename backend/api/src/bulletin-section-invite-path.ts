@@ -4,6 +4,7 @@ export type BulletinSectionInvitePath =
   | { kind: 'detail'; token: string }
   | { kind: 'pptx'; token: string }
   | { kind: 'verse'; token: string }
+  | { kind: 'previewSlide'; token: string; slide: number }
   | { kind: 'unknown'; rest: string };
 
 export function parseBulletinSectionInviteRest(rest: string): BulletinSectionInvitePath {
@@ -18,5 +19,14 @@ export function parseBulletinSectionInviteRest(rest: string): BulletinSectionInv
   if (tail === '') return { kind: 'detail', token };
   if (tail === '/pptx') return { kind: 'pptx', token };
   if (tail === '/verse') return { kind: 'verse', token };
+
+  const preview = tail.match(/^\/preview\/(\d+)\.png$/);
+  if (preview) {
+    const slide = Number.parseInt(preview[1]!, 10);
+    if (Number.isFinite(slide) && slide >= 1) {
+      return { kind: 'previewSlide', token, slide };
+    }
+  }
+
   return { kind: 'unknown', rest: raw };
 }

@@ -122,6 +122,12 @@ export function isBulletinSectionInvitePath(method: string, path: string): boole
   if (method === 'GET' && /^\/v1\/bulletins\/section-invite\/[^/]+\/pptx$/.test(path)) return true;
   if (method === 'POST' && /^\/v1\/bulletins\/section-invite\/[^/]+\/pptx$/.test(path)) return true;
   if (method === 'POST' && /^\/v1\/bulletins\/section-invite\/[^/]+\/verse$/.test(path)) return true;
+  if (
+    method === 'GET' &&
+    /^\/v1\/bulletins\/section-invite\/[^/]+\/preview\/\d+\.png$/.test(path)
+  ) {
+    return true;
+  }
   return false;
 }
 
