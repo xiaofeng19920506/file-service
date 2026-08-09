@@ -1504,7 +1504,7 @@
     padding-bottom: calc(1.25rem + var(--bottom-nav-height));
   }
 
-  /* 预览全屏：压过上面的「整页滚动」，改回占满视口 */
+  /* 预览全屏：压过上面的「整页滚动」；.app 已预留底栏，勿再 padding-bottom */
   .app-content > .bulletin-page.bulletin-page--workspace[data-mobile-view='preview'] {
     flex: 1 1 auto;
     min-height: 0;
@@ -1512,7 +1512,6 @@
     height: 100%;
     overflow: hidden;
     padding: 0;
-    padding-bottom: var(--bottom-nav-height, 0px);
     box-sizing: border-box;
   }
 

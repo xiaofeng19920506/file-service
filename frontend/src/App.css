@@ -7738,7 +7738,7 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
     height: 100% !important;
   }
 
-  /* 页级：隐藏顶栏操作区，预览占满顶栏与底栏之间的整屏 */
+  /* 页级：隐藏顶栏操作区；.app 已有底栏 padding，此处勿再垫一层 */
   .bulletin-page.bulletin-page--workspace[data-mobile-view='preview'] {
     flex: 1 1 auto;
     min-height: 0;
@@ -7746,7 +7746,6 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
     height: 100%;
     overflow: hidden;
     padding: 0;
-    padding-bottom: var(--bottom-nav-height, 0px);
     box-sizing: border-box;
   }
 
@@ -7757,7 +7756,6 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
     height: 100%;
     overflow: hidden;
     padding: 0;
-    padding-bottom: var(--bottom-nav-height, 0px);
   }
 
   .app-content:has(> .bulletin-page[data-mobile-view='preview']) {
