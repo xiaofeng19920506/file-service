@@ -172,12 +172,12 @@ export default function BulletinPreviewPanel({
       }
     }
     requestScroll(slide, sectionId ?? undefined);
+    // 仅 bump 触发；scrollToSectionId 放 deps 会在箭头切分区后重复跑
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- scrollToSectionId 取触发当帧的值
   }, [
     scrollToPresentationSlide?.bump,
     deckPlan,
     requestScroll,
-    scrollToPresentationSlide,
-    scrollToSectionId,
     onNavigateToSection,
     onVisibleSectionChange,
   ]);
