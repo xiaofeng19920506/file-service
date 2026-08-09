@@ -18,7 +18,7 @@ type WorshipTrackActionsProps = {
 
 /**
  * 歌曲 accordion：标题行 = 箭头 + 缩略图 + 歌名（过长省略）
- * 展开后：歌曲操作 + 切片二级 accordion（展开高度约 2 条，多余滚动）
+ * 展开后：歌曲信息；仅在有剪切时显示切片二级 accordion
  */
 export default function WorshipTrackActions({
   item,
@@ -33,10 +33,20 @@ export default function WorshipTrackActions({
   const hasClips = savedClips.length > 0;
   const [songOpen, setSongOpen] = useState(false);
   const [clipsOpen, setClipsOpen] = useState(false);
+  /** 无剪切时，用户点「添加剪切」才临时打开编辑器 */
+  const [addingClips, setAddingClips] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const songPanelId = `worship-song-panel-${item.id}`;
   const clipsPanelId = `worship-clips-panel-${item.id}`;
+
+  const showClipsSection = hasClips || addingClips;
+
+  useEffect(() => {
+    if (!hasClips) {
+      setClipsOpen(false);
+    }
+  }, [hasClips]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -54,9 +64,17 @@ export default function WorshipTrackActions({
     };
   }, [menuOpen]);
 
+  const composer = item.blob?.composer?.trim() || '';
+  const author = item.blob?.author?.trim() || '';
+  const titleZh = item.blob?.titleZhCn?.trim() || item.blob?.titleZhTw?.trim() || '';
   const clipSummary = hasClips
     ? savedClips.map((c) => formatClipSummary(c)).join(' · ')
-    : t('bulletin.worshipClipSegments');
+    : '';
+
+  const closeClipsSection = () => {
+    setClipsOpen(false);
+    setAddingClips(false);
+  };
 
   return (
     <div
@@ -96,6 +114,22 @@ export default function WorshipTrackActions({
             </button>
             {menuOpen ? (
               <div className="worship-track-more-menu" role="menu">
+                {!hasClips && onClipSave ? (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="worship-track-more-item"
+                    disabled={disabled}
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setSongOpen(true);
+                      setAddingClips(true);
+                      setClipsOpen(true);
+                    }}
+                  >
+                    {t('bulletin.worshipClipAdd')}
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   role="menuitem"
@@ -123,63 +157,124 @@ export default function WorshipTrackActions({
       >
         {songOpen ? (
           <div className="worship-track-card-body">
-            {hasClips && !clipsOpen ? (
-              <p className="worship-track-card-clip-summary" title={clipSummary}>
-                {clipSummary}
-              </p>
-            ) : null}
+            <dl className="worship-track-song-meta">
+              <div className="worship-track-song-meta-row">
+                <dt>{t('bulletin.worshipSongTitle')}</dt>
+                <dd title={title}>{title}</dd>
+              </div>
+              {titleZh && titleZh !== title ? (
+                <div className="worship-track-song-meta-row">
+                  <dt>{t('library.titleZhCn')}</dt>
+                  <dd title={titleZh}>{titleZh}</dd>
+                </div>
+              ) : null}
+              {composer ? (
+                <div className="worship-track-song-meta-row">
+                  <dt>{t('bulletin.worshipSongComposer')}</dt>
+                  <dd title={composer}>{composer}</dd>
+                </div>
+              ) : null}
+              {author ? (
+                <div className="worship-track-song-meta-row">
+                  <dt>{t('bulletin.worshipSongAuthor')}</dt>
+                  <dd title={author}>{author}</dd>
+                </div>
+              ) : null}
+              {item.youtubeUrl ? (
+                <div className="worship-track-song-meta-row">
+                  <dt>{t('bulletin.worshipSongYoutube')}</dt>
+                  <dd>
+                    <a
+                      href={item.youtubeUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="worship-track-song-link"
+                    >
+                      {item.youtubeVideoId}
+                    </a>
+                  </dd>
+                </div>
+              ) : null}
+            </dl>
 
-            <div className="worship-track-clips-accordion">
+            {!showClipsSection && !readOnly && onClipSave ? (
               <button
                 type="button"
-                className="worship-track-clips-trigger"
+                className="btn-secondary btn-sm worship-track-add-clips-btn"
                 disabled={disabled}
-                aria-expanded={clipsOpen}
-                aria-controls={clipsPanelId}
-                aria-label={
-                  clipsOpen
-                    ? t('bulletin.worshipClipCollapse')
-                    : t('bulletin.worshipClipExpand')
-                }
-                title={t('bulletin.worshipClipSegments')}
-                onClick={() => setClipsOpen((v) => !v)}
+                onClick={() => {
+                  setAddingClips(true);
+                  setClipsOpen(true);
+                }}
               >
-                <span className="worship-track-clips-chevron" aria-hidden>
-                  {clipsOpen ? <ChevronDownIcon /> : <ChevronRightIcon />}
-                </span>
-                <span className="worship-track-clips-label">{t('bulletin.worshipClipSegments')}</span>
-                {hasClips ? (
-                  <span className="worship-track-clips-count">{savedClips.length}</span>
-                ) : null}
+                {t('bulletin.worshipClipAdd')}
               </button>
+            ) : null}
 
-              <div
-                id={clipsPanelId}
-                className="worship-track-clips-panel"
-                hidden={!clipsOpen}
-              >
-                {clipsOpen ? (
-                  readOnly || !onClipSave ? (
-                    <ul className="worship-track-clips-readonly">
-                      {savedClips.map((clip, index) => (
-                        <li key={`${clip.startSec}-${index}`}>
-                          {formatClipSummary(clip)}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <WorshipClipFields
-                      item={item}
-                      disabled={disabled}
-                      open
-                      hideToggle
-                      compactList
-                      onSave={onClipSave}
-                    />
-                  )
+            {showClipsSection ? (
+              <div className="worship-track-clips-accordion">
+                {hasClips && !clipsOpen ? (
+                  <p className="worship-track-card-clip-summary" title={clipSummary}>
+                    {clipSummary}
+                  </p>
                 ) : null}
+                <button
+                  type="button"
+                  className="worship-track-clips-trigger"
+                  disabled={disabled}
+                  aria-expanded={clipsOpen}
+                  aria-controls={clipsPanelId}
+                  aria-label={
+                    clipsOpen
+                      ? t('bulletin.worshipClipCollapse')
+                      : t('bulletin.worshipClipExpand')
+                  }
+                  title={t('bulletin.worshipClipSegments')}
+                  onClick={() => setClipsOpen((v) => !v)}
+                >
+                  <span className="worship-track-clips-chevron" aria-hidden>
+                    {clipsOpen ? <ChevronDownIcon /> : <ChevronRightIcon />}
+                  </span>
+                  <span className="worship-track-clips-label">
+                    {t('bulletin.worshipClipSegments')}
+                  </span>
+                  {hasClips ? (
+                    <span className="worship-track-clips-count">{savedClips.length}</span>
+                  ) : null}
+                </button>
+
+                <div
+                  id={clipsPanelId}
+                  className="worship-track-clips-panel"
+                  hidden={!clipsOpen}
+                >
+                  {clipsOpen ? (
+                    readOnly || !onClipSave ? (
+                      <ul className="worship-track-clips-readonly">
+                        {savedClips.map((clip, index) => (
+                          <li key={`${clip.startSec}-${index}`}>
+                            {formatClipSummary(clip)}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <WorshipClipFields
+                        item={item}
+                        disabled={disabled}
+                        open
+                        hideToggle
+                        compactList
+                        onSave={onClipSave}
+                        onCleared={closeClipsSection}
+                        onOpenChange={(open) => {
+                          if (!open) closeClipsSection();
+                        }}
+                      />
+                    )
+                  ) : null}
+                </div>
               </div>
-            </div>
+            ) : null}
           </div>
         ) : null}
       </div>

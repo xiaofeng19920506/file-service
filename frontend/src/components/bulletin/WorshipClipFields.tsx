@@ -85,6 +85,8 @@ type WorshipClipFieldsProps = {
   onSave: (patch: { playClips: PlayClip[] | null }) => Promise<void>;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** 清除全部剪切并保存成功后回调（用于隐藏切片容器） */
+  onCleared?: () => void;
   hideToggle?: boolean;
   /** 列表限高约 2 条，多余纵向滚动 */
   compactList?: boolean;
@@ -96,6 +98,7 @@ export default function WorshipClipFields({
   onSave,
   open: openProp,
   onOpenChange,
+  onCleared,
   hideToggle = false,
   compactList = false,
 }: WorshipClipFieldsProps) {
@@ -218,12 +221,14 @@ export default function WorshipClipFields({
 
   const clearClips = async () => {
     setRows([clampClipRow({ startSec: 0, endSec: durationSec, label: '' }, durationSec)]);
-    setOpen(false);
     setClipError(null);
-    if (savedClips.length === 0) return;
     setSaving(true);
     try {
-      await onSave({ playClips: null });
+      if (savedClips.length > 0) {
+        await onSave({ playClips: null });
+      }
+      setOpen(false);
+      onCleared?.();
     } catch (err) {
       setClipError(friendlyError(err instanceof Error ? err.message : 'update_failed', t));
       setOpen(true);
