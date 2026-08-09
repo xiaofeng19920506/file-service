@@ -241,7 +241,7 @@ function AppShellInner({
                   type="button"
                   className="nav-back-btn"
                   onClick={mobileHeader.onBack}
-                  aria-label={t('playlists.backToList')}
+                  aria-label={mobileHeader.backAriaLabel ?? t('playlists.backToList')}
                 >
                   <ChevronLeftIcon />
                 </button>

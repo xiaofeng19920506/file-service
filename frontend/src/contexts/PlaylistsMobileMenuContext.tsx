@@ -8,6 +8,8 @@ export const PLAYLISTS_MOBILE_MENU_MOUNT_ID = 'playlists-mobile-menu-mount';
 export type PlaylistsMobileHeaderState = {
   title: string;
   onBack: () => void;
+  /** 顶栏后退按钮无障碍文案；缺省用播放列表「返回列表」 */
+  backAriaLabel?: string;
 };
 
 type PlaylistsMobileMenuContextValue = {

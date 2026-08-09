@@ -29,9 +29,11 @@ import {
 } from '../components/bulletin/BulletinWizardSteps';
 import ProgressStepper from '../components/ProgressStepper';
 import BulletinSectionPptEditor from '../components/bulletin/BulletinSectionPptEditor';
+import { usePlaylistsMobileMenu } from '../contexts/PlaylistsMobileMenuContext';
 import { useBulletinLocalDraftSync } from '../hooks/useBulletinLocalDraftSync';
 import { useBulletinRealtime } from '../hooks/useBulletinRealtime';
 import { useBulletinScripturePersistence } from '../hooks/useBulletinScripturePersistence';
+import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 import { createSlideShowBus } from '../lib/bulletin-slideshow-bus';
 import { useI18n } from '../i18n';
 import { computeOfferingTotalAmount } from '../lib/bulletin-offering';
@@ -166,6 +168,12 @@ export default function BulletinPage() {
   const [wizardStep, setWizardStep] = useState(0);
   const [activeSectionId, setActiveSectionId] = useState('cover');
   const [previewSectionId, setPreviewSectionId] = useState('cover');
+  /** 手机：分区列表 ↔ 预览（含表单）两级页 */
+  const [mobileWorkspaceView, setMobileWorkspaceView] = useState<'sections' | 'preview'>(
+    'sections',
+  );
+  const isMobileViewport = useMediaQuery(MOBILE_MEDIA_QUERY);
+  const { setMobileHeader } = usePlaylistsMobileMenu();
   const [previewScrollBump, setPreviewScrollBump] = useState(0);
   const [previewScrollToSlide, setPreviewScrollToSlide] = useState<{
     slide: number;
@@ -327,7 +335,7 @@ export default function BulletinPage() {
   }, [slideShowSessionId]);
 
   const selectNavSection = useCallback(
-    (sectionId: string) => {
+    (sectionId: string, opts?: { openMobilePreview?: boolean }) => {
       const targetId = resolveNavTargetSectionId(sectionId, navTree);
       const section = navSectionById(targetId, navSections);
       if (!section) return;
@@ -341,9 +349,55 @@ export default function BulletinPage() {
         const stepIdx = BULLETIN_WIZARD_STEPS.findIndex((s) => s.id === section.editableStepId);
         if (stepIdx >= 0) setWizardStep(stepIdx);
       }
+
+      if (opts?.openMobilePreview !== false && isMobileViewport) {
+        setMobileWorkspaceView('preview');
+      }
     },
-    [navSections, navTree],
+    [isMobileViewport, navSections, navTree],
   );
+
+  const backToMobileSections = useCallback(() => {
+    setMobileWorkspaceView('sections');
+  }, []);
+
+  useEffect(() => {
+    if (!isMobileViewport) {
+      setMobileHeader(null);
+      return;
+    }
+    if (!draft || mobileWorkspaceView !== 'preview') {
+      setMobileHeader(null);
+      return;
+    }
+    const section = navSectionById(activeSectionId, navSections);
+    const title = section?.label ?? (section ? t(section.labelKey) : t('bulletin.previewTitle'));
+    setMobileHeader({
+      title,
+      onBack: backToMobileSections,
+      backAriaLabel: t('bulletin.backToSections'),
+    });
+    return () => setMobileHeader(null);
+  }, [
+    activeSectionId,
+    backToMobileSections,
+    draft,
+    isMobileViewport,
+    mobileWorkspaceView,
+    navSections,
+    setMobileHeader,
+    t,
+  ]);
+
+  useEffect(() => {
+    if (!isMobileViewport) {
+      setMobileWorkspaceView('sections');
+    }
+  }, [isMobileViewport]);
+
+  useEffect(() => {
+    setMobileWorkspaceView('sections');
+  }, [selectedId]);
 
   const syncAnnouncementsToDraft = useCallback((next: AnnouncementDraft[]) => {
     setAnnouncements(next);
@@ -448,6 +502,9 @@ export default function BulletinPage() {
     setActiveSectionId('worship');
     setPreviewSectionId('worship');
     setPreviewScrollBump((b) => b + 1);
+    if (window.matchMedia(MOBILE_MEDIA_QUERY).matches) {
+      setMobileWorkspaceView('preview');
+    }
 
     if (oauth === 'connected') {
       setWorshipYoutubeOauthReady(true);
@@ -1367,8 +1424,11 @@ export default function BulletinPage() {
       {!draft ? (
         <p className="bulletin-empty">{t('bulletin.selectWeek')}</p>
       ) : (
-        <div className="bulletin-workspace">
-          <nav className="bulletin-workspace-nav" aria-label={t('bulletin.editorPanel')}>
+        <div
+          className="bulletin-workspace"
+          data-mobile-view={isMobileViewport ? mobileWorkspaceView : undefined}
+        >
+          <nav className="bulletin-workspace-nav" aria-label={t('bulletin.sectionsListTitle')}>
             <ProgressStepper
               steps={stepperSteps}
               currentIndex={navCurrentIndex}
@@ -1386,7 +1446,7 @@ export default function BulletinPage() {
               onStepSelect={(index) => {
                 const section = navSections[index];
                 if (!section) return;
-                selectNavSection(section.id);
+                selectNavSection(section.id, { openMobilePreview: true });
               }}
             />
           </nav>

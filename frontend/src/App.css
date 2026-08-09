@@ -7573,6 +7573,82 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   }
 }
 
+/* 手机：分区列表 ↔ 预览 两级导航（与 MOBILE_MEDIA_QUERY 对齐） */
+@media (max-width: 900px) {
+  .bulletin-workspace[data-mobile-view='sections'] .bulletin-workspace-form,
+  .bulletin-workspace[data-mobile-view='sections'] .bulletin-workspace-preview {
+    display: none;
+  }
+
+  .bulletin-workspace[data-mobile-view='preview'] .bulletin-workspace-nav {
+    display: none;
+  }
+
+  .bulletin-workspace[data-mobile-view='sections'] {
+    gap: 0;
+  }
+
+  .bulletin-workspace[data-mobile-view='sections'] .bulletin-workspace-nav {
+    flex: none;
+    width: 100%;
+    min-width: 0;
+    max-height: none;
+    padding: 0.5rem 0.35rem;
+    border: none;
+    background: transparent;
+  }
+
+  .bulletin-workspace[data-mobile-view='sections'] .progress-stepper--vertical .progress-stepper-list {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 0.25rem;
+  }
+
+  .bulletin-workspace[data-mobile-view='sections'] .progress-stepper-item {
+    width: 100%;
+  }
+
+  .bulletin-workspace[data-mobile-view='sections'] .progress-stepper--vertical .progress-stepper-btn {
+    min-height: 2.75rem;
+    padding: 0.65rem 0.75rem;
+    font-size: 0.95rem;
+  }
+
+  .bulletin-workspace[data-mobile-view='preview'] {
+    gap: 0.65rem;
+  }
+
+  /* 预览优先：点进分区后先看到 PPT，表单在下方 */
+  .bulletin-workspace[data-mobile-view='preview'] .bulletin-workspace-preview {
+    order: 1;
+  }
+
+  .bulletin-workspace[data-mobile-view='preview'] .bulletin-workspace-form {
+    order: 2;
+  }
+
+  .bulletin-workspace[data-mobile-view='preview'] .bulletin-workspace-form,
+  .bulletin-workspace[data-mobile-view='preview'] .bulletin-workspace-preview {
+    flex: none;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .bulletin-workspace[data-mobile-view='preview'] .bulletin-workspace-preview {
+    min-height: min(58vh, 28rem);
+  }
+
+  .bulletin-workspace[data-mobile-view='preview'] .bulletin-preview-panel,
+  .bulletin-workspace[data-mobile-view='preview'] .bulletin-deck-preview-shell {
+    min-height: min(58vh, 28rem);
+  }
+
+  .bulletin-workspace[data-mobile-view='preview'] .bulletin-deck-preview {
+    max-height: none;
+    min-height: min(58vh, 28rem);
+  }
+}
+
 .worship-songs-page {
   max-width: 880px;
   margin: 0 auto;

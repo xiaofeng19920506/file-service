@@ -315,6 +315,8 @@ export default {
     sectionPreviewRefreshing: '正在更新预览…',
     editorPanel: '周报编辑',
     previewTitle: 'PPT 预览',
+    backToSections: '返回分区列表',
+    sectionsListTitle: '选择分区',
     previewHint: '按分区浏览整份 PPT。左侧表单与右侧幻灯片保持一致；修改后预览会即时刷新。',
     previewDeckMeta: '共 {count} 页',
     previewDeckHighlightNote: '高亮为当前预览分区',

@@ -330,6 +330,8 @@ const en: MessageTree = {
     sectionPreviewRefreshing: 'Updating preview…',
     editorPanel: 'Bulletin editor',
     previewTitle: 'PPT preview',
+    backToSections: 'Back to sections',
+    sectionsListTitle: 'Choose a section',
     previewHint:
       'Browse the PPT by section. Left-side fields stay in sync with the slides; the preview refreshes as you edit.',
     previewDeckMeta: '{count} slides',
