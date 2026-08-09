@@ -44,6 +44,9 @@ describe('resolvePathAccessLevel', () => {
   it('marks bulletin section invite token routes as public', () => {
     const token = 'bs.abc.def.123.sig';
     expect(resolvePathAccessLevel('GET', `/v1/bulletins/section-invite/${token}`)).toBe('public');
+    expect(resolvePathAccessLevel('GET', `/v1/bulletins/section-invite/${token}/pptx`)).toBe(
+      'public',
+    );
     expect(resolvePathAccessLevel('POST', `/v1/bulletins/section-invite/${token}/pptx`)).toBe(
       'public',
     );

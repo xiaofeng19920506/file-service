@@ -201,8 +201,11 @@ const en: MessageTree = {
       'Please enter the verse of the week for the {date} bulletin (slide 35).',
     versePastorInviteLandingBodyLabel: 'Verse text',
     versePastorInviteLandingSubmit: 'Submit verse',
+    versePastorInviteLandingUpdate: 'Save changes',
     versePastorInviteLandingSubmitting: 'Submitting…',
     versePastorInviteLandingSubmitted: 'Verse submitted. The bulletin preview will update automatically.',
+    versePastorInviteLandingSubmittedKeepEditing:
+      'Verse saved. You can reopen this same link anytime to edit.',
     readonlyHint: 'Worship team can view and download; dates and announcements are edited by bulletin editors or admins.',
     serviceDate: 'Service date',
     serviceTime: 'Service time',
@@ -513,13 +516,24 @@ const en: MessageTree = {
     pastorInviteLandingIntroSimple:
       'Optionally upload a PPT for the {date} Sunday bulletin “Sunday message” section.',
     pastorInviteLandingChooseFile: 'Choose PPT file',
+    pastorInviteLandingReplaceFile: 'Choose a new file to replace',
     pastorInviteLandingUpload: 'Upload PPT',
+    pastorInviteLandingReplace: 'Replace upload',
     pastorInviteLandingUploading: 'Uploading…',
     pastorInviteLandingSkip: 'Skip upload and finish',
     pastorInviteLandingDone: 'Done',
     pastorInviteLandingUploaded: 'PPT uploaded. The “Sunday message” section is updated.',
+    pastorInviteLandingUploadedKeepEditing:
+      'PPT saved. You can reopen this same link anytime to download or replace it.',
     pastorInviteLandingSkipped: 'You’re all set. You can return with the same link to upload later.',
     pastorInviteLandingHasOverride: 'This section already has a custom PPT; uploading again will replace it.',
+    pastorInviteLandingCurrentFile: 'Uploaded file',
+    pastorInviteLandingNoFileYet:
+      'No file uploaded yet. After you upload, you can return via this link to change it.',
+    pastorInviteLandingDownload: 'Download current PPT',
+    pastorInviteLandingUploadedAt: 'Uploaded: {time}',
+    pastorInviteLandingRevisitHint:
+      'Bookmark this link: you can reopen it to view and edit what you submitted (until it expires).',
     pastorInviteLandingInvalid: 'Invite link is invalid or expired',
     pastorInviteLandingLoading: 'Loading invite…',
     worshipImportYoutubeTitle: 'Pick a YouTube playlist',
@@ -624,7 +638,7 @@ const en: MessageTree = {
     intro: 'Add songs for {date} {time} — “{title}”. Import a YouTube playlist or paste links.',
     loading: 'Loading playlist…',
     inviteGuestHint:
-      'You are editing this week’s worship playlist via invite link — no login required. The link only works for this playlist and expires after its validity period.',
+      'You are editing this week’s worship playlist via invite link — no login required. Bookmark this link: you can reopen it to add, remove, or edit songs until it expires.',
     addSection: 'Add songs',
     urlHint: 'Single videos or full YouTube playlist URLs; duplicates are skipped.',
     listSection: 'Tracks ({count})',

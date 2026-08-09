@@ -1,5 +1,11 @@
+/**
+ * 牧师分区邀请（主日信息 PPT / 本週金句）：
+ * - 令牌很长且含多个 `.`，Fastify `:param` 会匹配失败 → 走 `/*`
+ * - 内容持久化在周报上；同一未过期链接可反复打开查看并修改
+ */
 import { eq } from 'drizzle-orm';
 import {
+  blobs,
   normalizeSectionPptxOverrides,
   pptxBufferSlidesAreWellFormed,
   setSectionPptxOverride,
@@ -58,10 +64,52 @@ function isPptxFilename(name: string): boolean {
   return lower.endsWith('.pptx') || lower.endsWith('.ppt');
 }
 
-/**
- * 牧师分区 PPT 邀请：令牌很长且含多个 `.`，Fastify `:param` 会匹配失败。
- * 统一注册 `/v1/bulletins/section-invite/*`。
- */
+async function loadOverrideBlobMeta(
+  db: Db,
+  bulletin: typeof weeklyBulletins.$inferSelect,
+  sectionId: string,
+): Promise<{
+  hasPptxOverride: boolean;
+  pptxBlobId: string | null;
+  pptxFileName: string | null;
+  pptxUploadedAt: string | null;
+}> {
+  const overrides = normalizeSectionPptxOverrides(bulletin.sectionPptxOverrides);
+  const blobId = overrides[sectionId] ?? null;
+  if (!blobId) {
+    return {
+      hasPptxOverride: false,
+      pptxBlobId: null,
+      pptxFileName: null,
+      pptxUploadedAt: null,
+    };
+  }
+  const [blob] = await db
+    .select({
+      id: blobs.id,
+      originalFilename: blobs.originalFilename,
+      title: blobs.title,
+      createdAt: blobs.createdAt,
+    })
+    .from(blobs)
+    .where(eq(blobs.id, blobId))
+    .limit(1);
+  if (!blob) {
+    return {
+      hasPptxOverride: false,
+      pptxBlobId: null,
+      pptxFileName: null,
+      pptxUploadedAt: null,
+    };
+  }
+  return {
+    hasPptxOverride: true,
+    pptxBlobId: blob.id,
+    pptxFileName: blob.originalFilename || blob.title || 'upload.pptx',
+    pptxUploadedAt: blob.createdAt?.toISOString?.() ?? null,
+  };
+}
+
 export function registerBulletinSectionInviteRoutes(
   app: FastifyInstance,
   opts: { db: Db; env: ApiEnv; storage: ObjectStorage; redisUrl: string },
@@ -70,6 +118,26 @@ export function registerBulletinSectionInviteRoutes(
 
   app.get<{ Params: { '*': string } }>('/v1/bulletins/section-invite/*', async (request, reply) => {
     const parsed = parseBulletinSectionInviteRest(request.params['*'] ?? '');
+
+    if (parsed.kind === 'pptx') {
+      const resolved = await resolveSectionInvite(db, env.DOWNLOAD_HMAC_SECRET, parsed.token);
+      if ('error' in resolved) return inviteError(reply, resolved.error);
+
+      const meta = await loadOverrideBlobMeta(db, resolved.bulletin, resolved.sectionId);
+      if (!meta.pptxBlobId) return reply.code(404).send({ error: 'not_found' });
+
+      const [blob] = await db.select().from(blobs).where(eq(blobs.id, meta.pptxBlobId)).limit(1);
+      if (!blob) return reply.code(404).send({ error: 'not_found' });
+
+      const filename = (meta.pptxFileName || 'upload.pptx').replace(/[\r\n"]/g, '_');
+      const stream = await storage.createReadStream(blob.storageKey);
+      return reply
+        .header('Content-Type', blob.mimeType || PPTX_MIME)
+        .header('Content-Disposition', `attachment; filename="${filename}"`)
+        .header('Cache-Control', 'private, no-store')
+        .send(stream);
+    }
+
     if (parsed.kind !== 'detail') {
       return reply.code(404).send({ error: 'not_found' });
     }
@@ -77,13 +145,16 @@ export function registerBulletinSectionInviteRoutes(
     const resolved = await resolveSectionInvite(db, env.DOWNLOAD_HMAC_SECRET, parsed.token);
     if ('error' in resolved) return inviteError(reply, resolved.error);
 
-    const overrides = normalizeSectionPptxOverrides(resolved.bulletin.sectionPptxOverrides);
+    const pptxMeta = await loadOverrideBlobMeta(db, resolved.bulletin, resolved.sectionId);
     return {
       bulletinId: resolved.bulletin.id,
       serviceDate: resolved.bulletin.serviceDate,
       serviceTime: resolved.bulletin.serviceTime,
       sectionId: resolved.sectionId,
-      hasPptxOverride: Boolean(overrides[resolved.sectionId]),
+      hasPptxOverride: pptxMeta.hasPptxOverride,
+      pptxBlobId: pptxMeta.pptxBlobId,
+      pptxFileName: pptxMeta.pptxFileName,
+      pptxUploadedAt: pptxMeta.pptxUploadedAt,
       verseOfWeek:
         resolved.sectionId === 'verse_of_week' ? resolved.bulletin.verseOfWeek ?? '' : undefined,
       expiresAtUnix: resolved.expiresAtUnix,
@@ -185,6 +256,7 @@ export function registerBulletinSectionInviteRoutes(
         bulletinId: resolved.bulletin.id,
         sectionId: resolved.sectionId,
         blobId: persisted.blobId,
+        fileName: downloadName,
         sectionPptxOverrides: nextOverrides,
       };
     },

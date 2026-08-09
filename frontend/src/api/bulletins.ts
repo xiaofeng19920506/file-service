@@ -546,6 +546,9 @@ export type BulletinSectionInviteInfo = {
   serviceTime: string;
   sectionId: string;
   hasPptxOverride: boolean;
+  pptxBlobId?: string | null;
+  pptxFileName?: string | null;
+  pptxUploadedAt?: string | null;
   verseOfWeek?: string;
   expiresAtUnix: number;
 };
@@ -557,17 +560,23 @@ export async function fetchBulletinSectionInvite(
   return parseJson<BulletinSectionInviteInfo>(res);
 }
 
+/** 邀请链接下载已上传的分区 PPT（公开，凭 token） */
+export function bulletinSectionInvitePptxDownloadUrl(token: string): string {
+  const base = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '');
+  return `${base}/v1/bulletins/section-invite/${encodeURIComponent(token)}/pptx`;
+}
+
 export async function uploadBulletinSectionInvitePptx(
   token: string,
   file: File,
-): Promise<{ ok: true; blobId: string; sectionId: string }> {
+): Promise<{ ok: true; blobId: string; sectionId: string; fileName?: string }> {
   const form = new FormData();
   form.append('file', file);
   const res = await apiFetch(`/v1/bulletins/section-invite/${encodeURIComponent(token)}/pptx`, {
     method: 'POST',
     body: form,
   });
-  return parseJson<{ ok: true; blobId: string; sectionId: string }>(res);
+  return parseJson<{ ok: true; blobId: string; sectionId: string; fileName?: string }>(res);
 }
 
 export async function submitBulletinSectionInviteVerse(

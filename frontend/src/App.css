@@ -8643,6 +8643,28 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   gap: 0.5rem;
 }
 
+.bulletin-section-invite-existing {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  background: var(--bg, #f7f7f5);
+}
+
+.bulletin-section-invite-existing-title {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.bulletin-section-invite-existing-name {
+  margin: 0;
+  font-size: 0.95rem;
+  word-break: break-word;
+}
+
 .bulletin-worship-invite-combobox-wrap {
   position: relative;
   width: 100%;

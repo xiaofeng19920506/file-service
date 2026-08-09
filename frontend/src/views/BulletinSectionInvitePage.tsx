@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  bulletinSectionInvitePptxDownloadUrl,
   fetchBulletinSectionInvite,
   submitBulletinSectionInviteVerse,
   uploadBulletinSectionInvitePptx,
@@ -13,7 +14,7 @@ type BulletinSectionInvitePageProps = {
   token: string;
 };
 
-type Phase = 'loading' | 'ready' | 'done-upload' | 'done-verse' | 'done-skip' | 'error';
+type Phase = 'loading' | 'ready' | 'error';
 
 export default function BulletinSectionInvitePage({ token }: BulletinSectionInvitePageProps) {
   const { t } = useI18n();
@@ -24,18 +25,25 @@ export default function BulletinSectionInvitePage({ token }: BulletinSectionInvi
   const [verseDraft, setVerseDraft] = useState('');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const reload = useCallback(async () => {
+    const data = await fetchBulletinSectionInvite(token);
+    setInfo(data);
+    if (data.sectionId === 'verse_of_week') {
+      setVerseDraft(data.verseOfWeek ?? '');
+    }
+    return data;
+  }, [token]);
 
   useEffect(() => {
     let cancelled = false;
     setPhase('loading');
     setError(null);
-    void fetchBulletinSectionInvite(token)
-      .then((data) => {
+    setSuccess(null);
+    void reload()
+      .then(() => {
         if (cancelled) return;
-        setInfo(data);
-        if (data.sectionId === 'verse_of_week') {
-          setVerseDraft(data.verseOfWeek ?? '');
-        }
         setPhase('ready');
       })
       .catch((err) => {
@@ -51,7 +59,7 @@ export default function BulletinSectionInvitePage({ token }: BulletinSectionInvi
     return () => {
       cancelled = true;
     };
-  }, [token, t]);
+  }, [reload, t]);
 
   const handleUpload = async () => {
     if (!file || uploading) return;
@@ -61,9 +69,14 @@ export default function BulletinSectionInvitePage({ token }: BulletinSectionInvi
     }
     setUploading(true);
     setError(null);
+    setSuccess(null);
     try {
       await uploadBulletinSectionInvitePptx(token, file);
-      setPhase('done-upload');
+      await reload();
+      setFile(null);
+      if (fileRef.current) fileRef.current.value = '';
+      setSuccess(t('bulletin.pastorInviteLandingUploadedKeepEditing'));
+      setPhase('ready');
     } catch (err) {
       setError(friendlyError(err instanceof Error ? err.message : 'upload_failed', t));
     } finally {
@@ -80,9 +93,12 @@ export default function BulletinSectionInvitePage({ token }: BulletinSectionInvi
     }
     setUploading(true);
     setError(null);
+    setSuccess(null);
     try {
       await submitBulletinSectionInviteVerse(token, verse);
-      setPhase('done-verse');
+      await reload();
+      setSuccess(t('bulletin.versePastorInviteLandingSubmittedKeepEditing'));
+      setPhase('ready');
     } catch (err) {
       setError(friendlyError(err instanceof Error ? err.message : 'update_failed', t));
     } finally {
@@ -91,6 +107,7 @@ export default function BulletinSectionInvitePage({ token }: BulletinSectionInvi
   };
 
   const isVerse = info?.sectionId === 'verse_of_week';
+  const downloadUrl = bulletinSectionInvitePptxDownloadUrl(token);
 
   return (
     <main className="bulletin-section-invite-page">
@@ -117,6 +134,7 @@ export default function BulletinSectionInvitePage({ token }: BulletinSectionInvi
                   date: info.serviceDate,
                 })}
               </p>
+              <p className="playlists-muted">{t('bulletin.pastorInviteLandingRevisitHint')}</p>
               <label className="share-playlist-field">
                 <span>{t('bulletin.versePastorInviteLandingBodyLabel')}</span>
                 <textarea
@@ -124,9 +142,13 @@ export default function BulletinSectionInvitePage({ token }: BulletinSectionInvi
                   rows={6}
                   value={verseDraft}
                   disabled={uploading}
-                  onChange={(e) => setVerseDraft(e.target.value)}
+                  onChange={(e) => {
+                    setVerseDraft(e.target.value);
+                    setSuccess(null);
+                  }}
                 />
               </label>
+              {success ? <p className="form-success">{success}</p> : null}
               {error ? <p className="form-error">{error}</p> : null}
               <div className="bulletin-section-invite-actions">
                 <button
@@ -137,7 +159,9 @@ export default function BulletinSectionInvitePage({ token }: BulletinSectionInvi
                 >
                   {uploading
                     ? t('bulletin.versePastorInviteLandingSubmitting')
-                    : t('bulletin.versePastorInviteLandingSubmit')}
+                    : info.verseOfWeek?.trim()
+                      ? t('bulletin.versePastorInviteLandingUpdate')
+                      : t('bulletin.versePastorInviteLandingSubmit')}
                 </button>
               </div>
             </>
@@ -148,21 +172,54 @@ export default function BulletinSectionInvitePage({ token }: BulletinSectionInvi
                   date: info.serviceDate,
                 })}
               </p>
+              <p className="playlists-muted">{t('bulletin.pastorInviteLandingRevisitHint')}</p>
+
               {info.hasPptxOverride ? (
-                <p className="playlists-muted">{t('bulletin.pastorInviteLandingHasOverride')}</p>
-              ) : null}
+                <div className="bulletin-section-invite-existing">
+                  <p className="bulletin-section-invite-existing-title">
+                    {t('bulletin.pastorInviteLandingCurrentFile')}
+                  </p>
+                  <p className="bulletin-section-invite-existing-name" title={info.pptxFileName ?? ''}>
+                    {info.pptxFileName || t('bulletin.pastorInviteLandingHasOverride')}
+                  </p>
+                  {info.pptxUploadedAt ? (
+                    <p className="playlists-muted">
+                      {t('bulletin.pastorInviteLandingUploadedAt', {
+                        time: new Date(info.pptxUploadedAt).toLocaleString(),
+                      })}
+                    </p>
+                  ) : null}
+                  <a
+                    className="btn-secondary btn-sm"
+                    href={downloadUrl}
+                    download={info.pptxFileName || undefined}
+                  >
+                    {t('bulletin.pastorInviteLandingDownload')}
+                  </a>
+                </div>
+              ) : (
+                <p className="playlists-muted">{t('bulletin.pastorInviteLandingNoFileYet')}</p>
+              )}
 
               <label className="share-playlist-field">
-                <span>{t('bulletin.pastorInviteLandingChooseFile')}</span>
+                <span>
+                  {info.hasPptxOverride
+                    ? t('bulletin.pastorInviteLandingReplaceFile')
+                    : t('bulletin.pastorInviteLandingChooseFile')}
+                </span>
                 <input
                   ref={fileRef}
                   type="file"
                   accept=".pptx,.ppt,application/vnd.openxmlformats-officedocument.presentationml.presentation"
                   disabled={uploading}
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                  onChange={(e) => {
+                    setFile(e.target.files?.[0] ?? null);
+                    setSuccess(null);
+                  }}
                 />
               </label>
 
+              {success ? <p className="form-success">{success}</p> : null}
               {error ? <p className="form-error">{error}</p> : null}
 
               <div className="bulletin-section-invite-actions">
@@ -174,40 +231,13 @@ export default function BulletinSectionInvitePage({ token }: BulletinSectionInvi
                 >
                   {uploading
                     ? t('bulletin.pastorInviteLandingUploading')
-                    : t('bulletin.pastorInviteLandingUpload')}
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  disabled={uploading}
-                  onClick={() => setPhase('done-skip')}
-                >
-                  {t('bulletin.pastorInviteLandingSkip')}
+                    : info.hasPptxOverride
+                      ? t('bulletin.pastorInviteLandingReplace')
+                      : t('bulletin.pastorInviteLandingUpload')}
                 </button>
               </div>
             </>
           )
-        ) : null}
-
-        {phase === 'done-upload' ? (
-          <>
-            <p className="form-success">{t('bulletin.pastorInviteLandingUploaded')}</p>
-            <p className="playlists-muted">{t('bulletin.pastorInviteLandingDone')}</p>
-          </>
-        ) : null}
-
-        {phase === 'done-verse' ? (
-          <>
-            <p className="form-success">{t('bulletin.versePastorInviteLandingSubmitted')}</p>
-            <p className="playlists-muted">{t('bulletin.pastorInviteLandingDone')}</p>
-          </>
-        ) : null}
-
-        {phase === 'done-skip' ? (
-          <>
-            <p className="form-success">{t('bulletin.pastorInviteLandingSkipped')}</p>
-            <p className="playlists-muted">{t('bulletin.pastorInviteLandingDone')}</p>
-          </>
         ) : null}
       </div>
     </main>
