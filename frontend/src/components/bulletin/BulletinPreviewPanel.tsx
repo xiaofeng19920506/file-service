@@ -30,6 +30,11 @@ type BulletinPreviewPanelProps = {
   navOrder?: BulletinNavSection[];
   worshipRefreshKey?: number;
   onVisibleSectionChange?: (sectionId: string) => void;
+  /**
+   * 预览箭头跨到另一分区时：切换左侧选中分区（与滚动跟随区分，跟随只改高亮）。
+   * 调用方勿再 bump 到分区首页；本面板会滚到具体 slide。
+   */
+  onNavigateToSection?: (sectionId: string) => void;
   /** 供左侧「投影」使用实际页数与跳过页 */
   onDeckMetaChange?: (meta: { totalSlides: number; skipSlides: number[] } | null) => void;
   onWorshipPresentationModeChange?: (mode: WorshipPresentationMode) => void;
@@ -44,6 +49,7 @@ export default function BulletinPreviewPanel({
   navOrder,
   worshipRefreshKey = 0,
   onVisibleSectionChange,
+  onNavigateToSection,
   onDeckMetaChange,
   onWorshipPresentationModeChange,
 }: BulletinPreviewPanelProps) {
@@ -159,7 +165,11 @@ export default function BulletinPreviewPanel({
     if (sectionId) {
       // 先标记，避免随后 scrollToSectionId 变化又滚回分区首页
       lastVisibleSectionRef.current = sectionId;
-      onVisibleSectionChange?.(sectionId);
+      if (sectionId !== scrollToSectionId) {
+        onNavigateToSection?.(sectionId);
+      } else {
+        onVisibleSectionChange?.(sectionId);
+      }
     }
     requestScroll(slide, sectionId ?? undefined);
   }, [
@@ -167,6 +177,8 @@ export default function BulletinPreviewPanel({
     deckPlan,
     requestScroll,
     scrollToPresentationSlide,
+    scrollToSectionId,
+    onNavigateToSection,
     onVisibleSectionChange,
   ]);
 
@@ -234,11 +246,22 @@ export default function BulletinPreviewPanel({
       if (sectionId) {
         // 先标记，避免 scrollToSectionId 变化时又滚回分区首页
         lastVisibleSectionRef.current = sectionId;
-        onVisibleSectionChange?.(sectionId);
+        if (sectionId !== scrollToSectionId) {
+          // 跨分区：必须切换选中分区，预览才渲染目标页的 DOM
+          onNavigateToSection?.(sectionId);
+        } else {
+          onVisibleSectionChange?.(sectionId);
+        }
       }
       requestScroll(slide, sectionId ?? undefined);
     },
-    [deckPlan, onVisibleSectionChange, requestScroll],
+    [
+      deckPlan,
+      onNavigateToSection,
+      onVisibleSectionChange,
+      requestScroll,
+      scrollToSectionId,
+    ],
   );
 
   // 结构变化才整卷 planRefreshing；否则仅当前分区标 loading

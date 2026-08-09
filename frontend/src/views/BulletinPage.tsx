@@ -285,6 +285,22 @@ export default function BulletinPage() {
     setPreviewSectionId((prev) => (prev === sectionId ? prev : sectionId));
   }, []);
 
+  /** 预览箭头跨分区：切换编辑选中，但不 bump（避免滚回分区首页） */
+  const handleNavigateToSection = useCallback(
+    (sectionId: string) => {
+      const targetId = resolveNavTargetSectionId(sectionId, navTree);
+      const section = navSectionById(targetId, navSections);
+      if (!section) return;
+      setActiveSectionId(targetId);
+      setPreviewSectionId(targetId);
+      if (section.editableStepId) {
+        const stepIdx = BULLETIN_WIZARD_STEPS.findIndex((s) => s.id === section.editableStepId);
+        if (stepIdx >= 0) setWizardStep(stepIdx);
+      }
+    },
+    [navSections, navTree],
+  );
+
   /** 避免 skipSlides 每次新数组引用触发父组件无限 setState → 狂刷 worship-playlist */
   const handleDeckMetaChange = useCallback(
     (meta: { totalSlides: number; skipSlides: number[] } | null) => {
@@ -1485,6 +1501,7 @@ export default function BulletinPage() {
               navOrder={navSections}
               worshipRefreshKey={worshipPreviewRevision}
               onVisibleSectionChange={handleVisibleSectionChange}
+              onNavigateToSection={handleNavigateToSection}
               onDeckMetaChange={handleDeckMetaChange}
               onWorshipPresentationModeChange={(mode) => {
                 void persistWorshipPresentationMode(mode).catch((err) => {
