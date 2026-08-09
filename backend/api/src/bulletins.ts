@@ -115,8 +115,8 @@ const patchedPptxCache = new Map<string, Buffer>();
 /** v52：圣餐英文经文略加大至 28pt，减少底部空白 */
 /** v64：生日月页外置到模板库，主模板仅 P24 锚点 */
 /** v67：预览保留隐藏分区页（投影再跳过） */
-/** 含主日信息 appendAfter；升版本以作废旧「整段替换」预览缓存 */
-const SLIDE_PREVIEW_PATCH_REV = 'v68-message-append';
+/** 含主日信息 appendAfter + 本週聚会 B/C 对齐 A 版式 */
+const SLIDE_PREVIEW_PATCH_REV = 'v69-weekly-meeting-a';
 
 /** 生日月库 / 服事轮值磁盘指纹（Drive 同步后变化，使预览缓存失效） */
 function previewLibraryRev(): string {
