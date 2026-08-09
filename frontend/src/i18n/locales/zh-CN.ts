@@ -563,6 +563,8 @@ export default {
     worshipClipSegments: '剪切',
     worshipClipShow: '剪切',
     worshipClipHide: '收起',
+    worshipClipExpand: '展开剪切',
+    worshipClipCollapse: '收起剪切',
     worshipClipClear: '清除剪切',
     worshipTrackMore: '更多',
     worshipClipAddSegment: '加一段',

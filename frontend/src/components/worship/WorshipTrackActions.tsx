@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { PlaylistItem } from '../../api/playlists';
 import { formatClipSummary, resolvePlayClips, type PlayClip } from '../../lib/worship-presentation-mode';
 import { useI18n } from '../../i18n';
+import { ChevronDownIcon, ChevronRightIcon } from '../icons';
 import WorshipClipFields from '../bulletin/WorshipClipFields';
 
 type WorshipTrackActionsProps = {
@@ -47,7 +48,10 @@ export default function WorshipTrackActions({
 
   const summary = hasClips
     ? savedClips.map((c) => formatClipSummary(c)).join(' · ')
-    : t('bulletin.worshipClipSegments');
+    : null;
+  const toggleLabel = clipOpen
+    ? t('bulletin.worshipClipCollapse')
+    : t('bulletin.worshipClipExpand');
 
   return (
     <div className={`worship-track-actions${clipOpen ? ' is-open' : ''}`} ref={rootRef}>
@@ -58,15 +62,19 @@ export default function WorshipTrackActions({
           disabled={disabled}
           aria-expanded={clipOpen}
           aria-controls={panelId}
+          title={toggleLabel}
           onClick={() => setClipOpen((v) => !v)}
         >
-          <span className="worship-track-accordion-chevron" aria-hidden>
-            {clipOpen ? '▾' : '▸'}
+          <span className="worship-track-accordion-affordance" aria-hidden>
+            <span className="worship-track-accordion-chevron">
+              {clipOpen ? <ChevronDownIcon /> : <ChevronRightIcon />}
+            </span>
+            <span className="worship-track-accordion-action">{toggleLabel}</span>
           </span>
           <span className="worship-track-actions-title" title={title}>
             {title}
           </span>
-          {!clipOpen ? (
+          {!clipOpen && summary ? (
             <span className="bulletin-worship-clip-summary worship-track-actions-clip-hint" title={summary}>
               {summary}
             </span>
@@ -97,7 +105,7 @@ export default function WorshipTrackActions({
                   setMenuOpen(false);
                 }}
               >
-                {clipOpen ? t('bulletin.worshipClipHide') : t('bulletin.worshipClipShow')}
+                {toggleLabel}
               </button>
               <button
                 type="button"

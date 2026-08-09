@@ -589,6 +589,8 @@ const en: MessageTree = {
     worshipClipSegments: 'Clip',
     worshipClipShow: 'Clip',
     worshipClipHide: 'Hide',
+    worshipClipExpand: 'Show clips',
+    worshipClipCollapse: 'Hide clips',
     worshipClipClear: 'Clear clip',
     worshipTrackMore: 'More',
     worshipClipAddSegment: 'Add',
