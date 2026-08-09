@@ -4,6 +4,7 @@ import { getYoutubeAudioStatus } from '../../api/youtube-audio';
 import { friendlyError } from '../../lib/error-messages';
 import {
   formatClipTime,
+  defaultNextClipStartSec,
   resolvePlayClips,
   type PlayClip,
 } from '../../lib/worship-presentation-mode';
@@ -213,10 +214,19 @@ export default function WorshipClipFields({
   };
 
   const addSegment = () => {
-    setRows((prev) => [
-      ...prev,
-      clampClipRow({ startSec: 0, endSec: durationSec, label: '' }, durationSec),
-    ]);
+    setRows((prev) => {
+      const last = prev[prev.length - 1];
+      const nextStart = last
+        ? defaultNextClipStartSec(last, durationSec)
+        : 0;
+      return [
+        ...prev,
+        clampClipRow(
+          { startSec: nextStart, endSec: durationSec, label: '' },
+          durationSec,
+        ),
+      ];
+    });
   };
 
   if (!open && hideToggle) return null;

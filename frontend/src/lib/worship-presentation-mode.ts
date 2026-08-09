@@ -93,6 +93,23 @@ export function formatClipSummary(clip: PlayClip): string {
   return clip.label ? `${clip.label} ${start}–${end}` : `${start}–${end}`;
 }
 
+/**
+ * 新切段默认起点：上一段结束时间 + 1 秒（例如上一段到 1:00 → 新段从 1:01）。
+ * 上一段未设结束时，若有总时长则从片尾起（随后由 UI clamp）；否则为上一段起点 + 1。
+ */
+export function defaultNextClipStartSec(
+  previous: { startSec: number; endSec: number | null },
+  durationSec?: number | null,
+): number {
+  if (previous.endSec != null && Number.isFinite(previous.endSec)) {
+    return Math.max(0, Math.floor(previous.endSec) + 1);
+  }
+  if (durationSec != null && Number.isFinite(durationSec) && durationSec > 0) {
+    return Math.floor(durationSec);
+  }
+  return Math.max(0, Math.floor(previous.startSec) + 1);
+}
+
 export function clipExceedsDuration(
   clip: { startSec: number; endSec: number | null },
   durationSec: number,
