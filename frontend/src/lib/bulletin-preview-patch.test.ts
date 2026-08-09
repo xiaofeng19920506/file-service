@@ -31,7 +31,7 @@ describe('previewPatchFull / previewPatchForSection', () => {
       birthdayMonth: '七月',
       birthdayNames: '甲,乙',
       verseOfWeek: '金句',
-      announcements: undefined,
+      announcements: [],
       hiddenSections: [],
       weeklyMeetingVariant: 28,
       slideTextOverrides: undefined,
@@ -90,6 +90,20 @@ describe('previewPatchFull / previewPatchForSection', () => {
       }),
     );
     expect(a).not.toBe(b);
+  });
+
+  it('keeps hidden announcements in preview patch so deck-plan page indices stay aligned', () => {
+    const announcements = [
+      { id: 'a1', title: '一', body: '甲' },
+      { id: 'a2', title: '二', body: '乙' },
+    ];
+    const patch = previewPatchFull({
+      ...full,
+      announcements,
+      hiddenSections: ['announcement:a1'],
+    });
+    expect(patch.announcements).toEqual(announcements);
+    expect(patch.hiddenSections).toContain('announcement:a1');
   });
 
   it('changes keys when section pptx overrides fingerprint changes', () => {

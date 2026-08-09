@@ -63,11 +63,14 @@ export default function BulletinPreviewPanel({
 
   // 用值指纹当依赖：draft 对象引用变化但内容没变时（如 SSE 刷新），不重建 deck，
   // 否则预览列表会被反复重置、后面的页一直停在加载中。
-  const hiddenSectionsKey = (bulletin.hiddenSections ?? []).join(',');
+  // 预览 retainHidden：隐藏分区不改 PPT 结构，仅 UI 标「已隐藏」+ 投影 skip。
+  // 勿把 hiddenSections 放进 deck-plan 依赖，否则隐藏公告时会重拉 plan，且曾与 PNG 过滤逻辑打架导致页码乱套。
   const sectionPptxKey = sectionPptxOverridesKey(bulletin.sectionPptxOverrides);
   const announcementsStructureKey = (bulletin.announcements ?? [])
     .map((a) => a.id)
     .join(',');
+  const bulletinRef = useRef(bulletin);
+  bulletinRef.current = bulletin;
 
   useEffect(() => {
     let cancelled = false;
@@ -75,9 +78,10 @@ export default function BulletinPreviewPanel({
 
     const run = () => {
       setPlanRefreshing(true);
+      const snapshot = bulletinRef.current;
       void (async () => {
         try {
-          const plan = await buildBulletinDeckPlan(bulletin);
+          const plan = await buildBulletinDeckPlan(snapshot);
           if (!cancelled) setDeckPlan(plan);
         } catch {
           if (!cancelled) setDeckPlan(null);
@@ -99,9 +103,6 @@ export default function BulletinPreviewPanel({
     bulletin.id,
     bulletin.scriptureBook,
     bulletin.scriptureReference,
-    hiddenSectionsKey,
-    bulletin.skipTestimonyWeek,
-    bulletin.skipDepartmentReports,
     bulletin.weeklyMeetingVariant,
     // 条数 + id 顺序影响加页与 remap；正文改动不重建 plan
     announcementsStructureKey,

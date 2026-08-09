@@ -897,6 +897,7 @@ export default function BulletinPage() {
         skipTestimonyWeek: hiddenSections.includes('testimony_week'),
         skipDepartmentReports: hiddenSections.includes('department_reports'),
       };
+      const sentHiddenKey = [...hiddenSections].sort().join(',');
       setDraft((prev) => (prev ? { ...prev, ...patch } : prev));
 
       if (visible) {
@@ -907,7 +908,15 @@ export default function BulletinPage() {
       if (!canManage) return;
       void updateBulletin(draft.id, patch)
         .then((updated) => {
-          setDraft(withHiddenSections(updated));
+          setDraft((prev) => {
+            if (!prev || prev.id !== updated.id) return prev;
+            const currentHiddenKey = [...resolveHiddenSections(prev)].sort().join(',');
+            // 用户又改过显示/隐藏：勿用过期响应整表覆盖，否则分区与预览会错位到刷新才恢复
+            if (currentHiddenKey !== sentHiddenKey) {
+              return { ...prev, updatedAt: updated.updatedAt ?? prev.updatedAt };
+            }
+            return withHiddenSections(updated);
+          });
           setMessage(t('bulletin.saved'));
         })
         .catch((err) => {

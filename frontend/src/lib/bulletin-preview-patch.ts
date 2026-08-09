@@ -1,8 +1,5 @@
 import type { BulletinSlidePreviewParams } from '../api/bulletins';
-import {
-  filterVisibleAnnouncements,
-  resolveHiddenSections,
-} from './bulletin-section-visibility';
+import { resolveHiddenSections } from './bulletin-section-visibility';
 
 export type BulletinPreviewPatchFields = {
   serviceDate: string;
@@ -41,10 +38,17 @@ export function sectionPptxOverridesKey(
 /**
  * 整份 deck 共用的完整预览参数（封面/会前/读经/生日/覆盖…）。
  * 每一页 PNG 与 deck-plan 必须带同一套参数，否则演示页码或文字会对不上。
+ *
+ * 预览须保留隐藏公告页（与 deck-plan / retainHiddenSections 一致，UI 标「已隐藏」）；
+ * 导出再走 filterVisibleAnnouncements。切勿在此过滤公告，否则隐藏一条后页码全串。
  */
 export function previewPatchFull(full: BulletinPreviewPatchFields): BulletinSlidePreviewParams {
   const hidden = resolveHiddenSections(full);
-  const visible = filterVisibleAnnouncements(full.announcements, hidden);
+  const announcements = (full.announcements ?? []).map((a) => ({
+    id: a.id,
+    title: a.title,
+    body: a.body,
+  }));
   return {
     serviceDate: full.serviceDate,
     serviceTime: full.serviceTime || '11:00',
@@ -55,7 +59,7 @@ export function previewPatchFull(full: BulletinPreviewPatchFields): BulletinSlid
     birthdayMonth: full.birthdayMonth,
     birthdayNames: full.birthdayNames,
     verseOfWeek: full.verseOfWeek,
-    announcements: visible.map((a) => ({ id: a.id, title: a.title, body: a.body })),
+    announcements,
     hiddenSections: hidden,
     weeklyMeetingVariant: full.weeklyMeetingVariant ?? null,
     slideTextOverrides: full.slideTextOverrides,
@@ -158,7 +162,7 @@ export function bulletinSectionContentRev(
 /**
  * 前端 PNG 缓存代数：与后端 SLIDE_PREVIEW_PATCH_REV 对齐 bump，避免错页缓存残留。
  */
-export const BULLETIN_PREVIEW_BLOB_GEN = 'v67';
+export const BULLETIN_PREVIEW_BLOB_GEN = 'v68';
 
 /**
  * 前端 PNG 缓存 key：结构 + 本分区内容 + 本页文字覆盖。
