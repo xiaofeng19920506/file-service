@@ -7887,9 +7887,9 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  min-height: 1.85rem;
-  padding: 0.15rem 0.45rem 0.15rem 0.25rem;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
   border-radius: 8px;
   background: color-mix(in srgb, var(--accent, #3b82f6) 14%, var(--surface));
   color: color-mix(in srgb, var(--accent, #3b82f6) 72%, var(--text));
@@ -7901,23 +7901,15 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.35rem;
-  height: 1.35rem;
+  width: 1.45rem;
+  height: 1.45rem;
 }
 
 .worship-track-accordion-chevron .nav-back-icon,
 .worship-track-accordion-chevron .player-chrome-icon {
-  width: 1.2rem;
-  height: 1.2rem;
-  stroke-width: 2.4;
-}
-
-.worship-track-accordion-action {
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  line-height: 1.2;
-  white-space: nowrap;
+  width: 1.35rem;
+  height: 1.35rem;
+  stroke-width: 2.6;
 }
 
 .worship-track-actions.is-open .worship-track-accordion-trigger {
@@ -8075,10 +8067,11 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
-  min-height: 1.85rem;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
   margin: 0;
-  padding: 0.15rem 0.45rem 0.15rem 0.25rem;
+  padding: 0;
   border-radius: 8px;
   border: 1px solid color-mix(in srgb, var(--accent, #3b82f6) 28%, var(--border));
   background: color-mix(in srgb, var(--accent, #3b82f6) 14%, var(--surface));
@@ -8101,22 +8094,15 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.3rem;
-  height: 1.3rem;
+  width: 1.4rem;
+  height: 1.4rem;
 }
 
 .bulletin-worship-clip-segment-chevron .nav-back-icon,
 .bulletin-worship-clip-segment-chevron .player-chrome-icon {
-  width: 1.15rem;
-  height: 1.15rem;
-  stroke-width: 2.4;
-}
-
-.bulletin-worship-clip-segment-action {
-  font-size: 0.75rem;
-  font-weight: 700;
-  line-height: 1.2;
-  white-space: nowrap;
+  width: 1.3rem;
+  height: 1.3rem;
+  stroke-width: 2.6;
 }
 
 .bulletin-worship-clip-time-summary {

@@ -372,6 +372,7 @@ export default function WorshipClipFields({
                       disabled={disabled || saving}
                       aria-expanded={segmentOpen}
                       aria-controls={panelId}
+                      aria-label={toggleLabel}
                       title={toggleLabel}
                       onClick={() =>
                         setExpandedSegmentIndex((prev) => (prev === index ? null : index))
@@ -380,7 +381,6 @@ export default function WorshipClipFields({
                       <span className="bulletin-worship-clip-segment-chevron" aria-hidden>
                         {segmentOpen ? <ChevronDownIcon /> : <ChevronRightIcon />}
                       </span>
-                      <span className="bulletin-worship-clip-segment-action">{toggleLabel}</span>
                     </button>
                     {editingLabel ? (
                       <input

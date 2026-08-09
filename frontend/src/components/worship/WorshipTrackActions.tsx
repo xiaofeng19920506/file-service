@@ -62,6 +62,7 @@ export default function WorshipTrackActions({
           disabled={disabled}
           aria-expanded={clipOpen}
           aria-controls={panelId}
+          aria-label={toggleLabel}
           title={toggleLabel}
           onClick={() => setClipOpen((v) => !v)}
         >
@@ -69,7 +70,6 @@ export default function WorshipTrackActions({
             <span className="worship-track-accordion-chevron">
               {clipOpen ? <ChevronDownIcon /> : <ChevronRightIcon />}
             </span>
-            <span className="worship-track-accordion-action">{toggleLabel}</span>
           </span>
           <span className="worship-track-actions-title" title={title}>
             {title}
