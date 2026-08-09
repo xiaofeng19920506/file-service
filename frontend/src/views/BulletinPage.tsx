@@ -1329,7 +1329,10 @@ export default function BulletinPage() {
   }
 
   return (
-    <div className="bulletin-page bulletin-page--workspace">
+    <div
+      className="bulletin-page bulletin-page--workspace"
+      data-mobile-view={isMobileViewport && draft ? mobileWorkspaceView : undefined}
+    >
       <header className="bulletin-header">
         <div className="bulletin-header-title-row">
           <h1>{t('bulletin.title')}</h1>

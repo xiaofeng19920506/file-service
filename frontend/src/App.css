@@ -7566,6 +7566,10 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
     max-height: min(62vh, 480px);
   }
 
+  .bulletin-page.bulletin-page--workspace[data-mobile-view='preview'] .bulletin-deck-preview {
+    max-height: none;
+  }
+
   .bulletin-section-invite-page,
   .worship-songs-invite-shell,
   .worship-songs-page {
@@ -7615,37 +7619,89 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   }
 
   .bulletin-workspace[data-mobile-view='preview'] {
-    gap: 0.65rem;
+    flex: 1 1 auto;
+    min-height: 0;
+    gap: 0;
+    margin: 0;
   }
 
-  /* 预览优先：点进分区后先看到 PPT，表单在下方 */
+  /* 全屏预览：不占表单，预览铺满并居中 */
+  .bulletin-workspace[data-mobile-view='preview'] .bulletin-workspace-form {
+    display: none;
+  }
+
   .bulletin-workspace[data-mobile-view='preview'] .bulletin-workspace-preview {
     order: 1;
-  }
-
-  .bulletin-workspace[data-mobile-view='preview'] .bulletin-workspace-form {
-    order: 2;
-  }
-
-  .bulletin-workspace[data-mobile-view='preview'] .bulletin-workspace-form,
-  .bulletin-workspace[data-mobile-view='preview'] .bulletin-workspace-preview {
-    flex: none;
+    flex: 1 1 auto;
     width: 100%;
     min-width: 0;
-  }
-
-  .bulletin-workspace[data-mobile-view='preview'] .bulletin-workspace-preview {
-    min-height: min(58vh, 28rem);
+    min-height: 0;
+    height: 100%;
+    border: none;
+    border-radius: 0;
+    background: #0a0a0a;
+    overflow: hidden;
   }
 
   .bulletin-workspace[data-mobile-view='preview'] .bulletin-preview-panel,
   .bulletin-workspace[data-mobile-view='preview'] .bulletin-deck-preview-shell {
-    min-height: min(58vh, 28rem);
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 0;
+    height: 100%;
   }
 
   .bulletin-workspace[data-mobile-view='preview'] .bulletin-deck-preview {
     max-height: none;
-    min-height: min(58vh, 28rem);
+    min-height: 0;
+    height: 100%;
+    flex: 1 1 auto;
+  }
+
+  /* 页级：隐藏顶栏操作区，预览占满顶栏与底栏之间的整屏 */
+  .bulletin-page.bulletin-page--workspace[data-mobile-view='preview'] {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: 100%;
+    height: 100%;
+    overflow: hidden;
+    padding: 0;
+    padding-bottom: var(--bottom-nav-height, 0px);
+  }
+
+  .app-content > .bulletin-page.bulletin-page--workspace[data-mobile-view='preview'] {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: 100%;
+    height: auto;
+    overflow: hidden;
+    padding-bottom: var(--bottom-nav-height, 0px);
+  }
+
+  .bulletin-page.bulletin-page--workspace[data-mobile-view='preview'] > .bulletin-header,
+  .bulletin-page.bulletin-page--workspace[data-mobile-view='preview'] > .form-error,
+  .bulletin-page.bulletin-page--workspace[data-mobile-view='preview'] > .form-success,
+  .bulletin-page.bulletin-page--workspace[data-mobile-view='preview'] > .bulletin-drive-sync-status {
+    display: none;
+  }
+
+  .bulletin-page.bulletin-page--workspace[data-mobile-view='preview'] > .bulletin-workspace {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+  }
+
+  /* 幻灯片在全屏预览区内水平+垂直居中 */
+  .bulletin-workspace[data-mobile-view='preview'] .bulletin-deck-section-slides {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100%;
+  }
+
+  .bulletin-workspace[data-mobile-view='preview'] .bulletin-deck-slide {
+    margin-inline: auto;
   }
 }
 

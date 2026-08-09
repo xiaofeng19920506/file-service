@@ -1504,6 +1504,17 @@
     padding-bottom: calc(1.25rem + var(--bottom-nav-height));
   }
 
+  /* 预览全屏：压过上面的「整页滚动」，改回占满视口 */
+  .app-content > .bulletin-page.bulletin-page--workspace[data-mobile-view='preview'] {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: 100%;
+    height: auto;
+    overflow: hidden;
+    padding: 0;
+    padding-bottom: var(--bottom-nav-height, 0px);
+  }
+
   .bulletin-page.bulletin-page--workspace .bulletin-cover-step-fields,
   .bulletin-page.bulletin-page--workspace .bulletin-wizard-step {
     min-width: 0;
