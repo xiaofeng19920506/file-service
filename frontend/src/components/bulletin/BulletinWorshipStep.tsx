@@ -87,17 +87,22 @@ export default function BulletinWorshipStep({
     [items],
   );
 
+  const onPlaylistReadyRef = useRef(onPlaylistReady);
+  onPlaylistReadyRef.current = onPlaylistReady;
+  const servicePlaylistIdRef = useRef(draft.servicePlaylistId);
+  servicePlaylistIdRef.current = draft.servicePlaylistId;
+
   const refreshPlaylist = useCallback(async () => {
     const data = await getBulletinWorshipPlaylist(draft.id);
     if (data.playlist) {
       setItems(data.items);
-      if (draft.servicePlaylistId !== data.playlist.id) {
-        onPlaylistReady(data.playlist.id);
+      if (servicePlaylistIdRef.current !== data.playlist.id) {
+        onPlaylistReadyRef.current(data.playlist.id);
       }
     } else {
       setItems([]);
     }
-  }, [draft.id, draft.servicePlaylistId, onPlaylistReady]);
+  }, [draft.id]);
 
   useEffect(() => {
     if (!showPlaylist) return;

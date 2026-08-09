@@ -108,19 +108,29 @@ export default function BulletinPreviewPanel({
     sectionPptxKey,
   ]);
 
+  const onDeckMetaChangeRef = useRef(onDeckMetaChange);
+  onDeckMetaChangeRef.current = onDeckMetaChange;
+  const lastDeckMetaKeyRef = useRef<string>('');
+
   useEffect(() => {
-    if (!onDeckMetaChange) return;
-    if (deckPlan) {
-      onDeckMetaChange({
-        totalSlides: deckPlan.totalSlides,
-        skipSlides: presentationSlidesToSkipInShow(deckPlan, bulletin),
-      });
-    } else {
-      onDeckMetaChange(null);
+    const notify = onDeckMetaChangeRef.current;
+    if (!notify) return;
+    if (!deckPlan) {
+      if (lastDeckMetaKeyRef.current === 'null') return;
+      lastDeckMetaKeyRef.current = 'null';
+      notify(null);
+      return;
     }
+    const skipSlides = presentationSlidesToSkipInShow(deckPlan, bulletin);
+    const key = `${deckPlan.totalSlides}:${skipSlides.join(',')}`;
+    if (lastDeckMetaKeyRef.current === key) return;
+    lastDeckMetaKeyRef.current = key;
+    notify({
+      totalSlides: deckPlan.totalSlides,
+      skipSlides,
+    });
   }, [
     deckPlan,
-    onDeckMetaChange,
     bulletin.hiddenSections,
     bulletin.skipTestimonyWeek,
     bulletin.skipDepartmentReports,

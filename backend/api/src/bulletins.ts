@@ -82,6 +82,7 @@ import {
   writeBulletinPreviewDiskCache,
 } from './bulletin-preview-disk-cache.js';
 import {
+  isBulletinDriveSyncConfigured,
   readBulletinDriveSyncState,
   startBulletinDriveSyncScheduler,
   type BulletinDriveSyncResult,
@@ -1054,9 +1055,11 @@ export function registerBulletinRoutes(
     if (!user || !canViewBulletin(user.role)) {
       return reply.code(403).send({ error: 'bulletin_forbidden' });
     }
+    const configured = isBulletinDriveSyncConfigured(env);
     const state = readBulletinDriveSyncState();
     return reply.header('Cache-Control', 'private, no-store').send({
       ...state,
+      configured,
       libraryRev: previewLibraryRev(),
     });
   });
@@ -1065,6 +1068,17 @@ export function registerBulletinRoutes(
     const user = requireUser(request);
     if (!user || !canManageBulletin(user.role)) {
       return reply.code(403).send({ error: 'bulletin_forbidden' });
+    }
+    // 未配置时直接返回 skipped，不报错（Drive 为可选）
+    if (!isBulletinDriveSyncConfigured(env)) {
+      return reply.send({
+        skipped: true,
+        reason: 'not_configured',
+        rotationUpdated: false,
+        birthdayUpdated: false,
+        state: { ...readBulletinDriveSyncState(), configured: false },
+        libraryRev: previewLibraryRev(),
+      });
     }
     let result: BulletinDriveSyncResult;
     try {

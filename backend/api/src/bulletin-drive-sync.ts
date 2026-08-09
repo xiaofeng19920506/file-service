@@ -232,9 +232,8 @@ export function startBulletinDriveSyncScheduler(opts: {
       void runNow(false).catch((err) => opts.log.error({ err }, 'drive sync tick failed'));
     }, intervalMs);
     opts.log.info({ intervalMs }, 'bulletin drive sync scheduler started');
-  } else {
-    opts.log.info('bulletin drive sync not configured (skip)');
   }
+  // Drive 未配置时静默跳过（可选能力，不刷日志）
 
   return {
     stop: () => {

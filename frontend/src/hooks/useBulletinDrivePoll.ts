@@ -1,9 +1,11 @@
 /**
- * 已登录且可看周报时：每 30 分钟拉取服事轮值（管理员顺带触发 Drive 同步）。
+ * 已登录且可看周报时：每 30 分钟拉取服事轮值。
+ * Drive 同步为可选：未配置时不触发 sync、不打扰；配置后管理员才强制同步。
  * 仅在标签页可见时执行，避免后台空刷。
  */
 import { useEffect, useRef } from 'react';
 import {
+  fetchBulletinDriveSyncStatus,
   fetchServiceRotationSchedule,
   triggerBulletinDriveSync,
 } from '../api/bulletins';
@@ -23,9 +25,12 @@ export async function pullBulletinDriveData(opts: {
 }): Promise<void> {
   if (opts.canManage) {
     try {
-      await triggerBulletinDriveSync();
+      const status = await fetchBulletinDriveSyncStatus();
+      if (status.configured) {
+        await triggerBulletinDriveSync();
+      }
     } catch {
-      // 未配置 Drive 或权限不足时仍继续拉 schedule
+      // 未配置 / 权限不足 / 网络失败时仍继续拉 schedule
     }
   }
   const { schedules } = await fetchServiceRotationSchedule();

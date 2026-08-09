@@ -16,7 +16,12 @@ describe('pullBulletinDriveData', () => {
     vi.restoreAllMocks();
   });
 
-  it('triggers sync for managers then refreshes schedule', async () => {
+  it('triggers sync for managers only when Drive is configured', async () => {
+    const status = vi.fn(async () => ({
+      configured: true,
+      rotation: {},
+      birthday: {},
+    }));
     const trigger = vi.fn(async () => ({
       rotationUpdated: false,
       birthdayUpdated: false,
@@ -29,6 +34,7 @@ describe('pullBulletinDriveData', () => {
     const setSchedules = vi.fn();
 
     vi.doMock('../api/bulletins', () => ({
+      fetchBulletinDriveSyncStatus: status,
       triggerBulletinDriveSync: trigger,
       fetchServiceRotationSchedule: fetchSchedule,
     }));
@@ -38,12 +44,18 @@ describe('pullBulletinDriveData', () => {
 
     const { pullBulletinDriveData } = await import('./useBulletinDrivePoll');
     await pullBulletinDriveData({ canManage: true });
+    expect(status).toHaveBeenCalledOnce();
     expect(trigger).toHaveBeenCalledOnce();
     expect(fetchSchedule).toHaveBeenCalledOnce();
     expect(setSchedules).toHaveBeenCalledOnce();
   });
 
-  it('skips sync for non-managers', async () => {
+  it('skips sync when Drive is not configured', async () => {
+    const status = vi.fn(async () => ({
+      configured: false,
+      rotation: {},
+      birthday: {},
+    }));
     const trigger = vi.fn();
     const fetchSchedule = vi.fn(async () => ({
       schedules: [],
@@ -52,6 +64,32 @@ describe('pullBulletinDriveData', () => {
     const setSchedules = vi.fn();
 
     vi.doMock('../api/bulletins', () => ({
+      fetchBulletinDriveSyncStatus: status,
+      triggerBulletinDriveSync: trigger,
+      fetchServiceRotationSchedule: fetchSchedule,
+    }));
+    vi.doMock('../lib/bulletin-service-rotation', () => ({
+      setServiceRotationSchedules: setSchedules,
+    }));
+
+    const { pullBulletinDriveData } = await import('./useBulletinDrivePoll');
+    await pullBulletinDriveData({ canManage: true });
+    expect(status).toHaveBeenCalledOnce();
+    expect(trigger).not.toHaveBeenCalled();
+    expect(fetchSchedule).toHaveBeenCalledOnce();
+  });
+
+  it('skips sync for non-managers', async () => {
+    const status = vi.fn();
+    const trigger = vi.fn();
+    const fetchSchedule = vi.fn(async () => ({
+      schedules: [],
+      libraryRev: 'x',
+    }));
+    const setSchedules = vi.fn();
+
+    vi.doMock('../api/bulletins', () => ({
+      fetchBulletinDriveSyncStatus: status,
       triggerBulletinDriveSync: trigger,
       fetchServiceRotationSchedule: fetchSchedule,
     }));
@@ -61,6 +99,7 @@ describe('pullBulletinDriveData', () => {
 
     const { pullBulletinDriveData } = await import('./useBulletinDrivePoll');
     await pullBulletinDriveData({ canManage: false });
+    expect(status).not.toHaveBeenCalled();
     expect(trigger).not.toHaveBeenCalled();
     expect(fetchSchedule).toHaveBeenCalledOnce();
   });

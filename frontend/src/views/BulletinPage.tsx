@@ -266,6 +266,32 @@ export default function BulletinPage() {
     setPreviewSectionId((prev) => (prev === sectionId ? prev : sectionId));
   }, []);
 
+  /** 避免 skipSlides 每次新数组引用触发父组件无限 setState → 狂刷 worship-playlist */
+  const handleDeckMetaChange = useCallback(
+    (meta: { totalSlides: number; skipSlides: number[] } | null) => {
+      const nextTotal = meta?.totalSlides;
+      const nextSkip = meta?.skipSlides ?? [];
+      setPreviewTotalSlides((prev) => (prev === nextTotal ? prev : nextTotal));
+      setPreviewSkipSlides((prev) =>
+        prev.length === nextSkip.length && prev.every((n, i) => n === nextSkip[i])
+          ? prev
+          : nextSkip,
+      );
+    },
+    [],
+  );
+
+  const handlePlaylistReady = useCallback((playlistId: string) => {
+    setDraft((prev) => {
+      if (!prev || prev.servicePlaylistId === playlistId) return prev;
+      return { ...prev, servicePlaylistId: playlistId };
+    });
+  }, []);
+
+  const bumpWorshipPreview = useCallback(() => {
+    setWorshipPreviewRevision((v) => v + 1);
+  }, []);
+
   /** 投影窗翻页 → 主页左侧分区与右侧预览跟随 */
   useEffect(() => {
     if (!slideShowSessionId) return;
@@ -1130,14 +1156,11 @@ export default function BulletinPage() {
             oauthError={worshipOauthError}
             onClearOauthError={() => setWorshipOauthError(null)}
             playlistRefreshKey={worshipPreviewRevision}
-            onPlaylistReady={(playlistId) => {
-              setDraft((prev) => (prev ? { ...prev, servicePlaylistId: playlistId } : prev));
-              setWorshipPreviewRevision((v) => v + 1);
-            }}
-            onPlaylistChanged={() => setWorshipPreviewRevision((v) => v + 1)}
+            onPlaylistReady={handlePlaylistReady}
+            onPlaylistChanged={bumpWorshipPreview}
             onLyricsPptxChange={(blobId) => {
               setDraft((prev) => (prev ? { ...prev, worshipLyricsPptxBlobId: blobId } : prev));
-              setWorshipPreviewRevision((v) => v + 1);
+              bumpWorshipPreview();
             }}
             onPersistPresentationMode={persistWorshipPresentationMode}
           />
@@ -1243,27 +1266,23 @@ export default function BulletinPage() {
 
       {error && <p className="form-error">{error}</p>}
       {message && <p className="form-success">{message}</p>}
-      {canManage && driveSyncStatus ? (
+      {canManage && driveSyncStatus?.configured ? (
         <p className="playlists-muted bulletin-drive-sync-status">
-          {!driveSyncStatus.configured
-            ? t('bulletin.driveSyncNotConfigured')
-            : driveSyncStatus.lastError
-              ? t('bulletin.driveSyncError', { error: driveSyncStatus.lastError })
-              : t('bulletin.driveSyncLastRun', {
-                  time: driveSyncStatus.lastRunAt
-                    ? new Date(driveSyncStatus.lastRunAt).toLocaleString()
-                    : '—',
-                })}{' '}
-          {driveSyncStatus.configured ? (
-            <button
-              type="button"
-              className="btn-secondary"
-              disabled={driveSyncing}
-              onClick={() => void handleDriveSync()}
-            >
-              {driveSyncing ? t('bulletin.driveSyncing') : t('bulletin.driveSyncNow')}
-            </button>
-          ) : null}
+          {driveSyncStatus.lastError
+            ? t('bulletin.driveSyncError', { error: driveSyncStatus.lastError })
+            : t('bulletin.driveSyncLastRun', {
+                time: driveSyncStatus.lastRunAt
+                  ? new Date(driveSyncStatus.lastRunAt).toLocaleString()
+                  : '—',
+              })}{' '}
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={driveSyncing}
+            onClick={() => void handleDriveSync()}
+          >
+            {driveSyncing ? t('bulletin.driveSyncing') : t('bulletin.driveSyncNow')}
+          </button>
         </p>
       ) : null}
 
@@ -1325,10 +1344,7 @@ export default function BulletinPage() {
               navOrder={navSections}
               worshipRefreshKey={worshipPreviewRevision}
               onVisibleSectionChange={handleVisibleSectionChange}
-              onDeckMetaChange={(meta) => {
-                setPreviewTotalSlides(meta?.totalSlides);
-                setPreviewSkipSlides(meta?.skipSlides ?? []);
-              }}
+              onDeckMetaChange={handleDeckMetaChange}
               onWorshipPresentationModeChange={(mode) => {
                 void persistWorshipPresentationMode(mode).catch((err) => {
                   setError(friendlyError(err instanceof Error ? err.message : 'update_failed', t));
