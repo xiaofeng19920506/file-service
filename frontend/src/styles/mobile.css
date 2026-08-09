@@ -1509,10 +1509,15 @@
     flex: 1 1 auto;
     min-height: 0;
     max-height: 100%;
-    height: auto;
+    height: 100%;
     overflow: hidden;
     padding: 0;
     padding-bottom: var(--bottom-nav-height, 0px);
+    box-sizing: border-box;
+  }
+
+  .app-content:has(> .bulletin-page[data-mobile-view='preview']) {
+    overflow: hidden;
   }
 
   .bulletin-page.bulletin-page--workspace .bulletin-cover-step-fields,
