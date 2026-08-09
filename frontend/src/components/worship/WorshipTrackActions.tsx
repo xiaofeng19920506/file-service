@@ -68,6 +68,14 @@ export default function WorshipTrackActions({
     setClipsModalOpen(true);
   };
 
+  const removeClipAt = (index: number) => {
+    if (!onClipSave || readOnly || disabled) return;
+    const next = savedClips.filter((_, i) => i !== index);
+    void onClipSave({ playClips: next.length > 0 ? next : null });
+  };
+
+  const canEditClips = Boolean(!readOnly && onClipSave);
+
   return (
     <div className={`worship-track-card${songOpen ? ' is-open' : ''}`} ref={rootRef}>
       <div className="worship-track-card-header">
@@ -198,6 +206,21 @@ export default function WorshipTrackActions({
                     >
                       <span className="worship-track-clip-tag-label">{label}</span>
                       <span className="worship-track-clip-tag-time">{range}</span>
+                      {canEditClips ? (
+                        <button
+                          type="button"
+                          className="worship-track-clip-tag-remove"
+                          disabled={disabled}
+                          aria-label={t('bulletin.worshipClipRemoveSegment')}
+                          title={t('bulletin.worshipClipRemoveSegment')}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeClipAt(index);
+                          }}
+                        >
+                          ×
+                        </button>
+                      ) : null}
                     </span>
                   );
                 })}
