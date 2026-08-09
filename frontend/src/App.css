@@ -8075,6 +8075,78 @@ html:-webkit-full-screen .bulletin-slideshow-projector-hint {
   position: relative;
 }
 
+/* 叠在幻灯片预览区（不含底部 dock）：对齐模板左上角 YouTube 缩略图 */
+.bulletin-doxology-slide-stage {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 3.1rem;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.bulletin-doxology-thumb-hotspot {
+  pointer-events: auto;
+  position: absolute;
+  /* 对应模板 P37 左上角可点击缩略图区域，略放大便于点按 */
+  left: 1.1%;
+  top: 1.2%;
+  width: min(22%, 11.5rem);
+  aspect-ratio: 4 / 3;
+  max-height: 28%;
+  margin: 0;
+  padding: 0;
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #111;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  display: block;
+}
+
+.bulletin-doxology-thumb-hotspot:hover .bulletin-doxology-thumb-fab,
+.bulletin-doxology-thumb-hotspot:focus-visible .bulletin-doxology-thumb-fab {
+  background: #0b5394;
+  transform: scale(1.06);
+}
+
+.bulletin-doxology-thumb-hotspot.is-playing {
+  border-color: color-mix(in srgb, #0b5394 70%, #fff);
+}
+
+.bulletin-doxology-thumb-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.bulletin-doxology-thumb-fab {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  width: 2.65rem;
+  height: 2.65rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, #0b5394 88%, #000);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.bulletin-doxology-thumb-fab .player-chrome-icon,
+.bulletin-doxology-thumb-fab svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
 .bulletin-doxology-dock-btn {
   border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 999px;

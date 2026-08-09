@@ -616,11 +616,11 @@ export default {
     worshipSlidePlayingBg: '背景播放中',
     doxologyYoutubeLabel: '三一颂 YouTube 歌曲链接',
     doxologyYoutubeHint:
-      '在此粘贴三一颂的 YouTube 歌曲链接或视频 ID。右侧幻灯片可点播放：歌词页保持显示，音乐仅在后台播放。',
-    doxologyYoutubePlaceholder: 'https://www.youtube.com/watch?v=… 或视频 ID',
+      '默认已填本堂三一颂（可改）。右侧幻灯片可点播放：歌词页保持显示，音乐仅在后台播放。',
+    doxologyYoutubePlaceholder: 'https://www.youtube.com/watch?v=89zSBB5RUuM',
     doxologyYoutubeInvalid: '请输入有效的 YouTube 链接或 11 位视频 ID',
     doxologyYoutubeEmpty: '尚未设置歌曲链接',
-    doxologyYoutubeReady: '已设置：{id}',
+    doxologyYoutubeReady: '当前歌曲：{id}',
     doxologySlideTapPlay: '点击播放三一颂',
     doxologySlidePause: '暂停',
     doxologySlideResume: '继续',
@@ -628,7 +628,7 @@ export default {
     doxologyNeedVideo: '请先在左侧设置 YouTube 链接',
     doxologyPlayingBg: '三一颂背景播放中',
     doxologyPaused: '已暂停',
-    doxologySlideHint: '点击画面中央播放；播放时歌词页保持显示',
+    doxologySlideHint: '点左侧视频缩略图播放；播放时歌词页保持显示',
   },
   worshipSongs: {
     title: '敬拜赞美',

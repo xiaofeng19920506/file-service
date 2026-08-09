@@ -26,6 +26,7 @@ import { ChevronLeftIcon, ChevronRightIcon } from '../icons';
 import BulletinPptSlidePreview from './BulletinPptSlidePreview';
 import BulletinDoxologyEmbeddedPlayer from './BulletinDoxologyEmbeddedPlayer';
 import BulletinWorshipEmbeddedPlayer from './BulletinWorshipEmbeddedPlayer';
+import { resolveDoxologyYoutubeVideoId } from '../../lib/bulletin-doxology';
 import { normalizeWorshipPresentationMode, type WorshipPresentationMode } from '../../lib/worship-presentation-mode';
 
 export type BulletinPreviewScrollRequest = {
@@ -506,7 +507,9 @@ export default function BulletinFullDeckPreview({
                     worshipPresentationMode={bulletin.worshipPresentationMode}
                     onWorshipPresentationModeChange={onWorshipPresentationModeChange}
                     doxologyFirstSlide={doxologyFirstSlide}
-                    doxologyYoutubeVideoId={bulletin.doxologyYoutubeVideoId ?? ''}
+                    doxologyYoutubeVideoId={resolveDoxologyYoutubeVideoId(
+                      bulletin.doxologyYoutubeVideoId,
+                    )}
                   />
                 ))}
               </div>

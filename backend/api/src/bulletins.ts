@@ -69,6 +69,8 @@ import {
   getYoutubeVideoDurationSecondsCached,
   loadBundledServiceRotationSchedules,
   bulletinLibraryContentRev,
+  resolveDoxologyYoutubeVideoId,
+  DEFAULT_DOXOLOGY_YOUTUBE_VIDEO_ID,
   type ApiEnv,
   type Db,
   type SlideTextOverride,
@@ -557,7 +559,7 @@ async function mapBulletin(
     servicePlaylistId: row.servicePlaylistId,
     worshipPresentationMode: normalizeWorshipPresentationMode(row.worshipPresentationMode),
     worshipLyricsPptxBlobId: row.worshipLyricsPptxBlobId,
-    doxologyYoutubeVideoId: (row.doxologyYoutubeVideoId ?? '').trim(),
+    doxologyYoutubeVideoId: resolveDoxologyYoutubeVideoId(row.doxologyYoutubeVideoId),
     outputBlobId: row.outputBlobId,
     createdByUserId: row.createdByUserId,
     createdAt: row.createdAt.toISOString(),
@@ -1782,7 +1784,7 @@ export function registerBulletinRoutes(
         const raw =
           typeof body.doxologyYoutubeVideoId === 'string' ? body.doxologyYoutubeVideoId.trim() : '';
         if (!raw) {
-          patch.doxologyYoutubeVideoId = '';
+          patch.doxologyYoutubeVideoId = DEFAULT_DOXOLOGY_YOUTUBE_VIDEO_ID;
         } else {
           const videoId = normalizeYoutubeVideoId(raw);
           if (!videoId) {

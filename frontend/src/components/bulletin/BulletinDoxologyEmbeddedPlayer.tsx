@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import YoutubePlaylistPlayer, { type YoutubePlayerItem } from '../YoutubePlaylistPlayer';
 import { ListPlayIcon } from '../icons';
 import { useI18n } from '../../i18n';
+import { youtubeThumbnailSrc } from '../../lib/youtube-thumbnail';
 
 type BulletinDoxologyEmbeddedPlayerProps = {
   youtubeVideoId: string;
@@ -32,6 +33,8 @@ export default function BulletinDoxologyEmbeddedPlayer({
     return [{ youtubeVideoId: videoId, title: t('bulletin.sections.doxology') }];
   }, [hasVideo, videoId, t]);
 
+  const thumbSrc = hasVideo ? youtubeThumbnailSrc(videoId, 'hqdefault') : '';
+
   const handlePlay = () => {
     if (!hasVideo) return;
     setStarted(true);
@@ -47,34 +50,36 @@ export default function BulletinDoxologyEmbeddedPlayer({
     setStarted(false);
   };
 
+  const handleThumbClick = () => {
+    if (!hasVideo) return;
+    if (playing) handlePause();
+    else handlePlay();
+  };
+
   return (
     <>
-      {hasVideo && !playing ? (
-        <button
-          type="button"
-          className="bulletin-worship-slide-play"
-          onClick={handlePlay}
-          aria-label={t('bulletin.doxologySlideTapPlay')}
-          title={t('bulletin.doxologySlideTapPlay')}
-        >
-          <span className="bulletin-worship-slide-play-fab" aria-hidden>
-            <ListPlayIcon />
-          </span>
-        </button>
-      ) : null}
-
-      {hasVideo && playing ? (
-        <button
-          type="button"
-          className="bulletin-worship-slide-play"
-          onClick={handlePause}
-          aria-label={t('bulletin.doxologySlidePause')}
-          title={t('bulletin.doxologySlidePause')}
-        >
-          <span className="bulletin-worship-slide-play-fab" aria-hidden>
-            <PauseIcon />
-          </span>
-        </button>
+      {hasVideo ? (
+        <div className="bulletin-doxology-slide-stage" aria-hidden={false}>
+          <button
+            type="button"
+            className={`bulletin-doxology-thumb-hotspot${playing ? ' is-playing' : ''}`}
+            onClick={handleThumbClick}
+            aria-label={
+              playing ? t('bulletin.doxologySlidePause') : t('bulletin.doxologySlideTapPlay')
+            }
+            title={playing ? t('bulletin.doxologySlidePause') : t('bulletin.doxologySlideTapPlay')}
+          >
+            <img
+              className="bulletin-doxology-thumb-img"
+              src={thumbSrc}
+              alt=""
+              draggable={false}
+            />
+            <span className="bulletin-doxology-thumb-fab" aria-hidden>
+              {playing ? <PauseIcon /> : <ListPlayIcon />}
+            </span>
+          </button>
+        </div>
       ) : null}
 
       <div className="bulletin-worship-dock" role="status">

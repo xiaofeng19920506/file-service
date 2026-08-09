@@ -647,11 +647,11 @@ const en: MessageTree = {
     worshipSlidePlayingBg: 'Playing in background',
     doxologyYoutubeLabel: 'Doxology YouTube song link',
     doxologyYoutubeHint:
-      'Paste the doxology YouTube song URL or video ID here. On the slide, tap play: lyrics stay visible while audio plays in the background.',
-    doxologyYoutubePlaceholder: 'https://www.youtube.com/watch?v=… or video ID',
+      'Defaults to our church doxology (editable). On the slide, tap play: lyrics stay visible while audio plays in the background.',
+    doxologyYoutubePlaceholder: 'https://www.youtube.com/watch?v=89zSBB5RUuM',
     doxologyYoutubeInvalid: 'Enter a valid YouTube URL or 11-character video ID',
     doxologyYoutubeEmpty: 'No song link set yet',
-    doxologyYoutubeReady: 'Set: {id}',
+    doxologyYoutubeReady: 'Current song: {id}',
     doxologySlideTapPlay: 'Tap to play doxology',
     doxologySlidePause: 'Pause',
     doxologySlideResume: 'Resume',
@@ -659,7 +659,7 @@ const en: MessageTree = {
     doxologyNeedVideo: 'Set a YouTube link on the left first',
     doxologyPlayingBg: 'Doxology playing in background',
     doxologyPaused: 'Paused',
-    doxologySlideHint: 'Tap the center to play; lyrics stay visible while audio plays',
+    doxologySlideHint: 'Tap the left video thumbnail to play; lyrics stay visible',
   },
   worshipSongs: {
     title: 'Praise & worship',

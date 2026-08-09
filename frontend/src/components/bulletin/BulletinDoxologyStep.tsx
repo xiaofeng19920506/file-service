@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import type { WeeklyBulletin } from '../../api/bulletins';
 import { useI18n } from '../../i18n';
+import {
+  DEFAULT_DOXOLOGY_YOUTUBE_URL,
+  resolveDoxologyYoutubeVideoId,
+} from '../../lib/bulletin-doxology';
 import { parseYoutubeVideoId } from '../../lib/youtube-video-id';
 
 type BulletinDoxologyStepProps = {
@@ -11,20 +15,30 @@ type BulletinDoxologyStepProps = {
 
 export default function BulletinDoxologyStep({ draft, canEdit, onPatch }: BulletinDoxologyStepProps) {
   const { t } = useI18n();
-  const [input, setInput] = useState(draft.doxologyYoutubeVideoId ?? '');
+  const resolvedId = resolveDoxologyYoutubeVideoId(draft.doxologyYoutubeVideoId);
+  const [input, setInput] = useState(
+    draft.doxologyYoutubeVideoId?.trim()
+      ? draft.doxologyYoutubeVideoId
+      : DEFAULT_DOXOLOGY_YOUTUBE_URL,
+  );
   const [invalid, setInvalid] = useState(false);
 
   useEffect(() => {
-    setInput(draft.doxologyYoutubeVideoId ?? '');
+    setInput(
+      draft.doxologyYoutubeVideoId?.trim()
+        ? draft.doxologyYoutubeVideoId
+        : DEFAULT_DOXOLOGY_YOUTUBE_URL,
+    );
     setInvalid(false);
   }, [draft.doxologyYoutubeVideoId]);
 
   const commit = () => {
     const trimmed = input.trim();
     if (!trimmed) {
+      // 清空则回落到本堂默认三一颂
       setInvalid(false);
-      setInput('');
-      if (draft.doxologyYoutubeVideoId) onPatch('doxologyYoutubeVideoId', '');
+      setInput(DEFAULT_DOXOLOGY_YOUTUBE_URL);
+      onPatch('doxologyYoutubeVideoId', resolveDoxologyYoutubeVideoId(''));
       return;
     }
     const id = parseYoutubeVideoId(trimmed);
@@ -51,7 +65,7 @@ export default function BulletinDoxologyStep({ draft, canEdit, onPatch }: Bullet
           spellCheck={false}
           disabled={!canEdit}
           value={input}
-          placeholder={t('bulletin.doxologyYoutubePlaceholder')}
+          placeholder={DEFAULT_DOXOLOGY_YOUTUBE_URL}
           onChange={(e) => {
             setInput(e.target.value);
             if (invalid) setInvalid(false);
@@ -66,13 +80,9 @@ export default function BulletinDoxologyStep({ draft, canEdit, onPatch }: Bullet
         />
       </label>
       {invalid ? <p className="form-error">{t('bulletin.doxologyYoutubeInvalid')}</p> : null}
-      {draft.doxologyYoutubeVideoId ? (
-        <p className="playlists-muted">
-          {t('bulletin.doxologyYoutubeReady', { id: draft.doxologyYoutubeVideoId })}
-        </p>
-      ) : (
-        <p className="playlists-muted">{t('bulletin.doxologyYoutubeEmpty')}</p>
-      )}
+      <p className="playlists-muted">
+        {t('bulletin.doxologyYoutubeReady', { id: resolvedId })}
+      </p>
     </div>
   );
 }

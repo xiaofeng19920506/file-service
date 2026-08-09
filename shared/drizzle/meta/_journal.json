@@ -267,6 +267,13 @@
       "when": 1754750000000,
       "tag": "0039_bulletin_doxology_youtube",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1754760000000,
+      "tag": "0040_bulletin_doxology_default",
+      "breakpoints": true
     }
   ]
 }
