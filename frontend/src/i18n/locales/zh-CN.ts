@@ -285,11 +285,11 @@ export default {
     editSlidesAppendUploadShort: '上传追加',
     editSlidesReplaceUploadHint: '选择本机 .pptx，整段替换当前分区（预览与导出立即生效）',
     editSlidesAppendUploadHint:
-      '选择本机 .pptx，保留原有主日信息页，并在其后插入上传的幻灯片（预览与导出立即生效）',
+      '保留原有主日信息页；上传内容插在其后。再次上传只更换追加部分，不会叠加上周页数。',
     editSlidesReplaceHint: '上传本机 PPTX 可整段替换本区；网页内编辑请用右键菜单「修改幻灯片」。',
     editSlidesReplacedHint: '本区已用自定义 PPT 替换。可用右键菜单继续编辑，或「恢复原版」回到模板。',
     editSlidesAppendedHint:
-      '已在原有主日信息页后追加自定义 PPT。可用右键菜单继续追加替换上传内容，或「恢复原版」去掉追加页。',
+      '已在原有主日信息页后追加 PPT。再上传会替换这段追加内容（模板页保留）；「恢复原版」可去掉追加。',
     skipTestimony: '跳过见证周页（第 16 页）',
     skipDepartment: '跳过部门报告页（第 36 页）',
     meetingVariant: '本週聚会版式',
@@ -502,7 +502,7 @@ export default {
     pastorInviteScheduleHint: '每周一上午也会自动发送（同一主日不会重复发）。清空邮箱则停止自动发送。',
     pastorInviteLandingTitle: '主日信息 PPT',
     pastorInviteLandingIntroSimple:
-      '请为 {date} 主日周报上传「主日信息」PPT（可选）。将保留原有主日信息页，并在其后追加你上传的幻灯片。',
+      '请为 {date} 主日周报上传「主日信息」PPT（可选）。将保留原有主日信息页，并在其后追加你上传的幻灯片；再次上传只更换追加部分。',
     pastorInviteLandingChooseFile: '选择 PPT 文件',
     pastorInviteLandingReplaceFile: '选择新文件以更换追加内容',
     pastorInviteLandingUpload: '上传 PPT',
@@ -513,7 +513,7 @@ export default {
     pastorInviteLandingUploaded: 'PPT 已上传，已追加到原有主日信息页之后。',
     pastorInviteLandingUploadedKeepEditing: 'PPT 已保存。同一链接可随时回来下载或更换追加内容。',
     pastorInviteLandingSkipped: '已记录。你可以随时通过同一链接回来上传。',
-    pastorInviteLandingHasOverride: '该分区已有追加 PPT；再次上传将更换追加内容（原模板页仍保留）。',
+    pastorInviteLandingHasOverride: '该分区已有追加 PPT；再次上传将更换追加内容（原模板页仍保留，不会叠加上周页数）。',
     pastorInviteLandingCurrentFile: '已上传的文件',
     pastorInviteLandingNoFileYet: '尚未上传文件。上传后可随时通过本链接回来修改。',
     pastorInviteLandingDownload: '下载当前 PPT',

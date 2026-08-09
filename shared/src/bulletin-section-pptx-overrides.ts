@@ -10,7 +10,9 @@ import {
 export type SectionPptxOverrides = Record<string, string>;
 
 /**
- * 这些分区上传 PPT 时：保留模板原页，把上传页插在后面（非整段替换）。
+ * 这些分区上传 PPT 时：保留模板原页，把上传页插在锚点末页之后（非整段替换）。
+ * 每次预览/导出都从原版模板重新 splice：更换 override blob 只会替换「追加段」，
+ * 不会叠加上周页数，也不会盖掉模板主日信息页。
  * 目前仅主日信息。
  */
 export const BULLETIN_SECTION_PPTX_APPEND_AFTER = new Set(['message']);

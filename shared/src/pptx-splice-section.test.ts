@@ -72,4 +72,31 @@ describe('spliceSectionSlidesIntoPptx variable length', () => {
     const idx18 = after.findIndex((s) => s.slideInFile === 18);
     expect(idx18).toBe(idx17 + 3);
   });
+
+  it('appendAfter re-upload replaces previous append instead of stacking', async () => {
+    const tpl = await readFile(templatePath);
+    const before = await listPptxSlidesInPresentationOrder(tpl);
+
+    // 第一周：追加 2 页
+    const week1 = await extractSlidesByFileNumbersAsPptx(tpl, [25, 26]);
+    const afterWeek1 = await listPptxSlidesInPresentationOrder(
+      await spliceSectionSlidesIntoPptx(tpl, week1, [17], { appendAfter: true }),
+    );
+    expect(afterWeek1.length).toBe(before.length + 2);
+
+    // 第二周：从原模板重新 splice 另一份 3 页（模拟新周报 / 更换 override blob）
+    const week2 = await extractSlidesByFileNumbersAsPptx(tpl, [25, 26, 27]);
+    const afterWeek2 = await listPptxSlidesInPresentationOrder(
+      await spliceSectionSlidesIntoPptx(tpl, week2, [17], { appendAfter: true }),
+    );
+    expect(afterWeek2.length).toBe(before.length + 3);
+    expect(afterWeek2.length).not.toBe(before.length + 2 + 3);
+
+    const idx17 = afterWeek2.findIndex((s) => s.slideInFile === 17);
+    expect(idx17).toBeGreaterThanOrEqual(0);
+    expect(afterWeek2[idx17 + 1]?.slideInFile).toBeGreaterThan(38);
+    expect(afterWeek2[idx17 + 2]?.slideInFile).toBeGreaterThan(38);
+    expect(afterWeek2[idx17 + 3]?.slideInFile).toBeGreaterThan(38);
+    expect(afterWeek2.findIndex((s) => s.slideInFile === 18)).toBe(idx17 + 4);
+  });
 });
