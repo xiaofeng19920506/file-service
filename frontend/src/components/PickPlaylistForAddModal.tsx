@@ -85,7 +85,7 @@ export default function PickPlaylistForAddModal({
             type="button"
             className="modal-close-btn"
             onClick={onClose}
-            aria-label={t('metadata.close')}
+            aria-label={t('common.close')}
             disabled={disabled}
           >
             ×

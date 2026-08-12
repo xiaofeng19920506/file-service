@@ -6,7 +6,6 @@ import {
   type PlaylistDetail,
   type PlaylistSummary,
 } from '../api/playlists';
-import { addBulletinWorshipPlaylistItemsByVideos } from '../api/bulletins';
 import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 import { useDebouncedYoutubeSearch } from '../hooks/useDebouncedYoutubeSearch';
 import { friendlyError } from '../lib/error-messages';
@@ -23,7 +22,6 @@ export type YoutubeSearchResultLayout = 'list' | 'video';
 type PlaylistYoutubeSearchPanelProps = {
   playlistId?: string;
   inviteToken?: string;
-  bulletinId?: string;
   existingVideoIds?: Set<string>;
   libraryVideoIds?: Set<string>;
   onAdded: (detail: PlaylistDetail, meta: { addedCount: number; skippedCount: number }) => void;
@@ -37,14 +35,13 @@ type PlaylistYoutubeSearchPanelProps = {
   className?: string;
   /** 桌面弹窗：将搜索框渲染到指定容器（通常为 modal 顶栏中间） */
   searchHeaderEl?: HTMLElement | null;
-  /** list=歌单式文字列表；video=带缩略图的视频卡片（敬拜/加歌弹窗） */
+  /** list=歌单式文字列表；video=带缩略图的视频卡片 */
   resultLayout?: YoutubeSearchResultLayout;
 };
 
 export default function PlaylistYoutubeSearchPanel({
   playlistId,
   inviteToken,
-  bulletinId,
   existingVideoIds = new Set(),
   libraryVideoIds = new Set(),
   onAdded,
@@ -125,9 +122,7 @@ export default function PlaylistYoutubeSearchPanel({
     try {
       const data = inviteToken
         ? await addInvitePlaylistItemsByVideos(inviteToken, [{ videoId, title }])
-        : bulletinId
-          ? await addBulletinWorshipPlaylistItemsByVideos(bulletinId, [{ videoId, title }])
-          : await addPlaylistItemsByVideos(targetPlaylistId, [{ videoId, title }]);
+        : await addPlaylistItemsByVideos(targetPlaylistId, [{ videoId, title }]);
       onAdded(data, { addedCount: data.addedCount, skippedCount: data.skippedCount });
       setPendingAdd(null);
     } catch (err) {
@@ -153,7 +148,7 @@ export default function PlaylistYoutubeSearchPanel({
       return;
     }
 
-    if (!playlistId && !inviteToken && !bulletinId) return;
+    if (!playlistId && !inviteToken) return;
     if (isInCurrentPlaylist(videoId)) return;
     await addToPlaylist(playlistId ?? '', videoId, title);
   };
@@ -260,7 +255,6 @@ export default function PlaylistYoutubeSearchPanel({
             className={mobileListOnly ? 'youtube-trending--mobile-home' : ''}
             pickPlaylistOnAdd={pickPlaylistOnAdd}
             playlistId={playlistId}
-            bulletinId={bulletinId}
             libraryVideoIds={libraryVideoIds}
             existingVideoIds={existingVideoIds}
             playlists={playlists}

@@ -74,7 +74,7 @@ export default function RenamePlaylistModal({
               type="button"
               className="modal-close-btn"
               onClick={onClose}
-              aria-label={t('metadata.close')}
+              aria-label={t('common.close')}
               disabled={disabled}
             >
               ×

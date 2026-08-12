@@ -30,7 +30,7 @@ export default function ConfirmModal({
             type="button"
             className="modal-close-btn"
             onClick={onCancel}
-            aria-label={t('metadata.close')}
+            aria-label={t('common.close')}
           >
             ×
           </button>

@@ -230,7 +230,7 @@ export default function AdminPage() {
                                   className="btn-secondary btn-sm"
                                   onClick={() => setEditingBlob(blob)}
                                 >
-                                  {t('library.edit')}
+                                  {t('admin.edit')}
                                 </button>
                                 <button
                                   type="button"

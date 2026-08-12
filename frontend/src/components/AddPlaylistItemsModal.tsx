@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { addBulletinWorshipPlaylistItems } from '../api/bulletins';
 import { addPlaylistItems } from '../api/playlists';
 import { friendlyError } from '../lib/error-messages';
 import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
@@ -8,10 +7,7 @@ import { useI18n } from '../i18n';
 import type { PlaylistDetail } from '../api/playlists';
 
 type AddPlaylistItemsModalProps = {
-  /** 普通歌单：按 playlistId 添加 */
-  playlistId?: string;
-  /** 周报敬拜歌单：按 bulletinId 添加（与 playlistId 二选一） */
-  bulletinId?: string;
+  playlistId: string;
   existingVideoIds: Set<string>;
   /** 嵌在外层 modal 内时不渲染自己的 overlay/标题 */
   embedded?: boolean;
@@ -23,7 +19,6 @@ type AddPlaylistItemsModalProps = {
 
 export default function AddPlaylistItemsModal({
   playlistId,
-  bulletinId,
   existingVideoIds,
   embedded = false,
   hideUrlPanel = false,
@@ -60,13 +55,12 @@ export default function AddPlaylistItemsModal({
     setAddingUrl(true);
     setError(null);
     try {
-      const data = bulletinId
-        ? await addBulletinWorshipPlaylistItems(bulletinId, trimmed)
-        : await addPlaylistItems(playlistId!, trimmed);
+      const data = await addPlaylistItems(playlistId, trimmed);
       onAdded(data, { addedCount: data.addedCount, skippedCount: data.skippedCount });
       onClose();
     } catch (err) {
       setError(friendlyError(err instanceof Error ? err.message : 'add_playlist_item_failed', t));
+    } finally {
       setAddingUrl(false);
     }
   };
@@ -97,9 +91,7 @@ export default function AddPlaylistItemsModal({
           disabled={addingUrl}
         />
       </label>
-      <p className="playlists-muted playlists-add-modal-hint">
-        {bulletinId ? t('worshipSongs.urlHint') : t('playlists.addHint')}
-      </p>
+      <p className="playlists-muted playlists-add-modal-hint">{t('playlists.addHint')}</p>
       {error && <p className="error-msg">{error}</p>}
 
       <div className="metadata-modal-actions add-playlist-items-url-actions">
@@ -126,11 +118,10 @@ export default function AddPlaylistItemsModal({
         ) : null}
         <PlaylistYoutubeSearchPanel
           className="add-playlist-items-search"
-          playlistId={bulletinId ? undefined : playlistId}
-          bulletinId={bulletinId}
+          playlistId={playlistId}
           existingVideoIds={existingVideoIds}
           onAdded={onAdded}
-          resultLayout={bulletinId ? 'video' : 'list'}
+          resultLayout="list"
         />
       </section>
 
@@ -173,7 +164,7 @@ export default function AddPlaylistItemsModal({
             type="button"
             className="modal-close-btn"
             onClick={handleCancel}
-            aria-label={t('metadata.close')}
+            aria-label={t('common.close')}
             disabled={addingUrl}
           >
             ×

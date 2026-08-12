@@ -175,7 +175,7 @@ export default function ExportYoutubePlaylistModal({
             type="button"
             className="modal-close-btn"
             onClick={onClose}
-            aria-label={t('metadata.close')}
+            aria-label={t('common.close')}
           >
             ×
           </button>

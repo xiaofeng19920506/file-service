@@ -10,10 +10,10 @@ export function normalizeUserRole(raw: string | null | undefined): UserRole {
   if (raw === 'user') return 'user';
   // 历史角色一律降为普通用户
   if (
-    raw === 'member' ||
-    raw === 'worship_team' ||
-    raw === 'creator' ||
-    raw === 'vip'
+    raw === 'member'
+    || raw === 'worship_team'
+    || raw === 'creator'
+    || raw === 'vip'
   ) {
     return 'user';
   }
@@ -60,7 +60,7 @@ export function canUpload(_role: UserRole | null): boolean {
   return false;
 }
 
-/** @deprecated */
+/** @deprecated 周报已移除；保留避免旧 API 编译失败，恒为 false */
 export function canManageBulletin(_role: UserRole | null): boolean {
   return false;
 }
@@ -244,15 +244,6 @@ export function isUploadPath(_method: string, _path: string): boolean {
   return false;
 }
 export function isMergePath(_method: string, _path: string): boolean {
-  return false;
-}
-export function isBulletinPath(_method: string, _path: string): boolean {
-  return false;
-}
-export function isWorshipPlaylistInvitePath(_method: string, _path: string): boolean {
-  return false;
-}
-export function isBulletinSectionInvitePath(_method: string, _path: string): boolean {
   return false;
 }
 export function isVipVideoPath(_method: string, _path: string): boolean {

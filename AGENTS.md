@@ -1,10 +1,10 @@
 # file-service
 
-敬拜诗库 monorepo（MP3 播放器）：
+MP3 播放列表 monorepo：
 
-- `frontend/` — React Web（`:5173`）
+- `frontend/` — React Web（播放列表：搜索 / 整理 / 播放）
 - `backend/api/` — Fastify API（`:3000`）
-- `backend/worker/` — BullMQ Worker（YouTube 音频缓存）
+- `backend/worker/` — BullMQ Worker（YouTube → MP3 音频缓存）
 - `shared/` — 共享库 + Docker（Postgres / Redis）
 
 日常开发：`npm run dev:docker`（Docker 起 Postgres + Redis，本机跑 API/Web/Worker）。

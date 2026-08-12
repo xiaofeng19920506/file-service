@@ -274,6 +274,13 @@
       "when": 1754760000000,
       "tag": "0040_bulletin_doxology_default",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1755000000000,
+      "tag": "0041_user_roles_admin_user",
+      "breakpoints": true
     }
   ]
 }

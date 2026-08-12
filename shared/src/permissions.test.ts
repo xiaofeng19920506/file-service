@@ -1,179 +1,85 @@
-import { describe, it, expect } from 'vitest';
-import { isPublicApiPath } from './api-key.js';
+import { describe, expect, it } from 'vitest';
 import {
   accessDeniedErrorCode,
-  canAccessVipVideo,
-  canPlayPlaylistVideo,
+  canAccessPlaylists,
+  canEdit,
   isUnauthenticatedAccessAllowed,
+  normalizeUserRole,
   resolvePathAccessLevel,
   roleMeetsAccessLevel,
 } from './permissions.js';
 
+describe('normalizeUserRole', () => {
+  it('keeps admin and user', () => {
+    expect(normalizeUserRole('admin')).toBe('admin');
+    expect(normalizeUserRole('user')).toBe('user');
+  });
+
+  it('maps legacy roles to user', () => {
+    expect(normalizeUserRole('member')).toBe('user');
+    expect(normalizeUserRole('worship_team')).toBe('user');
+    expect(normalizeUserRole('creator')).toBe('user');
+    expect(normalizeUserRole('vip')).toBe('user');
+    expect(normalizeUserRole('unknown')).toBe('user');
+  });
+});
+
 describe('resolvePathAccessLevel', () => {
-  it('marks infrastructure as public', () => {
+  it('marks infrastructure and auth as public', () => {
     expect(resolvePathAccessLevel('GET', '/health')).toBe('public');
-    expect(resolvePathAccessLevel('GET', '/ready')).toBe('public');
-  });
-
-  it('marks auth entry as public', () => {
     expect(resolvePathAccessLevel('POST', '/v1/auth/login')).toBe('public');
-    expect(resolvePathAccessLevel('POST', '/v1/auth/register')).toBe('public');
   });
 
-  it('marks worship playlist invite token routes as public', () => {
-    const token = 'pe.abc.def.123.sig';
-    expect(resolvePathAccessLevel('GET', `/v1/playlists/invite/${token}`)).toBe('public');
-    expect(resolvePathAccessLevel('POST', `/v1/playlists/invite/${token}/items`)).toBe('public');
-    expect(resolvePathAccessLevel('PUT', `/v1/playlists/invite/${token}/items/order`)).toBe(
-      'public',
-    );
-    expect(resolvePathAccessLevel('DELETE', `/v1/playlists/invite/${token}/items/item-1`)).toBe(
-      'public',
-    );
-    expect(resolvePathAccessLevel('GET', `/v1/playlists/invite/${token}/youtube/search`)).toBe(
-      'public',
-    );
-    expect(
-      resolvePathAccessLevel('GET', `/v1/playlists/invite/${token}/youtube/search/suggest`),
-    ).toBe('public');
-    // 普通歌单接口仍需登录
+  it('marks playlists and youtube browse for logged-in users', () => {
     expect(resolvePathAccessLevel('GET', '/v1/playlists')).toBe('playlist');
     expect(resolvePathAccessLevel('GET', '/v1/youtube/search')).toBe('youtube_browse');
   });
 
-  it('marks bulletin section invite token routes as public', () => {
-    const token = 'bs.abc.def.123.sig';
-    expect(resolvePathAccessLevel('GET', `/v1/bulletins/section-invite/${token}`)).toBe('public');
-    expect(resolvePathAccessLevel('GET', `/v1/bulletins/section-invite/${token}/pptx`)).toBe(
-      'public',
-    );
-    expect(
-      resolvePathAccessLevel('GET', `/v1/bulletins/section-invite/${token}/preview/1.png`),
-    ).toBe('public');
-    expect(resolvePathAccessLevel('POST', `/v1/bulletins/section-invite/${token}/pptx`)).toBe(
-      'public',
-    );
-    expect(
-      resolvePathAccessLevel('POST', '/v1/bulletins/bul-1/sections/message/invite'),
-    ).toBe('bulletin_manage');
-  });
-
-  it('marks blob search as search (login + worship team)', () => {
-    expect(resolvePathAccessLevel('GET', '/v1/blobs')).toBe('search');
-  });
-
-  it('classifies protected routes', () => {
-    expect(resolvePathAccessLevel('GET', '/v1/blobs/x/content')).toBe('download');
-    expect(resolvePathAccessLevel('POST', '/v1/uploads')).toBe('upload');
-    expect(resolvePathAccessLevel('GET', '/v1/playlists')).toBe('playlist');
-    expect(resolvePathAccessLevel('GET', '/v1/youtube/search')).toBe('youtube_browse');
-    expect(resolvePathAccessLevel('GET', '/v1/youtube/trending')).toBe('youtube_browse');
-    expect(resolvePathAccessLevel('POST', '/v1/jobs')).toBe('merge');
-    expect(resolvePathAccessLevel('DELETE', '/v1/blobs/x')).toBe('admin');
+  it('marks admin user manage as admin', () => {
     expect(resolvePathAccessLevel('GET', '/v1/admin/users')).toBe('admin');
-    expect(resolvePathAccessLevel('DELETE', '/v1/admin/users/user-1')).toBe('admin');
-    expect(resolvePathAccessLevel('GET', '/v1/auth/session')).toBe('session');
-    expect(resolvePathAccessLevel('GET', '/v1/youtube/oauth/status')).toBe('youtube_export');
-    expect(resolvePathAccessLevel('POST', '/v1/playlists/x/export-youtube')).toBe('youtube_export');
-    expect(resolvePathAccessLevel('GET', '/v1/youtube/oauth/callback')).toBe('public');
-    expect(resolvePathAccessLevel('GET', '/v1/youtube/thumbnails/abc12345678')).toBe('public');
-    expect(resolvePathAccessLevel('GET', '/v1/bulletins/worship-team-members')).toBe('bulletin_manage');
   });
 
-  it('defaults unknown v1 routes to member', () => {
-    expect(resolvePathAccessLevel('GET', '/v1/unknown')).toBe('member');
+  it('defaults unknown /v1 to user', () => {
+    expect(resolvePathAccessLevel('GET', '/v1/unknown')).toBe('user');
   });
 });
 
 describe('roleMeetsAccessLevel', () => {
-  it('requires login for blob search', () => {
-    expect(roleMeetsAccessLevel('search', null)).toBe(false);
-    expect(roleMeetsAccessLevel('search', 'member')).toBe(false);
-    expect(roleMeetsAccessLevel('search', 'worship_team')).toBe(true);
+  it('allows user and admin for playlist', () => {
+    expect(roleMeetsAccessLevel('playlist', 'user')).toBe(true);
+    expect(roleMeetsAccessLevel('playlist', 'admin')).toBe(true);
+    expect(roleMeetsAccessLevel('playlist', null)).toBe(false);
   });
 
-  it('allows playlists for all logged-in roles', () => {
-    expect(roleMeetsAccessLevel('playlist', 'member')).toBe(true);
-    expect(roleMeetsAccessLevel('playlist', 'worship_team')).toBe(true);
-  });
-
-  it('enforces member login', () => {
-    expect(roleMeetsAccessLevel('member', null)).toBe(false);
-    expect(roleMeetsAccessLevel('member', 'member')).toBe(true);
-    expect(roleMeetsAccessLevel('member', 'vip')).toBe(false);
-  });
-
-  it('allows vip video for vip and admin roles', () => {
-    expect(roleMeetsAccessLevel('vip_video', 'vip')).toBe(true);
-    expect(roleMeetsAccessLevel('vip_video', 'admin')).toBe(true);
-    expect(roleMeetsAccessLevel('vip_video', 'member')).toBe(false);
-    expect(roleMeetsAccessLevel('vip_video', 'worship_team')).toBe(false);
-  });
-
-  it('allows youtube browse for vip and playlist roles', () => {
-    expect(roleMeetsAccessLevel('youtube_browse', 'vip')).toBe(true);
-    expect(roleMeetsAccessLevel('youtube_browse', 'member')).toBe(true);
-    expect(roleMeetsAccessLevel('youtube_browse', 'worship_team')).toBe(true);
-    expect(roleMeetsAccessLevel('youtube_browse', null)).toBe(false);
-  });
-
-  it('allows session for vip', () => {
-    expect(roleMeetsAccessLevel('session', 'vip')).toBe(true);
-    expect(roleMeetsAccessLevel('session', null)).toBe(false);
-  });
-
-  it('enforces merge for worship team', () => {
-    expect(roleMeetsAccessLevel('merge', 'member')).toBe(false);
-    expect(roleMeetsAccessLevel('merge', 'worship_team')).toBe(true);
-  });
-
-  it('enforces admin only paths', () => {
-    expect(roleMeetsAccessLevel('admin', 'worship_team')).toBe(false);
+  it('restricts admin paths', () => {
     expect(roleMeetsAccessLevel('admin', 'admin')).toBe(true);
-  });
-
-  it('enforces youtube export for worship team', () => {
-    expect(roleMeetsAccessLevel('youtube_export', 'member')).toBe(false);
-    expect(roleMeetsAccessLevel('youtube_export', 'worship_team')).toBe(true);
-    expect(roleMeetsAccessLevel('youtube_export', 'admin')).toBe(true);
+    expect(roleMeetsAccessLevel('admin', 'user')).toBe(false);
   });
 });
 
-describe('canAccessVipVideo', () => {
-  it('allows vip and admin only', () => {
-    expect(canAccessVipVideo('vip')).toBe(true);
-    expect(canAccessVipVideo('admin')).toBe(true);
-    expect(canAccessVipVideo('member')).toBe(false);
-    expect(canAccessVipVideo('worship_team')).toBe(false);
-    expect(canAccessVipVideo('creator')).toBe(false);
-    expect(canAccessVipVideo(null)).toBe(false);
+describe('capability helpers', () => {
+  it('playlists for any logged-in role', () => {
+    expect(canAccessPlaylists('user')).toBe(true);
+    expect(canAccessPlaylists('admin')).toBe(true);
+    expect(canAccessPlaylists(null)).toBe(false);
+  });
+
+  it('edit only for admin', () => {
+    expect(canEdit('admin')).toBe(true);
+    expect(canEdit('user')).toBe(false);
   });
 });
 
-describe('canPlayPlaylistVideo', () => {
-  it('allows worship team and above plus vip; denies member', () => {
-    expect(canPlayPlaylistVideo('member')).toBe(false);
-    expect(canPlayPlaylistVideo('worship_team')).toBe(true);
-    expect(canPlayPlaylistVideo('creator')).toBe(true);
-    expect(canPlayPlaylistVideo('admin')).toBe(true);
-    expect(canPlayPlaylistVideo('vip')).toBe(true);
-    expect(canPlayPlaylistVideo(null)).toBe(false);
-  });
-});
-
-describe('isPublicApiPath', () => {
-  it('blob search requires authentication', () => {
-    expect(isPublicApiPath('GET', '/v1/blobs')).toBe(false);
-    expect(isUnauthenticatedAccessAllowed('GET', '/v1/blobs')).toBe(false);
-    expect(isPublicApiPath('POST', '/v1/jobs')).toBe(false);
+describe('isUnauthenticatedAccessAllowed', () => {
+  it('allows public only', () => {
+    expect(isUnauthenticatedAccessAllowed('GET', '/health')).toBe(true);
+    expect(isUnauthenticatedAccessAllowed('GET', '/v1/playlists')).toBe(false);
   });
 });
 
 describe('accessDeniedErrorCode', () => {
-  it('maps levels to error codes', () => {
-    expect(accessDeniedErrorCode('search')).toBe('search_forbidden');
-    expect(accessDeniedErrorCode('download')).toBe('download_forbidden');
+  it('returns known codes', () => {
     expect(accessDeniedErrorCode('admin')).toBe('admin_required');
-    expect(accessDeniedErrorCode('member')).toBe('unauthorized');
+    expect(accessDeniedErrorCode('playlist')).toBe('playlist_forbidden');
   });
 });

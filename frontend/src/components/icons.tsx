@@ -81,15 +81,6 @@ function NavIcon({ children }: { children: ReactNode }) {
   );
 }
 
-export function LibraryNavIcon() {
-  return (
-    <NavIcon>
-      <path d="M4 6h16M4 10h16M4 14h10" strokeLinecap="round" />
-      <rect x="3" y="4" width="18" height="16" rx="2" />
-    </NavIcon>
-  );
-}
-
 export function PlaylistsNavIcon() {
   return (
     <NavIcon>
@@ -108,38 +99,11 @@ export function HomeNavIcon() {
   );
 }
 
-export function MergeNavIcon() {
-  return (
-    <NavIcon>
-      <rect x="3" y="4" width="14" height="10" rx="1.5" />
-      <rect x="7" y="10" width="14" height="10" rx="1.5" />
-    </NavIcon>
-  );
-}
-
 export function AdminNavIcon() {
   return (
     <NavIcon>
       <circle cx="12" cy="12" r="3" />
       <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" strokeLinecap="round" />
-    </NavIcon>
-  );
-}
-
-export function BulletinNavIcon() {
-  return (
-    <NavIcon>
-      <rect x="4" y="5" width="16" height="15" rx="2" />
-      <path d="M8 3v4M16 3v4M4 10h16" strokeLinecap="round" />
-    </NavIcon>
-  );
-}
-
-export function VipNavIcon() {
-  return (
-    <NavIcon>
-      <rect x="3" y="6" width="18" height="12" rx="2" />
-      <path d="M11 10.5v5l5-2.5-5-2.5z" fill="currentColor" stroke="none" />
     </NavIcon>
   );
 }

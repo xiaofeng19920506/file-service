@@ -100,7 +100,6 @@ export default function PlaylistsPage({
 }: PlaylistsPageProps) {
   const { t, locale } = useI18n();
   const { permissions } = useAuth();
-  const playbackMode = 'audio' as const;
   const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
   const [libraryVideoIds, setLibraryVideoIds] = useState<Set<string>>(() => new Set());
   const [detail, setDetail] = useState<PlaylistDetail | null>(null);
@@ -809,14 +808,14 @@ export default function PlaylistsPage({
   }, [detail?.items, activeIndex, shuffleEnabled, shuffleOrder, shuffleCursor]);
 
   useEffect(() => {
-    if (playbackMode !== 'audio' || audioCachePriorityIds.length === 0 || !detail?.items.length) {
+    if (audioCachePriorityIds.length === 0 || !detail?.items.length) {
       return;
     }
     void prioritizeYoutubeAudioCache(
       audioCachePriorityIds,
       detail.items.map((item) => ({ videoId: item.youtubeVideoId, title: item.title })),
     );
-  }, [playbackMode, audioCachePriorityIds, detail?.items]);
+  }, [audioCachePriorityIds, detail?.items]);
 
   const handleAudioStatusChange = useCallback((videoId: string, status: YoutubeAudioStatus) => {
     setDetail((prev) => {
@@ -882,9 +881,6 @@ export default function PlaylistsPage({
     [detail?.items],
   );
   const showPlayer = playerEngaged && playerItems.length > 0;
-  const youtubeWatchActive = false;
-  const youtubeWatchMobile = false;
-  const youtubeWatchDesktop = false;
   const audioWatchActive = showPlayer;
   const audioWatchDesktop = audioWatchActive && !isMobileViewport;
   const audioWatchMobile = audioWatchActive && isMobileViewport;
@@ -941,14 +937,12 @@ export default function PlaylistsPage({
   }, [audioWatchDesktop]);
 
   useEffect(() => {
-    if (!youtubeWatchMobile && !audioWatchMobile && !homePreviewMobile) return;
-    document.body.classList.add(
-      youtubeWatchMobile ? 'playlists-mobile-video-active' : 'playlists-mobile-audio-active',
-    );
+    if (!audioWatchMobile && !homePreviewMobile) return;
+    document.body.classList.add('playlists-mobile-audio-active');
     return () => {
       document.body.classList.remove('playlists-mobile-video-active', 'playlists-mobile-audio-active');
     };
-  }, [youtubeWatchMobile, audioWatchMobile, homePreviewMobile]);
+  }, [audioWatchMobile, homePreviewMobile]);
 
   const startRename = (id: string, title: string, modalTitle?: string) => {
     blockListSelectRef.current = true;
@@ -1426,9 +1420,7 @@ export default function PlaylistsPage({
       <div className="page-body page-body-playlists">
       <main
         className="playlists-page"
-        data-youtube-watch={youtubeWatchActive ? 'true' : 'false'}
-        data-youtube-desktop-watch={youtubeWatchDesktop ? 'true' : 'false'}
-        data-mobile-video-immersive={youtubeWatchMobile ? 'true' : 'false'}
+        data-playback-mode="audio"
         data-audio-now-playing={audioWatchActive ? 'true' : 'false'}
         data-audio-desktop-dock={audioWatchDesktop ? 'true' : 'false'}
         data-audio-mobile-record={audioWatchMobile ? 'true' : 'false'}
@@ -1454,13 +1446,10 @@ export default function PlaylistsPage({
           className="playlists-workspace"
           data-mobile-view={homePreviewMobile || selectedId ? 'detail' : 'list'}
           data-player-active={homePreview || showPlayer ? 'true' : 'false'}
-          data-youtube-watch={youtubeWatchActive ? 'true' : 'false'}
-          data-youtube-desktop-watch={youtubeWatchDesktop ? 'true' : 'false'}
-          data-mobile-video-immersive={youtubeWatchMobile ? 'true' : 'false'}
+          data-playback-mode="audio"
           data-audio-now-playing={audioWatchActive ? 'true' : 'false'}
           data-audio-desktop-dock={audioWatchDesktop ? 'true' : 'false'}
           data-audio-mobile-record={audioWatchMobile ? 'true' : 'false'}
-          data-playback-mode={playbackMode}
           data-mobile-audio-dock={showMobileAudioDock ? 'true' : 'false'}
         >
           {!homePreviewMobile && (
@@ -1514,7 +1503,7 @@ export default function PlaylistsPage({
               </div>
             ) : detail ? (
               <div
-                className={`playlists-main-inner${youtubeWatchActive ? ' playlists-main-inner--youtube-watch' : ''}${youtubeWatchDesktop ? ' playlists-main-inner--desktop-video' : ''}${youtubeWatchMobile ? ' playlists-main-inner--mobile-video' : ''}${audioWatchMobile ? ' playlists-main-inner--mobile-audio' : ''}${audioWatchDesktop ? ' playlists-main-inner--desktop-audio' : ''}`}
+                className={`playlists-main-inner${audioWatchMobile ? ' playlists-main-inner--mobile-audio' : ''}${audioWatchDesktop ? ' playlists-main-inner--desktop-audio' : ''}`}
               >
                 {renderMainToolbar(detail.playlist, detail.items.length > 0)}
 
@@ -1532,12 +1521,8 @@ export default function PlaylistsPage({
                 ) : (
                   <div
                     className="playlists-player-stage"
-                    data-playback-mode={playbackMode}
+                    data-playback-mode="audio"
                     data-player-engaged={showPlayer ? 'true' : 'false'}
-                    data-youtube-watch={youtubeWatchActive ? 'true' : 'false'}
-                    data-youtube-desktop-watch={youtubeWatchDesktop ? 'true' : 'false'}
-                    data-mobile-video-immersive={youtubeWatchMobile ? 'true' : 'false'}
-                    data-mobile-video-tracks-open={youtubeWatchActive ? 'true' : 'false'}
                     data-audio-desktop-dock={audioWatchDesktop ? 'true' : 'false'}
                     data-audio-mobile-record={audioWatchMobile ? 'true' : 'false'}
                     data-tracks-edit={tracksEditMode ? 'true' : 'false'}
@@ -1569,7 +1554,7 @@ export default function PlaylistsPage({
 
                       {showPlayer && renderAudioPlayer('inline')}
 
-                      {showPlayer && currentItem && !youtubeWatchMobile && (
+                      {showPlayer && currentItem && (
                         <div className="playlists-youtube-meta desktop-only">
                           <h2 className="playlists-youtube-meta-title" title={currentItem.title}>{currentItem.title}</h2>
                           <p className="playlists-youtube-meta-sub">{detail.playlist.title}</p>
@@ -1582,11 +1567,7 @@ export default function PlaylistsPage({
                       aria-label={t('playlists.tracksTitle')}
                     >
                       <div className="playlists-tracks-head">
-                        <h3>
-                          {youtubeWatchActive
-                            ? t('playlists.mixLabel', { title: detail.playlist.title })
-                            : t('playlists.tracksTitle')}
-                        </h3>
+                        <h3>{t('playlists.tracksTitle')}</h3>
                       </div>
                       <ol
                         ref={tracksListRef}
@@ -1690,13 +1671,6 @@ export default function PlaylistsPage({
                         title={currentItem.title}
                         currentTime={audioProgress.currentTime}
                       />
-                    )}
-
-                    {youtubeWatchMobile && currentItem && (
-                      <div className="playlists-youtube-meta playlists-mobile-video-meta mobile-only">
-                        <h2 className="playlists-youtube-meta-title" title={currentItem.title}>{currentItem.title}</h2>
-                        <p className="playlists-youtube-meta-sub">{detail.playlist.title}</p>
-                      </div>
                     )}
                   </div>
                 )}

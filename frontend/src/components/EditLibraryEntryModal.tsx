@@ -115,7 +115,7 @@ export default function EditLibraryEntryModal({
         updatedAt: result.updatedAt,
         updatedBy: result.updatedBy,
       });
-      setSuccess(t('library.editFileReplaced'));
+      setSuccess(t('admin.editFileReplaced'));
     } catch (err) {
       setError(friendlyError(err instanceof Error ? err.message : 'upload_failed', t));
     } finally {
@@ -147,12 +147,12 @@ export default function EditLibraryEntryModal({
     <div className="metadata-modal-overlay" role="dialog" aria-modal="true">
       <div className="metadata-modal edit-library-modal">
         <div className="metadata-modal-header">
-          <h3>{t('library.editTitle')}</h3>
+          <h3>{t('admin.editTitle')}</h3>
           <button
             type="button"
             className="modal-close-btn"
             onClick={onClose}
-            aria-label={t('metadata.close')}
+            aria-label={t('common.close')}
           >
             ×
           </button>
@@ -163,8 +163,8 @@ export default function EditLibraryEntryModal({
             <span>{filename || blob.id}</span>
             <span className="edit-library-size">{formatSize(sizeBytes)}</span>
             {fingerprint && (
-              <span className="content-fingerprint" title={t('library.fingerprintHint')}>
-                {t('library.fingerprint', { hash: formatContentFingerprint(fingerprint) })}
+              <span className="content-fingerprint" title={t('admin.fingerprintHint')}>
+                {t('admin.fingerprint', { hash: formatContentFingerprint(fingerprint) })}
               </span>
             )}
           </p>
@@ -210,8 +210,8 @@ export default function EditLibraryEntryModal({
           </div>
 
           <div className="edit-library-replace">
-            <h4>{t('library.replaceFile')}</h4>
-            <p className="edit-library-replace-hint">{t('library.replaceFileHint')}</p>
+            <h4>{t('admin.replaceFile')}</h4>
+            <p className="edit-library-replace-hint">{t('admin.replaceFileHint')}</p>
             <input
               ref={fileInputRef}
               type="file"
@@ -225,7 +225,7 @@ export default function EditLibraryEntryModal({
               disabled={replacingFile}
               onClick={() => fileInputRef.current?.click()}
             >
-              {replacingFile ? t('library.replacingFile') : t('library.replaceFile')}
+              {replacingFile ? t('admin.replacingFile') : t('admin.replaceFile')}
             </button>
           </div>
 
@@ -258,7 +258,7 @@ export default function EditLibraryEntryModal({
             disabled={savingMeta}
             onClick={() => void saveMetadata()}
           >
-            {savingMeta ? t('library.savingMetadata') : t('library.saveMetadata')}
+            {savingMeta ? t('admin.savingMetadata') : t('admin.saveMetadata')}
           </button>
         </div>
       </div>

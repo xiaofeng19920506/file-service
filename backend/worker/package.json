@@ -10,8 +10,7 @@
     "@file-service/shared": "*",
     "bullmq": "^5.34.5",
     "drizzle-orm": "^0.38.3",
-    "ioredis": "^5.4.2",
-    "pptx-automizer": "^0.8.1"
+    "ioredis": "^5.4.2"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",

@@ -247,7 +247,7 @@ function AppShellInner({
           <button
             type="button"
             className="nav-mobile-drawer-close"
-            aria-label={t('metadata.close')}
+            aria-label={t('common.close')}
             onClick={() => setMobileMenuOpen(false)}
           >
             <CloseIcon />
