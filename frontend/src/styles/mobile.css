@@ -167,6 +167,17 @@
     --bottom-nav-height: 0px;
   }
 
+  /* 盖过 responsive.css 里 11.5rem 的 !important padding */
+  body.playlists-mobile-audio-active
+    .playlists-page[data-mobile-home-preview='true']
+    .playlists-workspace[data-player-active='true']
+    .playlists-main-inner--mobile-audio,
+  body.playlists-mobile-audio-active
+    .playlists-page[data-mobile-home-preview='true']
+    .playlists-main-inner--mobile-audio {
+    padding-bottom: calc(10.5rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
   body.playlists-mobile-audio-active:has(.playlists-page[data-mobile-home-preview='true']) .nav-bottom,
   body.playlists-mobile-audio-active:has(.playlists-page[data-mobile-home-preview='true']) .page-tabs-bottom,
   body.playlists-mobile-audio-active:has(.playlists-page[data-mobile-home-preview='true']) .page-tab-bottom {
@@ -175,14 +186,14 @@
 
   body.playlists-mobile-audio-active:has(.playlists-page[data-mobile-home-preview='true'])
     .playlists-playback-dock--mobile {
-    bottom: 0;
-    padding-bottom: calc(0.45rem + env(safe-area-inset-bottom, 0px));
-    min-height: 0;
+    bottom: 0 !important;
+    padding-bottom: calc(0.45rem + env(safe-area-inset-bottom, 0px)) !important;
+    min-height: 0 !important;
   }
 
   body.playlists-mobile-audio-active:has(.playlists-page[data-mobile-home-preview='true'])
     .playlists-playback-dock--mobile.playlists-playback-dock--with-progress {
-    min-height: 0;
+    min-height: 0 !important;
   }
 
   .playlists-list-rename-btn,
