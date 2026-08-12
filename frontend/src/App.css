@@ -3756,6 +3756,16 @@
   width: 100%;
 }
 
+.youtube-search-result.is-previewing,
+.youtube-search-video-card.is-previewing {
+  background: color-mix(in srgb, var(--accent, #3b82f6) 10%, transparent);
+}
+
+.youtube-search-result.is-previewing .search-result-title,
+.youtube-search-video-card.is-previewing .youtube-search-video-title {
+  color: var(--accent, #3b82f6);
+}
+
 .playlists-home-preview-main {
   flex: 1;
   min-height: 0;

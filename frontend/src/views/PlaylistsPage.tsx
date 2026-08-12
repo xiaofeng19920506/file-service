@@ -328,23 +328,30 @@ export default function PlaylistsPage({
     setHomePreviewAddOpen(false);
   }, []);
 
-  const startHomePreview = useCallback((track: { videoId: string; title: string }) => {
-    setHomePreview(track);
-    setHomePreviewAudio(undefined);
-    setHomePreviewPlaying(true);
-    void prioritizeYoutubeAudioCache([track.videoId], [
-      { videoId: track.videoId, title: track.title },
-    ]);
-  }, []);
-
-  const homeSearchPreviewEnabled =
-    !selectedId && mobileHome === 'search' && isMobileViewport;
+  const startHomePreview = useCallback(
+    (track: { videoId: string; title: string }) => {
+      setPlaying(false);
+      setPlayerEngaged(false);
+      if (homePreview?.videoId === track.videoId) {
+        setHomePreviewPlaying((wasPlaying) => !wasPlaying);
+        return;
+      }
+      setHomePreview(track);
+      setHomePreviewAudio(undefined);
+      setHomePreviewPlaying(true);
+      void prioritizeYoutubeAudioCache([track.videoId], [
+        { videoId: track.videoId, title: track.title },
+      ]);
+    },
+    [homePreview?.videoId],
+  );
 
   useEffect(() => {
-    if (!homeSearchPreviewEnabled) {
+    if (!isMobileViewport) return;
+    if (selectedId || mobileHome !== 'search') {
       closeHomePreview();
     }
-  }, [homeSearchPreviewEnabled, closeHomePreview]);
+  }, [isMobileViewport, selectedId, mobileHome, closeHomePreview]);
 
   useEffect(() => {
     if (!isMobileViewport) {
@@ -700,6 +707,7 @@ export default function PlaylistsPage({
   );
 
   const engageAtIndex = (index: number, shouldPlay: boolean) => {
+    closeHomePreview();
     if (shuffleEnabled && detail?.items.length) {
       if (shuffleOrderRef.current.length !== detail.items.length) {
         installShuffleOrder(detail.items.length, index);
@@ -717,6 +725,7 @@ export default function PlaylistsPage({
 
   const startPlayback = () => {
     if (!detail?.items.length) return;
+    closeHomePreview();
     if (shuffleEnabled) {
       const order = installShuffleOrder(detail.items.length);
       setActiveIndex(order[0]!);
@@ -881,12 +890,15 @@ export default function PlaylistsPage({
     [detail?.items],
   );
   const showPlayer = playerEngaged && playerItems.length > 0;
-  const audioWatchActive = showPlayer;
+  const homePreviewDesktop = Boolean(homePreview && !isMobileViewport);
+  const audioWatchActive = showPlayer || homePreviewDesktop;
   const audioWatchDesktop = audioWatchActive && !isMobileViewport;
-  const audioWatchMobile = audioWatchActive && isMobileViewport;
+  const audioWatchMobile = showPlayer && isMobileViewport;
   const showMobileAudioDock =
     isMobileViewport &&
     (homePreview || (showPlayer && Boolean(selectedId && detail?.items.length)));
+  const homeSearchPreviewEnabled =
+    isMobileViewport && !selectedId && mobileHome === 'search';
   const mobileDockCanGoPrev = playerEngaged ? canGoPrev : activeIndex > 0;
   const mobileDockCanGoNext = playerEngaged ? canGoNext : itemCount > 1 || shuffleEnabled;
 
@@ -996,7 +1008,7 @@ export default function PlaylistsPage({
   );
 
   const renderAudioPlayer = (placement: 'inline' | 'dock') => {
-    if (!showPlayer) return null;
+    if (!showPlayer || homePreview) return null;
     if (placement === 'dock' && !audioWatchDesktop) return null;
     if (placement === 'inline' && !audioWatchMobile) return null;
 
@@ -1020,6 +1032,24 @@ export default function PlaylistsPage({
         playbackOrderOpen={playbackOrderOpen}
         onToggleQueue={openQueuePanel}
         queueOpen={queueOpen}
+        onProgressUpdate={setAudioProgress}
+        progressHandleRef={audioProgressHandleRef}
+      />
+    );
+  };
+
+  const renderDesktopPreviewDock = () => {
+    if (!homePreviewDesktop || homePreviewPlayerItems.length === 0) return null;
+    return (
+      <PlaylistAudioPlayer
+        items={homePreviewPlayerItems}
+        activeIndex={0}
+        onActiveIndexChange={() => {}}
+        playing={homePreviewPlaying}
+        onPlayingChange={setHomePreviewPlaying}
+        onAudioStatusChange={handleHomePreviewAudioStatusChange}
+        playlistTitle={t('playlists.previewListening')}
+        variant="desktopDock"
         onProgressUpdate={setAudioProgress}
         progressHandleRef={audioProgressHandleRef}
       />
@@ -1595,10 +1625,12 @@ export default function PlaylistsPage({
         libraryVideoIds={libraryVideoIds}
         onCreatePlaylist={createPlaylistForSearch}
         onAdded={(data, meta) => void handleItemsAdded(data, meta)}
+        onPreviewTrack={startHomePreview}
+        previewingVideoId={homePreview?.videoId}
         searchHeaderEl={headerSearchEl}
         resultLayout="list"
       />
-      {audioWatchDesktop && renderAudioPlayer('dock')}
+      {homePreviewDesktop ? renderDesktopPreviewDock() : audioWatchDesktop && renderAudioPlayer('dock')}
     </section>
   );
 

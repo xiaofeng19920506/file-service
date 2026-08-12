@@ -30,6 +30,7 @@ type YoutubeTrendingSongsProps = {
   onPreviewTrack?: (track: { videoId: string; title: string }) => void;
   className?: string;
   resultLayout?: YoutubeSearchResultLayout;
+  previewingVideoId?: string | null;
 };
 
 export default function YoutubeTrendingSongs({
@@ -44,6 +45,7 @@ export default function YoutubeTrendingSongs({
   onPreviewTrack,
   className = '',
   resultLayout = 'list',
+  previewingVideoId = null,
 }: YoutubeTrendingSongsProps) {
   const { t } = useI18n();
   const [songs, setSongs] = useState<TrendingSong[]>([]);
@@ -155,6 +157,7 @@ export default function YoutubeTrendingSongs({
             const inCurrentPlaylist = !pickPlaylistOnAdd && isInCurrentPlaylist(row.videoId);
             const alreadyAdded = pickPlaylistOnAdd && isInAnyPlaylist(row.videoId, row.inLibrary);
             const adding = addingVideoId === row.videoId;
+            const isPreviewing = previewingVideoId === row.videoId;
             const thumb = resolveYoutubeThumbnailUrl(row.videoId);
             const addControl = inCurrentPlaylist ? (
               <button
@@ -200,8 +203,10 @@ export default function YoutubeTrendingSongs({
 
             if (resultLayout === 'video') {
               return (
-                <li key={row.videoId} className="youtube-search-video-card">
-                  <div className="youtube-search-video-card-main">
+                <li
+                  key={row.videoId}
+                  className={`youtube-search-video-card${isPreviewing ? ' is-previewing' : ''}`}
+                >                  <div className="youtube-search-video-card-main">
                     {onPreviewTrack ? (
                       <button
                         type="button"
@@ -246,8 +251,10 @@ export default function YoutubeTrendingSongs({
             }
 
             return (
-              <li key={row.videoId} className="search-result-item youtube-search-result">
-                {onPreviewTrack ? (
+              <li
+                key={row.videoId}
+                className={`search-result-item youtube-search-result${isPreviewing ? ' is-previewing' : ''}`}
+              >                {onPreviewTrack ? (
                   <button
                     type="button"
                     className="youtube-search-result-play"
