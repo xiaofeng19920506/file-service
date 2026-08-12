@@ -6,7 +6,7 @@ import { useAuth } from '../auth/AuthContext';
 import { matchesAdminFilter } from '../lib/admin-filter';
 import { paginateItems, type AdminTablePageSize } from '../lib/admin-table-pagination';
 import { friendlyError } from '../lib/error-messages';
-import { roleLabelKey, type UserRole } from '../lib/permissions';
+import { normalizeUserRole, roleLabelKey, type UserRole } from '../lib/permissions';
 import { formatUserDisplayName } from '../lib/user-name';
 import { useI18n } from '../i18n';
 
@@ -25,7 +25,11 @@ function draftsEqual(a: Draft, b: Draft): boolean {
 }
 
 function rowDraft(row: AdminUserRecord): Draft {
-  return { firstName: row.firstName, lastName: row.lastName, role: row.role };
+  return {
+    firstName: row.firstName,
+    lastName: row.lastName,
+    role: normalizeUserRole(row.role),
+  };
 }
 
 function isNameValid(draft: Draft): boolean {
