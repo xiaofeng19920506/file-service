@@ -1,69 +1,91 @@
-export type UserRole = 'member' | 'worship_team' | 'creator' | 'admin' | 'vip';
+export type UserRole = 'admin' | 'user';
 
-/** 将数据库/旧 token 中的 role 规范化为当前角色 */
+const VALID_ROLES: UserRole[] = ['admin', 'user'];
+
+/** 旧角色映射到 user；未知 → user */
 export function normalizeUserRole(raw: string | null | undefined): UserRole {
-  if (raw === 'admin' || raw === 'worship_team' || raw === 'creator' || raw === 'member' || raw === 'vip') {
-    return raw;
+  if (raw === 'admin') return 'admin';
+  if (raw === 'user') return 'user';
+  // 历史角色一律降为普通用户
+  if (
+    raw === 'member' ||
+    raw === 'worship_team' ||
+    raw === 'creator' ||
+    raw === 'vip'
+  ) {
+    return 'user';
   }
-  if (raw === 'user') return 'member';
-  return 'member';
+  return 'user';
 }
 
-function isWorshipCapable(role: UserRole | null): boolean {
-  return role === 'worship_team' || role === 'creator' || role === 'admin';
+export function isValidUserRole(raw: string): raw is UserRole {
+  return VALID_ROLES.includes(raw as UserRole);
 }
 
-export function canSearch(role: UserRole | null): boolean {
-  return isWorshipCapable(role);
+function isLoggedIn(role: UserRole | null): boolean {
+  return role === 'admin' || role === 'user';
 }
 
 export function canAccessPlaylists(role: UserRole | null): boolean {
-  return role === 'member' || isWorshipCapable(role);
-}
-
-export function canDownload(role: UserRole | null): boolean {
-  return isWorshipCapable(role);
-}
-
-export function canMerge(role: UserRole | null): boolean {
-  return isWorshipCapable(role);
-}
-
-export function canUpload(role: UserRole | null): boolean {
-  return isWorshipCapable(role);
+  return isLoggedIn(role);
 }
 
 export function canExportToYoutube(role: UserRole | null): boolean {
-  return isWorshipCapable(role);
+  return isLoggedIn(role);
 }
 
 export function canEdit(role: UserRole | null): boolean {
   return role === 'admin';
 }
 
-export function canManageBulletin(role: UserRole | null): boolean {
-  return role === 'creator' || role === 'admin';
+/** @deprecated 诗库已移除 */
+export function canSearch(_role: UserRole | null): boolean {
+  return false;
 }
 
-export function canViewBulletin(role: UserRole | null): boolean {
-  return isWorshipCapable(role);
+/** @deprecated */
+export function canDownload(_role: UserRole | null): boolean {
+  return false;
 }
 
-export function canEditBulletinWorshipSongs(role: UserRole | null): boolean {
-  return canViewBulletin(role);
+/** @deprecated */
+export function canMerge(_role: UserRole | null): boolean {
+  return false;
 }
 
-export function canAccessVipVideo(role: UserRole | null): boolean {
-  return role === 'vip' || role === 'admin';
+/** @deprecated */
+export function canUpload(_role: UserRole | null): boolean {
+  return false;
 }
 
-/** 播放列表 YouTube 视频模式；普通成员（member）仅可 MP3 */
-export function canPlayPlaylistVideo(role: UserRole | null): boolean {
-  return role === 'vip' || isWorshipCapable(role);
+/** @deprecated */
+export function canManageBulletin(_role: UserRole | null): boolean {
+  return false;
 }
 
-export function isVipOnlyRole(role: UserRole | null): boolean {
-  return role === 'vip';
+/** @deprecated */
+export function canViewBulletin(_role: UserRole | null): boolean {
+  return false;
+}
+
+/** @deprecated */
+export function canEditBulletinWorshipSongs(_role: UserRole | null): boolean {
+  return false;
+}
+
+/** @deprecated VIP 已移除 */
+export function canAccessVipVideo(_role: UserRole | null): boolean {
+  return false;
+}
+
+/** MP3-only：不再提供歌单视频模式 */
+export function canPlayPlaylistVideo(_role: UserRole | null): boolean {
+  return false;
+}
+
+/** @deprecated */
+export function isVipOnlyRole(_role: UserRole | null): boolean {
+  return false;
 }
 
 export function roleLabelKey(role: UserRole): string {
@@ -94,12 +116,7 @@ export type AppPermissions = ReturnType<typeof permissionsForRole>;
 export const APP_HOME_PAGE = 'playlists' as const;
 
 export function homePageForPermissions(
-  permissions: AppPermissions,
-): typeof APP_HOME_PAGE | 'library' | 'bulletin' | 'vip-video' {
-  if (permissions.isVipOnly) return 'vip-video';
-  if (permissions.canManageBulletin) return 'bulletin';
-  if (permissions.canAccessPlaylists) return APP_HOME_PAGE;
-  if (permissions.canSearch) return 'library';
-  if (permissions.canAccessVipVideo) return 'vip-video';
+  _permissions: AppPermissions,
+): typeof APP_HOME_PAGE {
   return APP_HOME_PAGE;
 }

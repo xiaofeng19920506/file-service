@@ -119,15 +119,12 @@ const en: MessageTree = {
     submitting: 'Submitting…',
     logout: 'Sign out',
     checkingSession: 'Checking session…',
-    registerHint: 'New accounts are created as members with setlist access only. An admin can promote roles later.',
+    registerHint: 'New accounts are created as users with playlist access. An admin can change roles later.',
     continueAsGuest: 'Continue without signing in (setlists only)',
     adminBadge: 'Admin',
     role: {
-      member: 'Member',
-      worship_team: 'Worship team',
-      creator: 'Bulletin editor',
+      user: 'User',
       admin: 'Admin',
-      vip: 'VIP video',
     },
   },
   vipVideo: {

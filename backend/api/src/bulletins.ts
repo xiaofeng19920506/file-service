@@ -1948,7 +1948,7 @@ export function registerBulletinRoutes(
         .where(inArray(users.id, userIds));
       for (const row of memberRows) {
         const role = normalizeUserRole(row.role);
-        if (role === 'worship_team' || role === 'creator' || role === 'admin') {
+        if (role === 'admin' || role === 'user') {
           recipientEmails.add(row.email.trim().toLowerCase());
         }
       }

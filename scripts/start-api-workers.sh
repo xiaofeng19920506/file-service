@@ -1,19 +1,16 @@
 #!/usr/bin/env bash
-# 本机：API + N 个 MP3 缓存 Worker + N 个 VIP 视频缓存 Worker + 1 个 PPT 合并 Worker
+# 本机：API + N 个 MP3 缓存 Worker
 #
 # 用法:
-#   ./scripts/start-api-workers.sh           # 默认各 5 个音频/视频 worker + 1 个 merge worker
-#   ./scripts/start-api-workers.sh 3         # 各 3 个音频/视频 worker
-#   MP3_WORKER_COUNT=5 VIDEO_WORKER_COUNT=5 ./scripts/start-api-workers.sh
+#   ./scripts/start-api-workers.sh           # 默认 5 个音频 worker
+#   ./scripts/start-api-workers.sh 3         # 3 个音频 worker
+#   MP3_WORKER_COUNT=5 ./scripts/start-api-workers.sh
 #
 # 建议 .env:
-#   YOUTUBE_AUDIO_WORKER_CONCURRENCY=1   # 每个 MP3 worker 进程内并发（建议 1）
-#   YOUTUBE_VIDEO_WORKER_CONCURRENCY=1   # 每个视频 worker 进程内并发（建议 1）
-#   WORKER_CONCURRENCY=1                 # PPT 合并 worker 并发
+#   YOUTUBE_AUDIO_WORKER_CONCURRENCY=1
 #   YT_DLP_PATH=/opt/homebrew/bin/yt-dlp
 #
 # MP3 总并发 ≈ MP3_WORKER_COUNT × YOUTUBE_AUDIO_WORKER_CONCURRENCY
-# 视频总并发 ≈ VIDEO_WORKER_COUNT × YOUTUBE_VIDEO_WORKER_CONCURRENCY
 #
 # npm 快捷: npm run dev:api-audio-5w
 
@@ -23,14 +20,9 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 MP3_WORKER_COUNT="${MP3_WORKER_COUNT:-${1:-5}}"
-VIDEO_WORKER_COUNT="${VIDEO_WORKER_COUNT:-${MP3_WORKER_COUNT}}"
 
 if ! [[ "$MP3_WORKER_COUNT" =~ ^[1-9][0-9]*$ ]]; then
   echo "MP3_WORKER_COUNT 必须是正整数，当前: ${MP3_WORKER_COUNT}" >&2
-  exit 1
-fi
-if ! [[ "$VIDEO_WORKER_COUNT" =~ ^[1-9][0-9]*$ ]]; then
-  echo "VIDEO_WORKER_COUNT 必须是正整数，当前: ${VIDEO_WORKER_COUNT}" >&2
   exit 1
 fi
 
@@ -78,14 +70,12 @@ free_port 3000
 
 pkill -f "tsx watch backend/api/src/index.ts" 2>/dev/null || true
 pkill -f "tsx watch backend/worker/src/index.ts" 2>/dev/null || true
-pkill -f "tsx watch backend/worker/src/worker-merge.ts" 2>/dev/null || true
 pkill -f "tsx watch backend/worker/src/worker-audio.ts" 2>/dev/null || true
-pkill -f "tsx watch backend/worker/src/worker-video.ts" 2>/dev/null || true
 sleep 1
 
-names="api,merge"
-colors="blue,magenta"
-cmds=("cd '${ROOT}' && exec '${TSX}' watch backend/api/src/index.ts" "cd '${ROOT}' && exec '${TSX}' watch backend/worker/src/worker-merge.ts")
+names="api"
+colors="blue"
+cmds=("cd '${ROOT}' && exec '${TSX}' watch backend/api/src/index.ts")
 
 for ((i = 1; i <= MP3_WORKER_COUNT; i++)); do
   names+=",mp3${i}"
@@ -93,17 +83,9 @@ for ((i = 1; i <= MP3_WORKER_COUNT; i++)); do
   cmds+=("cd '${ROOT}' && exec '${TSX}' watch backend/worker/src/worker-audio.ts")
 done
 
-for ((i = 1; i <= VIDEO_WORKER_COUNT; i++)); do
-  names+=",video${i}"
-  colors+=",yellow"
-  cmds+=("cd '${ROOT}' && exec '${TSX}' watch backend/worker/src/worker-video.ts")
-done
-
-info "启动 API + 1 个合并 Worker + ${MP3_WORKER_COUNT} 个 MP3 Worker + ${VIDEO_WORKER_COUNT} 个视频 Worker（Ctrl+C 全部停止）"
+info "启动 API + ${MP3_WORKER_COUNT} 个 MP3 Worker（Ctrl+C 全部停止）"
 echo "   进程: ${names}"
 echo "   MP3 总并发 ≈ ${MP3_WORKER_COUNT} × YOUTUBE_AUDIO_WORKER_CONCURRENCY（见 .env）"
-echo "   视频总并发 ≈ ${VIDEO_WORKER_COUNT} × YOUTUBE_VIDEO_WORKER_CONCURRENCY（见 .env）"
-echo "   PPT 合并并发 = WORKER_CONCURRENCY（见 .env）"
 echo ""
 
 exec bash "$SUPERVISOR" "${cmds[@]}"

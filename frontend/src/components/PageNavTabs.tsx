@@ -1,53 +1,23 @@
-import {
-  AdminNavIcon,
-  BulletinNavIcon,
-  HomeNavIcon,
-  LibraryNavIcon,
-  MergeNavIcon,
-  PlaylistsNavIcon,
-  VipNavIcon,
-} from './icons';
+import { AdminNavIcon, HomeNavIcon, PlaylistsNavIcon } from './icons';
 import type { AppPage } from '../hooks/useAppPage';
 import { useI18n } from '../i18n';
 
-type NavTarget =
-  | 'library'
-  | 'playlists'
-  | 'playlist-lists'
-  | 'merge'
-  | 'bulletin'
-  | 'admin'
-  | 'vip-video';
+type NavTarget = 'playlists' | 'playlist-lists' | 'admin';
 
 type PageNavTabsProps = {
   page: AppPage;
   navigate: (page: NavTarget) => void;
-  canSearch: boolean;
   canAccessPlaylists: boolean;
-  canMerge: boolean;
-  canViewBulletin: boolean;
   canEdit: boolean;
-  canAccessVipVideo: boolean;
   variant: 'header' | 'bottom';
 };
 
 const NAV_ITEMS: {
   id: NavTarget;
-  icon: typeof LibraryNavIcon;
-  labelKey:
-    | 'nav.library'
-    | 'nav.playlistsShort'
-    | 'nav.playlistLists'
-    | 'nav.merge'
-    | 'nav.bulletinShort'
-    | 'nav.admin'
-    | 'nav.vipShort';
-  requiresSearch?: boolean;
+  icon: typeof HomeNavIcon;
+  labelKey: 'nav.playlistsShort' | 'nav.playlistLists' | 'nav.admin';
   requiresPlaylists?: boolean;
-  requiresMerge?: boolean;
-  requiresBulletin?: boolean;
   requiresEdit?: boolean;
-  requiresVipVideo?: boolean;
   bottomOnly?: boolean;
   /** 桌面顶栏不展示（首页由左侧应用名标识即可） */
   headerHidden?: boolean;
@@ -67,30 +37,6 @@ const NAV_ITEMS: {
     bottomOnly: true,
   },
   {
-    id: 'library',
-    icon: LibraryNavIcon,
-    labelKey: 'nav.library',
-    requiresSearch: true,
-  },
-  {
-    id: 'merge',
-    icon: MergeNavIcon,
-    labelKey: 'nav.merge',
-    requiresMerge: true,
-  },
-  {
-    id: 'bulletin',
-    icon: BulletinNavIcon,
-    labelKey: 'nav.bulletinShort',
-    requiresBulletin: true,
-  },
-  {
-    id: 'vip-video',
-    icon: VipNavIcon,
-    labelKey: 'nav.vipShort',
-    requiresVipVideo: true,
-  },
-  {
     id: 'admin',
     icon: AdminNavIcon,
     labelKey: 'nav.admin',
@@ -101,12 +47,8 @@ const NAV_ITEMS: {
 export default function PageNavTabs({
   page,
   navigate,
-  canSearch,
   canAccessPlaylists,
-  canMerge,
-  canViewBulletin,
   canEdit,
-  canAccessVipVideo,
   variant,
 }: PageNavTabsProps) {
   const { t } = useI18n();
@@ -115,12 +57,8 @@ export default function PageNavTabs({
   const items = NAV_ITEMS.filter((item) => {
     if (item.bottomOnly && !isBottom) return false;
     if (item.headerHidden && !isBottom) return false;
-    if (item.requiresSearch && !canSearch) return false;
     if (item.requiresPlaylists && !canAccessPlaylists) return false;
-    if (item.requiresMerge && !canMerge) return false;
-    if (item.requiresBulletin && !canViewBulletin) return false;
     if (item.requiresEdit && !canEdit) return false;
-    if (item.requiresVipVideo && !canAccessVipVideo) return false;
     return true;
   });
 

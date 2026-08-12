@@ -10,7 +10,7 @@ import { roleLabelKey, type UserRole } from '../lib/permissions';
 import { formatUserDisplayName } from '../lib/user-name';
 import { useI18n } from '../i18n';
 
-const ROLES: UserRole[] = ['member', 'vip', 'worship_team', 'creator', 'admin'];
+const ROLES: UserRole[] = ['user', 'admin'];
 
 type Draft = {
   firstName: string;

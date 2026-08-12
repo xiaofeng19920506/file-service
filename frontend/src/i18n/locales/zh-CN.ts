@@ -111,15 +111,12 @@ export default {
     submitting: '提交中…',
     logout: '退出',
     checkingSession: '正在验证登录状态…',
-    registerHint: '新注册用户默认为普通成员，仅可使用播放列表；权限由管理员在后台分配。',
+    registerHint: '新注册用户默认为普通用户，可使用播放列表；管理员可在后台调整角色。',
     continueAsGuest: '暂不登录，仅浏览播放列表',
     adminBadge: '管理员',
     role: {
-      member: '成员',
-      worship_team: '敬拜团',
-      creator: '周报编辑',
+      user: '用户',
       admin: '管理员',
-      vip: 'VIP 视频',
     },
   },
   vipVideo: {

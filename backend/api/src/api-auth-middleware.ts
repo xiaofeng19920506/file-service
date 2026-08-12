@@ -84,6 +84,6 @@ export function registerApiAuthHooks(app: FastifyInstance, deps: ApiAuthDeps): v
     if (roleMeetsAccessLevel(level, role)) return;
 
     const code = accessDeniedErrorCode(level);
-    return reply.code(level === 'member' ? 401 : 403).send({ error: code });
+    return reply.code(code === 'unauthorized' ? 401 : 403).send({ error: code });
   });
 }

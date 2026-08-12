@@ -2,23 +2,19 @@ import {
   searchYoutubeVideos,
   searchYoutubeVideosViaYtdlp,
   getUserLibraryVideoIdSet,
-  getVideoCacheMap,
-  prefetchYoutubeVideosFromSearch,
-  canAccessVipVideo,
   fetchYoutubeSearchSuggestionsRemote,
   YOUTUBE_SEARCH_DEFAULT_PAGE_SIZE,
   YOUTUBE_SEARCH_MAX_PAGE_SIZE,
   type ApiEnv,
   type Db,
-  type YoutubeVideoExtractQueue,
 } from '@file-service/shared';
 import type { FastifyInstance } from 'fastify';
 
 export function registerYoutubeSearchRoutes(
   app: FastifyInstance,
-  opts: { db: Db; env: ApiEnv; videoQueue: YoutubeVideoExtractQueue },
+  opts: { db: Db; env: ApiEnv },
 ) {
-  const { db, env, videoQueue } = opts;
+  const { db, env } = opts;
 
   app.get<{ Querystring: { q?: string } }>(
     '/v1/youtube/search/suggest',
@@ -67,34 +63,12 @@ export function registerYoutubeSearchRoutes(
           getUserLibraryVideoIdSet(db, user.id),
         ]);
 
-        const vipVideo = canAccessVipVideo(user.role);
-
-        if (vipVideo) {
-          void prefetchYoutubeVideosFromSearch(db, videoQueue, page.results).catch((err) => {
-            request.log.warn({ err }, 'vip search video prefetch failed');
-          });
-        }
-
-        const videoCache = vipVideo
-          ? await getVideoCacheMap(
-              db,
-              page.results.map((row) => row.videoId),
-            )
-          : null;
-
         return {
           query: q,
           ...page,
           results: page.results.map((row) => ({
             ...row,
             inLibrary: libraryIds.has(row.videoId),
-            ...(videoCache
-              ? {
-                  video: {
-                    status: videoCache.get(row.videoId)?.status ?? 'pending',
-                  },
-                }
-              : {}),
           })),
         };
       } catch (e) {

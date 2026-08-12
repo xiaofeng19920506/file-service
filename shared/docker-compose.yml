@@ -1,8 +1,6 @@
-# 本地基础设施：Postgres + Redis + LibreOffice 预览（双实例 :3010/:3011）；可选 Worker（profile: libre）
+# 本地基础设施：仅 Postgres + Redis（MP3 播放器；API/Worker 在本机跑）
 # 用法（在仓库根目录）：
-#   docker compose -f shared/docker-compose.yml up -d postgres redis libreoffice libreoffice2
-#   .env: SOFFICE_PREVIEW_URL=http://localhost:3010,http://localhost:3011
-#   docker compose -f shared/docker-compose.yml --profile libre up --build -d worker
+#   docker compose -f shared/docker-compose.yml up -d postgres redis
 
 services:
   postgres:
@@ -23,86 +21,6 @@ services:
     image: redis:7-alpine
     ports:
       - '6379:6379'
-
-  libreoffice:
-    build:
-      context: ..
-      dockerfile: shared/docker/Dockerfile.libreoffice
-    container_name: file-service-libreoffice
-    restart: unless-stopped
-    ports:
-      - '3010:3010'
-    environment:
-      PORT: 3010
-      SOFFICE_PATH: soffice
-    deploy:
-      resources:
-        limits:
-          memory: 1536M
-    healthcheck:
-      test:
-        [
-          'CMD',
-          'node',
-          '-e',
-          "fetch('http://127.0.0.1:3010/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
-        ]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-      start_period: 45s
-
-  # 第二预览实例：与上面并行，API 通过 SOFFICE_PREVIEW_URL 逗号列表轮询
-  libreoffice2:
-    build:
-      context: ..
-      dockerfile: shared/docker/Dockerfile.libreoffice
-    container_name: file-service-libreoffice2
-    restart: unless-stopped
-    ports:
-      - '3011:3010'
-    environment:
-      PORT: 3010
-      SOFFICE_PATH: soffice
-    deploy:
-      resources:
-        limits:
-          memory: 1536M
-    healthcheck:
-      test:
-        [
-          'CMD',
-          'node',
-          '-e',
-          "fetch('http://127.0.0.1:3010/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
-        ]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-      start_period: 45s
-
-  worker:
-    profiles: [libre]
-    build:
-      context: ..
-      dockerfile: shared/docker/Dockerfile.worker
-    depends_on:
-      - postgres
-      - redis
-    env_file:
-      - ../.env
-    environment:
-      DATABASE_URL: postgresql://fileservice:fileservice@postgres:5432/fileservice
-      REDIS_URL: redis://redis:6379
-      STORAGE_BACKEND: fs
-      LOCAL_STORAGE_DIR: /data/storage
-      SOFFICE_PATH: soffice
-    volumes:
-      - ../data/storage:/data/storage
-    deploy:
-      resources:
-        limits:
-          memory: 1536M
 
 volumes:
   postgres_data:

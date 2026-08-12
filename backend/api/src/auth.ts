@@ -250,7 +250,7 @@ export function registerAuthRoutes(
           passwordHash: hashPassword(password),
           firstName,
           lastName,
-          role: 'member',
+          role: 'user',
           ...contact,
         })
         .returning();

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 启动 file-service：Docker(Postgres+Redis) + API + Worker
+# 启动 file-service：Docker(Postgres+Redis) + API + Worker（youtube-audio）
 # 手动：bash scripts/autostart/api-stack.sh
 set -euo pipefail
 

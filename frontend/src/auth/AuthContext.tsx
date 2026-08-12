@@ -45,13 +45,9 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 /** 会话校验最长阻塞首屏时间（弱网 / 跨境） */
 const SESSION_VERIFY_TIMEOUT_MS = 8_000;
 
-function goHomeAfterAuth(user?: { role: string } | null): void {
+function goHomeAfterAuth(): void {
   const hash = window.location.hash;
   if (hash !== '#/login' && hash !== '' && hash !== '#/' && hash !== '#') return;
-  if (user && normalizeUserRole(user.role) === 'vip') {
-    window.location.hash = '#/vip';
-    return;
-  }
   window.location.hash = '#/playlists';
 }
 
@@ -84,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         setUser(verified ?? getCachedUser());
         if ((verified ?? getCachedUser()) && window.location.hash === '#/login') {
-          goHomeAfterAuth(verified ?? getCachedUser());
+          goHomeAfterAuth();
         }
       } finally {
         if (!cancelled) {
@@ -103,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const session = await loginUser({ email, password });
     setUser(session.user);
-    goHomeAfterAuth(session.user);
+    goHomeAfterAuth();
   }, []);
 
   const register = useCallback(
@@ -122,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }) => {
       const session = await registerUser(input);
       setUser(session.user);
-      goHomeAfterAuth(session.user);
+      goHomeAfterAuth();
     },
     [],
   );

@@ -1,21 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from './auth/AuthContext';
-import BlobPreviewPage from './views/BlobPreviewPage';
-import MergeEditPage from './views/MergeEditPage';
 import AdminPage from './views/AdminPage';
 import AuthPage from './views/AuthPage';
-import LibraryPage from './views/LibraryPage';
-import MergePage from './views/MergePage';
 import PlaylistsPage from './views/PlaylistsPage';
-import BulletinPage from './views/BulletinPage';
-import WorshipSongsInvitePage from './views/WorshipSongsInvitePage';
-import BulletinSectionInvitePage from './views/BulletinSectionInvitePage';
-import BulletinSlideShowPresenterPage from './views/BulletinSlideShowPresenterPage';
-import BulletinSlideShowProjectorPage from './views/BulletinSlideShowProjectorPage';
-import VipVideoPage from './views/VipVideoPage';
-import UploadConfirmPage from './views/UploadConfirmPage';
-import { useLibraryUpload } from './hooks/useLibraryUpload';
-import { useBulletinDrivePoll } from './hooks/useBulletinDrivePoll';
 import PageNavTabs from './components/PageNavTabs';
 import { CloseIcon, ChevronLeftIcon, MenuIcon, MoonIcon, SunIcon } from './components/icons';
 import { useAppPage } from './hooks/useAppPage';
@@ -38,21 +25,14 @@ function AppShellInner({
 }) {
   const { t, locale, setLocale } = useI18n();
   const { user, loading, logout, permissions, isAdmin } = useAuth();
-  useBulletinDrivePoll({
-    enabled: Boolean(user) && permissions.canViewBulletin,
-    canManage: permissions.canManageBulletin,
-  });
   const {
     page,
     playlistId,
     playlistShareToken,
-    mergePlaylistId,
     navigate,
     navigateToPlaylist,
     navigateClearPlaylistShare,
-    navigateToMergeWithPlaylist,
   } = useAppPage();
-  const libraryUpload = useLibraryUpload();
   const [theme, setTheme] = useState<'light' | 'dark'>(() =>
     document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light',
   );
@@ -65,14 +45,6 @@ function AppShellInner({
       if (user || hasStoredSession()) navigate(home);
       return;
     }
-    if (page === 'library' && !permissions.canSearch) {
-      navigate(home);
-      return;
-    }
-    if (page === 'preview' && !permissions.canDownload) {
-      navigate(home);
-      return;
-    }
     if (page === 'playlists' && !permissions.canAccessPlaylists) {
       navigate(home);
       return;
@@ -81,33 +53,9 @@ function AppShellInner({
       navigate(home);
       return;
     }
-    if ((page === 'merge' || page === 'merge-edit') && !permissions.canMerge) {
-      navigate(home);
-      return;
-    }
-    if (page === 'library-upload' && !permissions.canUpload) {
-      navigate(home);
-      return;
-    }
     if (page === 'admin' && !permissions.canEdit) {
       navigate(home);
       return;
-    }
-    if (page === 'bulletin' && !permissions.canViewBulletin) {
-      navigate(home);
-      return;
-    }
-    if (page === 'vip-video' && !permissions.canAccessVipVideo) {
-      navigate(home);
-      return;
-    }
-    if (permissions.isVipOnly && page !== 'vip-video') {
-      if (window.location.hash !== '#/vip') {
-        window.location.hash = '#/vip';
-      }
-    }
-    if (page === 'worship-songs' && !permissions.canAccessPlaylists && !permissions.canViewBulletin) {
-      navigate(home);
     }
   }, [loading, user, page, navigate, permissions]);
 
@@ -134,22 +82,15 @@ function AppShellInner({
   }, [mobileMenuOpen]);
 
   useEffect(() => {
-    if (page === 'preview' || page === 'login' || page === 'merge-edit' || page === 'library-upload')
-      return;
+    if (page === 'login') return;
     document.title =
       page === 'playlists'
         ? t('pages.playlistsTitle')
         : page === 'playlist-lists'
           ? t('pages.playlistListsTitle')
-          : page === 'merge'
-          ? t('pages.mergeTitle')
           : page === 'admin'
             ? t('pages.adminTitle')
-            : page === 'bulletin'
-              ? t('pages.bulletinTitle')
-              : page === 'library'
-              ? t('pages.libraryTitle')
-              : t('pages.playlistsTitle');
+            : t('pages.playlistsTitle');
   }, [page, t]);
 
   const toggleTheme = () => {
@@ -200,15 +141,9 @@ function AppShellInner({
       ? t('nav.playlistsShort')
       : page === 'playlist-lists'
         ? t('nav.playlistListsShort')
-        : page === 'merge'
-        ? t('nav.mergeShort')
         : page === 'admin'
           ? t('nav.adminShort')
-          : page === 'bulletin'
-            ? t('nav.bulletinShort')
-            : page === 'library'
-            ? t('nav.libraryShort')
-            : t('nav.playlistsShort');
+          : t('nav.playlistsShort');
 
   const accountActions = user ? (
     <>
@@ -229,8 +164,8 @@ function AppShellInner({
   return (
     <div
       className={`app${page === 'playlists' || page === 'playlist-lists' ? ' app-playlists' : ''}${
-        page === 'bulletin' ? ' app-bulletin' : ''
-      }${mobileMenuOpen ? ' nav-mobile-menu-open' : ''}`}
+        mobileMenuOpen ? ' nav-mobile-menu-open' : ''
+      }`}
     >
       <header className="nav">
         <div className="nav-inner">
@@ -264,12 +199,8 @@ function AppShellInner({
             <PageNavTabs
               page={page}
               navigate={navigate}
-              canSearch={permissions.canSearch}
               canAccessPlaylists={permissions.canAccessPlaylists}
-              canMerge={permissions.canMerge}
-              canViewBulletin={permissions.canViewBulletin}
               canEdit={permissions.canEdit}
-              canAccessVipVideo={permissions.canAccessVipVideo}
               variant="header"
             />
           </div>
@@ -338,7 +269,6 @@ function AppShellInner({
       </aside>
 
       <div className="app-content">
-        {page === 'library' && permissions.canSearch && <LibraryPage libraryUpload={libraryUpload} />}
         {(page === 'playlists' || page === 'playlist-lists') && permissions.canAccessPlaylists && (
           <PlaylistsPage
             mobileHome={page === 'playlist-lists' ? 'lists' : 'search'}
@@ -346,11 +276,8 @@ function AppShellInner({
             shareToken={playlistShareToken}
             onSelectId={navigateToPlaylist}
             onClearShareToken={() => navigateClearPlaylistShare(playlistId)}
-            onLoadToMerge={navigateToMergeWithPlaylist}
           />
         )}
-        {page === 'merge' && permissions.canMerge && <MergePage mergePlaylistId={mergePlaylistId} />}
-        {page === 'bulletin' && permissions.canViewBulletin && <BulletinPage />}
         {page === 'admin' && permissions.canEdit && <AdminPage />}
       </div>
 
@@ -358,12 +285,8 @@ function AppShellInner({
         <PageNavTabs
           page={page}
           navigate={navigate}
-          canSearch={permissions.canSearch}
           canAccessPlaylists={permissions.canAccessPlaylists}
-          canMerge={permissions.canMerge}
-          canViewBulletin={permissions.canViewBulletin}
           canEdit={permissions.canEdit}
-          canAccessVipVideo={permissions.canAccessVipVideo}
           variant="bottom"
         />
       </nav>
@@ -383,24 +306,9 @@ function AppShellWithMenu() {
 }
 
 export default function App() {
-  const { user, loading, permissions } = useAuth();
-  const { page, previewBlobId, mergeEditBlobIds, mergeEditTitle, worshipSongsInviteToken, worshipSongsBulletinId, bulletinSectionInviteToken, slideshowSessionId } = useAppPage();
-  const libraryUpload = useLibraryUpload();
+  const { user, loading } = useAuth();
+  const { page } = useAppPage();
   const { t } = useI18n();
-
-  // 敬拜邀请链接：仅凭 HMAC token，无需登录（避免跳转 #/login 丢掉 invite）
-  if (page === 'worship-songs' && worshipSongsInviteToken) {
-    return (
-      <WorshipSongsInvitePage
-        inviteToken={worshipSongsInviteToken}
-      />
-    );
-  }
-
-  // 主日信息牧师 PPT 邀请：无需登录
-  if (page === 'bulletin-section-invite' && bulletinSectionInviteToken) {
-    return <BulletinSectionInvitePage token={bulletinSectionInviteToken} />;
-  }
 
   if (loading) {
     return (
@@ -412,67 +320,6 @@ export default function App() {
 
   if (page === 'login' && !user) {
     return <AuthPage />;
-  }
-
-  if (page === 'vip-video') {
-    if (!user) {
-      window.location.hash = '#/login';
-      return <AuthPage />;
-    }
-    if (!permissions.canAccessVipVideo) {
-      const home = homePageForPermissions(permissions);
-      window.location.hash = home === 'vip-video' ? '#/vip' : `#/${home}`;
-      return (
-        <div className="auth-page">
-          <p className="auth-loading">{t('auth.checkingSession')}</p>
-        </div>
-      );
-    }
-    return <VipVideoPage />;
-  }
-
-  if (page === 'preview' && previewBlobId && permissions.canDownload) {
-    return <BlobPreviewPage blobId={previewBlobId} />;
-  }
-
-  if (page === 'merge-edit' && mergeEditBlobIds?.length && permissions.canMerge) {
-    return <MergeEditPage blobIds={mergeEditBlobIds} title={mergeEditTitle} />;
-  }
-
-  if (page === 'library-upload' && permissions.canUpload) {
-    return <UploadConfirmPage libraryUpload={libraryUpload} />;
-  }
-
-  if (
-    page === 'bulletin-slideshow-projector' &&
-    slideshowSessionId &&
-    permissions.canViewBulletin
-  ) {
-    return <BulletinSlideShowProjectorPage sessionId={slideshowSessionId} />;
-  }
-
-  if (
-    page === 'bulletin-slideshow-presenter' &&
-    slideshowSessionId &&
-    permissions.canViewBulletin
-  ) {
-    return <BulletinSlideShowPresenterPage sessionId={slideshowSessionId} />;
-  }
-
-  if (page === 'worship-songs' && worshipSongsBulletinId) {
-    if (!user) {
-      window.location.hash = '#/login';
-      return <AuthPage />;
-    }
-    if (!permissions.canViewBulletin) {
-      window.location.hash = '#/bulletin';
-      return (
-        <div className="auth-page">
-          <p className="auth-loading">{t('auth.checkingSession')}</p>
-        </div>
-      );
-    }
-    return <WorshipSongsInvitePage bulletinId={worshipSongsBulletinId} />;
   }
 
   if (!user && page !== 'login') {

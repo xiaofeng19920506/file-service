@@ -17,7 +17,7 @@ export const users = pgTable('users', {
   passwordHash: text('password_hash').notNull(),
   firstName: text('first_name').notNull(),
   lastName: text('last_name').notNull().default(''),
-  role: text('role').notNull().default('member'),
+  role: text('role').notNull().default('user'),
   premiumTrialEndsAt: timestamp('premium_trial_ends_at', { withTimezone: true }),
   phone: text('phone').notNull().default(''),
   addressLine1: text('address_line1').notNull().default(''),
@@ -43,7 +43,7 @@ export const userLoginDevices = pgTable('user_login_devices', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-export type UserRole = 'member' | 'worship_team' | 'creator' | 'admin' | 'vip';
+export type UserRole = 'admin' | 'user';
 
 export const blobs = pgTable('blobs', {
   id: uuid('id').defaultRandom().primaryKey(),

@@ -3,19 +3,15 @@ import {
   recordYoutubeVideoPlay,
   recordYoutubeUserSearch,
   getPersonalizedYoutubeRecommendations,
-  prefetchYoutubeVideosFromSearch,
-  canAccessVipVideo,
-  getVideoCacheMap,
   type Db,
-  type YoutubeVideoExtractQueue,
 } from '@file-service/shared';
 import type { FastifyInstance } from 'fastify';
 
 export function registerYoutubeTrendingRoutes(
   app: FastifyInstance,
-  opts: { db: Db; videoQueue: YoutubeVideoExtractQueue },
+  opts: { db: Db },
 ) {
-  const { db, videoQueue } = opts;
+  const { db } = opts;
 
   app.get<{ Querystring: { limit?: string } }>(
     '/v1/youtube/recommendations',
@@ -26,43 +22,7 @@ export function registerYoutubeTrendingRoutes(
       const limitRaw = Number.parseInt(request.query.limit ?? '10', 10);
       const limit = Number.isFinite(limitRaw) ? limitRaw : 10;
 
-      const data = await getPersonalizedYoutubeRecommendations(db, user.id, limit);
-      const vipVideo = canAccessVipVideo(user.role);
-
-      if (vipVideo) {
-        void prefetchYoutubeVideosFromSearch(
-          db,
-          videoQueue,
-          data.songs.map((song) => ({
-            videoId: song.videoId,
-            title: song.title,
-            relevanceScore: song.playCount,
-          })),
-        ).catch((err) => {
-          request.log.warn({ err }, 'vip recommendations video prefetch failed');
-        });
-      }
-
-      const videoCache = vipVideo
-        ? await getVideoCacheMap(
-            db,
-            data.songs.map((song) => song.videoId),
-          )
-        : null;
-
-      return {
-        ...data,
-        songs: data.songs.map((song) => ({
-          ...song,
-          ...(videoCache
-            ? {
-                video: {
-                  status: videoCache.get(song.videoId)?.status ?? 'pending',
-                },
-              }
-            : {}),
-        })),
-      };
+      return getPersonalizedYoutubeRecommendations(db, user.id, limit);
     },
   );
 
@@ -73,43 +33,7 @@ export function registerYoutubeTrendingRoutes(
     const limitRaw = Number.parseInt(request.query.limit ?? '10', 10);
     const limit = Number.isFinite(limitRaw) ? limitRaw : 10;
 
-    const data = await getTrendingYoutubeSongs(db, limit, user.id);
-    const vipVideo = canAccessVipVideo(user.role);
-
-    if (vipVideo) {
-      void prefetchYoutubeVideosFromSearch(
-        db,
-        videoQueue,
-        data.songs.map((song) => ({
-          videoId: song.videoId,
-          title: song.title,
-          relevanceScore: song.playCount,
-        })),
-      ).catch((err) => {
-        request.log.warn({ err }, 'vip trending video prefetch failed');
-      });
-    }
-
-    const videoCache = vipVideo
-      ? await getVideoCacheMap(
-          db,
-          data.songs.map((song) => song.videoId),
-        )
-      : null;
-
-    return {
-      ...data,
-      songs: data.songs.map((song) => ({
-        ...song,
-        ...(videoCache
-          ? {
-              video: {
-                status: videoCache.get(song.videoId)?.status ?? 'pending',
-              },
-            }
-          : {}),
-      })),
-    };
+    return getTrendingYoutubeSongs(db, limit, user.id);
   });
 
   app.post<{ Body: { videoId?: string; title?: string; channelTitle?: string | null } }>(

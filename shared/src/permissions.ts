@@ -2,132 +2,100 @@ import type { UserRole } from './db/schema.js';
 
 export type { UserRole };
 
-const VALID_ROLES: UserRole[] = ['member', 'worship_team', 'creator', 'admin', 'vip'];
+const VALID_ROLES: UserRole[] = ['admin', 'user'];
+
+/** 旧角色映射到 user；未知 → user */
 export function normalizeUserRole(raw: string | null | undefined): UserRole {
-  if (raw === 'admin' || raw === 'worship_team' || raw === 'creator' || raw === 'member' || raw === 'vip') {
-    return raw;
+  if (raw === 'admin') return 'admin';
+  if (raw === 'user') return 'user';
+  // 历史角色一律降为普通用户
+  if (
+    raw === 'member' ||
+    raw === 'worship_team' ||
+    raw === 'creator' ||
+    raw === 'vip'
+  ) {
+    return 'user';
   }
-  if (raw === 'user') return 'member';
-  return 'member';
+  return 'user';
 }
 
 export function isValidUserRole(raw: string): raw is UserRole {
   return VALID_ROLES.includes(raw as UserRole);
 }
 
-function isWorshipCapable(role: UserRole | null): boolean {
-  return role === 'worship_team' || role === 'creator' || role === 'admin';
-}
-
-export function canSearch(role: UserRole | null): boolean {
-  return isWorshipCapable(role);
+function isLoggedIn(role: UserRole | null): boolean {
+  return role === 'admin' || role === 'user';
 }
 
 export function canAccessPlaylists(role: UserRole | null): boolean {
-  return role === 'member' || isWorshipCapable(role);
-}
-
-export function canDownload(role: UserRole | null): boolean {
-  return isWorshipCapable(role);
-}
-
-export function canMerge(role: UserRole | null): boolean {
-  return isWorshipCapable(role);
-}
-
-export function canUpload(role: UserRole | null): boolean {
-  return isWorshipCapable(role);
+  return isLoggedIn(role);
 }
 
 export function canExportToYoutube(role: UserRole | null): boolean {
-  return isWorshipCapable(role);
+  return isLoggedIn(role);
 }
 
 export function canEdit(role: UserRole | null): boolean {
   return role === 'admin';
 }
 
-export function canManageBulletin(role: UserRole | null): boolean {
-  return role === 'creator' || role === 'admin';
+/** @deprecated 诗库已移除；保留函数避免旧调用编译失败，恒为 false */
+export function canSearch(_role: UserRole | null): boolean {
+  return false;
 }
 
-export function canViewBulletin(role: UserRole | null): boolean {
-  return isWorshipCapable(role);
+/** @deprecated */
+export function canDownload(_role: UserRole | null): boolean {
+  return false;
 }
 
-/** 敬拜赞美歌单：敬拜团及以上可直接编辑周报绑定的歌单 */
-export function canEditBulletinWorshipSongs(role: UserRole | null): boolean {
-  return canViewBulletin(role);
+/** @deprecated */
+export function canMerge(_role: UserRole | null): boolean {
+  return false;
 }
 
-export function canAccessVipVideo(role: UserRole | null): boolean {
-  return role === 'vip' || role === 'admin';
+/** @deprecated */
+export function canUpload(_role: UserRole | null): boolean {
+  return false;
 }
 
-/** 播放列表 YouTube 视频模式（iframe）；普通成员仅 MP3 */
-export function canPlayPlaylistVideo(role: UserRole | null): boolean {
-  return role === 'vip' || isWorshipCapable(role);
+/** @deprecated */
+export function canManageBulletin(_role: UserRole | null): boolean {
+  return false;
 }
 
-export function isVipOnlyRole(role: UserRole | null): boolean {
-  return role === 'vip';
+/** @deprecated */
+export function canViewBulletin(_role: UserRole | null): boolean {
+  return false;
 }
 
-function isBulletinWorshipPlaylistEditPath(method: string, path: string): boolean {
-  if (!/^\/v1\/bulletins\/[^/]+\/worship-playlist/.test(path)) return false;
-  if (method === 'POST' && /\/worship-playlist\/invite$/.test(path)) return false;
-  if (method === 'POST' && /\/worship-playlist$/.test(path)) return false;
-  return (
-    (method === 'GET' && /\/worship-playlist$/.test(path))
-    || (method === 'POST' && /\/worship-playlist\/open$/.test(path))
-    || (method === 'POST' && /\/worship-playlist\/items$/.test(path))
-    || (method === 'PUT' && /\/worship-playlist\/items\/order$/.test(path))
-    || (method === 'DELETE' && /\/worship-playlist\/items\/[^/]+$/.test(path))
-  );
+/** @deprecated */
+export function canEditBulletinWorshipSongs(_role: UserRole | null): boolean {
+  return false;
 }
 
-export function isSearchPath(method: string, path: string): boolean {
-  return method === 'GET' && path === '/v1/blobs';
+/** @deprecated VIP 已移除 */
+export function canAccessVipVideo(_role: UserRole | null): boolean {
+  return false;
+}
+
+/** MP3-only：不再提供歌单视频模式 */
+export function canPlayPlaylistVideo(_role: UserRole | null): boolean {
+  return false;
+}
+
+/** @deprecated */
+export function isVipOnlyRole(_role: UserRole | null): boolean {
+  return false;
 }
 
 export function isPlaylistPath(method: string, path: string): boolean {
-  // 邀请令牌接口单独走 public（HMAC 即凭证），勿按 playlist 角色拦截
-  if (path.startsWith('/v1/playlists/invite/')) return false;
   if (path.startsWith('/v1/playlists')) return true;
   if (method === 'POST' && path === '/v1/youtube/plays') return true;
   if (method === 'GET' && /^\/v1\/youtube\/videos\/[^/]+\/captions$/.test(path)) return true;
   if (method === 'POST' && path === '/v1/youtube/audio/prioritize') return true;
   if (/^\/v1\/youtube\/videos\/[^/]+\/audio/.test(path)) return true;
-  return false;
-}
-
-/** 周报敬拜邀请链接：仅凭 HMAC token 访问，无需登录 */
-export function isWorshipPlaylistInvitePath(method: string, path: string): boolean {
-  if (!path.startsWith('/v1/playlists/invite/')) return false;
-  if (method === 'GET' && /^\/v1\/playlists\/invite\/[^/]+$/.test(path)) return true;
-  if (method === 'POST' && /^\/v1\/playlists\/invite\/[^/]+\/items$/.test(path)) return true;
-  if (method === 'PUT' && /^\/v1\/playlists\/invite\/[^/]+\/items\/order$/.test(path)) return true;
-  if (method === 'DELETE' && /^\/v1\/playlists\/invite\/[^/]+\/items\/[^/]+$/.test(path)) return true;
-  if (method === 'GET' && /^\/v1\/playlists\/invite\/[^/]+\/youtube\/search$/.test(path)) return true;
-  if (method === 'GET' && /^\/v1\/playlists\/invite\/[^/]+\/youtube\/search\/suggest$/.test(path)) {
-    return true;
-  }
-  return false;
-}
-
-/** 主日信息等分区 PPT 邀请：仅凭 HMAC token，无需登录 */
-export function isBulletinSectionInvitePath(method: string, path: string): boolean {
-  if (!path.startsWith('/v1/bulletins/section-invite/')) return false;
-  if (method === 'GET' && /^\/v1\/bulletins\/section-invite\/[^/]+$/.test(path)) return true;
-  if (method === 'GET' && /^\/v1\/bulletins\/section-invite\/[^/]+\/pptx$/.test(path)) return true;
-  if (method === 'POST' && /^\/v1\/bulletins\/section-invite\/[^/]+\/pptx$/.test(path)) return true;
-  if (method === 'POST' && /^\/v1\/bulletins\/section-invite\/[^/]+\/verse$/.test(path)) return true;
-  if (
-    method === 'GET' &&
-    /^\/v1\/bulletins\/section-invite\/[^/]+\/preview\/\d+\.png$/.test(path)
-  ) {
-    return true;
-  }
   return false;
 }
 
@@ -140,60 +108,6 @@ export function isYoutubeBrowsePath(method: string, path: string): boolean {
   return false;
 }
 
-export function isVipVideoPath(method: string, path: string): boolean {
-  if (method === 'GET' && path === '/v1/vip/playlist') return true;
-  if (method === 'POST' && path === '/v1/youtube/video/prioritize') return true;
-  if (method === 'POST' && path === '/v1/youtube/video/status') return true;
-  if (method === 'GET' && /^\/v1\/youtube\/videos\/[^/]+\/video$/.test(path)) return true;
-  if (method === 'POST' && /^\/v1\/youtube\/videos\/[^/]+\/video\/extract$/.test(path)) return true;
-  return false;
-}
-
-/** @deprecated use isSearchPath — kept for callers that still reference guest browse */
-export function isGuestBrowsePath(method: string, path: string): boolean {
-  return isSearchPath(method, path);
-}
-
-export function isDownloadPath(method: string, path: string): boolean {
-  if (method !== 'GET') return false;
-  return /^\/v1\/blobs\/[^/]+\/content$/.test(path)
-    || /^\/v1\/blobs\/[^/]+\/preview\.pptx$/.test(path);
-}
-
-export function isUploadPath(method: string, path: string): boolean {
-  if (path === '/v1/blobs/exists' && method === 'GET') return true;
-  if (path === '/v1/uploads' && method === 'POST') return true;
-  if (path === '/v1/uploads/init' && method === 'POST') return true;
-  if (/^\/v1\/uploads\/[^/]+\/complete$/.test(path) && method === 'POST') return true;
-  if (/^\/v1\/uploads\/[^/]+\/chunks\/\d+$/.test(path) && method === 'POST') return true;
-  return false;
-}
-
-export function isMergePath(method: string, path: string): boolean {
-  if (isPlaylistPath(method, path)) return false;
-  if (!path.startsWith('/v1/jobs')) return false;
-  if (method === 'GET' && /^\/v1\/jobs\/[^/]+\/download$/.test(path)) return false;
-  return true;
-}
-
-export function isBulletinPath(_method: string, path: string): boolean {
-  return path.startsWith('/v1/bulletins');
-}
-
-function isBulletinWritePath(method: string, path: string): boolean {
-  if (!path.startsWith('/v1/bulletins')) return false;
-  // Creator/admin directory for inviting worship team to add songs
-  if (method === 'GET' && path === '/v1/bulletins/worship-team-members') return true;
-  return method !== 'GET';
-}
-
-export function isEditPath(method: string, path: string): boolean {
-  if (method === 'PATCH' && /^\/v1\/blobs\/[^/]+\/metadata$/.test(path)) return true;
-  if (method === 'PUT' && /^\/v1\/blobs\/[^/]+\/content$/.test(path)) return true;
-  if (method === 'DELETE' && /^\/v1\/blobs\/[^/]+$/.test(path)) return true;
-  return false;
-}
-
 export function isAdminUserManagePath(method: string, path: string): boolean {
   if (method === 'GET' && path === '/v1/admin/users') return true;
   if (method === 'PATCH' && /^\/v1\/admin\/users\/[^/]+$/.test(path)) return true;
@@ -202,7 +116,7 @@ export function isAdminUserManagePath(method: string, path: string): boolean {
 }
 
 export function isAdminOnlyPath(method: string, path: string): boolean {
-  return isEditPath(method, path) || isAdminUserManagePath(method, path);
+  return isAdminUserManagePath(method, path);
 }
 
 export function isYoutubeOAuthCallbackPath(method: string, path: string): boolean {
@@ -217,35 +131,18 @@ export function isYoutubeExportPath(method: string, path: string): boolean {
   return false;
 }
 
-/** @deprecated use isEditPath */
-export function isAdminWritePath(method: string, path: string): boolean {
-  return isEditPath(method, path);
-}
-
 /** API 路径所需的最低权限级别 */
 export type PathAccessLevel =
   | 'public'
-  | 'search'
-  | 'member'
-  | 'download'
-  | 'upload'
+  | 'user'
   | 'playlist'
-  | 'merge'
   | 'admin'
   | 'youtube_export'
-  | 'bulletin_view'
-  | 'bulletin_worship_edit'
-  | 'bulletin_manage'
-  | 'vip_video'
   | 'youtube_browse'
   | 'session';
 
 function isPublicInfrastructurePath(path: string): boolean {
   return path === '/health' || path === '/ready' || path === '/docs' || path.startsWith('/docs/');
-}
-
-function isSignedMergeDownloadPath(method: string, path: string): boolean {
-  return method === 'GET' && /^\/v1\/jobs\/[^/]+\/download$/.test(path);
 }
 
 function isSignedAudioStreamPath(method: string, path: string): boolean {
@@ -254,10 +151,6 @@ function isSignedAudioStreamPath(method: string, path: string): boolean {
 
 function isSignedAudioPreviewPath(method: string, path: string): boolean {
   return method === 'GET' && /^\/v1\/youtube\/videos\/[^/]+\/audio\/preview$/.test(path);
-}
-
-function isSignedVideoStreamPath(method: string, path: string): boolean {
-  return method === 'GET' && /^\/v1\/youtube\/videos\/[^/]+\/video\/stream$/.test(path);
 }
 
 /** 缩略图经 API 代理；<img> 无法带 Bearer，须公开 */
@@ -281,33 +174,20 @@ function isSessionPath(method: string, path: string): boolean {
 /** 解析路径所需的最低权限（未识别的 /v1/* 默认需登录） */
 export function resolvePathAccessLevel(method: string, path: string): PathAccessLevel {
   if (isPublicInfrastructurePath(path)) return 'public';
-  if (isSignedMergeDownloadPath(method, path)) return 'public';
   if (isSignedAudioStreamPath(method, path)) return 'public';
   if (isSignedAudioPreviewPath(method, path)) return 'public';
-  if (isSignedVideoStreamPath(method, path)) return 'public';
   if (isYoutubeThumbnailPath(method, path)) return 'public';
   if (isAuthEntryPath(method, path)) return 'public';
   if (isYoutubeOAuthCallbackPath(method, path)) return 'public';
-  if (isWorshipPlaylistInvitePath(method, path)) return 'public';
-  if (isBulletinSectionInvitePath(method, path)) return 'public';
-  if (isVipVideoPath(method, path)) return 'vip_video';
   if (isYoutubeBrowsePath(method, path)) return 'youtube_browse';
   if (isYoutubeExportPath(method, path)) return 'youtube_export';
-  if (isBulletinWorshipPlaylistEditPath(method, path)) return 'bulletin_worship_edit';
-  if (isBulletinWritePath(method, path)) return 'bulletin_manage';
-  if (isBulletinPath(method, path)) return 'bulletin_view';
-  if (isSearchPath(method, path)) return 'search';
   if (isAdminOnlyPath(method, path)) return 'admin';
-  if (isUploadPath(method, path)) return 'upload';
   if (isPlaylistPath(method, path)) return 'playlist';
-  if (isMergePath(method, path)) return 'merge';
-  if (isDownloadPath(method, path)) return 'download';
   if (isSessionPath(method, path)) return 'session';
-  if (path.startsWith('/v1/')) return 'member';
+  if (path.startsWith('/v1/')) return 'user';
   return 'public';
 }
 
-/** 是否可在无凭证情况下访问（健康检查、登录、游客浏览诗库等） */
 export function isUnauthenticatedAccessAllowed(method: string, path: string): boolean {
   const level = resolvePathAccessLevel(method, path);
   return level === 'public';
@@ -320,40 +200,14 @@ export function roleMeetsAccessLevel(
   switch (level) {
     case 'public':
       return true;
-    case 'search':
-      return canSearch(role);
-    case 'member':
-      return role === 'member' || role === 'worship_team' || role === 'creator' || role === 'admin';
-    case 'download':
-      return canDownload(role);
-    case 'upload':
-      return canUpload(role);
+    case 'user':
     case 'playlist':
-      return canAccessPlaylists(role);
-    case 'merge':
-      return canMerge(role);
+    case 'youtube_export':
+    case 'youtube_browse':
+    case 'session':
+      return isLoggedIn(role);
     case 'admin':
       return canEdit(role);
-    case 'youtube_export':
-      return canExportToYoutube(role);
-    case 'bulletin_view':
-      return canViewBulletin(role);
-    case 'bulletin_worship_edit':
-      return canEditBulletinWorshipSongs(role);
-    case 'bulletin_manage':
-      return canManageBulletin(role);
-    case 'vip_video':
-      return canAccessVipVideo(role);
-    case 'youtube_browse':
-      return canAccessPlaylists(role) || canAccessVipVideo(role);
-    case 'session':
-      return (
-        role === 'member'
-        || role === 'worship_team'
-        || role === 'creator'
-        || role === 'admin'
-        || role === 'vip'
-      );
     default:
       return false;
   }
@@ -361,33 +215,52 @@ export function roleMeetsAccessLevel(
 
 export function accessDeniedErrorCode(level: PathAccessLevel): string {
   switch (level) {
-    case 'search':
-      return 'search_forbidden';
-    case 'download':
-      return 'download_forbidden';
-    case 'upload':
-      return 'upload_forbidden';
     case 'playlist':
+    case 'youtube_browse':
       return 'playlist_forbidden';
-    case 'merge':
-      return 'merge_forbidden';
     case 'admin':
       return 'admin_required';
     case 'youtube_export':
       return 'youtube_export_forbidden';
-    case 'bulletin_view':
-    case 'bulletin_worship_edit':
-    case 'bulletin_manage':
-      return 'bulletin_forbidden';
-    case 'vip_video':
-      return 'vip_forbidden';
-    case 'youtube_browse':
-      return 'playlist_forbidden';
     case 'session':
-      return 'unauthorized';
-    case 'member':
+    case 'user':
       return 'unauthorized';
     default:
       return 'forbidden';
   }
+}
+
+/** @deprecated stubs for removed features */
+export function isSearchPath(_method: string, _path: string): boolean {
+  return false;
+}
+export function isGuestBrowsePath(method: string, path: string): boolean {
+  return isSearchPath(method, path);
+}
+export function isDownloadPath(_method: string, _path: string): boolean {
+  return false;
+}
+export function isUploadPath(_method: string, _path: string): boolean {
+  return false;
+}
+export function isMergePath(_method: string, _path: string): boolean {
+  return false;
+}
+export function isBulletinPath(_method: string, _path: string): boolean {
+  return false;
+}
+export function isWorshipPlaylistInvitePath(_method: string, _path: string): boolean {
+  return false;
+}
+export function isBulletinSectionInvitePath(_method: string, _path: string): boolean {
+  return false;
+}
+export function isVipVideoPath(_method: string, _path: string): boolean {
+  return false;
+}
+export function isEditPath(_method: string, _path: string): boolean {
+  return false;
+}
+export function isAdminWritePath(method: string, path: string): boolean {
+  return isEditPath(method, path);
 }
