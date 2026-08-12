@@ -94,11 +94,11 @@
     flex-direction: column;
   }
 
-  /* 试听：CD 靠下，添加按钮在 CD 右上角 */
+  /* 试听：CD 靠下，添加按钮在 CD 右上角（勿裁切） */
   .playlists-page[data-mobile-home-preview='true'] .playlists-player-stage[data-audio-mobile-record='true'] {
     flex: 1 1 auto;
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .playlists-page[data-mobile-home-preview='true']
@@ -111,6 +111,7 @@
     padding-top: 0.75rem;
     padding-bottom: 0.5rem;
     justify-content: flex-end;
+    overflow: visible;
   }
 
   .playlists-page[data-mobile-home-preview='true'] .playlist-audio-record-stage {
@@ -120,10 +121,10 @@
     justify-content: flex-end;
     padding-top: min(12vh, 4.5rem);
     padding-bottom: 0.5rem;
+    overflow: visible;
   }
 
-  .playlists-page[data-mobile-home-preview='true'] .playlist-audio-record-disc-wrap,
-  .playlists-page[data-mobile-home-preview='true'] .playlist-audio-record-disc {
+  .playlists-page[data-mobile-home-preview='true'] .playlist-audio-record-disc-wrap {
     width: min(68vw, 16rem);
   }
 
@@ -134,6 +135,7 @@
 
   .playlists-page[data-mobile-home-preview='true'] .playlists-main-inner--mobile-audio {
     padding-bottom: calc(var(--playlists-mobile-dock-height-active) + 1.25rem) !important;
+    overflow: visible !important;
   }
 
   .playlists-list-rename-btn,

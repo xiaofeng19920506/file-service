@@ -403,6 +403,8 @@
     flex-shrink: 0;
     width: min(72vw, 17.5rem);
     aspect-ratio: 1;
+    /* 给右上角添加按钮留出不被父级 overflow 裁切的空间 */
+    overflow: visible;
   }
 
   .playlist-audio-record-disc {
@@ -425,33 +427,34 @@
 
   .playlist-audio-record-add-btn {
     position: absolute;
-    top: 0;
-    right: 0;
-    z-index: 2;
+    top: 0.35rem;
+    right: 0.35rem;
+    z-index: 3;
     display: grid;
     place-items: center;
-    width: 2.5rem;
-    height: 2.5rem;
+    width: 2.65rem;
+    height: 2.65rem;
     margin: 0;
     padding: 0;
     border: 1px solid var(--border-light);
     border-radius: 50%;
     background: var(--surface);
     color: var(--text);
-    box-shadow: 0 6px 16px color-mix(in srgb, #000 14%, transparent);
-    transform: translate(18%, -18%);
+    box-shadow: 0 6px 16px color-mix(in srgb, #000 16%, transparent);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
   }
 
   .playlist-audio-record-add-btn:active {
-    transform: translate(18%, -18%) scale(0.94);
+    transform: scale(0.94);
   }
 
-  .playlist-audio-record-add-btn svg {
-    width: 1.15rem;
-    height: 1.15rem;
+  .playlist-audio-record-add-btn svg,
+  .playlist-audio-record-add-btn .plus-icon {
+    width: 1.2rem;
+    height: 1.2rem;
+    display: block;
   }
 
   .playlist-audio-record-add-btn:focus-visible {
