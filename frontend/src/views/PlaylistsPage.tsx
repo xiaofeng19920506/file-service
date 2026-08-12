@@ -13,14 +13,13 @@ import PlaylistListSwipeRow, {
 import PlaylistTrackSwipeRow from '../components/PlaylistTrackSwipeRow';
 import SharePlaylistModal from '../components/SharePlaylistModal';
 import ExportYoutubePlaylistModal from '../components/ExportYoutubePlaylistModal';
-import { DragHandleIcon, PlusIcon } from '../components/icons';
+import { ChevronLeftIcon, DragHandleIcon, PlusIcon } from '../components/icons';
 import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 import { useSortableVerticalList } from '../hooks/useSortableVerticalList';
 import PlaylistAudioPlayer, {
   type PlaylistAudioProgressHandle,
   type PlaylistAudioProgressState,
 } from '../components/PlaylistAudioPlayer';
-import PlaylistDesktopAudioCenter from '../components/PlaylistDesktopAudioCenter';
 import PlaylistsMobilePlaybackDock from '../components/PlaylistsMobilePlaybackDock';
 import PlaylistQueuePanel from '../components/PlaylistQueuePanel';
 import PlaylistPlaybackOrderPanel from '../components/PlaylistPlaybackOrderPanel';
@@ -130,6 +129,7 @@ export default function PlaylistsPage({
   );
   const [tracksEditMode, setTracksEditMode] = useState(false);
   const isMobileViewport = useMediaQuery(MOBILE_MEDIA_QUERY);
+  const [headerSearchEl, setHeaderSearchEl] = useState<HTMLDivElement | null>(null);
   const { closeMenu, setMobileHeader } = usePlaylistsMobileMenu();
 
   useEffect(() => {
@@ -1377,6 +1377,231 @@ export default function PlaylistsPage({
   const mobileHomeView =
     isMobileViewport && !selectedId && !homePreview ? mobileHome : undefined;
 
+  const renderTracksOrderedList = () => (
+    <ol
+      ref={tracksListRef}
+      className={`playlists-tracks sortable-vertical-list${savingOrder ? ' saving-order' : ''}${trackSortable.isSorting ? ' is-sorting' : ''}`}
+    >
+      {trackSortable.isSorting && trackSortable.getGapIndicatorStyle() ? (
+        <li
+          aria-hidden
+          className="sortable-gap-indicator"
+          style={trackSortable.getGapIndicatorStyle()!}
+        />
+      ) : null}
+      {displayTrackRows.map(({ item, index }) => {
+        const isActive = index === activeIndex;
+        const isPlaying = isActive && playing;
+        const useTrackSwipe = isMobileViewport && !tracksEditMode;
+        const desktopTrackChrome = !isMobileViewport;
+        const canDragReorder = (tracksEditMode || desktopTrackChrome) && !shuffleReady;
+        return (
+          <li
+            key={item.id}
+            className={`playlists-track sortable-vertical-item${isActive ? ' active' : ''}${isPlaying ? ' playing' : ''}${trackSortable.isDraggingItem(index) ? ' is-sortable-dragging' : ''}`}
+            style={canDragReorder ? trackSortable.getItemStyle(index) : undefined}
+          >
+            {useTrackSwipe ? (
+              <PlaylistTrackSwipeRow
+                title={item.title}
+                thumbUrl={youtubeThumb(item.youtubeVideoId)}
+                isPlaying={isPlaying}
+                opened={trackSwipeOpenId === item.id}
+                onOpenedChange={(open) => {
+                  setTrackSwipeOpenId(open ? item.id : null);
+                }}
+                onPlay={() => {
+                  if (blockTrackPlayRef.current || removeTrackTarget) return;
+                  engageAndPlay(index);
+                }}
+                onDeleteRequest={() => requestRemoveTrack(item)}
+                deleteBusy={removingItemId === item.id}
+              />
+            ) : (
+              <>
+                {canDragReorder && (
+                  <span
+                    className={`playlists-track-drag-handle${savingOrder ? ' disabled' : ''}${desktopTrackChrome ? ' playlists-track-drag-handle--desktop' : ''}`}
+                    title={t('playlists.dragToReorder')}
+                    {...trackSortable.bindDragHandle(index)}
+                  >
+                    <DragHandleIcon />
+                  </span>
+                )}
+                <button
+                  type="button"
+                  className="playlists-track-main"
+                  onClick={() => engageAndPlay(index)}
+                  title={item.title}
+                >
+                  <span className="playlists-track-thumb-wrap">
+                    <img
+                      className="playlists-track-thumb"
+                      src={youtubeThumb(item.youtubeVideoId)}
+                      alt=""
+                      loading="lazy"
+                      draggable={false}
+                    />
+                    <span className="playlists-track-play-icon" aria-hidden>
+                      {isPlaying ? '▮▮' : '▶'}
+                    </span>
+                  </span>
+                  <span className="playlists-track-title">{item.title}</span>
+                </button>
+                {(canDragReorder || desktopTrackChrome) && (
+                  <button
+                    type="button"
+                    className="playlists-track-remove"
+                    disabled={removingItemId === item.id || savingOrder}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (desktopTrackChrome) {
+                        requestRemoveTrack(item);
+                        return;
+                      }
+                      void handleRemoveItem(item.id);
+                    }}
+                    aria-label={t('playlists.removeTrack', { title: item.title })}
+                  >
+                    {removingItemId === item.id ? '…' : '×'}
+                  </button>
+                )}
+              </>
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+
+  const renderDesktopRightPanel = () => {
+    if (!selectedId) {
+      return renderPlaylistLibrary();
+    }
+    if (loadingDetail) {
+      return (
+        <div className="playlists-placeholder playlists-sidebar-placeholder">
+          <p className="playlists-muted">{t('playlists.loadingDetail')}</p>
+        </div>
+      );
+    }
+    if (!detail) return null;
+
+    const playlist = detail.playlist;
+    const hasTracks = detail.items.length > 0;
+
+    return (
+      <div className="playlists-sidebar-detail">
+        <div className="playlists-sidebar-detail-head">
+          <button
+            type="button"
+            className="playlists-sidebar-back-btn"
+            onClick={backToList}
+            aria-label={t('playlists.backToList')}
+            title={t('playlists.backToList')}
+          >
+            <ChevronLeftIcon />
+          </button>
+          <div className="playlists-sidebar-detail-titles">
+            <h2 title={playlist.title}>{playlist.title}</h2>
+            <p className="playlists-muted">
+              {t('playlists.trackCount', { count: detail.items.length })}
+            </p>
+          </div>
+        </div>
+
+        <div className="playlists-sidebar-detail-actions">
+          {hasTracks && (
+            <button type="button" className="btn-primary" onClick={startPlayback}>
+              {t('playlists.playAll')}
+            </button>
+          )}
+          <button type="button" className="btn-secondary" onClick={() => setShowAddModal(true)}>
+            {t('playlists.addTitle')}
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => startRename(playlist.id, playlist.title, t('playlists.editListName'))}
+          >
+            {t('playlists.editListName')}
+          </button>
+          {permissions.canExportToYoutube && hasTracks && (
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() =>
+                setExportTarget({
+                  id: playlist.id,
+                  title: playlist.title,
+                  trackCount: detail.items.length,
+                })
+              }
+            >
+              {t('playlists.exportYoutube')}
+            </button>
+          )}
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() =>
+              setShareTarget({
+                id: playlist.id,
+                title: playlist.title,
+              })
+            }
+          >
+            {t('playlists.share')}
+          </button>
+          <button
+            type="button"
+            className="btn-secondary btn-danger-outline"
+            disabled={deletingId === playlist.id}
+            onClick={() =>
+              setDeleteTarget({
+                id: playlist.id,
+                title: playlist.title,
+              })
+            }
+          >
+            {deletingId === playlist.id ? t('playlists.deleting') : t('playlists.delete')}
+          </button>
+        </div>
+
+        {detail.items.length === 0 ? (
+          <div className="playlists-empty-card playlists-empty-tracks">
+            <p className="playlists-empty-title">{t('playlists.noTracksTitle')}</p>
+            <p className="playlists-muted">{t('playlists.noTracksHint')}</p>
+          </div>
+        ) : (
+          <aside className="playlists-tracks-col playlists-tracks-col--sidebar" aria-label={t('playlists.tracksTitle')}>
+            <div className="playlists-tracks-head">
+              <h3>{t('playlists.tracksTitle')}</h3>
+            </div>
+            {renderTracksOrderedList()}
+          </aside>
+        )}
+      </div>
+    );
+  };
+
+  const renderDesktopSearchMain = () => (
+    <section className="playlists-main playlists-main--search" aria-live="polite">
+      <PlaylistYoutubeSearchPanel
+        className="playlists-youtube-search--desktop-home"
+        pickPlaylistOnAdd
+        playlists={playlists}
+        loadingPlaylists={loadingList}
+        libraryVideoIds={libraryVideoIds}
+        onCreatePlaylist={createPlaylistForSearch}
+        onAdded={(data, meta) => void handleItemsAdded(data, meta)}
+        searchHeaderEl={headerSearchEl}
+        resultLayout="list"
+      />
+      {audioWatchDesktop && renderAudioPlayer('dock')}
+    </section>
+  );
+
   const renderHomePreviewMain = () => (
     <section className="playlists-main playlists-home-preview-main" aria-live="polite">
       <div className="playlists-main-inner playlists-main-inner--mobile-audio">
@@ -1431,8 +1656,23 @@ export default function PlaylistsPage({
         data-mobile-home-preview={homePreviewMobile ? 'true' : undefined}
       >
         <header className={`playlists-header${selectedId ? ' mobile-only-hidden' : ''}`}>
-          <h1>{t('playlists.title')}</h1>
-          <p className="playlists-intro">{t('playlists.intro')}</p>
+          {isMobileViewport ? (
+            <>
+              <h1>{t('playlists.title')}</h1>
+              <p className="playlists-intro">{t('playlists.intro')}</p>
+            </>
+          ) : (
+            <div className="playlists-header-desktop">
+              <div className="playlists-header-brand">
+                <h1>{t('playlists.title')}</h1>
+              </div>
+              <div
+                className="playlists-header-search"
+                ref={setHeaderSearchEl}
+                aria-label={t('playlists.searchSection')}
+              />
+            </div>
+          )}
         </header>
 
         {(error || notice) && !(isMobileViewport && !selectedId && mobileHome === 'search') && (
@@ -1443,7 +1683,7 @@ export default function PlaylistsPage({
         )}
 
         <div
-          className="playlists-workspace"
+          className={`playlists-workspace${isMobileViewport ? '' : ' playlists-workspace--desktop-search'}`}
           data-mobile-view={homePreviewMobile || selectedId ? 'detail' : 'list'}
           data-player-active={homePreview || showPlayer ? 'true' : 'false'}
           data-playback-mode="audio"
@@ -1452,6 +1692,18 @@ export default function PlaylistsPage({
           data-audio-mobile-record={audioWatchMobile ? 'true' : 'false'}
           data-mobile-audio-dock={showMobileAudioDock ? 'true' : 'false'}
         >
+          {!isMobileViewport ? (
+            <>
+              {renderDesktopSearchMain()}
+              <aside
+                className="playlists-sidebar playlists-sidebar--right"
+                aria-label={selectedId ? t('playlists.tracksTitle') : t('playlists.savedTitle')}
+              >
+                {renderDesktopRightPanel()}
+              </aside>
+            </>
+          ) : (
+            <>
           {!homePreviewMobile && (
           <aside
             className={`playlists-sidebar${
@@ -1503,7 +1755,7 @@ export default function PlaylistsPage({
               </div>
             ) : detail ? (
               <div
-                className={`playlists-main-inner${audioWatchMobile ? ' playlists-main-inner--mobile-audio' : ''}${audioWatchDesktop ? ' playlists-main-inner--desktop-audio' : ''}`}
+                className={`playlists-main-inner${audioWatchMobile ? ' playlists-main-inner--mobile-audio' : ''}`}
               >
                 {renderMainToolbar(detail.playlist, detail.items.length > 0)}
 
@@ -1523,161 +1775,29 @@ export default function PlaylistsPage({
                     className="playlists-player-stage"
                     data-playback-mode="audio"
                     data-player-engaged={showPlayer ? 'true' : 'false'}
-                    data-audio-desktop-dock={audioWatchDesktop ? 'true' : 'false'}
                     data-audio-mobile-record={audioWatchMobile ? 'true' : 'false'}
                     data-tracks-edit={tracksEditMode ? 'true' : 'false'}
                   >
                     <div className="playlists-player-col">
-                      {!showPlayer && currentItem && (
-                        <button
-                          type="button"
-                          className="playlists-hero desktop-only"
-                          onClick={startPlayback}
-                          aria-label={t('playlists.playAll')}
-                        >
-                          <img
-                            className="playlists-hero-thumb"
-                            src={youtubeThumb(currentItem.youtubeVideoId)}
-                            alt=""
-                            loading="lazy"
-                          />
-                          <span className="playlists-hero-overlay">
-                            <span className="playlists-hero-play-icon" aria-hidden>
-                              ▶
-                            </span>
-                            <span className="playlists-hero-play-label">
-                              {t('playlists.startPlayback')}
-                            </span>
-                          </span>
-                        </button>
-                      )}
-
                       {showPlayer && renderAudioPlayer('inline')}
-
-                      {showPlayer && currentItem && (
-                        <div className="playlists-youtube-meta desktop-only">
-                          <h2 className="playlists-youtube-meta-title" title={currentItem.title}>{currentItem.title}</h2>
-                          <p className="playlists-youtube-meta-sub">{detail.playlist.title}</p>
-                        </div>
-                      )}
                     </div>
 
                     <aside
-                      className={`playlists-tracks-col${audioWatchMobile || audioWatchDesktop ? ' playlists-tracks-col--hidden-audio-watch' : ''}`}
+                      className={`playlists-tracks-col${audioWatchMobile ? ' playlists-tracks-col--hidden-audio-watch' : ''}`}
                       aria-label={t('playlists.tracksTitle')}
                     >
                       <div className="playlists-tracks-head">
                         <h3>{t('playlists.tracksTitle')}</h3>
                       </div>
-                      <ol
-                        ref={tracksListRef}
-                        className={`playlists-tracks sortable-vertical-list${savingOrder ? ' saving-order' : ''}${trackSortable.isSorting ? ' is-sorting' : ''}`}
-                      >
-                        {trackSortable.isSorting && trackSortable.getGapIndicatorStyle() ? (
-                          <li
-                            aria-hidden
-                            className="sortable-gap-indicator"
-                            style={trackSortable.getGapIndicatorStyle()!}
-                          />
-                        ) : null}
-                        {displayTrackRows.map(({ item, index }) => {
-                          const isActive = index === activeIndex;
-                          const isPlaying = isActive && playing;
-                          const useTrackSwipe = isMobileViewport && !tracksEditMode;
-                          const desktopTrackChrome = !isMobileViewport;
-                          const canDragReorder = (tracksEditMode || desktopTrackChrome) && !shuffleReady;
-                          return (
-                            <li
-                              key={item.id}
-                              className={`playlists-track sortable-vertical-item${isActive ? ' active' : ''}${isPlaying ? ' playing' : ''}${trackSortable.isDraggingItem(index) ? ' is-sortable-dragging' : ''}`}
-                              style={canDragReorder ? trackSortable.getItemStyle(index) : undefined}
-                            >
-                              {useTrackSwipe ? (
-                                <PlaylistTrackSwipeRow
-                                  title={item.title}
-                                  thumbUrl={youtubeThumb(item.youtubeVideoId)}
-                                  isPlaying={isPlaying}
-                                  opened={trackSwipeOpenId === item.id}
-                                  onOpenedChange={(open) => {
-                                    setTrackSwipeOpenId(open ? item.id : null);
-                                  }}
-                                  onPlay={() => {
-                                    if (blockTrackPlayRef.current || removeTrackTarget) return;
-                                    engageAndPlay(index);
-                                  }}
-                                  onDeleteRequest={() => requestRemoveTrack(item)}
-                                  deleteBusy={removingItemId === item.id}
-                                />
-                              ) : (
-                                <>
-                              {canDragReorder && (
-                                <span
-                                  className={`playlists-track-drag-handle${savingOrder ? ' disabled' : ''}${desktopTrackChrome ? ' playlists-track-drag-handle--desktop' : ''}`}
-                                  title={t('playlists.dragToReorder')}
-                                  {...trackSortable.bindDragHandle(index)}
-                                >
-                                  <DragHandleIcon />
-                                </span>
-                              )}
-                              <button
-                                type="button"
-                                className="playlists-track-main"
-                                onClick={() => engageAndPlay(index)}
-                                title={item.title}
-                              >
-                                <span className="playlists-track-thumb-wrap">
-                                  <img
-                                    className="playlists-track-thumb"
-                                    src={youtubeThumb(item.youtubeVideoId)}
-                                    alt=""
-                                    loading="lazy"
-                                    draggable={false}
-                                  />
-                                  <span className="playlists-track-play-icon" aria-hidden>
-                                    {isPlaying ? '▮▮' : '▶'}
-                                  </span>
-                                </span>
-                                <span className="playlists-track-title">{item.title}</span>
-                              </button>
-                              {(canDragReorder || desktopTrackChrome) && (
-                                <button
-                                  type="button"
-                                  className="playlists-track-remove"
-                                  disabled={removingItemId === item.id || savingOrder}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (desktopTrackChrome) {
-                                      requestRemoveTrack(item);
-                                      return;
-                                    }
-                                    void handleRemoveItem(item.id);
-                                  }}
-                                  aria-label={t('playlists.removeTrack', { title: item.title })}
-                                >
-                                  {removingItemId === item.id ? '…' : '×'}
-                                </button>
-                              )}
-                                </>
-                              )}
-                            </li>
-                          );
-                        })}
-                      </ol>
+                      {renderTracksOrderedList()}
                     </aside>
-
-                    {audioWatchDesktop && currentItem && (
-                      <PlaylistDesktopAudioCenter
-                        videoId={currentItem.youtubeVideoId}
-                        title={currentItem.title}
-                        currentTime={audioProgress.currentTime}
-                      />
-                    )}
                   </div>
                 )}
-                {audioWatchDesktop && renderAudioPlayer('dock')}
               </div>
             ) : null}
           </section>
+          )}
+            </>
           )}
         </div>
       </main>

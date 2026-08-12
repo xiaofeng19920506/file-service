@@ -4276,6 +4276,31 @@
   margin-bottom: 0.75rem;
 }
 
+.playlists-header-desktop {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.playlists-header-brand {
+  flex-shrink: 0;
+}
+
+.playlists-header-brand h1 {
+  margin: 0;
+}
+
+.playlists-header-search {
+  flex: 1;
+  min-width: 0;
+  max-width: 42rem;
+}
+
+.playlists-header-search .search-box {
+  width: 100%;
+}
+
 .playlists-header h1 {
   margin: 0 0 0.25rem;
   font-size: 1.35rem;
@@ -4321,6 +4346,143 @@
   gap: 0.85rem;
   min-height: 0;
   width: 100%;
+}
+
+@media (min-width: 901px) {
+  .playlists-workspace--desktop-search {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 22rem);
+  }
+
+  .playlists-main--search {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .playlists-youtube-search--desktop-home {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    padding: 0.75rem 0.85rem 0.85rem;
+  }
+
+  .playlists-youtube-search--desktop-home.playlists-youtube-search--header-search {
+    padding-top: 0.55rem;
+  }
+
+  .playlists-youtube-search--desktop-home .playlists-youtube-search-results,
+  .playlists-youtube-search--desktop-home .youtube-trending {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  .playlists-sidebar--right {
+    min-width: 0;
+  }
+
+  .playlists-sidebar-detail {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .playlists-sidebar-detail-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.35rem;
+    padding: 0.65rem 0.75rem 0.4rem;
+    flex-shrink: 0;
+  }
+
+  .playlists-sidebar-back-btn {
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
+    margin-top: 0.05rem;
+    display: grid;
+    place-items: center;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  .playlists-sidebar-back-btn:hover {
+    background: color-mix(in srgb, var(--text) 8%, transparent);
+  }
+
+  .playlists-sidebar-back-btn svg {
+    width: 1.15rem;
+    height: 1.15rem;
+  }
+
+  .playlists-sidebar-detail-titles {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .playlists-sidebar-detail-titles h2 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 650;
+    color: var(--text);
+    text-transform: none;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .playlists-sidebar-detail-titles .playlists-muted {
+    margin-top: 0.15rem;
+    font-size: 0.78rem;
+  }
+
+  .playlists-sidebar-detail-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    padding: 0 0.75rem 0.65rem;
+    flex-shrink: 0;
+  }
+
+  .playlists-sidebar-detail-actions .btn-primary,
+  .playlists-sidebar-detail-actions .btn-secondary {
+    font-size: 0.78rem;
+    padding: 0.35rem 0.55rem;
+  }
+
+  .playlists-sidebar-detail .playlists-tracks-col--sidebar {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    width: 100%;
+    max-width: none;
+  }
+
+  .playlists-sidebar-detail .playlists-tracks {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    max-height: none;
+  }
+
+  .playlists-sidebar-placeholder {
+    flex: 1;
+    border: none;
+    background: transparent;
+  }
+
+  .playlists-page[data-audio-desktop-dock='true'] .playlists-workspace--desktop-search {
+    padding-bottom: 5.75rem;
+  }
 }
 
 .playlists-sidebar,

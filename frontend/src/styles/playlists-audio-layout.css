@@ -141,8 +141,12 @@
     display: block;
   }
 
-  .playlists-page[data-audio-desktop-dock='true'] .playlists-tracks-col {
+  .playlists-page[data-audio-desktop-dock='true'] .playlists-player-stage .playlists-tracks-col {
     display: none;
+  }
+
+  .playlists-page[data-audio-desktop-dock='true'] .playlists-tracks-col--sidebar {
+    display: flex !important;
   }
 
   .playlists-main-inner--desktop-audio {
