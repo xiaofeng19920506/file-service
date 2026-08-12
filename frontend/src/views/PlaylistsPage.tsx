@@ -1658,15 +1658,6 @@ export default function PlaylistsPage({
             />
           </div>
         </div>
-        <div className="playlists-home-preview-actions">
-          <button
-            type="button"
-            className="btn-primary playlists-home-preview-add-btn"
-            onClick={() => setHomePreviewAddOpen(true)}
-          >
-            {t('playlists.addToList')}
-          </button>
-        </div>
       </div>
     </section>
   );
@@ -1987,6 +1978,7 @@ export default function PlaylistsPage({
           onPlayToggle={handleMobileDockPlayToggle}
           onPrev={() => {}}
           onNext={() => {}}
+          onAddToList={() => setHomePreviewAddOpen(true)}
         />
       )}
 
