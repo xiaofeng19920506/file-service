@@ -1762,6 +1762,7 @@ export default function PlaylistsPage({
                 onCreatePlaylist={createPlaylistForSearch}
                 onAdded={(data, meta) => void handleItemsAdded(data, meta)}
                 onPreviewTrack={homeSearchPreviewEnabled ? startHomePreview : undefined}
+                previewingVideoId={homePreview?.videoId}
               />
             ) : (
               renderPlaylistLibrary()
