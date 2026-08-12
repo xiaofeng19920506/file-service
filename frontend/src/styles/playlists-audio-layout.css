@@ -154,7 +154,7 @@
     flex-direction: column;
     min-height: 0;
     flex: 1;
-    padding-bottom: 5.75rem;
+    padding-bottom: 0;
   }
 
   .playlists-main-inner--desktop-audio .playlists-tracks {
@@ -267,6 +267,41 @@
 
   .playlist-audio-dock-queue-btn {
     flex-shrink: 0;
+  }
+}
+
+/* iPad 横屏 / 窄桌面：底栏两行，避免横向裁切控件 */
+@media (min-width: 901px) and (max-width: 1199px) {
+  .playlist-audio-dock-inner {
+    flex-wrap: wrap;
+    row-gap: 0.45rem;
+    column-gap: 0.75rem;
+    padding: 0.55rem 1rem 0.6rem;
+    min-height: 0;
+  }
+
+  .playlist-audio-dock-track {
+    flex: 1 1 12rem;
+    max-width: none;
+  }
+
+  .playlist-audio-dock-center {
+    flex: 1 1 100%;
+    order: 3;
+  }
+
+  .playlist-audio-dock-options {
+    margin-left: 0;
+  }
+
+  .playlist-audio-dock-options .audio-volume {
+    min-width: 5rem;
+    max-width: 7rem;
+  }
+
+  .playlists-page[data-audio-desktop-dock='true'] .playlists-workspace--desktop-search,
+  .page-body-playlists .playlists-workspace[data-player-active='true'] {
+    padding-bottom: calc(var(--playlists-desktop-dock-height) + 2.25rem);
   }
 }
 

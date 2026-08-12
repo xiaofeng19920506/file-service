@@ -17,8 +17,8 @@
   --z-overlay: 100;
   --z-modal: 200;
 
-  --playlists-mobile-dock-height: 7.25rem;
-  --playlists-mobile-dock-height-active: 10.25rem;
+  --playlists-mobile-dock-height: 8rem;
+  --playlists-mobile-dock-height-active: 11rem;
   --playlist-np-mobile-dock-height: 11.5rem;
   --playlists-desktop-dock-height: 5.5rem;
   --touch-target: 2.75rem;
@@ -162,24 +162,20 @@ body {
     border-radius: 16px 16px 0 0;
   }
 
-  /* 敬拜列表：播放条仅在播放时显示，避免挡住内容 */
+  /* 底栏高度变量已含 safe-area，dock 勿再叠加 --safe-bottom */
   .playlists-playback-dock--mobile {
     z-index: var(--z-dock);
-    bottom: calc(var(--bottom-nav-height) + var(--safe-bottom));
-    padding-bottom: max(0.65rem, var(--safe-bottom));
+    bottom: var(--bottom-nav-height);
+    padding-bottom: 0.5rem;
   }
 
   .playlists-workspace[data-mobile-view='detail'][data-mobile-audio-dock='true'] .playlists-main-inner {
-    padding-bottom: calc(
-      var(--playlists-mobile-dock-height) + var(--bottom-nav-height) + var(--safe-bottom) + 0.5rem
-    );
+    padding-bottom: calc(var(--playlists-mobile-dock-height) + 0.65rem);
   }
 
   .playlists-workspace[data-mobile-view='detail'][data-mobile-audio-dock='true'][data-player-active='true']
     .playlists-main-inner {
-    padding-bottom: calc(
-      var(--playlists-mobile-dock-height-active) + var(--bottom-nav-height) + var(--safe-bottom) + 0.5rem
-    );
+    padding-bottom: calc(var(--playlists-mobile-dock-height-active) + 0.65rem);
   }
 
   body.playlists-mobile-audio-active .page-body-playlists,
@@ -188,26 +184,20 @@ body {
   }
 
   body.playlists-mobile-audio-active .playlists-main-inner--mobile-audio {
-    padding-bottom: calc(
-      var(--playlists-mobile-dock-height) + var(--bottom-nav-height) + var(--safe-bottom) + 0.5rem
-    ) !important;
+    padding-bottom: calc(var(--playlists-mobile-dock-height) + 0.65rem) !important;
   }
 
   body.playlists-mobile-audio-active
     .playlists-workspace[data-player-active='true']
     .playlists-main-inner--mobile-audio {
-    padding-bottom: calc(
-      var(--playlists-mobile-dock-height-active) + var(--bottom-nav-height) + var(--safe-bottom)
-    ) !important;
+    padding-bottom: calc(var(--playlists-mobile-dock-height-active) + 0.65rem) !important;
   }
 
   .page-body-playlists
     .playlists-workspace[data-mobile-view='detail'][data-player-active='true']:not(
       [data-audio-now-playing='true']
     ) {
-    padding-bottom: calc(
-      var(--playlists-mobile-dock-height) + var(--bottom-nav-height) + var(--safe-bottom) + 0.75rem
-    );
+    padding-bottom: calc(var(--playlists-mobile-dock-height) + 0.75rem);
   }
 
   .page-body-playlists .playlists-main-inner {
@@ -280,6 +270,12 @@ body {
     display: flex;
     align-items: center;
     box-sizing: border-box;
+  }
+
+  /* dock 内进度条用紧凑高度，靠 padding 扩大热区，避免撑爆固定 dock */
+  .playlists-playback-dock-progress .audio-progress,
+  .playlists-playback-dock-progress .audio-player-bar-progress {
+    min-height: 1.75rem;
   }
 
   .audio-progress .audio-progress-track {
