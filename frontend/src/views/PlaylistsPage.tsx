@@ -924,8 +924,6 @@ export default function PlaylistsPage({
     [homePreview, homePreviewAudio],
   );
 
-  const homePreviewMobile = Boolean(homePreview && isMobileViewport && !selectedId);
-
   const addHomePreviewToPlaylist = async (targetPlaylistId: string) => {
     if (!homePreview || homePreviewAdding) return;
     setHomePreviewAdding(true);
@@ -959,9 +957,10 @@ export default function PlaylistsPage({
   );
   const showPlayer = playerEngaged && playerItems.length > 0;
   const homePreviewDesktop = Boolean(homePreview && !isMobileViewport);
+  const homePreviewMobile = Boolean(homePreview && isMobileViewport && !selectedId);
   const audioWatchActive = showPlayer || homePreviewDesktop;
   const audioWatchDesktop = audioWatchActive && !isMobileViewport;
-  const audioWatchMobile = showPlayer && isMobileViewport;
+  const audioWatchMobile = (showPlayer || homePreviewMobile) && isMobileViewport;
   const showMobileAudioDock =
     isMobileViewport &&
     (homePreview || (showPlayer && Boolean(selectedId && detail?.items.length)));

@@ -82,50 +82,54 @@
   .playlists-page[data-mobile-home-preview='true'] .playlists-home-preview-main {
     flex: 1;
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .playlists-page[data-mobile-home-preview='true'] .playlists-main-inner {
     flex: 1;
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
     padding: 0;
     display: flex;
     flex-direction: column;
   }
 
-  /* 试听：CD 靠下，添加按钮在 CD 右上角（勿裁切） */
+  /* 试听：CD 靠下贴近底栏，添加 + 钉在 CD 右上角 */
   .playlists-page[data-mobile-home-preview='true'] .playlists-player-stage[data-audio-mobile-record='true'] {
     flex: 1 1 auto;
     min-height: 0;
     overflow: visible;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
   }
 
   .playlists-page[data-mobile-home-preview='true']
     .playlist-audio-player--mobile-record {
     flex: 1 1 auto;
     min-height: 0 !important;
-    height: auto;
-    max-height: 100%;
+    height: 100%;
+    max-height: none;
     margin-bottom: 0;
-    padding-top: 0.75rem;
-    padding-bottom: 0.5rem;
+    padding-top: 0;
+    padding-bottom: 0.25rem;
     justify-content: flex-end;
     overflow: visible;
   }
 
   .playlists-page[data-mobile-home-preview='true'] .playlist-audio-record-stage {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     min-height: 0;
     max-height: none;
-    justify-content: flex-end;
-    padding-top: min(12vh, 4.5rem);
-    padding-bottom: 0.5rem;
+    margin-top: auto;
+    justify-content: center;
+    padding-top: 0;
+    padding-bottom: 0.35rem;
     overflow: visible;
   }
 
   .playlists-page[data-mobile-home-preview='true'] .playlist-audio-record-disc-wrap {
-    width: min(68vw, 16rem);
+    width: min(64vw, 15.5rem);
   }
 
   .playlists-page[data-mobile-home-preview='true'] .playlist-audio-record-disc {
@@ -133,8 +137,13 @@
     height: 100%;
   }
 
+  .playlists-page[data-mobile-home-preview='true'] .playlist-audio-record-now-lyric {
+    margin-top: 0.15rem;
+    margin-bottom: 0.15rem;
+  }
+
   .playlists-page[data-mobile-home-preview='true'] .playlists-main-inner--mobile-audio {
-    padding-bottom: calc(var(--playlists-mobile-dock-height-active) + 1.25rem) !important;
+    padding-bottom: calc(var(--playlists-mobile-dock-height-active) + 1rem) !important;
     overflow: visible !important;
   }
 
