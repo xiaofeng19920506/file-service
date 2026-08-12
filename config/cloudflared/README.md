@@ -23,7 +23,7 @@ npm run tunnel:run
 
 # 5. 同步 URL 到 App
 npm run tunnel:sync-env
-cd ../worship-player && npm run ios
+cd ../playlist-player && npm run ios
 ```
 
 ## 控制台 Token 模式（可选）

@@ -115,22 +115,6 @@ button.link-btn:hover {
   padding: clamp(1.5rem, 4vw, 2.75rem) var(--page-gutter) 3rem;
 }
 
-.main-library {
-  max-width: var(--shell-max);
-  padding-inline: var(--page-gutter);
-  padding-block: 0.75rem;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.main-library .app-intro {
-  max-width: none;
-  margin-bottom: clamp(1.25rem, 2vw, 1.75rem);
-}
-
 .app-intro {
   font-size: 1.0625rem;
   line-height: 1.5;
@@ -340,33 +324,6 @@ button.link-btn:hover {
 }
 
 /* ── 工作流区块 ── */
-.workflow-section {
-  padding: 1.5rem;
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-  border: 1px solid color-mix(in srgb, var(--border-light) 80%, transparent);
-  box-shadow: 0 2px 16px var(--shadow-sm);
-}
-
-.library-workflow-grid .workflow-section {
-  margin-bottom: 0;
-  padding: 1.125rem;
-}
-
-.workflow-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-
-.workflow-step {
-  width: 1.625rem;
-  height: 1.625rem;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  background: var(--blue);
-  color: #fff;
-}
 
 .section-hint,
 .dedup-hint,
@@ -532,12 +489,7 @@ button.link-btn:hover {
 
 .admin-table-users th.admin-table-col-role,
 .admin-table-users th.admin-table-col-date,
-.admin-table-users th.admin-table-actions-col,
-.admin-table-library th.admin-table-col-composer,
-.admin-table-library th.admin-table-col-author,
-.admin-table-library th.admin-table-col-size,
-.admin-table-library th.admin-table-col-updated,
-.admin-table-library th.admin-table-actions-col {
+.admin-table-users th.admin-table-actions-col {
   text-align: center;
 }
 
@@ -586,13 +538,6 @@ button.link-btn:hover {
   color: var(--text-secondary);
 }
 
-.library-merge-hint {
-  border-radius: var(--radius-lg);
-  border: none;
-  background: var(--surface-secondary);
-  font-size: 0.941rem;
-}
-
 .progress-bar {
   border-radius: var(--radius-pill);
   overflow: hidden;
@@ -605,13 +550,7 @@ button.link-btn:hover {
   transition: width 0.35s var(--ease);
 }
 
-/* ── 预览 / 合并面板 ── */
-.merge-panel {
-  background: var(--bg);
-}
-
-.preview-toolbar,
-.single-slide-nav {
+.preview-toolbar {
   backdrop-filter: saturate(180%) blur(16px);
   -webkit-backdrop-filter: saturate(180%) blur(16px);
 }
@@ -642,23 +581,18 @@ button.link-btn:hover {
 
 /* ── 滚动条（WebKit） ── */
 .admin-table-wrap::-webkit-scrollbar,
-.metadata-modal-body::-webkit-scrollbar,
-.merge-panel::-webkit-scrollbar {
+.metadata-modal-body::-webkit-scrollbar {
   height: 6px;
   width: 6px;
 }
 
 .admin-table-wrap::-webkit-scrollbar-thumb,
-.metadata-modal-body::-webkit-scrollbar-thumb,
-.merge-panel::-webkit-scrollbar-thumb {
+.metadata-modal-body::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: var(--radius-pill);
 }
 
 @media (max-width: 768px) {
-  .workflow-section {
-    padding: 1rem;
-  }
 
   .search-box {
     flex-direction: column;

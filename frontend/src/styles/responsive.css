@@ -95,7 +95,7 @@ body {
     overscroll-behavior-y: contain;
   }
 
-  /* 管理页：与诗库/合并一致，内容区可滚动 */
+  /* 管理页：内容区可滚动 */
   .admin-page {
     flex: 1;
     min-height: 0;
@@ -104,15 +104,6 @@ body {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-y: contain;
     padding-bottom: calc(1.25rem + var(--bottom-nav-height));
-  }
-
-  /* 周报：交给 .app-content 纵向滚动；勿再锁死 100% 高度 */
-  .app-content > .bulletin-page.bulletin-page--workspace {
-    flex: 0 0 auto;
-    min-height: 0;
-    max-height: none;
-    height: auto;
-    overflow: visible;
   }
 
   /* 模态框：底部 sheet，全宽可点按钮 */
