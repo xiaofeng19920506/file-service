@@ -88,17 +88,20 @@
 
   .playlists-page[data-mobile-home-preview='true'] .playlists-main-inner,
   .playlists-page[data-mobile-home-preview='true'] .playlists-main-inner--mobile-audio {
-    flex: 1 1 auto !important;
+    flex: 1 1 0% !important;
     min-height: 0 !important;
-    height: 100% !important;
+    height: auto !important;
     overflow: visible !important;
     padding: 0 !important;
     display: flex !important;
     flex-direction: column !important;
+    /* 只为贴底的播控留空，避免歌词下方大片空白 */
+    padding-bottom: calc(10.5rem + env(safe-area-inset-bottom, 0px)) !important;
+    box-sizing: border-box !important;
   }
 
   .playlists-page[data-mobile-home-preview='true'] .playlists-player-stage[data-audio-mobile-record='true'] {
-    flex: 1 1 auto !important;
+    flex: 1 1 0% !important;
     min-height: 0 !important;
     overflow: visible !important;
     display: flex !important;
@@ -108,19 +111,19 @@
   .playlists-page[data-mobile-home-preview='true']
     .playlists-player-stage[data-audio-mobile-record='true']
     .playlists-player-col {
-    flex: 1 1 auto !important;
+    flex: 1 1 0% !important;
     min-height: 0 !important;
     display: flex !important;
     flex-direction: column !important;
   }
 
   .playlists-page[data-mobile-home-preview='true'] .playlist-audio-player--mobile-record {
-    flex: 1 1 auto !important;
+    flex: 1 1 0% !important;
     min-height: 0 !important;
     height: auto !important;
     max-height: none !important;
     margin: 0 !important;
-    padding: 0.35rem var(--page-gutter) 0.2rem !important;
+    padding: 0.25rem var(--page-gutter) 0 !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: flex-end !important;
@@ -132,11 +135,11 @@
     .playlists-player-stage[data-audio-mobile-record='true']
     .playlist-audio-record-stage,
   .playlists-page[data-mobile-home-preview='true'] .playlist-audio-record-stage {
-    flex: 1 1 auto !important;
+    flex: 1 1 0% !important;
     min-height: 0 !important;
     max-height: none !important;
     margin-top: 0 !important;
-    padding: 0 0 0.2rem !important;
+    padding: 0 !important;
     justify-content: flex-end !important;
     align-items: center !important;
     overflow: visible !important;
@@ -144,8 +147,8 @@
 
   .playlists-page[data-mobile-home-preview='true'] .playlist-audio-record-disc-wrap {
     width: min(62vw, 14.75rem) !important;
-    margin-top: auto !important;
-    margin-bottom: 0.1rem;
+    margin: 0 0 0.35rem !important;
+    flex: 0 0 auto !important;
   }
 
   .playlists-page[data-mobile-home-preview='true'] .playlist-audio-record-disc {
@@ -155,15 +158,9 @@
 
   .playlists-page[data-mobile-home-preview='true'] .playlist-audio-record-now-lyric {
     flex: 0 0 auto;
-    margin-top: 0.15rem !important;
-    margin-bottom: 0.1rem !important;
-    min-height: 1.75rem;
-    padding-bottom: 0.1rem !important;
-  }
-
-  .playlists-page[data-mobile-home-preview='true'] .playlists-main-inner--mobile-audio {
-    /* 试听 dock 更矮，且贴底（无底栏导航） */
-    padding-bottom: calc(9.25rem + env(safe-area-inset-bottom, 0px)) !important;
+    margin: 0 0 0.15rem !important;
+    min-height: 1.5rem;
+    padding: 0 1rem 0.1rem !important;
   }
 
   body.playlists-mobile-audio-active:has(.playlists-page[data-mobile-home-preview='true']) {
