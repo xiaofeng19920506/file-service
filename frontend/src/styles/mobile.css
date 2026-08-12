@@ -94,9 +94,42 @@
     flex-direction: column;
   }
 
+  /* 试听：CD 区不得吃满整屏，避免挡住「添加到列表」 */
+  .playlists-page[data-mobile-home-preview='true'] .playlists-player-stage[data-audio-mobile-record='true'] {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .playlists-page[data-mobile-home-preview='true']
+    .playlist-audio-player--mobile-record {
+    flex: 1 1 auto;
+    min-height: 0 !important;
+    height: auto;
+    max-height: 100%;
+    margin-bottom: 0;
+    padding-bottom: 0.35rem;
+  }
+
+  .playlists-page[data-mobile-home-preview='true'] .playlist-audio-record-stage {
+    flex: 1 1 auto;
+    min-height: min(28vh, 12.5rem);
+    max-height: min(38vh, 16rem);
+    padding-bottom: 0.5rem;
+  }
+
+  .playlists-page[data-mobile-home-preview='true'] .playlist-audio-record-disc {
+    width: min(58vw, 13.5rem);
+  }
+
   .playlists-page[data-mobile-home-preview='true'] .playlists-home-preview-actions {
+    position: relative;
+    z-index: 6;
+    flex-shrink: 0;
+    background: var(--surface);
+    padding-top: 0.35rem;
     padding-bottom: calc(
-      var(--playlists-mobile-dock-height-active) + var(--bottom-nav-height) + 0.75rem
+      var(--playlists-mobile-dock-height-active) + var(--bottom-nav-height) + var(--safe-bottom) + 0.75rem
     );
   }
 
