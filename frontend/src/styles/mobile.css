@@ -79,72 +79,94 @@
     width: 100%;
   }
 
+  /* 试听：整列撑满并把 CD 压到底栏上方（盖过通用 38vh min-height） */
   .playlists-page[data-mobile-home-preview='true'] .playlists-home-preview-main {
     flex: 1;
     min-height: 0;
-    overflow: visible;
+    overflow: visible !important;
   }
 
-  .playlists-page[data-mobile-home-preview='true'] .playlists-main-inner {
-    flex: 1;
-    min-height: 0;
-    overflow: visible;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
+  .playlists-page[data-mobile-home-preview='true'] .playlists-main-inner,
+  .playlists-page[data-mobile-home-preview='true'] .playlists-main-inner--mobile-audio {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
   }
 
-  /* 试听：CD 靠下贴近底栏，添加 + 钉在 CD 右上角 */
   .playlists-page[data-mobile-home-preview='true'] .playlists-player-stage[data-audio-mobile-record='true'] {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow: visible;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    display: flex !important;
+    flex-direction: column !important;
   }
 
   .playlists-page[data-mobile-home-preview='true']
-    .playlist-audio-player--mobile-record {
-    flex: 1 1 auto;
+    .playlists-player-stage[data-audio-mobile-record='true']
+    .playlists-player-col {
+    flex: 1 1 auto !important;
     min-height: 0 !important;
-    height: 100%;
-    max-height: none;
-    margin-bottom: 0;
-    padding-top: 0;
-    padding-bottom: 0.25rem;
-    justify-content: flex-end;
-    overflow: visible;
+    display: flex !important;
+    flex-direction: column !important;
   }
 
+  .playlists-page[data-mobile-home-preview='true'] .playlist-audio-player--mobile-record {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0.35rem var(--page-gutter) 0.2rem !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-end !important;
+    overflow: visible !important;
+  }
+
+  .playlists-page[data-mobile-home-preview='true']
+    .playlists-main-inner--mobile-audio
+    .playlists-player-stage[data-audio-mobile-record='true']
+    .playlist-audio-record-stage,
   .playlists-page[data-mobile-home-preview='true'] .playlist-audio-record-stage {
-    flex: 0 0 auto;
-    min-height: 0;
-    max-height: none;
-    margin-top: auto;
-    justify-content: center;
-    padding-top: 0;
-    padding-bottom: 0.35rem;
-    overflow: visible;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin-top: 0 !important;
+    padding: 0 0 0.2rem !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    overflow: visible !important;
   }
 
   .playlists-page[data-mobile-home-preview='true'] .playlist-audio-record-disc-wrap {
-    width: min(64vw, 15.5rem);
+    width: min(62vw, 14.75rem) !important;
+    margin-top: auto !important;
+    margin-bottom: 0.1rem;
   }
 
   .playlists-page[data-mobile-home-preview='true'] .playlist-audio-record-disc {
-    width: 100%;
-    height: 100%;
+    width: 100% !important;
+    height: 100% !important;
   }
 
   .playlists-page[data-mobile-home-preview='true'] .playlist-audio-record-now-lyric {
-    margin-top: 0.15rem;
-    margin-bottom: 0.15rem;
+    flex: 0 0 auto;
+    margin-top: 0.15rem !important;
+    margin-bottom: 0.1rem !important;
+    min-height: 1.75rem;
+    padding-bottom: 0.1rem !important;
   }
 
   .playlists-page[data-mobile-home-preview='true'] .playlists-main-inner--mobile-audio {
-    padding-bottom: calc(var(--playlists-mobile-dock-height-active) + 1rem) !important;
-    overflow: visible !important;
+    padding-bottom: calc(var(--playlists-mobile-dock-height-active) + 0.75rem) !important;
+  }
+
+  body.playlists-mobile-audio-active:has(.playlists-page[data-mobile-home-preview='true']) .page-tab-bottom {
+    display: none !important;
   }
 
   .playlists-list-rename-btn,
