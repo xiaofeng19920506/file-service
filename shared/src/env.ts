@@ -32,7 +32,6 @@ const apiFs = z.object({
     .positive()
     .default(USER_SESSION_TTL_60_YEARS_SECONDS),
   ADMIN_EMAILS: z.string().optional(),
-  WEBHOOK_SECRET: z.string().min(8).optional(),
   YOUTUBE_API_KEY: z.string().min(10).optional(),
   GOOGLE_OAUTH_CLIENT_ID: z.string().min(10).optional(),
   GOOGLE_OAUTH_CLIENT_SECRET: z.string().min(10).optional(),
@@ -80,7 +79,6 @@ const apiS3 = z.object({
     .positive()
     .default(USER_SESSION_TTL_60_YEARS_SECONDS),
   ADMIN_EMAILS: z.string().optional(),
-  WEBHOOK_SECRET: z.string().min(8).optional(),
   YOUTUBE_API_KEY: z.string().min(10).optional(),
   GOOGLE_OAUTH_CLIENT_ID: z.string().min(10).optional(),
   GOOGLE_OAUTH_CLIENT_SECRET: z.string().min(10).optional(),
@@ -148,9 +146,7 @@ const workerFs = z.object({
   EXPORT_RETENTION_DAYS: retention,
   WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
   YOUTUBE_AUDIO_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
-  YOUTUBE_VIDEO_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
   YT_DLP_PATH: z.string().default('yt-dlp'),
-  WEBHOOK_SECRET: z.string().min(8).optional(),
 });
 
 const workerS3 = z.object({
@@ -165,9 +161,7 @@ const workerS3 = z.object({
   EXPORT_RETENTION_DAYS: retention,
   WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
   YOUTUBE_AUDIO_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
-  YOUTUBE_VIDEO_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
   YT_DLP_PATH: z.string().default('yt-dlp'),
-  WEBHOOK_SECRET: z.string().min(8).optional(),
 });
 
 export const workerSchema = z.discriminatedUnion('STORAGE_BACKEND', [
@@ -188,4 +182,3 @@ export function loadWorkerEnv(
 }
 
 export { YOUTUBE_AUDIO_QUEUE_NAME } from './youtube-audio-cache.js';
-export { YOUTUBE_VIDEO_QUEUE_NAME } from './youtube-video-cache.js';
