@@ -5,7 +5,7 @@
 #   bash scripts/prod-stack.sh stop          # 停止本机 API/Web 进程
 #   bash scripts/prod-stack.sh start         # 迁移 + 启动（使用已有构建）
 #   bash scripts/prod-stack.sh start --build # 先 build:prod 再启动
-#   MP3_WORKER_COUNT=5 VIDEO_WORKER_COUNT=5 bash scripts/prod-stack.sh start
+#   MP3_WORKER_COUNT=5 bash scripts/prod-stack.sh start
 #   bash scripts/prod-stack.sh status        # 查看端口与容器
 #
 # npm 快捷：
@@ -22,7 +22,6 @@ COMPOSE=(docker compose -f "${ROOT}/shared/docker-compose.yml")
 API_PORT="${PORT:-3000}"
 WEB_PORT="${FILE_SERVICE_WEB_PORT:-4000}"
 MP3_WORKER_COUNT="${MP3_WORKER_COUNT:-5}"
-VIDEO_WORKER_COUNT="${VIDEO_WORKER_COUNT:-5}"
 SUPERVISOR="${ROOT}/scripts/autostart/supervise-commands.sh"
 
 RED='\033[0;31m'
@@ -40,8 +39,8 @@ usage() {
 用法: bash scripts/prod-stack.sh <stop|start|status> [--build]
 
   stop              停止本机 API / Worker / Web（:3000 :4000 :5173）
-  start [--build]   启动 Docker + 迁移 + API + 1 合并 Worker + 5 音频 + 5 视频 + Web
-                    可用 MP3_WORKER_COUNT / VIDEO_WORKER_COUNT 覆盖默认 5
+  start [--build]   启动 Docker + 迁移 + API + MP3 Worker + Web
+                    可用 MP3_WORKER_COUNT 覆盖默认 5
   status            查看 Docker 容器与端口占用
 
 示例：
@@ -70,7 +69,6 @@ load_env() {
   # shellcheck disable=SC1091
   source "${ROOT}/.env"
   set +a
-  export SOFFICE_PREVIEW_URL="${SOFFICE_PREVIEW_URL:-http://localhost:3010}"
 }
 
 free_port() {
@@ -102,8 +100,6 @@ stop_local_processes() {
   pkill -f "${ROOT}/backend/api/dist/index.js" 2>/dev/null || true
   pkill -f "${ROOT}/backend/worker/dist/index.js" 2>/dev/null || true
   pkill -f "${ROOT}/backend/worker/dist/worker-audio.js" 2>/dev/null || true
-  pkill -f "${ROOT}/backend/worker/dist/worker-video.js" 2>/dev/null || true
-  pkill -f "${ROOT}/backend/worker/dist/worker-merge.js" 2>/dev/null || true
   pkill -f "${ROOT}/backend/api/src/index.ts" 2>/dev/null || true
   pkill -f "${ROOT}/backend/worker/src/" 2>/dev/null || true
   pkill -f "${ROOT}/node_modules/.bin/tsx watch backend/" 2>/dev/null || true
@@ -119,7 +115,7 @@ cmd_stop() {
   info "停止 file-service 本机进程…"
   stop_local_processes
   ok "已停止 API :${API_PORT} / Web :${WEB_PORT} / Dev :5173"
-  echo "Docker 容器（Postgres / Redis / LibreOffice）仍在运行；要停容器请执行："
+  echo "Docker 容器（Postgres / Redis）仍在运行；要停容器请执行："
   echo "  docker compose -f shared/docker-compose.yml down"
 }
 
@@ -152,8 +148,6 @@ ensure_build() {
   for f in \
     "${ROOT}/backend/api/dist/index.js" \
     "${ROOT}/backend/worker/dist/worker-audio.js" \
-    "${ROOT}/backend/worker/dist/worker-video.js" \
-    "${ROOT}/backend/worker/dist/worker-merge.js" \
     "${ROOT}/frontend/.next/BUILD_ID"; do
     if [[ ! -f "$f" ]]; then
       missing=1
@@ -176,10 +170,6 @@ validate_worker_counts() {
     echo "MP3_WORKER_COUNT 必须是正整数，当前: ${MP3_WORKER_COUNT}" >&2
     exit 1
   fi
-  if ! [[ "$VIDEO_WORKER_COUNT" =~ ^[1-9][0-9]*$ ]]; then
-    echo "VIDEO_WORKER_COUNT 必须是正整数，当前: ${VIDEO_WORKER_COUNT}" >&2
-    exit 1
-  fi
 }
 
 cmd_start() {
@@ -200,8 +190,8 @@ cmd_start() {
     exit 1
   fi
 
-  info "启动 Docker：Postgres + Redis + LibreOffice 预览"
-  "${COMPOSE[@]}" up -d postgres redis libreoffice
+  info "启动 Docker：Postgres + Redis"
+  "${COMPOSE[@]}" up -d postgres redis
   wait_for_postgres
   ok "Docker 基础设施就绪"
 
@@ -211,10 +201,9 @@ cmd_start() {
   ensure_build "$build_flag"
 
   echo ""
-  info "启动生产栈（API :${API_PORT} · Web :${WEB_PORT} · LibreOffice :3010）"
-  echo "   Worker: 1 合并 + ${MP3_WORKER_COUNT} 音频 + ${VIDEO_WORKER_COUNT} 视频"
+  info "启动生产栈（API :${API_PORT} · Web :${WEB_PORT}）"
+  echo "   Worker: ${MP3_WORKER_COUNT} × youtube-audio"
   echo "   MP3 总并发 ≈ ${MP3_WORKER_COUNT} × YOUTUBE_AUDIO_WORKER_CONCURRENCY（见 .env）"
-  echo "   视频总并发 ≈ ${VIDEO_WORKER_COUNT} × YOUTUBE_VIDEO_WORKER_CONCURRENCY（见 .env）"
   echo "   Ctrl+C 停止全部本机进程"
   echo ""
 
@@ -224,13 +213,9 @@ cmd_start() {
 
   local -a supervised_cmds=(
     "cd '${ROOT}' && exec node backend/api/dist/index.js"
-    "cd '${ROOT}' && exec node backend/worker/dist/worker-merge.js"
   )
   for ((i = 1; i <= MP3_WORKER_COUNT; i++)); do
     supervised_cmds+=("cd '${ROOT}' && exec node backend/worker/dist/worker-audio.js")
-  done
-  for ((i = 1; i <= VIDEO_WORKER_COUNT; i++)); do
-    supervised_cmds+=("cd '${ROOT}' && exec node backend/worker/dist/worker-video.js")
   done
   supervised_cmds+=("cd '${ROOT}/frontend' && exec env PORT=${WEB_PORT} npm run start")
 
@@ -244,7 +229,7 @@ cmd_status() {
   "${COMPOSE[@]}" ps
   echo ""
   info "端口"
-  for port in "$API_PORT" "$WEB_PORT" 3010 5432 6379; do
+  for port in "$API_PORT" "$WEB_PORT" 5432 6379; do
     if lsof -ti ":${port}" >/dev/null 2>&1; then
       echo "  :${port}  占用中"
     else
