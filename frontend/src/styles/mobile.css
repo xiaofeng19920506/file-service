@@ -162,11 +162,30 @@
   }
 
   .playlists-page[data-mobile-home-preview='true'] .playlists-main-inner--mobile-audio {
-    padding-bottom: calc(var(--playlists-mobile-dock-height-active) + 0.75rem) !important;
+    /* 试听 dock 更矮，且贴底（无底栏导航） */
+    padding-bottom: calc(9.25rem + env(safe-area-inset-bottom, 0px)) !important;
   }
 
+  body.playlists-mobile-audio-active:has(.playlists-page[data-mobile-home-preview='true']) {
+    --bottom-nav-height: 0px;
+  }
+
+  body.playlists-mobile-audio-active:has(.playlists-page[data-mobile-home-preview='true']) .nav-bottom,
+  body.playlists-mobile-audio-active:has(.playlists-page[data-mobile-home-preview='true']) .page-tabs-bottom,
   body.playlists-mobile-audio-active:has(.playlists-page[data-mobile-home-preview='true']) .page-tab-bottom {
     display: none !important;
+  }
+
+  body.playlists-mobile-audio-active:has(.playlists-page[data-mobile-home-preview='true'])
+    .playlists-playback-dock--mobile {
+    bottom: 0;
+    padding-bottom: calc(0.45rem + env(safe-area-inset-bottom, 0px));
+    min-height: 0;
+  }
+
+  body.playlists-mobile-audio-active:has(.playlists-page[data-mobile-home-preview='true'])
+    .playlists-playback-dock--mobile.playlists-playback-dock--with-progress {
+    min-height: 0;
   }
 
   .playlists-list-rename-btn,
