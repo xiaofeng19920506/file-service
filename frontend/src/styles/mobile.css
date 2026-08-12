@@ -95,8 +95,8 @@
     padding: 0 !important;
     display: flex !important;
     flex-direction: column !important;
-    /* 只为贴底的播控留空，避免歌词下方大片空白 */
-    padding-bottom: calc(10.5rem + env(safe-area-inset-bottom, 0px)) !important;
+    /* 主区底边已接近 dock 顶，只需少量间隙，勿再按整段 dock 高度留白 */
+    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px)) !important;
     box-sizing: border-box !important;
   }
 
@@ -175,7 +175,7 @@
   body.playlists-mobile-audio-active
     .playlists-page[data-mobile-home-preview='true']
     .playlists-main-inner--mobile-audio {
-    padding-bottom: calc(10.5rem + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   body.playlists-mobile-audio-active:has(.playlists-page[data-mobile-home-preview='true']) .nav-bottom,
