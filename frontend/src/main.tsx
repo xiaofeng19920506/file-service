@@ -4,8 +4,6 @@ import App from './App';
 import { AuthProvider } from './auth/AuthContext';
 import { I18nProvider } from './i18n';
 import './index.css';
-import './styles/ppt-editor.css';
-import './styles/ppt-ribbon.css';
 
 const stored = localStorage.getItem('theme');
 const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;

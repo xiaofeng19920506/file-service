@@ -125,11 +125,12 @@ function oauthClientRedirect(
   state: ReturnType<typeof parseCallbackState>,
   params: Record<string, string>,
 ) {
-  if (state?.returnHash === '/bulletin') {
-    params.worship_youtube = '1';
-  }
+  const returnHash =
+    state?.returnHash === '/bulletin' || state?.returnHash === '/worship'
+      ? '/playlists'
+      : state?.returnHash;
   return redirectToWebApp(callbackRedirectWebAppUrl(env, state), params, {
-    returnHash: state?.returnHash,
+    returnHash,
     returnPlaylistId: state?.returnPlaylistId,
   });
 }

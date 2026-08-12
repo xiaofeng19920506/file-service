@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   addPlaylistItemsByVideos,
-  addInvitePlaylistItemsByVideos,
   type PlaylistDetail,
   type PlaylistSummary,
 } from '../api/playlists';
@@ -21,7 +20,6 @@ export type YoutubeSearchResultLayout = 'list' | 'video';
 
 type PlaylistYoutubeSearchPanelProps = {
   playlistId?: string;
-  inviteToken?: string;
   existingVideoIds?: Set<string>;
   libraryVideoIds?: Set<string>;
   onAdded: (detail: PlaylistDetail, meta: { addedCount: number; skippedCount: number }) => void;
@@ -41,7 +39,6 @@ type PlaylistYoutubeSearchPanelProps = {
 
 export default function PlaylistYoutubeSearchPanel({
   playlistId,
-  inviteToken,
   existingVideoIds = new Set(),
   libraryVideoIds = new Set(),
   onAdded,
@@ -80,7 +77,6 @@ export default function PlaylistYoutubeSearchPanel({
     resetSearch,
   } = useDebouncedYoutubeSearch({
     debounceEnabled: searchOnSubmit ? false : !isMobileViewport,
-    inviteToken,
   });
 
   const resultsListRef = useRef<HTMLUListElement>(null);
@@ -120,9 +116,7 @@ export default function PlaylistYoutubeSearchPanel({
     setAddingVideoId(videoId);
     setAddError(null);
     try {
-      const data = inviteToken
-        ? await addInvitePlaylistItemsByVideos(inviteToken, [{ videoId, title }])
-        : await addPlaylistItemsByVideos(targetPlaylistId, [{ videoId, title }]);
+      const data = await addPlaylistItemsByVideos(targetPlaylistId, [{ videoId, title }]);
       onAdded(data, { addedCount: data.addedCount, skippedCount: data.skippedCount });
       setPendingAdd(null);
     } catch (err) {
@@ -148,9 +142,9 @@ export default function PlaylistYoutubeSearchPanel({
       return;
     }
 
-    if (!playlistId && !inviteToken) return;
+    if (!playlistId) return;
     if (isInCurrentPlaylist(videoId)) return;
-    await addToPlaylist(playlistId ?? '', videoId, title);
+    await addToPlaylist(playlistId, videoId, title);
   };
 
   const isInCurrentPlaylist = (videoId: string) => existingVideoIds.has(videoId);
@@ -158,11 +152,9 @@ export default function PlaylistYoutubeSearchPanel({
   const isInAnyPlaylist = (videoId: string, inLibrary?: boolean) =>
     inLibrary === true || libraryVideoIds.has(videoId);
 
-  const showTrending = Boolean(inviteToken)
-    ? false
-    : searchOnSubmit
-      ? !hasSearched && !isSearchBusy
-      : searchResults.length === 0 && !isSearchBusy && !searchQuery.trim();
+  const showTrending = searchOnSubmit
+    ? !hasSearched && !isSearchBusy
+    : searchResults.length === 0 && !isSearchBusy && !searchQuery.trim();
   const relocateSearchToHeader = Boolean(searchHeaderEl) && !isMobileViewport;
   const showSearchButton = searchOnSubmit || !isMobileViewport;
 

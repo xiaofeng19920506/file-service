@@ -1,19 +1,8 @@
 import { z } from 'zod';
-import { isValidLibreOfficePreviewUrlList } from './libreoffice-preview-client.js';
 
 const retention = z.coerce.number().int().positive().default(7);
 
 const apiKeyField = z.string().min(8).optional();
-
-/** 单个或逗号分隔的 LibreOffice 预览 URL */
-const sofficePreviewUrlField = z
-  .string()
-  .min(1)
-  .refine(isValidLibreOfficePreviewUrlList, {
-    message:
-      'SOFFICE_PREVIEW_URL must be one or more comma-separated http(s) URLs (e.g. http://localhost:3010,http://localhost:3011)',
-  })
-  .optional();
 
 /** 60 年（按 365 天/年计算） */
 export const USER_SESSION_TTL_60_YEARS_SECONDS = 60 * 365 * 24 * 60 * 60;
@@ -32,13 +21,6 @@ const apiFs = z.object({
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   RATE_LIMIT_UPLOAD_MAX: z.coerce.number().int().positive().default(30),
   PUBLIC_BASE_URL: z.string().url().optional(),
-  SOFFICE_PATH: z.string().default('soffice'),
-  /**
-   * Docker LibreOffice 预览服务。
-   * 单个：http://localhost:3010
-   * 多个（逗号分隔，轮询）：http://localhost:3010,http://localhost:3011
-   */
-  SOFFICE_PREVIEW_URL: sofficePreviewUrlField,
   API_KEY: apiKeyField,
   AUTH_REQUIRED: z
     .enum(['true', 'false', '1', '0'])
@@ -50,7 +32,6 @@ const apiFs = z.object({
     .positive()
     .default(USER_SESSION_TTL_60_YEARS_SECONDS),
   ADMIN_EMAILS: z.string().optional(),
-  WORSHIP_TEAM_EMAILS: z.string().optional(),
   WEBHOOK_SECRET: z.string().min(8).optional(),
   YOUTUBE_API_KEY: z.string().min(10).optional(),
   GOOGLE_OAUTH_CLIENT_ID: z.string().min(10).optional(),
@@ -58,8 +39,6 @@ const apiFs = z.object({
   GOOGLE_OAUTH_REDIRECT_URI: z.string().url().optional(),
   YT_DLP_PATH: z.string().default('yt-dlp'),
   WEB_APP_URL: z.string().url().optional(),
-  /** VIP 用户专属播放列表 UUID */
-  VIP_PLAYLIST_ID: z.string().uuid().optional(),
   SHARE_LINK_TTL_SECONDS: z.coerce.number().int().positive().default(604_800),
   SMTP_HOST: z.string().min(1).optional(),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
@@ -70,18 +49,6 @@ const apiFs = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().min(3).optional(),
-  /** Google Drive 服务账号 JSON 文件路径，或整段 JSON 字符串 */
-  GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON: z.string().min(2).optional(),
-  /** 服事轮值 .xlsx 的 Drive fileId */
-  BULLETIN_DRIVE_ROTATION_FILE_ID: z.string().min(5).optional(),
-  /** Jan–Dec 生日 PPTX 的 Drive fileId */
-  BULLETIN_DRIVE_BIRTHDAY_PPTX_FILE_ID: z.string().min(5).optional(),
-  /** Drive 同步间隔（毫秒），默认 6 小时 */
-  BULLETIN_DRIVE_SYNC_INTERVAL_MS: z.coerce
-    .number()
-    .int()
-    .positive()
-    .default(21_600_000),
 });
 
 const apiS3 = z.object({
@@ -102,13 +69,6 @@ const apiS3 = z.object({
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   RATE_LIMIT_UPLOAD_MAX: z.coerce.number().int().positive().default(30),
   PUBLIC_BASE_URL: z.string().url().optional(),
-  SOFFICE_PATH: z.string().default('soffice'),
-  /**
-   * Docker LibreOffice 预览服务。
-   * 单个：http://localhost:3010
-   * 多个（逗号分隔，轮询）：http://localhost:3010,http://localhost:3011
-   */
-  SOFFICE_PREVIEW_URL: sofficePreviewUrlField,
   API_KEY: apiKeyField,
   AUTH_REQUIRED: z
     .enum(['true', 'false', '1', '0'])
@@ -120,7 +80,6 @@ const apiS3 = z.object({
     .positive()
     .default(USER_SESSION_TTL_60_YEARS_SECONDS),
   ADMIN_EMAILS: z.string().optional(),
-  WORSHIP_TEAM_EMAILS: z.string().optional(),
   WEBHOOK_SECRET: z.string().min(8).optional(),
   YOUTUBE_API_KEY: z.string().min(10).optional(),
   GOOGLE_OAUTH_CLIENT_ID: z.string().min(10).optional(),
@@ -128,8 +87,6 @@ const apiS3 = z.object({
   GOOGLE_OAUTH_REDIRECT_URI: z.string().url().optional(),
   YT_DLP_PATH: z.string().default('yt-dlp'),
   WEB_APP_URL: z.string().url().optional(),
-  /** VIP 用户专属播放列表 UUID */
-  VIP_PLAYLIST_ID: z.string().uuid().optional(),
   SHARE_LINK_TTL_SECONDS: z.coerce.number().int().positive().default(604_800),
   SMTP_HOST: z.string().min(1).optional(),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
@@ -140,18 +97,6 @@ const apiS3 = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().min(3).optional(),
-  /** Google Drive 服务账号 JSON 文件路径，或整段 JSON 字符串 */
-  GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON: z.string().min(2).optional(),
-  /** 服事轮值 .xlsx 的 Drive fileId */
-  BULLETIN_DRIVE_ROTATION_FILE_ID: z.string().min(5).optional(),
-  /** Jan–Dec 生日 PPTX 的 Drive fileId */
-  BULLETIN_DRIVE_BIRTHDAY_PPTX_FILE_ID: z.string().min(5).optional(),
-  /** Drive 同步间隔（毫秒），默认 6 小时 */
-  BULLETIN_DRIVE_SYNC_INTERVAL_MS: z.coerce
-    .number()
-    .int()
-    .positive()
-    .default(21_600_000),
 });
 
 export const apiSchema = z.discriminatedUnion('STORAGE_BACKEND', [
@@ -201,7 +146,6 @@ const workerFs = z.object({
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().min(1),
   EXPORT_RETENTION_DAYS: retention,
-  SOFFICE_PATH: z.string().default('soffice'),
   WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
   YOUTUBE_AUDIO_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
   YOUTUBE_VIDEO_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
@@ -219,7 +163,6 @@ const workerS3 = z.object({
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().min(1),
   EXPORT_RETENTION_DAYS: retention,
-  SOFFICE_PATH: z.string().default('soffice'),
   WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
   YOUTUBE_AUDIO_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
   YOUTUBE_VIDEO_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
@@ -244,23 +187,5 @@ export function loadWorkerEnv(
   return parsed.data;
 }
 
-export const MERGE_QUEUE_NAME = 'merge-presentation';
 export { YOUTUBE_AUDIO_QUEUE_NAME } from './youtube-audio-cache.js';
 export { YOUTUBE_VIDEO_QUEUE_NAME } from './youtube-video-cache.js';
-
-const previewSchema = z.object({
-  PORT: z.coerce.number().int().positive().default(3010),
-  SOFFICE_PATH: z.string().default('soffice'),
-});
-
-export type PreviewEnv = z.infer<typeof previewSchema>;
-
-export function loadPreviewEnv(
-  processEnv: NodeJS.ProcessEnv = process.env,
-): PreviewEnv {
-  const parsed = previewSchema.safeParse(processEnv);
-  if (!parsed.success) {
-    throw new Error(`Invalid env: ${parsed.error.message}`);
-  }
-  return parsed.data;
-}

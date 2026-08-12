@@ -11,7 +11,7 @@ describe('youtube oauth state', () => {
       userId: 'user-1',
       returnPlaylistId: 'playlist-1',
       returnWebAppUrl: 'https://app.example.com',
-      returnHash: '/bulletin',
+      returnHash: '/playlists',
       expiresAtUnix: 4_000_000_000,
     });
     const claims = verifyYoutubeOAuthState({
@@ -23,7 +23,7 @@ describe('youtube oauth state', () => {
       userId: 'user-1',
       returnPlaylistId: 'playlist-1',
       returnWebAppUrl: 'https://app.example.com',
-      returnHash: '/bulletin',
+      returnHash: '/playlists',
       expiresAtUnix: 4_000_000_000,
     });
   });

@@ -409,7 +409,6 @@ const en: MessageTree = {
     content_already_exists_files:
       'Upload failed — this file already exists in the library: {names}',
     admin_required: 'Only admins can edit library file information',
-    merge_forbidden: 'Your account cannot use merge — contact an admin',
     upload_forbidden: 'Your account cannot upload files — contact an admin',
     download_forbidden: 'Sign in to download or preview',
     login_failed: 'Sign-in failed — please try again',
@@ -429,10 +428,6 @@ const en: MessageTree = {
     update_user_failed: 'Failed to update user — please try again',
     user_not_found: 'User not found',
     invalid_role: 'Invalid role',
-    vip_forbidden: 'Your account cannot access this feature',
-    vip_playlist_failed: 'Failed to load VIP playlist',
-    vip_playlist_not_configured: 'VIP playlist is not configured (VIP_PLAYLIST_ID)',
-    vip_playlist_not_found: 'VIP playlist not found',
     video_not_ready: 'Video is not cached yet — please wait',
     video_extract_failed: 'Video caching failed — try again later',
     video_playback_failed: 'Video playback failed — refresh and try again',

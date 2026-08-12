@@ -1,31 +1,8 @@
-export type WorshipPresentationMode = 'ppt' | 'youtube' | 'ppt_youtube';
-
 export type PlayClip = {
   startSec: number;
   endSec: number | null;
   label?: string | null;
 };
-
-export const WORSHIP_PRESENTATION_MODES: WorshipPresentationMode[] = [
-  'ppt',
-  'youtube',
-  'ppt_youtube',
-];
-
-export function normalizeWorshipPresentationMode(
-  value: unknown,
-  fallback: WorshipPresentationMode = 'youtube',
-): WorshipPresentationMode {
-  return value === 'ppt' || value === 'youtube' || value === 'ppt_youtube' ? value : fallback;
-}
-
-export function worshipNeedsPlaylist(mode: WorshipPresentationMode): boolean {
-  return mode === 'youtube' || mode === 'ppt_youtube';
-}
-
-export function worshipNeedsLyricsPptx(mode: WorshipPresentationMode): boolean {
-  return mode === 'ppt' || mode === 'ppt_youtube';
-}
 
 /** `<input type="time" step="1">` 的 value（HH:MM:SS）；null → 空 */
 export function secondsToHtmlTime(seconds: number | null | undefined): string {

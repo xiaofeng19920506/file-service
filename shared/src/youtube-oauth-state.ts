@@ -7,7 +7,7 @@ export type YoutubeOAuthState = {
   userId: string;
   returnPlaylistId?: string;
   returnWebAppUrl?: string;
-  /** e.g. `/bulletin` — OAuth 完成后回到 `#/bulletin?...` */
+  /** e.g. `/playlists` — OAuth 完成后回到 `#/playlists?...` */
   returnHash?: string;
   expiresAtUnix: number;
 };

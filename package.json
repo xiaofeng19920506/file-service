@@ -6,7 +6,6 @@
     "frontend",
     "backend/api",
     "backend/worker",
-    "backend/preview",
     "shared"
   ],
   "scripts": {

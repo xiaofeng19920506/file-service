@@ -13,8 +13,6 @@ export const YOUTUBE_SEARCH_DEBOUNCE_MS = 450;
 type UseDebouncedYoutubeSearchOptions = {
   debounceMs?: number;
   debounceEnabled?: boolean;
-  /** 敬拜邀请：匿名搜索加歌 */
-  inviteToken?: string;
 };
 
 function mergeSearchResults(
@@ -32,7 +30,7 @@ function mergeSearchResults(
 }
 
 export function useDebouncedYoutubeSearch(options: UseDebouncedYoutubeSearchOptions = {}) {
-  const { debounceMs = YOUTUBE_SEARCH_DEBOUNCE_MS, debounceEnabled = true, inviteToken } = options;
+  const { debounceMs = YOUTUBE_SEARCH_DEBOUNCE_MS, debounceEnabled = true } = options;
   const { t } = useI18n();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<YoutubeSearchResult[]>([]);
@@ -105,11 +103,10 @@ export function useDebouncedYoutubeSearch(options: UseDebouncedYoutubeSearchOpti
       setLoadMoreLoading(false);
       setSearchResults([]);
       resetPagination();
-      void (inviteToken ? Promise.resolve() : recordYoutubeSearch(trimmed)).catch(() => undefined);
+      void recordYoutubeSearch(trimmed).catch(() => undefined);
       try {
         const data = await searchYoutubeVideos(trimmed, {
           limit: YOUTUBE_SEARCH_PAGE_SIZE,
-          inviteToken,
         });
         if (id !== requestIdRef.current) return;
         applySearchPage(data, 'replace');
@@ -123,7 +120,7 @@ export function useDebouncedYoutubeSearch(options: UseDebouncedYoutubeSearchOpti
         if (id === requestIdRef.current) setSearchLoading(false);
       }
     },
-    [applySearchPage, clearSearchState, inviteToken, resetPagination, t],
+    [applySearchPage, clearSearchState, resetPagination, t],
   );
 
   const loadMore = useCallback(async () => {
@@ -138,7 +135,6 @@ export function useDebouncedYoutubeSearch(options: UseDebouncedYoutubeSearchOpti
         limit: YOUTUBE_SEARCH_PAGE_SIZE,
         pageToken: nextPageToken ?? undefined,
         offset: nextPageToken ? undefined : nextOffset,
-        inviteToken,
       });
       if (id !== requestIdRef.current) return;
 
@@ -152,7 +148,7 @@ export function useDebouncedYoutubeSearch(options: UseDebouncedYoutubeSearchOpti
     } finally {
       if (id === requestIdRef.current) setLoadMoreLoading(false);
     }
-  }, [hasMore, inviteToken, loadMoreLoading, nextOffset, nextPageToken, searchLoading, t]);
+  }, [hasMore, loadMoreLoading, nextOffset, nextPageToken, searchLoading, t]);
 
   const searchNow = useCallback(() => {
     if (debounceRef.current) {

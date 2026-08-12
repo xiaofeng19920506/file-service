@@ -19,29 +19,21 @@ describe('shouldSkipRateLimit', () => {
     expect(shouldSkipRateLimit('GET', '/v1/jobs/abc/download')).toBe(true);
   });
 
-  it('skips vip video status polling', () => {
+  it('skips video status polling', () => {
     expect(shouldSkipRateLimit('GET', '/v1/youtube/videos/abc123/video')).toBe(true);
     expect(shouldSkipRateLimit('GET', '/v1/youtube/videos/abc123/video/stream')).toBe(false);
     expect(shouldSkipRateLimit('POST', '/v1/youtube/video/status')).toBe(true);
   });
 
-  it('skips worship audio status polling', () => {
+  it('skips audio status polling', () => {
     expect(shouldSkipRateLimit('GET', '/v1/youtube/videos/abc123/audio')).toBe(true);
     expect(shouldSkipRateLimit('GET', '/v1/youtube/videos/abc123/audio/stream-url')).toBe(false);
     expect(shouldSkipRateLimit('POST', '/v1/youtube/videos/abc123/audio/stream-url')).toBe(false);
   });
 
-  it('skips bulletin preview deck-plan and slide png', () => {
-    expect(shouldSkipRateLimit('GET', '/v1/bulletins/template/deck-plan')).toBe(true);
-    expect(shouldSkipRateLimit('GET', '/v1/bulletins/template/slides/12/preview.png')).toBe(true);
-    expect(shouldSkipRateLimit('GET', '/v1/bulletins')).toBe(false);
+  it('does not skip unrelated bulletin paths', () => {
+    expect(shouldSkipRateLimit('GET', '/v1/bulletins/template/deck-plan')).toBe(false);
     expect(shouldSkipRateLimit('GET', '/v1/auth/session')).toBe(false);
-  });
-
-  it('skips light bulletin schedule / drive-sync status polls', () => {
-    expect(shouldSkipRateLimit('GET', '/v1/bulletins/service-rotation/schedule')).toBe(true);
-    expect(shouldSkipRateLimit('GET', '/v1/bulletins/drive-sync/status')).toBe(true);
-    expect(shouldSkipRateLimit('POST', '/v1/bulletins/drive-sync/sync')).toBe(false);
   });
 });
 

@@ -54,7 +54,7 @@ function timingSafeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-/** 无需登录的路径（健康检查、登录注册、签名下载、游客浏览诗库等） */
+/** 无需登录的路径（健康检查、登录注册、签名下载等） */
 export function isPublicApiPath(method: string, path: string): boolean {
   return isUnauthenticatedAccessAllowed(method, path);
 }

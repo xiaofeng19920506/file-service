@@ -99,14 +99,14 @@ async function main() {
   if (existing) {
     await db
       .update(users)
-      .set({ passwordHash, firstName, lastName, role: 'member' })
+      .set({ passwordHash, firstName, lastName, role: 'user' })
       .where(eq(users.id, existing.id));
     userId = existing.id;
     console.log(`[seed] 已更新用户: ${email}`);
   } else {
     const [created] = await db
       .insert(users)
-      .values({ email, passwordHash, firstName, lastName, role: 'member' })
+      .values({ email, passwordHash, firstName, lastName, role: 'user' })
       .returning();
     userId = created!.id;
     console.log(`[seed] 已创建用户: ${email}`);

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   canAddNextClipSegment,
   defaultNextClipStartSec,
-} from './worship-presentation-mode';
+} from './playlist-play-clips';
 
 describe('defaultNextClipStartSec', () => {
   it('starts one second after previous end (1:00 → 1:01)', () => {

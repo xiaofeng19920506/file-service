@@ -57,7 +57,7 @@ import { usePlaylistsMobileMenu, PlaylistsMobileMenuPortal } from '../contexts/P
 import { useAuth } from '../auth/AuthContext';
 import { writeLastPlaylistId } from '../lib/playlist-last-open';
 import { prefetchTrackLyrics, readDefaultSubtitleLanguage } from '../lib/playlist-lyrics';
-import { toYoutubePlayerItems } from '../lib/worship-presentation-mode';
+import { toYoutubePlayerItems } from '../lib/playlist-play-clips';
 import { useRecordYoutubePlay } from '../hooks/useRecordYoutubePlay';
 
 type PlaylistsPageProps = {
