@@ -12,7 +12,7 @@ import { useMediaSession } from '../hooks/useMediaSession';
 import { useSwipeTrackNavigation } from '../hooks/useSwipeTrackNavigation';
 import type { PlaylistPlaybackOrderMode } from '../lib/playlist-playback-order-mode';
 import PlaylistLyricsScroller from './PlaylistLyricsScroller';
-import { PlaybackOrderModeIcon, QueueIcon } from './icons';
+import { PlaybackOrderModeIcon, PlusIcon, QueueIcon } from './icons';
 import AudioSeekBar from './AudioSeekBar';
 import ScrollingTitle from './ScrollingTitle';
 
@@ -46,6 +46,8 @@ type PlaylistAudioPlayerProps = {
   playbackOrderOpen?: boolean;
   onToggleQueue?: () => void;
   queueOpen?: boolean;
+  /** 试听：CD 右上角「添加到列表」icon */
+  onAddToList?: () => void;
 };
 
 function youtubeThumb(videoId: string): string {
@@ -144,6 +146,7 @@ export default function PlaylistAudioPlayer({
   playbackOrderOpen = false,
   onToggleQueue,
   queueOpen = false,
+  onAddToList,
 }: PlaylistAudioPlayerProps) {
   const { t, locale } = useI18n();
   const isNowPlaying = variant === 'nowPlaying';
@@ -687,7 +690,7 @@ export default function PlaylistAudioPlayer({
         syncDurationFromAudio(el);
       }
 
-      if (usingPreview || endedHandledRef.current) return;
+      if ((usingPreview && !onNextTrack) || endedHandledRef.current) return;
 
       const trackDuration = el.duration;
       if (!Number.isFinite(trackDuration) || trackDuration <= 0) return;
@@ -696,11 +699,12 @@ export default function PlaylistAudioPlayer({
 
       advanceToNextTrack();
     },
-    [advanceToNextTrack, syncDurationFromAudio, usingPreview],
+    [advanceToNextTrack, onNextTrack, syncDurationFromAudio, usingPreview],
   );
 
   const handleEnded = useCallback(() => {
-    if (usingPreviewRef.current) {
+    // 有 onNextTrack（试听电台）时播完切下一首；否则 preview 流重播当前曲
+    if (usingPreviewRef.current && !onNextTrack) {
       if (wantPlayRef.current) {
         void replayCurrentTrackStream();
       } else {
@@ -709,13 +713,13 @@ export default function PlaylistAudioPlayer({
       return;
     }
     advanceToNextTrack();
-  }, [advanceToNextTrack, replayCurrentTrackStream, onPlayingChange]);
+  }, [advanceToNextTrack, onNextTrack, replayCurrentTrackStream, onPlayingChange]);
 
   const handlePause = useCallback(
     (e: React.SyntheticEvent<HTMLAudioElement>) => {
       if (skipPauseSyncRef.current) return;
       if (e.currentTarget.ended) {
-        if (usingPreviewRef.current) {
+        if (usingPreviewRef.current && !onNextTrack) {
           if (wantPlayRef.current) void replayCurrentTrackStream();
           return;
         }
@@ -724,7 +728,7 @@ export default function PlaylistAudioPlayer({
       }
       onPlayingChange(false);
     },
-    [advanceToNextTrack, replayCurrentTrackStream, onPlayingChange],
+    [advanceToNextTrack, onNextTrack, replayCurrentTrackStream, onPlayingChange],
   );
 
   const handleAudioError = useCallback(() => {
@@ -1227,15 +1231,30 @@ export default function PlaylistAudioPlayer({
               />
             </div>
           ) : (
-            <button
-              type="button"
-              className={`playlist-audio-record-disc${playing ? ' is-playing' : ''}`}
-              onClick={() => setShowLyrics(true)}
-              aria-label={t('playlists.showLyrics')}
-            >
-              <div className="playlist-audio-record-disc-ring" aria-hidden />
-              <img className="playlist-audio-record-art" src={artworkUrl} alt="" loading="lazy" />
-            </button>
+            <div className="playlist-audio-record-disc-wrap">
+              <button
+                type="button"
+                className={`playlist-audio-record-disc${playing ? ' is-playing' : ''}`}
+                onClick={() => setShowLyrics(true)}
+                aria-label={t('playlists.showLyrics')}
+              >
+                <div className="playlist-audio-record-disc-ring" aria-hidden />
+                <img className="playlist-audio-record-art" src={artworkUrl} alt="" loading="lazy" />
+              </button>
+              {onAddToList ? (
+                <button
+                  type="button"
+                  className="playlist-audio-record-add-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAddToList();
+                  }}
+                  aria-label={t('playlists.addToList')}
+                >
+                  <PlusIcon />
+                </button>
+              ) : null}
+            </div>
           )}
         </div>
 

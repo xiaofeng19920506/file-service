@@ -1,5 +1,5 @@
 import AudioSeekBar from './AudioSeekBar';
-import { PlaybackOrderModeIcon, PlusIcon, QueueIcon } from './icons';
+import { PlaybackOrderModeIcon, QueueIcon } from './icons';
 import { formatPlaybackTime } from './PlaylistAudioPlayer';
 import { useI18n } from '../i18n';
 import ScrollingTitle from './ScrollingTitle';
@@ -21,8 +21,6 @@ type PlaylistsMobilePlaybackDockProps = {
   onSeekRatio?: (ratio: number) => void;
   onOpenPlaybackOrder?: () => void;
   onToggleQueue?: () => void;
-  /** 试听态：在底栏加入「添加到列表」 */
-  onAddToList?: () => void;
   onPlayToggle: () => void;
   onPrev: () => void;
   onNext: () => void;
@@ -44,7 +42,6 @@ export default function PlaylistsMobilePlaybackDock({
   onSeekRatio,
   onOpenPlaybackOrder,
   onToggleQueue,
-  onAddToList,
   onPlayToggle,
   onPrev,
   onNext,
@@ -54,7 +51,7 @@ export default function PlaylistsMobilePlaybackDock({
 
   return (
     <div
-      className={`playlists-playback-dock playlists-playback-dock--mobile playlists-playback-dock--audio mobile-only${showProgress ? ' playlists-playback-dock--with-progress' : ''}${onAddToList ? ' playlists-playback-dock--with-add' : ''}`}
+      className={`playlists-playback-dock playlists-playback-dock--mobile playlists-playback-dock--audio mobile-only${showProgress ? ' playlists-playback-dock--with-progress' : ''}`}
       role="group"
       aria-label={t('playlists.playerSectionAudio')}
     >
@@ -122,16 +119,6 @@ export default function PlaylistsMobilePlaybackDock({
         </div>
 
         <div className="playlists-playback-dock-secondary">
-          {onAddToList ? (
-            <button
-              type="button"
-              className="playlists-playback-dock-add-btn"
-              onClick={onAddToList}
-            >
-              <PlusIcon />
-              <span>{t('playlists.addToList')}</span>
-            </button>
-          ) : null}
           {onOpenPlaybackOrder ? (
             <button
               type="button"

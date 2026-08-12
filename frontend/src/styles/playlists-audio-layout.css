@@ -390,16 +390,25 @@
   .playlist-audio-record-stage {
     flex: 1 1 auto;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-end;
     min-height: min(46vh, 360px);
     max-height: none;
-    padding: 0.15rem 0 1.25rem;
+    padding: 1.5rem 0 0.85rem;
+  }
+
+  .playlist-audio-record-disc-wrap {
+    position: relative;
+    flex-shrink: 0;
+    width: min(72vw, 17.5rem);
+    aspect-ratio: 1;
   }
 
   .playlist-audio-record-disc {
     position: relative;
-    width: min(72vw, 17.5rem);
+    width: 100%;
+    height: 100%;
     aspect-ratio: 1;
     border-radius: 50%;
     display: grid;
@@ -412,6 +421,42 @@
     padding: 0;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  .playlist-audio-record-add-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--border-light);
+    border-radius: 50%;
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 6px 16px color-mix(in srgb, #000 14%, transparent);
+    transform: translate(18%, -18%);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  .playlist-audio-record-add-btn:active {
+    transform: translate(18%, -18%) scale(0.94);
+  }
+
+  .playlist-audio-record-add-btn svg {
+    width: 1.15rem;
+    height: 1.15rem;
+  }
+
+  .playlist-audio-record-add-btn:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 2px;
   }
 
   button.playlist-audio-record-disc:focus-visible {

@@ -24,6 +24,8 @@ import PlaylistsMobilePlaybackDock from '../components/PlaylistsMobilePlaybackDo
 import PlaylistQueuePanel from '../components/PlaylistQueuePanel';
 import PlaylistPlaybackOrderPanel from '../components/PlaylistPlaybackOrderPanel';
 import { prioritizeYoutubeAudioCache, type YoutubeAudioStatus } from '../api/youtube-audio';
+import { fetchYoutubeRecommendations } from '../api/youtube-recommendations';
+import { fetchTrendingYoutubeSongs } from '../api/youtube-trending';
 import {
   addPlaylistItemsByVideos,
   deletePlaylist,
@@ -187,6 +189,9 @@ export default function PlaylistsPage({
   const [homePreviewAudio, setHomePreviewAudio] = useState<YoutubeAudioStatus | undefined>();
   const [homePreviewAddOpen, setHomePreviewAddOpen] = useState(false);
   const [homePreviewAdding, setHomePreviewAdding] = useState(false);
+  const homePreviewPlayedRef = useRef<Set<string>>(new Set());
+  const homePreviewQueueRef = useRef<Array<{ videoId: string; title: string }>>([]);
+  const homePreviewAdvancingRef = useRef(false);
 
   useEffect(() => {
     if (oauthHandledRef.current) return;
@@ -326,7 +331,67 @@ export default function PlaylistsPage({
     setHomePreviewPlaying(false);
     setHomePreviewAudio(undefined);
     setHomePreviewAddOpen(false);
+    homePreviewPlayedRef.current = new Set();
+    homePreviewQueueRef.current = [];
+    homePreviewAdvancingRef.current = false;
   }, []);
+
+  const fillHomePreviewQueue = useCallback(async () => {
+    if (homePreviewQueueRef.current.length >= 5) return;
+    const seen = homePreviewPlayedRef.current;
+    const queued = new Set(homePreviewQueueRef.current.map((row) => row.videoId));
+
+    const pushUnique = (rows: Array<{ videoId: string; title: string }>) => {
+      for (const row of rows) {
+        const videoId = row.videoId?.trim();
+        const title = row.title?.trim();
+        if (!videoId || !title) continue;
+        if (seen.has(videoId) || queued.has(videoId)) continue;
+        homePreviewQueueRef.current.push({ videoId, title });
+        queued.add(videoId);
+        if (homePreviewQueueRef.current.length >= 12) break;
+      }
+    };
+
+    try {
+      const recommended = await fetchYoutubeRecommendations(24);
+      pushUnique(recommended.songs);
+    } catch {
+      // fall through to trending
+    }
+
+    if (homePreviewQueueRef.current.length >= 3) return;
+
+    try {
+      const trending = await fetchTrendingYoutubeSongs(24);
+      pushUnique(trending.songs);
+    } catch {
+      // ignore — advance will stop if queue empty
+    }
+  }, []);
+
+  const playNextHomePreviewRadio = useCallback(async () => {
+    if (homePreviewAdvancingRef.current) return;
+    homePreviewAdvancingRef.current = true;
+    try {
+      await fillHomePreviewQueue();
+      const next = homePreviewQueueRef.current.shift();
+      if (!next) {
+        setHomePreviewPlaying(false);
+        return;
+      }
+      homePreviewPlayedRef.current.add(next.videoId);
+      setHomePreview(next);
+      setHomePreviewAudio(undefined);
+      setHomePreviewPlaying(true);
+      void prioritizeYoutubeAudioCache([next.videoId], [
+        { videoId: next.videoId, title: next.title },
+      ]);
+      void fillHomePreviewQueue();
+    } finally {
+      homePreviewAdvancingRef.current = false;
+    }
+  }, [fillHomePreviewQueue]);
 
   const startHomePreview = useCallback(
     (track: { videoId: string; title: string }) => {
@@ -336,14 +401,17 @@ export default function PlaylistsPage({
         setHomePreviewPlaying((wasPlaying) => !wasPlaying);
         return;
       }
+      homePreviewPlayedRef.current = new Set([track.videoId]);
+      homePreviewQueueRef.current = [];
       setHomePreview(track);
       setHomePreviewAudio(undefined);
       setHomePreviewPlaying(true);
       void prioritizeYoutubeAudioCache([track.videoId], [
         { videoId: track.videoId, title: track.title },
       ]);
+      void fillHomePreviewQueue();
     },
-    [homePreview?.videoId],
+    [fillHomePreviewQueue, homePreview?.videoId],
   );
 
   useEffect(() => {
@@ -1048,6 +1116,10 @@ export default function PlaylistsPage({
         playing={homePreviewPlaying}
         onPlayingChange={setHomePreviewPlaying}
         onAudioStatusChange={handleHomePreviewAudioStatusChange}
+        onNextTrack={() => {
+          void playNextHomePreviewRadio();
+        }}
+        canGoNext
         playlistTitle={t('playlists.previewListening')}
         variant="desktopDock"
         onProgressUpdate={setAudioProgress}
@@ -1651,6 +1723,11 @@ export default function PlaylistsPage({
               playing={homePreviewPlaying}
               onPlayingChange={setHomePreviewPlaying}
               onAudioStatusChange={handleHomePreviewAudioStatusChange}
+              onNextTrack={() => {
+                void playNextHomePreviewRadio();
+              }}
+              canGoNext
+              onAddToList={() => setHomePreviewAddOpen(true)}
               playlistTitle={t('playlists.previewListening')}
               variant="mobileRecord"
               onProgressUpdate={setAudioProgress}
@@ -1969,7 +2046,7 @@ export default function PlaylistsPage({
           trackLabel={t('playlists.previewListening')}
           playing={homePreviewPlaying}
           canGoPrev={false}
-          canGoNext={false}
+          canGoNext
           showProgress
           currentTime={audioProgress.currentTime}
           duration={audioProgress.duration}
@@ -1977,8 +2054,9 @@ export default function PlaylistsPage({
           onSeekRatio={(ratio) => audioProgressHandleRef.current?.seekToRatio(ratio)}
           onPlayToggle={handleMobileDockPlayToggle}
           onPrev={() => {}}
-          onNext={() => {}}
-          onAddToList={() => setHomePreviewAddOpen(true)}
+          onNext={() => {
+            void playNextHomePreviewRadio();
+          }}
         />
       )}
 
