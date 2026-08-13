@@ -872,9 +872,9 @@ export default function PlaylistsPage({
     const current = detail.items[activeIndex];
     const next = detail.items[activeIndex + 1];
     const prev = detail.items[activeIndex - 1];
-    if (current) prefetchTrackLyrics(current.youtubeVideoId, lang);
-    if (next) prefetchTrackLyrics(next.youtubeVideoId, lang);
-    if (prev) prefetchTrackLyrics(prev.youtubeVideoId, lang);
+    if (current) prefetchTrackLyrics(current.youtubeVideoId, lang, current.title);
+    if (next) prefetchTrackLyrics(next.youtubeVideoId, lang, next.title);
+    if (prev) prefetchTrackLyrics(prev.youtubeVideoId, lang, prev.title);
   }, [detail?.items, activeIndex, locale]);
 
   const audioCachePriorityIds = useMemo(() => {

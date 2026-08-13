@@ -13,10 +13,11 @@ import {
 
 type UsePlaylistTrackLyricsOptions = {
   videoId?: string;
+  title?: string;
   locale: string;
 };
 
-export function usePlaylistTrackLyrics({ videoId, locale }: UsePlaylistTrackLyricsOptions) {
+export function usePlaylistTrackLyrics({ videoId, title, locale }: UsePlaylistTrackLyricsOptions) {
   const defaultSubtitleLang = readDefaultSubtitleLanguage(locale);
   const [subtitleLang, setSubtitleLang] = useState<SubtitleLanguage>(defaultSubtitleLang);
   const [captionCues, setCaptionCues] = useState<CaptionCue[]>([]);
@@ -51,7 +52,7 @@ export function usePlaylistTrackLyrics({ videoId, locale }: UsePlaylistTrackLyri
     void (async () => {
       try {
         const lang = readStoredSubtitleLanguage(requestId, defaultSubtitleLang);
-        const { cues, language } = await loadTrackLyrics(requestId, lang);
+        const { cues, language } = await loadTrackLyrics(requestId, lang, title);
         applyIfCurrent(seq, requestId, () => {
           setSubtitleLang(language);
           setCaptionCues(cues);
@@ -66,7 +67,7 @@ export function usePlaylistTrackLyrics({ videoId, locale }: UsePlaylistTrackLyri
         });
       }
     })();
-  }, [videoId, defaultSubtitleLang, applyIfCurrent]);
+  }, [videoId, title, defaultSubtitleLang, applyIfCurrent]);
 
   const changeSubtitleLang = useCallback(
     (lang: SubtitleLanguage) => {
@@ -81,7 +82,7 @@ export function usePlaylistTrackLyrics({ videoId, locale }: UsePlaylistTrackLyri
 
       void (async () => {
         try {
-          const { cues, language } = await loadTrackLyrics(requestId, lang);
+          const { cues, language } = await loadTrackLyrics(requestId, lang, title);
           applyIfCurrent(seq, requestId, () => {
             setSubtitleLang(language);
             setCaptionCues(cues);
@@ -97,7 +98,7 @@ export function usePlaylistTrackLyrics({ videoId, locale }: UsePlaylistTrackLyri
         }
       })();
     },
-    [applyIfCurrent],
+    [applyIfCurrent, title],
   );
 
   const lyricsReadyForCurrentTrack = loadedVideoId != null && loadedVideoId === videoId;

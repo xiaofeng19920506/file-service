@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   captionXmlToCues,
+  cleanYoutubeTitleForLyrics,
   isBlockedCaptionPayload,
+  parseLrcToCues,
   transcriptLinesToCues,
 } from './youtube-captions.js';
 
@@ -32,6 +34,26 @@ describe('captionXmlToCues', () => {
       { start: 0.8, end: 1.6, text: 'two' },
       { start: 1.6, end: 2.8, text: 'three' },
     ]);
+  });
+
+  it('parses classic <text> tags with extra attributes', () => {
+    const xml = `<transcript><text start="1.5" dur="2" w="1">你好</text></transcript>`;
+    expect(captionXmlToCues(xml)).toEqual([{ start: 1.5, end: 3.5, text: '你好' }]);
+  });
+
+  it('parses LRC synced lyrics', () => {
+    expect(
+      parseLrcToCues('[00:25.94] 这一路上走走停停\n[00:29.39] 顺着少年漂流的痕迹\n'),
+    ).toEqual([
+      { start: 25.94, end: 29.39, text: '这一路上走走停停' },
+      { start: 29.39, end: 33.39, text: '顺着少年漂流的痕迹' },
+    ]);
+  });
+
+  it('strips karaoke decorations from YouTube titles', () => {
+    expect(
+      cleanYoutubeTitleForLyrics('買辣椒也用券 - 起風了 (新版)【動態歌詞Lyrics】'),
+    ).toBe('買辣椒也用券 - 起風了');
   });
 
   it('detects blocked caption pages', () => {

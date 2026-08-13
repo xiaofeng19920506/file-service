@@ -8,7 +8,7 @@ function parseSubtitleLang(value: string | undefined): SubtitleLanguage {
 }
 
 export function registerYoutubeCaptionRoutes(app: FastifyInstance) {
-  app.get<{ Params: { videoId: string }; Querystring: { subtitleLang?: string } }>(
+  app.get<{ Params: { videoId: string }; Querystring: { subtitleLang?: string; title?: string } }>(
     '/v1/youtube/videos/:videoId/captions',
     async (request, reply) => {
       const videoId = request.params.videoId;
@@ -17,9 +17,10 @@ export function registerYoutubeCaptionRoutes(app: FastifyInstance) {
       }
 
       const subtitleLang = parseSubtitleLang(request.query.subtitleLang);
+      const title = request.query.title?.trim() || undefined;
 
       try {
-        const result = await fetchYoutubeVideoCaptions(videoId, { subtitleLang });
+        const result = await fetchYoutubeVideoCaptions(videoId, { subtitleLang, title });
         if (!result?.cues.length) {
           return {
             videoId,
@@ -33,7 +34,7 @@ export function registerYoutubeCaptionRoutes(app: FastifyInstance) {
       } catch (e) {
         request.log.warn(e, 'youtube captions fetch failed, retrying');
         try {
-          const retry = await fetchYoutubeVideoCaptions(videoId, { subtitleLang });
+          const retry = await fetchYoutubeVideoCaptions(videoId, { subtitleLang, title });
           if (!retry?.cues.length) {
             return {
               videoId,

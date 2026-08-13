@@ -29,8 +29,11 @@ function isRetryableCaptionError(err: unknown): boolean {
 async function fetchVideoCaptionsOnce(
   videoId: string,
   subtitleLang: SubtitleLanguage,
+  title?: string,
 ): Promise<VideoCaptions> {
   const params = new URLSearchParams({ subtitleLang });
+  const trimmedTitle = title?.trim();
+  if (trimmedTitle) params.set('title', trimmedTitle);
   const res = await apiFetch(
     `/v1/youtube/videos/${encodeURIComponent(videoId)}/captions?${params}`,
     { signal: AbortSignal.timeout(20_000) },
@@ -41,13 +44,14 @@ async function fetchVideoCaptionsOnce(
 export async function fetchVideoCaptions(
   videoId: string,
   subtitleLang: SubtitleLanguage,
+  title?: string,
 ): Promise<VideoCaptions> {
   try {
-    return await fetchVideoCaptionsOnce(videoId, subtitleLang);
+    return await fetchVideoCaptionsOnce(videoId, subtitleLang, title);
   } catch (err) {
     if (!isRetryableCaptionError(err)) throw err;
     await new Promise((resolve) => setTimeout(resolve, 400));
-    return fetchVideoCaptionsOnce(videoId, subtitleLang);
+    return fetchVideoCaptionsOnce(videoId, subtitleLang, title);
   }
 }
 

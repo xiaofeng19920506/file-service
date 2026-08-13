@@ -67,17 +67,18 @@ function writeCache(
 async function fetchPreferredThenFallback(
   videoId: string,
   preferredLang: SubtitleLanguage,
+  title?: string,
 ): Promise<{ cues: CaptionCue[]; language: SubtitleLanguage }> {
   const fallbackLang: SubtitleLanguage = preferredLang === 'zh' ? 'en' : 'zh';
 
   try {
-    const data = await fetchVideoCaptions(videoId, preferredLang);
+    const data = await fetchVideoCaptions(videoId, preferredLang, title);
     if (data.cues.length) {
       return { cues: data.cues, language: preferredLang };
     }
   } catch (preferredErr) {
     try {
-      const alt = await fetchVideoCaptions(videoId, fallbackLang);
+      const alt = await fetchVideoCaptions(videoId, fallbackLang, title);
       if (alt.cues.length) {
         return { cues: alt.cues, language: fallbackLang };
       }
@@ -88,7 +89,7 @@ async function fetchPreferredThenFallback(
   }
 
   try {
-    const alt = await fetchVideoCaptions(videoId, fallbackLang);
+    const alt = await fetchVideoCaptions(videoId, fallbackLang, title);
     if (alt.cues.length) {
       return { cues: alt.cues, language: fallbackLang };
     }
@@ -102,6 +103,7 @@ async function fetchPreferredThenFallback(
 export async function loadTrackLyrics(
   videoId: string,
   preferredLang: SubtitleLanguage,
+  title?: string,
 ): Promise<{ cues: CaptionCue[]; language: SubtitleLanguage }> {
   const key = cacheKey(videoId, preferredLang);
   const cached = readCache(key);
@@ -112,7 +114,7 @@ export async function loadTrackLyrics(
   const pending = inflight.get(key);
   if (pending) return pending;
 
-  const request = fetchPreferredThenFallback(videoId, preferredLang)
+  const request = fetchPreferredThenFallback(videoId, preferredLang, title)
     .then((result) => {
       writeCache(videoId, preferredLang, result);
       return result;
@@ -125,10 +127,14 @@ export async function loadTrackLyrics(
   return request;
 }
 
-export function prefetchTrackLyrics(videoId: string, preferredLang: SubtitleLanguage): void {
+export function prefetchTrackLyrics(
+  videoId: string,
+  preferredLang: SubtitleLanguage,
+  title?: string,
+): void {
   const key = cacheKey(videoId, preferredLang);
   if (readCache(key) || inflight.has(key)) return;
-  void loadTrackLyrics(videoId, preferredLang).catch(() => undefined);
+  void loadTrackLyrics(videoId, preferredLang, title).catch(() => undefined);
 }
 
 export function clearTrackLyricsCache(videoId?: string): void {

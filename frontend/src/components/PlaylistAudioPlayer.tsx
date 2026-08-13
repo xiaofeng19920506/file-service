@@ -183,6 +183,7 @@ export default function PlaylistAudioPlayer({
     changeSubtitleLang,
   } = usePlaylistTrackLyrics({
     videoId: current?.youtubeVideoId,
+    title: current?.title,
     locale,
   });
   const lyricsEmptyMessage = lyricsError

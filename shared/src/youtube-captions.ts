@@ -39,6 +39,17 @@ type CaptionTrack = {
 type CaptionTrackList = {
   tracks: CaptionTrack[];
   translationLanguages: string[];
+  title: string | null;
+};
+
+type PlayerPayload = {
+  captions?: {
+    playerCaptionsTracklistRenderer?: {
+      captionTracks?: CaptionTrack[];
+      translationLanguages?: Array<{ languageCode?: string }>;
+    };
+  };
+  videoDetails?: { title?: string };
 };
 
 export type TranscriptLine = {
@@ -129,16 +140,53 @@ function parseTranscriptXml(xml: string): TranscriptLine[] {
   }
   if (results.length > 0) return results;
 
-  const classicRegex = /<text start="([^"]*)" dur="([^"]*)">([^<]*)<\/text>/g;
+  const classicRegex = /<text\b([^>]*)>([\s\S]*?)<\/text>/g;
   while ((match = classicRegex.exec(xml))) {
-    const start = parseFloat(match[1] ?? '0');
-    const dur = parseFloat(match[2] ?? '0');
-    const text = decodeEntities(match[3] ?? '').trim();
+    const start = attrNumber(match[1] ?? '', 'start');
+    if (start == null) continue;
+    const dur = attrNumber(match[1] ?? '', 'dur') ?? 0;
+    const text = decodeEntities((match[2] ?? '').replace(/<[^>]+>/g, '')).trim();
     if (text) {
       results.push({ text, duration: dur * 1000, offset: start * 1000 });
     }
   }
   return results;
+}
+
+const LRC_LINE_RE = /^\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]\s*(.*)$/;
+
+export function parseLrcToCues(lrc: string): CaptionCue[] {
+  const rows: Array<{ start: number; text: string }> = [];
+  for (const raw of lrc.split(/\r?\n/)) {
+    const match = LRC_LINE_RE.exec(raw.trim());
+    if (!match) continue;
+    const text = (match[4] ?? '').trim();
+    if (!text) continue;
+    const minutes = Number.parseInt(match[1] ?? '0', 10);
+    const seconds = Number.parseInt(match[2] ?? '0', 10);
+    const frac = match[3] ?? '0';
+    const millis =
+      frac.length <= 2 ? Number.parseInt(frac.padEnd(2, '0'), 10) * 10 : Number.parseInt(frac.slice(0, 3), 10);
+    rows.push({ start: minutes * 60 + seconds + millis / 1000, text });
+  }
+  return rows.map((row, index) => ({
+    start: row.start,
+    end: rows[index + 1]?.start ?? row.start + 4,
+    text: row.text,
+  }));
+}
+
+export function cleanYoutubeTitleForLyrics(title: string): string {
+  return title
+    .replace(/【[^】]*】/g, ' ')
+    .replace(/\[[^\]]*\]/g, ' ')
+    .replace(/『[^』]*』/g, ' ')
+    .replace(/「[^」]*」/g, ' ')
+    .replace(/（[^）]*）/g, ' ')
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/#[^\s#]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 export function transcriptLinesToCues(lines: TranscriptLine[]): CaptionCue[] {
@@ -226,60 +274,67 @@ function pickEnglishTranslationLangs(translationLanguages: string[]): string[] {
   return merged;
 }
 
-function parseCaptionTrackList(data: {
-  captions?: {
-    playerCaptionsTracklistRenderer?: {
-      captionTracks?: CaptionTrack[];
-      translationLanguages?: Array<{ languageCode?: string }>;
-    };
-  };
-}): CaptionTrackList {
-  const renderer = data.captions?.playerCaptionsTracklistRenderer;
+function parseCaptionTrackList(data: PlayerPayload | null | undefined): CaptionTrackList {
+  const renderer = data?.captions?.playerCaptionsTracklistRenderer;
   const tracks = renderer?.captionTracks ?? [];
   const translationLanguages = (renderer?.translationLanguages ?? [])
     .map((entry) => entry.languageCode)
     .filter((code): code is string => Boolean(code));
-  return { tracks, translationLanguages };
+  const title = data?.videoDetails?.title?.trim() || null;
+  return { tracks, translationLanguages, title };
 }
 
-async function fetchCaptionTrackList(videoId: string): Promise<CaptionTrackList> {
+async function fetchInnertubePlayer(videoId: string, clientName: 'ANDROID' | 'WEB'): Promise<PlayerPayload | null> {
+  const isAndroid = clientName === 'ANDROID';
   try {
     const resp = await fetch(INNERTUBE_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'User-Agent': INNERTUBE_USER_AGENT,
+        'User-Agent': isAndroid ? INNERTUBE_USER_AGENT : YT_PAGE_USER_AGENT,
       },
       body: JSON.stringify({
         context: {
           client: {
-            clientName: 'ANDROID',
-            clientVersion: INNERTUBE_CLIENT_VERSION,
+            clientName,
+            clientVersion: isAndroid ? INNERTUBE_CLIENT_VERSION : '2.20240815.00.00',
             hl: 'zh-CN',
           },
         },
         videoId,
       }),
     });
-    if (resp.ok) {
-      const list = parseCaptionTrackList((await resp.json()) as Parameters<typeof parseCaptionTrackList>[0]);
-      if (list.tracks.length > 0) return list;
-    }
+    if (!resp.ok) return null;
+    return (await resp.json()) as PlayerPayload;
   } catch {
-    // fall through to watch page
+    return null;
+  }
+}
+
+async function fetchCaptionTrackList(videoId: string): Promise<CaptionTrackList> {
+  let best: CaptionTrackList = { tracks: [], translationLanguages: [], title: null };
+
+  for (const client of ['ANDROID', 'WEB'] as const) {
+    const payload = await fetchInnertubePlayer(videoId, client);
+    const list = parseCaptionTrackList(payload);
+    if (!best.title && list.title) best = { ...best, title: list.title };
+    if (list.tracks.length > 0) return { ...list, title: list.title ?? best.title };
   }
 
-  const page = await fetch(`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`, {
-    headers: {
-      'User-Agent': YT_PAGE_USER_AGENT,
-      'Accept-Language': 'zh-CN,zh;q=0.9',
-    },
-  });
-  const html = await page.text();
-  const player = parseInlineJson(html, 'ytInitialPlayerResponse') as Parameters<
-    typeof parseCaptionTrackList
-  >[0] | null;
-  return parseCaptionTrackList(player ?? {});
+  try {
+    const page = await fetch(`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`, {
+      headers: {
+        'User-Agent': YT_PAGE_USER_AGENT,
+        'Accept-Language': 'zh-CN,zh;q=0.9',
+      },
+    });
+    const html = await page.text();
+    const player = parseInlineJson(html, 'ytInitialPlayerResponse') as PlayerPayload | null;
+    const list = parseCaptionTrackList(player);
+    return { ...list, title: list.title ?? best.title };
+  } catch {
+    return best;
+  }
 }
 
 function buildCaptionTrackUrl(track: CaptionTrack, tlang?: string): string {
@@ -376,6 +431,59 @@ function buildEnglishResult(
   return { videoId, language, sourceLanguage, translated, cues };
 }
 
+type LrclibHit = {
+  trackName?: string;
+  artistName?: string;
+  syncedLyrics?: string | null;
+};
+
+function scoreLrclibHit(query: string, hit: LrclibHit): number {
+  const hay = `${hit.artistName ?? ''} ${hit.trackName ?? ''}`.toLowerCase();
+  let score = 0;
+  for (const token of query.toLowerCase().split(/[\s\-–—/|]+/).filter((part) => part.length >= 2)) {
+    if (hay.includes(token)) score += token.length;
+  }
+  return score;
+}
+
+export async function fetchLrclibCues(title: string): Promise<CaptionCue[] | null> {
+  const query = cleanYoutubeTitleForLyrics(title);
+  if (query.length < 2) return null;
+  try {
+    const url = new URL('https://lrclib.net/api/search');
+    url.searchParams.set('q', query);
+    const res = await fetch(url.toString(), {
+      headers: { 'User-Agent': YT_PAGE_USER_AGENT },
+    });
+    if (!res.ok) return null;
+    const rows = (await res.json()) as LrclibHit[];
+    if (!Array.isArray(rows) || rows.length === 0) return null;
+    const withSync = rows.filter((row) => row.syncedLyrics?.includes('['));
+    if (withSync.length === 0) return null;
+    withSync.sort((a, b) => scoreLrclibHit(query, b) - scoreLrclibHit(query, a));
+    const cues = parseLrcToCues(withSync[0]!.syncedLyrics ?? '');
+    return cues.length > 0 ? cues : null;
+  } catch {
+    return null;
+  }
+}
+
+async function lyricsFallbackResult(
+  videoId: string,
+  title: string | null | undefined,
+): Promise<YoutubeCaptionsResult | null> {
+  if (!title?.trim()) return null;
+  const cues = await fetchLrclibCues(title);
+  if (!cues?.length) return null;
+  return {
+    videoId,
+    language: cuesContainChinese(cues) ? 'zh' : 'en',
+    sourceLanguage: 'lrclib',
+    translated: false,
+    cues,
+  };
+}
+
 async function translateText(
   text: string,
   sourceLang: string,
@@ -441,13 +549,14 @@ async function fetchChineseTranslationCues(
   const viaTranscript = await fetchChineseViaTranscript(videoId);
   if (viaTranscript?.length) {
     const enTrack = pickEnglishTrack(tracks);
-    return buildChineseResult(
+    const result = buildChineseResult(
       videoId,
       viaTranscript,
       'zh',
       enTrack?.languageCode ?? null,
       Boolean(enTrack),
     );
+    if (result) return result;
   }
 
   const zhTrack = pickChineseTrack(tracks);
@@ -513,13 +622,14 @@ async function fetchEnglishTranslationCues(
   const viaTranscript = await fetchEnglishViaTranscript(videoId);
   if (viaTranscript?.length) {
     const zhTrack = pickChineseTrack(tracks);
-    return buildEnglishResult(
+    const result = buildEnglishResult(
       videoId,
       viaTranscript,
       'en',
       zhTrack?.languageCode ?? null,
       Boolean(zhTrack),
     );
+    if (result) return result;
   }
 
   const enTrack = pickEnglishTrack(tracks);
@@ -587,31 +697,35 @@ async function fetchEnglishTranslationCues(
 
 export async function fetchYoutubeVideoCaptions(
   videoId: string,
-  opts: { subtitleLang?: SubtitleLanguage } = {},
+  opts: { subtitleLang?: SubtitleLanguage; title?: string } = {},
 ): Promise<YoutubeCaptionsResult | null> {
   if (!VIDEO_ID_RE.test(videoId)) return null;
 
   const subtitleLang = opts.subtitleLang === 'en' ? 'en' : 'zh';
-  const { tracks, translationLanguages } = await fetchCaptionTrackList(videoId);
+  const { tracks, translationLanguages, title } = await fetchCaptionTrackList(videoId);
+  const hintTitle = opts.title?.trim() || title;
 
   if (tracks.length === 0) {
     if (subtitleLang === 'en') {
       const viaTranscript = await fetchEnglishViaTranscript(videoId);
-      if (viaTranscript?.length) {
-        return buildEnglishResult(videoId, viaTranscript, 'en', null, false);
-      }
-      return null;
+      const english = viaTranscript?.length
+        ? buildEnglishResult(videoId, viaTranscript, 'en', null, false)
+        : null;
+      if (english) return english;
+    } else {
+      const viaTranscript = await fetchChineseViaTranscript(videoId);
+      const chinese = viaTranscript?.length
+        ? buildChineseResult(videoId, viaTranscript, 'zh', null, false)
+        : null;
+      if (chinese) return chinese;
     }
-    const viaTranscript = await fetchChineseViaTranscript(videoId);
-    if (viaTranscript?.length) {
-      return buildChineseResult(videoId, viaTranscript, 'zh', null, false);
-    }
-    return null;
+    return lyricsFallbackResult(videoId, hintTitle);
   }
 
-  if (subtitleLang === 'en') {
-    return fetchEnglishTranslationCues(videoId, tracks, translationLanguages);
-  }
-
-  return fetchChineseTranslationCues(videoId, tracks, translationLanguages);
+  const fromYoutube =
+    subtitleLang === 'en'
+      ? await fetchEnglishTranslationCues(videoId, tracks, translationLanguages)
+      : await fetchChineseTranslationCues(videoId, tracks, translationLanguages);
+  if (fromYoutube?.cues.length) return fromYoutube;
+  return lyricsFallbackResult(videoId, hintTitle);
 }
