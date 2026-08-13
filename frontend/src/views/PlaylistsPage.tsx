@@ -193,6 +193,19 @@ export default function PlaylistsPage({
   const homePreviewQueueRef = useRef<Array<{ videoId: string; title: string }>>([]);
   const homePreviewAdvancingRef = useRef(false);
 
+  const isWorshipPraisePlaylist = useCallback((title: string) => {
+    const normalized = title.trim().toLowerCase();
+    return normalized.includes('敬拜赞美') || /\bworship\b.*\bpraise\b/.test(normalized);
+  }, []);
+
+  const homePlaylists = useMemo(
+    () =>
+      isMobileViewport
+        ? playlists
+        : playlists.filter((row) => !isWorshipPraisePlaylist(row.title)),
+    [isMobileViewport, playlists, isWorshipPraisePlaylist],
+  );
+
   useEffect(() => {
     if (oauthHandledRef.current) return;
 
@@ -1339,6 +1352,7 @@ export default function PlaylistsPage({
 
   const renderPlaylistLibrary = () => {
     const isMobileLists = isMobileViewport && !selectedId && mobileHome === 'lists';
+    const listedPlaylists = isMobileViewport ? playlists : homePlaylists;
 
     return (
     <>
@@ -1359,8 +1373,8 @@ export default function PlaylistsPage({
           </button>
         ) : (
           !loadingList &&
-          playlists.length > 0 && (
-            <span className="playlists-sidebar-count">{playlists.length}</span>
+          listedPlaylists.length > 0 && (
+            <span className="playlists-sidebar-count">{listedPlaylists.length}</span>
           )
         )}
       </div>
@@ -1401,14 +1415,14 @@ export default function PlaylistsPage({
 
         {loadingList ? (
           <p className="playlists-muted">{t('playlists.loading')}</p>
-        ) : playlists.length === 0 ? (
+        ) : listedPlaylists.length === 0 ? (
           <div className="playlists-empty-card">
             <p className="playlists-empty-title">{t('playlists.emptyTitle')}</p>
             <p className="playlists-muted">{t('playlists.empty')}</p>
           </div>
         ) : (
           <ul className="playlists-list">
-            {playlists.map((row) => (
+            {listedPlaylists.map((row) => (
               <li
                 key={row.id}
                 className={`playlists-list-row${selectedId === row.id ? ' active' : ''}`}
@@ -1763,7 +1777,7 @@ export default function PlaylistsPage({
           ) : (
             <div className="playlists-header-desktop">
               <div className="playlists-header-brand">
-                <h1>{t('playlists.title')}</h1>
+                <h1>{t('playlists.desktopTitle')}</h1>
               </div>
               <div
                 className="playlists-header-search"

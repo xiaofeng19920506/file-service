@@ -144,6 +144,7 @@ export default {
   },
   playlists: {
     title: '敬拜列表',
+    desktopTitle: '播放列表',
     intro: '填写列表名称创建空列表，再添加 YouTube 曲目；支持连续自动播放。',
     importTitle: '创建新列表',
     createPlaceholder: '列表名称',

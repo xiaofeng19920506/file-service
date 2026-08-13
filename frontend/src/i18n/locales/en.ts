@@ -148,6 +148,7 @@ const en: MessageTree = {
   },
   playlists: {
     title: 'Setlists',
+    desktopTitle: 'Playlists',
     intro: 'Enter a list name to create an empty list, then add YouTube tracks. Supports continuous MP3 playback.',
     importTitle: 'Create new list',
     createPlaceholder: 'List name',
