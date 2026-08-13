@@ -1202,12 +1202,27 @@ export default function PlaylistAudioPlayer({
       </div>
     );
 
+    const addToListButton = onAddToList ? (
+      <button
+        type="button"
+        className={`playlist-audio-record-add-btn${showLyrics ? ' playlist-audio-record-add-btn--lyrics-head' : ' playlist-audio-record-add-btn--cover-head'}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          onAddToList();
+        }}
+        aria-label={t('playlists.addToList')}
+      >
+        <PlusIcon />
+      </button>
+    ) : null;
+
     return (
       <section
         ref={mobileSwipeRef}
         className={`playlist-audio-player playlist-audio-player--mobile-record playlist-audio-player--swipe-nav${showLyrics ? ' playlist-audio-player--lyrics-open' : ''}`}
         aria-label={t('playlists.playerSectionAudio')}
       >
+        {!showLyrics ? addToListButton : null}
         <div
           className={`playlist-audio-record-stage${showLyrics ? ' playlist-audio-record-stage--lyrics' : ''}`}
         >
@@ -1222,21 +1237,7 @@ export default function PlaylistAudioPlayer({
                   {t('playlists.backToCover')}
                 </button>
                 {recordLangSwitch}
-                {onAddToList ? (
-                  <button
-                    type="button"
-                    className="playlist-audio-record-add-btn playlist-audio-record-add-btn--lyrics-head"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onAddToList();
-                    }}
-                    aria-label={t('playlists.addToList')}
-                  >
-                    <PlusIcon />
-                  </button>
-                ) : (
-                  <span className="playlist-audio-record-lyrics-head-spacer" aria-hidden />
-                )}
+                {addToListButton ?? <span className="playlist-audio-record-lyrics-head-spacer" aria-hidden />}
               </header>
               <PlaylistLyricsScroller
                 cues={captionCues}
@@ -1260,19 +1261,6 @@ export default function PlaylistAudioPlayer({
                 <div className="playlist-audio-record-disc-ring" aria-hidden />
                 <img className="playlist-audio-record-art" src={artworkUrl} alt="" loading="lazy" />
               </button>
-              {onAddToList ? (
-                <button
-                  type="button"
-                  className="playlist-audio-record-add-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onAddToList();
-                  }}
-                  aria-label={t('playlists.addToList')}
-                >
-                  <PlusIcon />
-                </button>
-              ) : null}
             </div>
           )}
         </div>

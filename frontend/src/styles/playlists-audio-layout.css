@@ -365,6 +365,7 @@
   }
 
   .playlist-audio-player--mobile-record {
+    position: relative;
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -535,6 +536,18 @@
     display: block;
     width: 2.5rem;
     height: 2.5rem;
+  }
+
+  .playlist-audio-record-add-btn--cover-head {
+    position: absolute;
+    top: 0.35rem;
+    right: 0.15rem;
+    z-index: 6;
+    transform: none;
+  }
+
+  .playlist-audio-record-add-btn--cover-head:active {
+    transform: scale(0.94);
   }
 
   .playlist-audio-record-add-btn--lyrics-head {
