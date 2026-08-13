@@ -126,7 +126,7 @@
     padding: 0.25rem var(--page-gutter) 0 !important;
     display: flex !important;
     flex-direction: column !important;
-    justify-content: flex-end !important;
+    justify-content: center !important;
     overflow: visible !important;
   }
 
@@ -135,12 +135,12 @@
     .playlists-player-stage[data-audio-mobile-record='true']
     .playlist-audio-record-stage,
   .playlists-page[data-mobile-home-preview='true'] .playlist-audio-record-stage {
-    flex: 1 1 0% !important;
+    flex: 0 0 auto !important;
     min-height: 0 !important;
     max-height: none !important;
     margin-top: 0 !important;
     padding: 0 !important;
-    justify-content: flex-end !important;
+    justify-content: center !important;
     align-items: center !important;
     overflow: visible !important;
   }
