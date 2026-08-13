@@ -332,6 +332,12 @@ export function extractArtistTrackPairs(title: string): LyricsArtistTrack[] {
     add(dashParts[0]!, dashParts.slice(1).join(' - '));
   }
 
+  const runs = extractCjkRuns(cleaned);
+  if (runs.length >= 2) {
+    add(runs.slice(0, -1).join(''), runs[runs.length - 1]!);
+    add(runs[0]!, runs[runs.length - 1]!);
+  }
+
   return pairs;
 }
 
@@ -343,11 +349,18 @@ export function extractLyricsSearchQueries(title: string): string[] {
   const songLikes = extractSongLikeBrackets(raw);
   queries.push(...songLikes);
 
+  const cleaned = cleanYoutubeTitleForLyrics(raw);
+  const cjkRuns = extractCjkRuns(cleaned);
+  if (cjkRuns.length >= 2) {
+    queries.push(cjkRuns[cjkRuns.length - 1]!);
+  } else if (cjkRuns.length === 1) {
+    queries.push(cjkRuns[0]!);
+  }
+
   for (const pair of extractArtistTrackPairs(raw)) {
     queries.push(`${pair.artist} ${pair.track}`);
   }
 
-  const cleaned = cleanYoutubeTitleForLyrics(raw);
   if (cleaned) queries.push(cleaned);
 
   const dashParts = cleaned.split(/\s+[-–—]\s+/).map((part) => part.trim()).filter(Boolean);
@@ -647,6 +660,60 @@ export function plainLyricsToCues(plain: string): CaptionCue[] {
     end: index * 4 + 4,
     text,
   }));
+}
+
+const ZH_FOLD: Record<string, string> = {
+  願: '愿',
+  讓: '让',
+  個: '个',
+  麼: '么',
+  為: '为',
+  這: '这',
+  來: '来',
+  過: '过',
+  對: '对',
+  後: '后',
+  從: '从',
+  時: '时',
+  將: '将',
+  與: '与',
+  無: '无',
+  樂: '乐',
+  風: '风',
+  長: '长',
+  愛: '爱',
+  倫: '伦',
+  傑: '杰',
+  詞: '词',
+  雲: '云',
+};
+
+function foldZh(text: string): string {
+  return [...text].map((ch) => ZH_FOLD[ch] ?? ch).join('');
+}
+
+/** YouTube 机翻字幕常不含歌名；原词一般会反复出现歌名片段。 */
+export function cuesMatchSongTitle(cues: CaptionCue[], title: string): boolean {
+  const songName =
+    extractSongLikeBrackets(title)[0] ??
+    extractCjkRuns(cleanYoutubeTitleForLyrics(title)).reduce(
+      (best, run) => (run.length >= best.length ? run : best),
+      '',
+    );
+  if (songName.length < 3) return true;
+  const sample = foldZh(
+    cues
+      .slice(0, 40)
+      .map((cue) => cue.text)
+      .join(''),
+  );
+  if (!sample) return false;
+  const folded = foldZh(songName);
+  const window = Math.min(3, folded.length);
+  for (let i = 0; i <= folded.length - window; i++) {
+    if (sample.includes(folded.slice(i, i + window))) return true;
+  }
+  return false;
 }
 
 export function cuesLookLikeLineLyrics(cues: CaptionCue[]): boolean {
@@ -1098,24 +1165,39 @@ async function fetchCaptionsForLanguage(
   tracks: CaptionTrack[],
   translationLanguages: string[],
   lrclibMatch: Promise<LrclibMatch | null> | null,
+  title?: string,
 ): Promise<YoutubeCaptionsResult | null> {
   const wantEnglish = subtitleLang === 'en';
+  const lrclib = lrclibMatch ? await lrclibMatch : null;
+  const synced = lrclibMatchToResult(videoId, lrclib, false);
+  const lrclibIsChinese = Boolean(synced?.cues.length && (lrclib?.language === 'zh' || cuesContainChinese(synced.cues)));
+  const lrclibIsEnglish = Boolean(synced?.cues.length && lrclib?.language === 'en' && !lrclibIsChinese);
+
+  // 歌曲优先用歌词库原词。YouTube「中文字幕」经常是英文字幕机翻，会把五月天唱成翻译腔。
+  if (synced?.cues.length) {
+    if (!wantEnglish && lrclibIsChinese) return synced;
+    if (wantEnglish && lrclibIsEnglish) return synced;
+  }
+
+  const titleOk = (cues: CaptionCue[]) => !title?.trim() || cuesMatchSongTitle(cues, title);
+
   const manual = wantEnglish
     ? await fetchManualEnglishCues(videoId, tracks)
     : await fetchManualChineseCues(videoId, tracks);
-  if (manual?.cues.length) return manual;
-
-  const lrclib = lrclibMatch ? await lrclibMatch : null;
-  const synced = lrclibMatchToResult(videoId, lrclib, false);
-  if (synced) return synced;
+  if (manual?.cues.length && titleOk(manual.cues)) return manual;
 
   const asr = wantEnglish
     ? await fetchAsrEnglishIfLyricLike(videoId, tracks)
     : await fetchAsrChineseIfLyricLike(videoId, tracks);
-  if (asr?.cues.length) return asr;
+  if (asr?.cues.length && titleOk(asr.cues)) return asr;
+
+  if (synced?.cues.length) return synced;
 
   const unsynced = lrclibMatchToResult(videoId, lrclib, true);
   if (unsynced) return unsynced;
+
+  // 有歌名时不再回退机翻字幕，空着也比错词好
+  if (title?.trim()) return null;
 
   return wantEnglish
     ? fetchEnglishMachineTranslation(tracks, translationLanguages, videoId)
@@ -1135,5 +1217,12 @@ export async function fetchYoutubeVideoCaptions(
   const hintTitle = titleHint || title;
   const lrclibMatch = lrclibFromHint ?? (hintTitle ? fetchLrclibMatch(hintTitle) : null);
 
-  return fetchCaptionsForLanguage(videoId, subtitleLang, tracks, translationLanguages, lrclibMatch);
+  return fetchCaptionsForLanguage(
+    videoId,
+    subtitleLang,
+    tracks,
+    translationLanguages,
+    lrclibMatch,
+    hintTitle ?? undefined,
+  );
 }

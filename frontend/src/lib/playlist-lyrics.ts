@@ -13,7 +13,7 @@ const inflight = new Map<string, Promise<{ cues: CaptionCue[]; language: Subtitl
 const EMPTY_CACHE_TTL_MS = 120_000;
 
 function cacheKey(videoId: string, lang: SubtitleLanguage): string {
-  return `${videoId}:${lang}`;
+  return `v2:${videoId}:${lang}`;
 }
 
 export function readDefaultSubtitleLanguage(locale: string): SubtitleLanguage {

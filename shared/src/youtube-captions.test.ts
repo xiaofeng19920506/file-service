@@ -3,6 +3,7 @@ import {
   captionXmlToCues,
   cleanYoutubeTitleForLyrics,
   cuesLookLikeLineLyrics,
+  cuesMatchSongTitle,
   extractLyricsSearchQueries,
   isBlockedCaptionPayload,
   parseLrcToCues,
@@ -68,6 +69,35 @@ describe('captionXmlToCues', () => {
     expect(queries[0]).toBe('我不願讓你一個人');
     expect(queries.some((query) => query.includes('五月天') && query.includes('我不願讓你一個人'))).toBe(true);
     expect(queries.some((query) => /mayday/i.test(query) && query.includes('我不願讓你一個人'))).toBe(true);
+  });
+
+  it('parses unbracketed artist plus song title', () => {
+    const queries = extractLyricsSearchQueries('周杰伦 蘭亭序');
+    expect(queries[0]).toBe('蘭亭序');
+    expect(queries.some((query) => query.includes('周杰伦') && query.includes('蘭亭序'))).toBe(true);
+  });
+
+  it('rejects YouTube captions that are a translation of the song', () => {
+    expect(
+      cuesMatchSongTitle(
+        [
+          { start: 0, end: 1, text: '我不想让你感到孤独' },
+          { start: 1, end: 2, text: '即使我知道你不在那里，我依然会问' },
+          { start: 2, end: 3, text: '空气不会替你回答' },
+        ],
+        'Mayday五月天 [我不願讓你一個人]',
+      ),
+    ).toBe(false);
+
+    expect(
+      cuesMatchSongTitle(
+        [
+          { start: 0, end: 1, text: '你說呢 明知你不在 還是會問' },
+          { start: 1, end: 2, text: '我不願讓你一個人' },
+        ],
+        'Mayday五月天 [我不願讓你一個人]',
+      ),
+    ).toBe(true);
   });
 
   it('extracts the bracket title even when the video title has extra prefixes', () => {
