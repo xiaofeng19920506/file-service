@@ -55,6 +55,14 @@ describe('captionXmlToCues', () => {
     ]);
   });
 
+  it('merges word-level LRC into slower lines', () => {
+    const cues = parseLrcToCues(
+      '[00:12.00]我\n[00:12.40]不愿\n[00:12.90]让你\n[00:13.50]一个人\n',
+    );
+    expect(cues).toHaveLength(1);
+    expect(cues[0]?.text).toBe('我不愿让你一个人');
+  });
+
   it('strips karaoke decorations from YouTube titles', () => {
     expect(
       cleanYoutubeTitleForLyrics('買辣椒也用券 - 起風了 (新版)【動態歌詞Lyrics】'),

@@ -169,11 +169,62 @@ export function parseLrcToCues(lrc: string): CaptionCue[] {
       frac.length <= 2 ? Number.parseInt(frac.padEnd(2, '0'), 10) * 10 : Number.parseInt(frac.slice(0, 3), 10);
     rows.push({ start: minutes * 60 + seconds + millis / 1000, text });
   }
-  return rows.map((row, index) => ({
+  const mapped = rows.map((row, index) => ({
     start: row.start,
     end: rows[index + 1]?.start ?? row.start + 4,
     text: row.text,
   }));
+  return mergeShortLyricCues(mapped);
+}
+
+const MIN_LINE_SEC = 1.7;
+const MAX_WORD_SEC = 1.2;
+const MAX_MERGED_CHARS = 22;
+
+function joinLyricText(left: string, right: string): string {
+  if (!left) return right;
+  if (!right) return left;
+  const cjk = /[\u3400-\u9fff]$/.test(left) || /^[\u3400-\u9fff]/.test(right);
+  if (cjk || left.endsWith(' ') || right.startsWith(' ')) return `${left}${right}`;
+  return `${left} ${right}`;
+}
+
+/** 把逐字/过短的时间轴合成一句，避免歌词一闪而过。 */
+export function mergeShortLyricCues(cues: CaptionCue[]): CaptionCue[] {
+  if (cues.length < 2) return cues.map((cue) => ({ ...cue }));
+
+  const merged: CaptionCue[] = [];
+  for (const cue of cues) {
+    const prev = merged[merged.length - 1];
+    if (!prev) {
+      merged.push({ ...cue });
+      continue;
+    }
+    const prevDur = prev.end - prev.start;
+    const cueDur = Math.max(0, cue.end - cue.start);
+    const gap = cue.start - prev.end;
+    const joined = joinLyricText(prev.text, cue.text);
+    const wordLike = cue.text.trim().length <= 4 || cueDur <= MAX_WORD_SEC;
+    const canMerge =
+      joined.length <= MAX_MERGED_CHARS &&
+      gap <= 0.4 &&
+      (prevDur < MIN_LINE_SEC || wordLike) &&
+      (wordLike || prev.text.trim().length <= 12);
+    if (canMerge) {
+      prev.text = joined;
+      prev.end = Math.max(prev.end, cue.end);
+    } else {
+      merged.push({ ...cue });
+    }
+  }
+
+  for (let i = 0; i < merged.length; i++) {
+    const line = merged[i]!;
+    const next = merged[i + 1];
+    const holdEnd = line.start + MIN_LINE_SEC;
+    line.end = next ? Math.max(line.end, Math.min(holdEnd, next.start)) : Math.max(line.end, holdEnd);
+  }
+  return merged;
 }
 
 const CJK_RUN_RE = /[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]{2,}/g;

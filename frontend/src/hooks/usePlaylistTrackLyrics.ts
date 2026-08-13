@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CaptionCue } from '../api/youtube-captions';
 import { findActiveCaption } from '../api/youtube-captions';
+import { mergeShortLyricCues } from '../lib/caption-cues';
 import {
   clearTrackLyricsCache,
   loadTrackLyrics,
@@ -154,9 +155,13 @@ export function usePlaylistTrackLyrics({ videoId, title, locale }: UsePlaylistTr
   );
 
   const lyricsReadyForCurrentTrack = loadedVideoId != null && loadedVideoId === videoId;
+  const displayCues = useMemo(
+    () => (lyricsReadyForCurrentTrack ? mergeShortLyricCues(captionCues) : []),
+    [lyricsReadyForCurrentTrack, captionCues],
+  );
 
   return {
-    captionCues: lyricsReadyForCurrentTrack ? captionCues : [],
+    captionCues: displayCues,
     lyricsLoading: Boolean(videoId) && (!lyricsReadyForCurrentTrack || lyricsGenerating),
     lyricsGenerating,
     lyricsError: lyricsReadyForCurrentTrack && lyricsError,
