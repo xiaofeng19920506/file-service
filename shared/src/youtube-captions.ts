@@ -72,7 +72,7 @@ export function isLikelyChineseText(text: string): boolean {
   return /[\u4e00-\u9fff\u3400-\u4dbf]/.test(text);
 }
 
-function cuesContainChinese(cues: CaptionCue[]): boolean {
+export function cuesContainChinese(cues: CaptionCue[]): boolean {
   const sample = cues
     .slice(0, 30)
     .map((cue) => cue.text)
@@ -686,6 +686,9 @@ const ZH_FOLD: Record<string, string> = {
   傑: '杰',
   詞: '词',
   雲: '云',
+  蘭: '兰',
+  書: '书',
+  門: '门',
 };
 
 function foldZh(text: string): string {

@@ -162,6 +162,7 @@ export default {
     showLyrics: '查看歌词',
     backToCover: '返回封面',
     loadingLyrics: '正在加载歌词…',
+    matchingLyrics: '正在为这首歌补充歌词…',
     tapCdForLyrics: '点击 CD 查看歌词',
     addTitle: '添加歌曲',
     addOrPasteUrl: '或粘贴链接',

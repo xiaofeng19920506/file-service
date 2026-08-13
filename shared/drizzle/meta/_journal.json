@@ -281,6 +281,13 @@
       "when": 1755000000000,
       "tag": "0041_user_roles_admin_user",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1755010000000,
+      "tag": "0042_youtube_video_lyrics",
+      "breakpoints": true
     }
   ]
 }

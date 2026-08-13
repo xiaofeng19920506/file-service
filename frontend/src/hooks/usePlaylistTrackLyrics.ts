@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CaptionCue } from '../api/youtube-captions';
 import { findActiveCaption } from '../api/youtube-captions';
 import {
+  clearTrackLyricsCache,
   loadTrackLyrics,
   readDefaultSubtitleLanguage,
   readStoredSubtitleLanguage,
@@ -23,9 +24,12 @@ export function usePlaylistTrackLyrics({ videoId, title, locale }: UsePlaylistTr
   const [captionCues, setCaptionCues] = useState<CaptionCue[]>([]);
   const [loadedVideoId, setLoadedVideoId] = useState<string | null>(null);
   const [lyricsError, setLyricsError] = useState(false);
+  const [lyricsGenerating, setLyricsGenerating] = useState(false);
   const videoIdRef = useRef(videoId);
+  const titleRef = useRef(title);
   const requestSeqRef = useRef(0);
   videoIdRef.current = videoId;
+  titleRef.current = title;
 
   const applyIfCurrent = useCallback((seq: number, requestId: string, update: () => void) => {
     if (seq !== requestSeqRef.current) return;
@@ -48,26 +52,71 @@ export function usePlaylistTrackLyrics({ videoId, title, locale }: UsePlaylistTr
     setCaptionCues([]);
     setLoadedVideoId(null);
     setLyricsError(false);
+    setLyricsGenerating(false);
 
     void (async () => {
       try {
         const lang = readStoredSubtitleLanguage(requestId, defaultSubtitleLang);
-        const { cues, language } = await loadTrackLyrics(requestId, lang, title);
+        const { cues, language, generating } = await loadTrackLyrics(requestId, lang, title);
         applyIfCurrent(seq, requestId, () => {
           setSubtitleLang(language);
           setCaptionCues(cues);
-          setLoadedVideoId(requestId);
+          setLyricsGenerating(Boolean(generating && cues.length === 0));
+          if (!generating || cues.length > 0) setLoadedVideoId(requestId);
           setLyricsError(false);
         });
       } catch {
         applyIfCurrent(seq, requestId, () => {
           setCaptionCues([]);
           setLoadedVideoId(requestId);
+          setLyricsGenerating(false);
           setLyricsError(true);
         });
       }
     })();
   }, [videoId, title, defaultSubtitleLang, applyIfCurrent]);
+
+  useEffect(() => {
+    if (!videoId || !lyricsGenerating) return;
+    let cancelled = false;
+    let attempts = 0;
+    const timer = window.setInterval(() => {
+      attempts += 1;
+      if (attempts > 40) {
+        window.clearInterval(timer);
+        setLyricsGenerating(false);
+        setLoadedVideoId(videoId);
+        return;
+      }
+      const requestId = videoId;
+      const seq = requestSeqRef.current;
+      clearTrackLyricsCache(requestId);
+      void loadTrackLyrics(
+        requestId,
+        readStoredSubtitleLanguage(requestId, defaultSubtitleLang),
+        titleRef.current,
+      ).then(({ cues, language, generating }) => {
+        if (cancelled) return;
+        applyIfCurrent(seq, requestId, () => {
+          if (cues.length > 0) {
+            setSubtitleLang(language);
+            setCaptionCues(cues);
+            setLyricsGenerating(false);
+            setLoadedVideoId(requestId);
+            return;
+          }
+          if (!generating) {
+            setLyricsGenerating(false);
+            setLoadedVideoId(requestId);
+          }
+        });
+      });
+    }, 4000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [videoId, lyricsGenerating, defaultSubtitleLang, applyIfCurrent]);
 
   const changeSubtitleLang = useCallback(
     (lang: SubtitleLanguage) => {
@@ -79,20 +128,23 @@ export function usePlaylistTrackLyrics({ videoId, title, locale }: UsePlaylistTr
       setCaptionCues([]);
       setLoadedVideoId(null);
       setLyricsError(false);
+      setLyricsGenerating(false);
 
       void (async () => {
         try {
-          const { cues, language } = await loadTrackLyrics(requestId, lang, title);
+          const { cues, language, generating } = await loadTrackLyrics(requestId, lang, title);
           applyIfCurrent(seq, requestId, () => {
             setSubtitleLang(language);
             setCaptionCues(cues);
-            setLoadedVideoId(requestId);
+            setLyricsGenerating(Boolean(generating && cues.length === 0));
+            if (!generating || cues.length > 0) setLoadedVideoId(requestId);
             setLyricsError(false);
           });
         } catch {
           applyIfCurrent(seq, requestId, () => {
             setCaptionCues([]);
             setLoadedVideoId(requestId);
+            setLyricsGenerating(false);
             setLyricsError(true);
           });
         }
@@ -105,7 +157,8 @@ export function usePlaylistTrackLyrics({ videoId, title, locale }: UsePlaylistTr
 
   return {
     captionCues: lyricsReadyForCurrentTrack ? captionCues : [],
-    lyricsLoading: Boolean(videoId) && !lyricsReadyForCurrentTrack,
+    lyricsLoading: Boolean(videoId) && (!lyricsReadyForCurrentTrack || lyricsGenerating),
+    lyricsGenerating,
     lyricsError: lyricsReadyForCurrentTrack && lyricsError,
     subtitleLang,
     changeSubtitleLang,

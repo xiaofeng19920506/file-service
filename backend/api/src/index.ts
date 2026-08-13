@@ -11,6 +11,7 @@ import {
   runMigrations,
   createObjectStorage,
   YOUTUBE_AUDIO_QUEUE_NAME,
+  YOUTUBE_LYRICS_QUEUE_NAME,
   bullmqConnection,
   loadApiKeyConfig,
 } from '@file-service/shared';
@@ -41,6 +42,9 @@ async function buildApp() {
   const audioQueue = new Queue(YOUTUBE_AUDIO_QUEUE_NAME, {
     connection: bullmqConnection(env.REDIS_URL),
   });
+  const lyricsQueue = new Queue(YOUTUBE_LYRICS_QUEUE_NAME, {
+    connection: bullmqConnection(env.REDIS_URL),
+  });
 
   const app = Fastify({ logger: true });
 
@@ -69,7 +73,7 @@ async function buildApp() {
   registerAuthRoutes(app, { db, env, apiKeyConfig });
   registerAdminUserRoutes(app, { db });
   registerPlaylistRoutes(app, { db, env, audioQueue });
-  registerYoutubeCaptionRoutes(app);
+  registerYoutubeCaptionRoutes(app, { db, lyricsQueue });
   registerYoutubeAudioRoutes(app, { db, env, storage, audioQueue });
   registerYoutubeOAuthRoutes(app, { db, env });
   registerYoutubeSearchRoutes(app, { db, env });

@@ -235,6 +235,7 @@ export default function PlaylistAudioPlayer({
   const {
     captionCues,
     lyricsLoading,
+    lyricsGenerating,
     lyricsError,
     subtitleLang,
     changeSubtitleLang,
@@ -246,6 +247,9 @@ export default function PlaylistAudioPlayer({
   const lyricsEmptyMessage = lyricsError
     ? t('errors.captions_fetch_failed')
     : t('playlists.noLyricsYet');
+  const lyricsLoadingMessage = lyricsGenerating
+    ? t('playlists.matchingLyrics')
+    : t('playlists.loadingLyrics');
 
   useEffect(() => {
     setShowLyrics(false);
@@ -1318,7 +1322,7 @@ export default function PlaylistAudioPlayer({
                 cues={captionCues}
                 currentTime={currentTime}
                 loading={lyricsLoading}
-                loadingMessage={t('playlists.loadingLyrics')}
+                loadingMessage={lyricsLoadingMessage}
                 emptyMessage={lyricsEmptyMessage}
                 className="playlist-audio-record-lyrics-scroller"
                 panelRef={lyricsPanelRef}
@@ -1345,7 +1349,7 @@ export default function PlaylistAudioPlayer({
             cues={captionCues}
             currentTime={currentTime}
             loading={lyricsLoading}
-            loadingMessage={t('playlists.loadingLyrics')}
+            loadingMessage={lyricsLoadingMessage}
             emptyMessage={lyricsError ? t('errors.captions_fetch_failed') : t('playlists.tapCdForLyrics')}
             onOpen={() => setShowLyrics(true)}
             openLabel={t('playlists.showLyrics')}
@@ -1456,7 +1460,7 @@ export default function PlaylistAudioPlayer({
             cues={captionCues}
             currentTime={currentTime}
             loading={lyricsLoading}
-            loadingMessage={t('playlists.loadingLyrics')}
+            loadingMessage={lyricsLoadingMessage}
             emptyMessage={lyricsEmptyMessage}
             className="playlist-np-lyrics-desktop desktop-only"
             panelRef={lyricsPanelRef}

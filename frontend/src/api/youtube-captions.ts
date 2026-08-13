@@ -14,6 +14,7 @@ export type VideoCaptions = {
   sourceLanguage: string | null;
   translated: boolean;
   cues: CaptionCue[];
+  generating?: boolean;
 };
 
 function isRetryableCaptionError(err: unknown): boolean {

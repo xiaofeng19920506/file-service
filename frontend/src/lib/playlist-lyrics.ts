@@ -9,7 +9,13 @@ type LyricsCacheEntry = {
 };
 
 const lyricsCache = new Map<string, LyricsCacheEntry>();
-const inflight = new Map<string, Promise<{ cues: CaptionCue[]; language: SubtitleLanguage }>>();
+type LyricsLoadResult = {
+  cues: CaptionCue[];
+  language: SubtitleLanguage;
+  generating?: boolean;
+};
+
+const inflight = new Map<string, Promise<LyricsLoadResult>>();
 const EMPTY_CACHE_TTL_MS = 120_000;
 
 function cacheKey(videoId: string, lang: SubtitleLanguage): string {
@@ -68,7 +74,7 @@ async function fetchPreferredThenFallback(
   videoId: string,
   preferredLang: SubtitleLanguage,
   title?: string,
-): Promise<{ cues: CaptionCue[]; language: SubtitleLanguage }> {
+): Promise<LyricsLoadResult> {
   const fallbackLang: SubtitleLanguage = preferredLang === 'zh' ? 'en' : 'zh';
 
   try {
@@ -76,35 +82,38 @@ async function fetchPreferredThenFallback(
     if (data.cues.length) {
       return { cues: data.cues, language: preferredLang };
     }
+    try {
+      const alt = await fetchVideoCaptions(videoId, fallbackLang, title);
+      if (alt.cues.length) {
+        return { cues: alt.cues, language: fallbackLang };
+      }
+      return {
+        cues: [],
+        language: preferredLang,
+        generating: Boolean(data.generating || alt.generating),
+      };
+    } catch {
+      return { cues: [], language: preferredLang, generating: Boolean(data.generating) };
+    }
   } catch (preferredErr) {
     try {
       const alt = await fetchVideoCaptions(videoId, fallbackLang, title);
       if (alt.cues.length) {
         return { cues: alt.cues, language: fallbackLang };
       }
+      return { cues: [], language: preferredLang, generating: Boolean(alt.generating) };
     } catch {
       /* 两种语言都失败时抛出原始错误，让 UI 显示加载失败而不是「暂无歌词」 */
     }
     throw preferredErr;
   }
-
-  try {
-    const alt = await fetchVideoCaptions(videoId, fallbackLang, title);
-    if (alt.cues.length) {
-      return { cues: alt.cues, language: fallbackLang };
-    }
-  } catch {
-    /* 首选语言已成功但为空，fallback 失败仍视为暂无字幕 */
-  }
-
-  return { cues: [], language: preferredLang };
 }
 
 export async function loadTrackLyrics(
   videoId: string,
   preferredLang: SubtitleLanguage,
   title?: string,
-): Promise<{ cues: CaptionCue[]; language: SubtitleLanguage }> {
+): Promise<LyricsLoadResult> {
   const key = cacheKey(videoId, preferredLang);
   const cached = readCache(key);
   if (cached) {
@@ -116,7 +125,9 @@ export async function loadTrackLyrics(
 
   const request = fetchPreferredThenFallback(videoId, preferredLang, title)
     .then((result) => {
-      writeCache(videoId, preferredLang, result);
+      if (!(result.generating && result.cues.length === 0)) {
+        writeCache(videoId, preferredLang, result);
+      }
       return result;
     })
     .finally(() => {
@@ -143,7 +154,7 @@ export function clearTrackLyricsCache(videoId?: string): void {
     inflight.clear();
     return;
   }
-  const prefix = `${videoId}:`;
+  const prefix = `v2:${videoId}:`;
   for (const key of lyricsCache.keys()) {
     if (key.startsWith(prefix)) lyricsCache.delete(key);
   }

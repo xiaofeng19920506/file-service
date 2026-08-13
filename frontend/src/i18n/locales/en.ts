@@ -166,6 +166,7 @@ const en: MessageTree = {
     showLyrics: 'Show lyrics',
     backToCover: 'Back to cover',
     loadingLyrics: 'Loading lyrics…',
+    matchingLyrics: 'Finding lyrics for this song…',
     tapCdForLyrics: 'Tap the CD to view lyrics',
     addTitle: 'Add tracks',
     addOrPasteUrl: 'Or paste a URL',

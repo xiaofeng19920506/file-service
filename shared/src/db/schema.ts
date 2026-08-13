@@ -152,6 +152,27 @@ export const youtubeOAuthConnections = pgTable('youtube_oauth_connections', {
 
 export type YoutubeAudioCacheStatus = 'pending' | 'processing' | 'ready' | 'failed';
 
+export const youtubeVideoLyrics = pgTable(
+  'youtube_video_lyrics',
+  {
+    youtubeVideoId: text('youtube_video_id').notNull(),
+    language: text('language').notNull(),
+    status: text('status').notNull().default('pending'),
+    source: text('source'),
+    title: text('title'),
+    cues: jsonb('cues').$type<Array<{ start: number; end: number; text: string }>>().notNull().default([]),
+    errorCode: text('error_code'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.youtubeVideoId, t.language] }),
+  }),
+);
+
+export type YoutubeVideoLyricsStatus = 'pending' | 'ready' | 'failed';
+export type YoutubeVideoLyricsRow = typeof youtubeVideoLyrics.$inferSelect;
+
 export const youtubeAudioCache = pgTable('youtube_audio_cache', {
   youtubeVideoId: text('youtube_video_id').primaryKey(),
   status: text('status').notNull().default('pending'),
