@@ -131,6 +131,11 @@
   }
 
   .playlists-page[data-mobile-home-preview='true']
+    .playlist-audio-player--mobile-record.playlist-audio-player--lyrics-open {
+    justify-content: flex-start !important;
+  }
+
+  .playlists-page[data-mobile-home-preview='true']
     .playlists-main-inner--mobile-audio
     .playlists-player-stage[data-audio-mobile-record='true']
     .playlist-audio-record-stage,
@@ -143,6 +148,28 @@
     justify-content: center !important;
     align-items: center !important;
     overflow: visible !important;
+  }
+
+  /* 歌词页：顶栏贴内容区顶部，歌词在剩余空间居中/滚动（勿把顶栏一起居中） */
+  .playlists-page[data-mobile-home-preview='true']
+    .playlists-main-inner--mobile-audio
+    .playlists-player-stage[data-audio-mobile-record='true']
+    .playlist-audio-player--lyrics-open
+    .playlist-audio-record-stage--lyrics,
+  .playlists-page[data-mobile-home-preview='true']
+    .playlist-audio-player--lyrics-open
+    .playlist-audio-record-stage--lyrics {
+    flex: 1 1 0% !important;
+    width: 100% !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    overflow: hidden !important;
+  }
+
+  .playlists-page[data-mobile-home-preview='true'] .playlist-audio-record-lyrics-view {
+    flex: 1 1 0% !important;
+    min-height: 0 !important;
+    width: 100% !important;
   }
 
   .playlists-page[data-mobile-home-preview='true'] .playlist-audio-record-disc-wrap {

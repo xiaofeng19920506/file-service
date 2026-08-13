@@ -1218,6 +1218,21 @@ export default function PlaylistAudioPlayer({
                   {t('playlists.backToCover')}
                 </button>
                 {recordLangSwitch}
+                {onAddToList ? (
+                  <button
+                    type="button"
+                    className="playlist-audio-record-add-btn playlist-audio-record-add-btn--lyrics-head"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onAddToList();
+                    }}
+                    aria-label={t('playlists.addToList')}
+                  >
+                    <PlusIcon />
+                  </button>
+                ) : (
+                  <span className="playlist-audio-record-lyrics-head-spacer" aria-hidden />
+                )}
               </header>
               <PlaylistLyricsScroller
                 cues={captionCues}
