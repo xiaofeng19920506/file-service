@@ -399,6 +399,22 @@
     overflow: visible;
   }
 
+  /* 试听封面：本文件在 mobile.css 之后加载，盖过 flex-end / 38vh，避免 CD 贴底 */
+  .playlists-page[data-mobile-home-preview='true']
+    .playlist-audio-player--mobile-record:not(.playlist-audio-player--lyrics-open) {
+    justify-content: center;
+  }
+
+  .playlists-page[data-mobile-home-preview='true']
+    .playlists-main-inner--mobile-audio
+    .playlists-player-stage[data-audio-mobile-record='true']
+    .playlist-audio-record-stage:not(.playlist-audio-record-stage--lyrics) {
+    flex: 0 0 auto;
+    min-height: 0;
+    padding-bottom: 0;
+    justify-content: center;
+  }
+
   .playlist-audio-record-disc-wrap {
     position: relative;
     flex-shrink: 0;

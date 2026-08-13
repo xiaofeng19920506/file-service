@@ -66,6 +66,8 @@
     min-height: 0;
     padding: 0;
     width: 100%;
+    /* 试听 dock 无播放顺序/队列行，矮于通用 11.5rem；给封面垂直居中留出真实空隙 */
+    --playlists-preview-dock-reserve: 9.5rem;
   }
 
   .playlists-page[data-mobile-home-preview='true'] .playlists-header {
@@ -79,7 +81,7 @@
     width: 100%;
   }
 
-  /* 试听：整列撑满并把 CD 压到底栏上方（盖过通用 38vh min-height） */
+  /* 试听封面：CD+当前歌词在顶栏与 dock 之间垂直居中（盖过通用 38vh min-height） */
   .playlists-page[data-mobile-home-preview='true'] .playlists-home-preview-main {
     flex: 1;
     min-height: 0;
@@ -95,8 +97,8 @@
     padding: 0 !important;
     display: flex !important;
     flex-direction: column !important;
-    /* 主区底边已接近 dock 顶，只需少量间隙，勿再按整段 dock 高度留白 */
-    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px)) !important;
+    /* 按试听 dock 实高留白，让 flex 居中落在可见空隙，而不是沉到 overlay 下面 */
+    padding-bottom: calc(var(--playlists-preview-dock-reserve) + env(safe-area-inset-bottom, 0px)) !important;
     box-sizing: border-box !important;
   }
 
@@ -138,8 +140,9 @@
   .playlists-page[data-mobile-home-preview='true']
     .playlists-main-inner--mobile-audio
     .playlists-player-stage[data-audio-mobile-record='true']
-    .playlist-audio-record-stage,
-  .playlists-page[data-mobile-home-preview='true'] .playlist-audio-record-stage {
+    .playlist-audio-record-stage:not(.playlist-audio-record-stage--lyrics),
+  .playlists-page[data-mobile-home-preview='true']
+    .playlist-audio-record-stage:not(.playlist-audio-record-stage--lyrics) {
     flex: 0 0 auto !important;
     min-height: 0 !important;
     max-height: none !important;
@@ -194,7 +197,7 @@
     --bottom-nav-height: 0px;
   }
 
-  /* 盖过 responsive.css 里 11.5rem 的 !important padding */
+  /* 盖过 responsive.css 里 11.5rem 的 !important padding（完整播控含队列行，试听没有） */
   body.playlists-mobile-audio-active
     .playlists-page[data-mobile-home-preview='true']
     .playlists-workspace[data-player-active='true']
@@ -202,7 +205,7 @@
   body.playlists-mobile-audio-active
     .playlists-page[data-mobile-home-preview='true']
     .playlists-main-inner--mobile-audio {
-    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: calc(var(--playlists-preview-dock-reserve) + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   body.playlists-mobile-audio-active:has(.playlists-page[data-mobile-home-preview='true']) .nav-bottom,
