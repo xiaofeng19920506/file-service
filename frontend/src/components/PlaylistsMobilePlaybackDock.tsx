@@ -19,6 +19,7 @@ type PlaylistsMobilePlaybackDockProps = {
   playbackOrderOpen?: boolean;
   queueOpen?: boolean;
   onSeekRatio?: (ratio: number) => void;
+  progressResetKey?: string;
   onOpenPlaybackOrder?: () => void;
   onToggleQueue?: () => void;
   onPlayToggle: () => void;
@@ -40,6 +41,7 @@ export default function PlaylistsMobilePlaybackDock({
   playbackOrderOpen = false,
   queueOpen = false,
   onSeekRatio,
+  progressResetKey,
   onOpenPlaybackOrder,
   onToggleQueue,
   onPlayToggle,
@@ -63,7 +65,8 @@ export default function PlaylistsMobilePlaybackDock({
       {showProgress && onSeekRatio ? (
         <div className="playlists-playback-dock-progress-wrap">
           <AudioSeekBar
-            key={`${title}:${duration > 0 ? Math.round(duration) : 0}`}
+            key={progressResetKey ?? title}
+            resetKey={progressResetKey ?? title}
             currentTime={currentTime}
             duration={duration}
             canSeek={canSeek}

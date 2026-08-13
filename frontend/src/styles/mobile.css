@@ -175,6 +175,14 @@
     width: 100% !important;
   }
 
+  .playlists-page[data-mobile-home-preview='true'] .playlist-audio-record-lyrics-scroller,
+  .playlists-page[data-mobile-home-preview='true'] .playlist-lyrics-scroller {
+    flex: 1 1 0% !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .playlists-page[data-mobile-home-preview='true'] .playlist-audio-record-disc-wrap {
     width: min(62vw, 14.75rem) !important;
     margin: 0 0 0.35rem !important;
@@ -186,11 +194,12 @@
     height: 100% !important;
   }
 
-  .playlists-page[data-mobile-home-preview='true'] .playlist-audio-record-now-lyric {
+  .playlists-page[data-mobile-home-preview='true'] .playlist-audio-record-now-lyric,
+  .playlists-page[data-mobile-home-preview='true'] .playlist-karaoke {
     flex: 0 0 auto;
     margin: 0 0 0.15rem !important;
-    min-height: 1.5rem;
-    padding: 0 1rem 0.1rem !important;
+    min-height: calc(var(--playlist-karaoke-line, 2.15rem) * 2);
+    padding: 0.1rem 1rem 0.25rem !important;
   }
 
   body.playlists-mobile-audio-active:has(.playlists-page[data-mobile-home-preview='true']) {

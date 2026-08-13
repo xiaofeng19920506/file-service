@@ -176,17 +176,187 @@ export function parseLrcToCues(lrc: string): CaptionCue[] {
   }));
 }
 
-export function cleanYoutubeTitleForLyrics(title: string): string {
-  return title
-    .replace(/【[^】]*】/g, ' ')
-    .replace(/\[[^\]]*\]/g, ' ')
-    .replace(/『[^』]*』/g, ' ')
-    .replace(/「[^」]*」/g, ' ')
-    .replace(/（[^）]*）/g, ' ')
-    .replace(/\([^)]*\)/g, ' ')
+const CJK_RUN_RE = /[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]{2,}/g;
+
+const BRACKET_PAIRS: Array<[string, string]> = [
+  ['【', '】'],
+  ['[', ']'],
+  ['『', '』'],
+  ['「', '」'],
+  ['（', '）'],
+  ['(', ')'],
+];
+
+const DECORATION_PATTERN =
+  /動態歌詞|动态歌词|歌詞|歌词|Lyrics?|Karaoke|卡拉OK|官方影像|官方|Official(?:\s+(?:Music\s+)?Video)?|字幕|Color\s*Coded|Lyric\s*Video|Music\s*Video|\bM\/V\b|\bMV\b|\bHD\b|\b4K\b|\b1080p\b|\b720p\b/gi;
+
+const DECORATION_ONLY_RE =
+  /^(新版|完整版|高清|高音質|高音质|音質|音质|純音樂|纯音乐|Instrumental|Live|LIVE|現場|现场|Cover|翻唱|Audio|Visualizer|Video|MV|HD|4K|字幕|歌詞|歌词|Lyrics)$/i;
+
+export type LyricsArtistTrack = {
+  artist: string;
+  track: string;
+};
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function uniqueNonEmpty(values: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const value of values) {
+    const trimmed = value.replace(/\s+/g, ' ').trim();
+    if (trimmed.length < 2) continue;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(trimmed);
+  }
+  return result;
+}
+
+export function extractCjkRuns(text: string): string[] {
+  return text.match(CJK_RUN_RE) ?? [];
+}
+
+function isDecorationFragment(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return true;
+  if (DECORATION_ONLY_RE.test(trimmed)) return true;
+  const stripped = trimmed
+    .replace(DECORATION_PATTERN, ' ')
+    .replace(/[\s\-_|/·•.,:：!！?？~～*]+/g, ' ')
+    .trim();
+  return !stripped || stripped.length < 2 || DECORATION_ONLY_RE.test(stripped);
+}
+
+function isLikelySongTitleFragment(text: string): boolean {
+  const trimmed = text.trim();
+  if (trimmed.length < 2 || trimmed.length > 48) return false;
+  if (isDecorationFragment(trimmed)) return false;
+  return /[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/.test(trimmed) || /[a-zA-Z]{3,}/.test(trimmed);
+}
+
+function extractBracketFragments(title: string): string[] {
+  const fragments: string[] = [];
+  for (const [open, close] of BRACKET_PAIRS) {
+    const re = new RegExp(`${escapeRegExp(open)}([^${escapeRegExp(close)}]{1,80})${escapeRegExp(close)}`, 'g');
+    let match: RegExpExecArray | null;
+    while ((match = re.exec(title))) {
+      const inner = (match[1] ?? '').trim();
+      if (inner) fragments.push(inner);
+    }
+  }
+  return fragments;
+}
+
+function stripDecorations(text: string): string {
+  return text
+    .replace(DECORATION_PATTERN, ' ')
     .replace(/#[^\s#]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function rewriteTitleBrackets(title: string): string {
+  let result = title;
+  for (const [open, close] of BRACKET_PAIRS) {
+    const re = new RegExp(`${escapeRegExp(open)}([^${escapeRegExp(close)}]{0,80})${escapeRegExp(close)}`, 'g');
+    result = result.replace(re, (_all, inner: string) => {
+      const trimmed = String(inner ?? '').trim();
+      return isLikelySongTitleFragment(trimmed) ? ` ${trimmed} ` : ' ';
+    });
+  }
+  return result;
+}
+
+export function cleanYoutubeTitleForLyrics(title: string): string {
+  return stripDecorations(rewriteTitleBrackets(title))
+    .replace(/^[-–—|/\s]+|[-–—|/\s]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function splitArtistCandidates(text: string): string[] {
+  const candidates: string[] = [];
+  for (const chunk of text.split(/[\s\-–—/|]+/)) {
+    const trimmed = chunk.trim();
+    if (trimmed.length < 2 || isDecorationFragment(trimmed)) continue;
+    candidates.push(trimmed);
+    const runs = trimmed.match(/[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]+|[A-Za-z0-9.]+/g) ?? [];
+    for (const run of runs) {
+      if (run.length >= 2 && run !== trimmed && !isDecorationFragment(run)) {
+        candidates.push(run);
+      }
+    }
+  }
+  return uniqueNonEmpty(candidates);
+}
+
+function extractSongLikeBrackets(title: string): string[] {
+  return uniqueNonEmpty(extractBracketFragments(title).filter(isLikelySongTitleFragment));
+}
+
+export function extractArtistTrackPairs(title: string): LyricsArtistTrack[] {
+  const pairs: LyricsArtistTrack[] = [];
+  const seen = new Set<string>();
+  const add = (artist: string, track: string) => {
+    const a = artist.replace(/\s+/g, ' ').trim();
+    const t = track.replace(/\s+/g, ' ').trim();
+    if (a.length < 2 || t.length < 2 || a.toLowerCase() === t.toLowerCase()) return;
+    const key = `${a.toLowerCase()}\0${t.toLowerCase()}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    pairs.push({ artist: a, track: t });
+  };
+
+  const songLikes = extractSongLikeBrackets(title);
+  let outside = title;
+  for (const fragment of extractBracketFragments(title)) {
+    outside = outside.replace(fragment, ' ');
+  }
+  outside = stripDecorations(rewriteTitleBrackets(outside));
+  const artists = splitArtistCandidates(outside).sort((a, b) => {
+    const rank = (name: string) =>
+      (extractCjkRuns(name).length > 0 ? 30 : 0) + (name.length >= 5 ? 10 : 0) + name.length;
+    return rank(b) - rank(a);
+  });
+  for (const song of songLikes) {
+    for (const artist of artists) add(artist, song);
+  }
+
+  const cleaned = cleanYoutubeTitleForLyrics(title);
+  const dashParts = cleaned.split(/\s+[-–—]\s+/).map((part) => part.trim()).filter(Boolean);
+  if (dashParts.length >= 2) {
+    add(dashParts[0]!, dashParts.slice(1).join(' - '));
+  }
+
+  return pairs;
+}
+
+export function extractLyricsSearchQueries(title: string): string[] {
+  const raw = title.trim();
+  if (!raw) return [];
+
+  const queries: string[] = [];
+  const songLikes = extractSongLikeBrackets(raw);
+  queries.push(...songLikes);
+
+  for (const pair of extractArtistTrackPairs(raw)) {
+    queries.push(`${pair.artist} ${pair.track}`);
+  }
+
+  const cleaned = cleanYoutubeTitleForLyrics(raw);
+  if (cleaned) queries.push(cleaned);
+
+  const dashParts = cleaned.split(/\s+[-–—]\s+/).map((part) => part.trim()).filter(Boolean);
+  if (dashParts.length >= 2) {
+    queries.push(dashParts.slice(1).join(' - '));
+  }
+
+  queries.push(raw);
+  return uniqueNonEmpty(queries);
 }
 
 export function transcriptLinesToCues(lines: TranscriptLine[]): CaptionCue[] {
@@ -238,20 +408,39 @@ function parseInlineJson(html: string, globalName: string): unknown | null {
   return null;
 }
 
-function pickChineseTrack(tracks: CaptionTrack[]): CaptionTrack | undefined {
-  for (const code of ZH_LANG_CODES) {
-    const exact = tracks.find((track) => track.languageCode === code);
-    if (exact) return exact;
-  }
-  return tracks.find((track) => isChineseLang(track.languageCode));
+function isAsrTrack(track: CaptionTrack): boolean {
+  return track.kind === 'asr';
 }
 
-function pickEnglishTrack(tracks: CaptionTrack[]): CaptionTrack | undefined {
+function pickChineseTrack(tracks: CaptionTrack[], allowAsr = true): CaptionTrack | undefined {
+  const chinese = tracks.filter((track) => isChineseLang(track.languageCode));
+  for (const code of ZH_LANG_CODES) {
+    const exact = chinese.find((track) => track.languageCode === code && !isAsrTrack(track));
+    if (exact) return exact;
+  }
+  const manual = chinese.find((track) => !isAsrTrack(track));
+  if (manual) return manual;
+  if (!allowAsr) return undefined;
+  for (const code of ZH_LANG_CODES) {
+    const exact = chinese.find((track) => track.languageCode === code);
+    if (exact) return exact;
+  }
+  return chinese[0];
+}
+
+function pickEnglishTrack(tracks: CaptionTrack[], allowAsr = true): CaptionTrack | undefined {
   const english = tracks.filter((track) => isEnglishLang(track.languageCode));
+  const manual = english.find((track) => !isAsrTrack(track));
+  if (manual) return manual;
+  if (!allowAsr) return undefined;
+  return english[0];
+}
+
+function pickTranslationSourceTrack(tracks: CaptionTrack[]): CaptionTrack | undefined {
   return (
-    english.find((track) => track.kind !== 'asr') ??
-    english[0] ??
-    tracks.find((track) => track.kind !== 'asr') ??
+    pickEnglishTrack(tracks, true) ??
+    pickChineseTrack(tracks, true) ??
+    tracks.find((track) => !isAsrTrack(track)) ??
     tracks[0]
   );
 }
@@ -435,49 +624,249 @@ type LrclibHit = {
   trackName?: string;
   artistName?: string;
   syncedLyrics?: string | null;
+  plainLyrics?: string | null;
+  instrumental?: boolean;
 };
 
-function scoreLrclibHit(query: string, hit: LrclibHit): number {
-  const hay = `${hit.artistName ?? ''} ${hit.trackName ?? ''}`.toLowerCase();
+type LrclibMatch = {
+  syncedCues: CaptionCue[] | null;
+  unsyncedCues: CaptionCue[] | null;
+  language: 'zh' | 'en';
+};
+
+export function plainLyricsToCues(plain: string): CaptionCue[] {
+  const lines = plain
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .filter((line) => !/^\[[^\]]+\]$/.test(line))
+    .filter((line) => !/^(作词|作曲|编曲|作詞|編曲|歌詞|歌词|Lyricist|Composer)\s*[:：]/.test(line));
+  if (lines.length < 3) return [];
+  return lines.map((text, index) => ({
+    start: index * 4,
+    end: index * 4 + 4,
+    text,
+  }));
+}
+
+export function cuesLookLikeLineLyrics(cues: CaptionCue[]): boolean {
+  if (cues.length < 5) return false;
+  const sample = cues.slice(0, 48);
+  const lengths = sample.map((cue) => cue.text.replace(/\s+/g, ' ').trim().length).filter((n) => n > 0);
+  if (lengths.length < 5) return false;
+  const avg = lengths.reduce((sum, n) => sum + n, 0) / lengths.length;
+  const longRatio = lengths.filter((n) => n > 48).length / lengths.length;
+  const timedRatio = sample.filter((cue) => cue.end > cue.start + 0.2).length / sample.length;
+  if (timedRatio < 0.7 || longRatio > 0.4) return false;
+  if (cuesContainChinese(sample) && avg > 24) return false;
+  if (!cuesContainChinese(sample) && avg > 56) return false;
+  return true;
+}
+
+function latinTokens(text: string): string[] {
+  return text
+    .toLowerCase()
+    .split(/[\s\-–—/|\[\]()【】『』「」（）]+/)
+    .filter((token) => token.length >= 3 && !/[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/.test(token) && !/^\d+$/.test(token));
+}
+
+export function scoreLrclibHit(query: string, hit: LrclibHit): number {
+  const track = hit.trackName ?? '';
+  const artist = hit.artistName ?? '';
+  const hay = `${artist} ${track}`.toLowerCase();
   let score = 0;
-  for (const token of query.toLowerCase().split(/[\s\-–—/|]+/).filter((part) => part.length >= 2)) {
-    if (hay.includes(token)) score += token.length;
+
+  for (const run of extractCjkRuns(query)) {
+    if (track.includes(run)) score += run.length * 6;
+    else if (artist.includes(run)) score += run.length;
+    else score -= run.length * 8;
   }
+
+  for (const token of latinTokens(query)) {
+    if (track.toLowerCase().includes(token)) score += token.length * 3;
+    else if (hay.includes(token)) score += token.length;
+  }
+
+  const trackNorm = track.toLowerCase().replace(/\s+/g, '');
+  const queryNorm = query.toLowerCase().replace(/\s+/g, '');
+  if (trackNorm.length >= 2 && (queryNorm.includes(trackNorm) || trackNorm.includes(queryNorm))) {
+    score += Math.min(trackNorm.length, queryNorm.length) * 2;
+  }
+
   return score;
 }
 
-export async function fetchLrclibCues(title: string): Promise<CaptionCue[] | null> {
-  const query = cleanYoutubeTitleForLyrics(title);
-  if (query.length < 2) return null;
+function trackContainsQueryTitle(query: string, hit: LrclibHit): boolean {
+  const track = hit.trackName ?? '';
+  const cjkRuns = extractCjkRuns(query);
+  if (cjkRuns.length > 0) {
+    const longest = cjkRuns.reduce((best, run) => (run.length >= best.length ? run : best));
+    if (longest.length >= 4) return track.includes(longest);
+    return cjkRuns.some((run) => track.includes(run));
+  }
+  const tokens = latinTokens(query);
+  if (tokens.length === 0) return false;
+  const inTrack = tokens.filter((token) => track.toLowerCase().includes(token));
+  return inTrack.reduce((sum, token) => sum + token.length, 0) >= 6;
+}
+
+function hitPassesThreshold(
+  query: string,
+  hit: LrclibHit,
+  score: number,
+  secondScore?: number,
+): boolean {
+  const track = hit.trackName ?? '';
+  const artist = hit.artistName ?? '';
+  const cjkRuns = extractCjkRuns(query);
+  if (cjkRuns.length > 0) {
+    const missing = cjkRuns.filter((run) => !track.includes(run) && !artist.includes(run));
+    if (missing.length > 0) return false;
+    if (!cjkRuns.some((run) => track.includes(run))) return false;
+  } else {
+    const tokens = latinTokens(query);
+    const inTrack = tokens.filter((token) => track.toLowerCase().includes(token));
+    if (inTrack.reduce((sum, token) => sum + token.length, 0) < 6) return false;
+  }
+
+  const minScore = cjkRuns.length > 0 ? Math.max(10, cjkRuns.reduce((sum, run) => sum + run.length, 0)) : 8;
+  if (score < minScore) return false;
+
+  if (secondScore != null && score - secondScore < 4 && !trackContainsQueryTitle(query, hit)) {
+    return false;
+  }
+  return true;
+}
+
+function bestQueryForHit(queries: string[], hit: LrclibHit): string {
+  return queries.reduce((best, query) => (scoreLrclibHit(query, hit) > scoreLrclibHit(best, hit) ? query : best), queries[0] ?? '');
+}
+
+export function pickBestLrclibHit(
+  queries: string[],
+  hits: LrclibHit[],
+  opts: { lyrics?: 'synced' | 'unsynced' | 'any' } = {},
+): LrclibHit | null {
+  if (queries.length === 0 || hits.length === 0) return null;
+  const lyrics = opts.lyrics ?? 'synced';
+  const filtered = hits.filter((hit) => {
+    if (hit.instrumental) return false;
+    const hasSync = Boolean(hit.syncedLyrics?.includes('['));
+    const hasPlain = Boolean(hit.plainLyrics?.trim());
+    if (lyrics === 'synced') return hasSync;
+    if (lyrics === 'unsynced') return hasPlain && !hasSync;
+    return hasSync || hasPlain;
+  });
+  if (filtered.length === 0) return null;
+
+  const scored = filtered.map((hit) => {
+    const query = bestQueryForHit(queries, hit);
+    return { hit, query, score: scoreLrclibHit(query, hit) };
+  });
+  scored.sort((a, b) => b.score - a.score);
+  const best = scored[0]!;
+  const second = scored[1];
+  if (!hitPassesThreshold(best.query, best.hit, best.score, second?.score)) return null;
+  return best.hit;
+}
+
+function isHighConfidenceHit(title: string, hit: LrclibHit): boolean {
+  const longest = extractCjkRuns(title).reduce((best, run) => (run.length >= best.length ? run : best), '');
+  if (longest.length >= 4) return (hit.trackName ?? '').includes(longest);
+  return trackContainsQueryTitle(cleanYoutubeTitleForLyrics(title) || title, hit);
+}
+
+function lrclibHitToCues(hit: LrclibHit, allowUnsynced: boolean): CaptionCue[] | null {
+  if (hit.syncedLyrics?.includes('[')) {
+    const cues = parseLrcToCues(hit.syncedLyrics);
+    if (cues.length > 0) return cues;
+  }
+  if (allowUnsynced && hit.plainLyrics) {
+    const cues = plainLyricsToCues(hit.plainLyrics);
+    if (cues.length > 0) return cues;
+  }
+  return null;
+}
+
+async function searchLrclib(params: Record<string, string>): Promise<LrclibHit[]> {
   try {
     const url = new URL('https://lrclib.net/api/search');
-    url.searchParams.set('q', query);
+    for (const [key, value] of Object.entries(params)) {
+      const trimmed = value.trim();
+      if (trimmed) url.searchParams.set(key, trimmed);
+    }
     const res = await fetch(url.toString(), {
       headers: { 'User-Agent': YT_PAGE_USER_AGENT },
     });
-    if (!res.ok) return null;
+    if (!res.ok) return [];
     const rows = (await res.json()) as LrclibHit[];
-    if (!Array.isArray(rows) || rows.length === 0) return null;
-    const withSync = rows.filter((row) => row.syncedLyrics?.includes('['));
-    if (withSync.length === 0) return null;
-    withSync.sort((a, b) => scoreLrclibHit(query, b) - scoreLrclibHit(query, a));
-    const cues = parseLrcToCues(withSync[0]!.syncedLyrics ?? '');
-    return cues.length > 0 ? cues : null;
+    return Array.isArray(rows) ? rows : [];
   } catch {
-    return null;
+    return [];
   }
 }
 
-async function lyricsFallbackResult(
+async function fetchLrclibMatch(title: string): Promise<LrclibMatch | null> {
+  const queries = extractLyricsSearchQueries(title);
+  const pairs = extractArtistTrackPairs(title);
+  if (queries.length === 0) return null;
+
+  const collected: LrclibHit[] = [];
+  const seen = new Set<string>();
+  const addHits = (rows: LrclibHit[]) => {
+    for (const row of rows) {
+      const key = `${row.artistName ?? ''}\0${row.trackName ?? ''}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      collected.push(row);
+    }
+  };
+
+  const firstBatch: Array<Promise<LrclibHit[]>> = pairs
+    .slice(0, 2)
+    .map((pair) => searchLrclib({ track_name: pair.track, artist_name: pair.artist }));
+  if (queries[0]) firstBatch.push(searchLrclib({ q: queries[0] }));
+  for (const rows of await Promise.all(firstBatch)) addHits(rows);
+
+  const confident = collected.some((hit) => isHighConfidenceHit(title, hit) && hit.syncedLyrics?.includes('['));
+  if (!confident) {
+    const rest: Array<Promise<LrclibHit[]>> = queries.slice(1, 6).map((query) => searchLrclib({ q: query }));
+    for (const pair of pairs.slice(2, 3)) {
+      rest.push(searchLrclib({ track_name: pair.track, artist_name: pair.artist }));
+    }
+    if (rest.length > 0) {
+      for (const rows of await Promise.all(rest)) addHits(rows);
+    }
+  }
+
+  const syncedHit = pickBestLrclibHit(queries, collected, { lyrics: 'synced' });
+  const syncedCues = syncedHit ? lrclibHitToCues(syncedHit, false) : null;
+  const unsyncedHit = syncedCues ? null : pickBestLrclibHit(queries, collected, { lyrics: 'unsynced' });
+  const unsyncedCues = unsyncedHit ? lrclibHitToCues(unsyncedHit, true) : null;
+  const sample = syncedCues ?? unsyncedCues;
+  if (!sample?.length) return null;
+  return {
+    syncedCues,
+    unsyncedCues,
+    language: cuesContainChinese(sample) ? 'zh' : 'en',
+  };
+}
+
+export async function fetchLrclibCues(title: string): Promise<CaptionCue[] | null> {
+  const match = await fetchLrclibMatch(title);
+  return match?.syncedCues ?? null;
+}
+
+function lrclibMatchToResult(
   videoId: string,
-  title: string | null | undefined,
-): Promise<YoutubeCaptionsResult | null> {
-  if (!title?.trim()) return null;
-  const cues = await fetchLrclibCues(title);
+  match: LrclibMatch | null | undefined,
+  preferUnsynced: boolean,
+): YoutubeCaptionsResult | null {
+  const cues = preferUnsynced ? match?.unsyncedCues : match?.syncedCues;
   if (!cues?.length) return null;
   return {
     videoId,
-    language: cuesContainChinese(cues) ? 'zh' : 'en',
+    language: match?.language ?? (cuesContainChinese(cues) ? 'zh' : 'en'),
     sourceLanguage: 'lrclib',
     translated: false,
     cues,
@@ -541,125 +930,140 @@ async function translateCues(
   return validate(translated) ? translated : null;
 }
 
-async function fetchChineseTranslationCues(
+function hasManualChineseTrack(tracks: CaptionTrack[]): boolean {
+  return tracks.some((track) => isChineseLang(track.languageCode) && !isAsrTrack(track));
+}
+
+function hasManualEnglishTrack(tracks: CaptionTrack[]): boolean {
+  return tracks.some((track) => isEnglishLang(track.languageCode) && !isAsrTrack(track));
+}
+
+async function fetchManualChineseCues(
   videoId: string,
   tracks: CaptionTrack[],
-  translationLanguages: string[],
 ): Promise<YoutubeCaptionsResult | null> {
-  const viaTranscript = await fetchChineseViaTranscript(videoId);
-  if (viaTranscript?.length) {
-    const enTrack = pickEnglishTrack(tracks);
-    const result = buildChineseResult(
-      videoId,
-      viaTranscript,
-      'zh',
-      enTrack?.languageCode ?? null,
-      Boolean(enTrack),
-    );
-    if (result) return result;
-  }
-
-  const zhTrack = pickChineseTrack(tracks);
+  const zhTrack = pickChineseTrack(tracks, false);
   if (zhTrack) {
     const cues = await fetchCuesFromTrack(zhTrack);
     if (cues?.length) {
-      const enTrack = pickEnglishTrack(tracks);
-      return buildChineseResult(
-        videoId,
-        cues,
-        zhTrack.languageCode,
-        enTrack?.languageCode ?? null,
-        Boolean(enTrack),
-      );
+      return buildChineseResult(videoId, cues, zhTrack.languageCode, null, false);
     }
   }
 
-  const sourceTrack = pickEnglishTrack(tracks);
+  if (!hasManualChineseTrack(tracks)) return null;
+  const viaTranscript = await fetchChineseViaTranscript(videoId);
+  if (viaTranscript?.length) {
+    return buildChineseResult(videoId, viaTranscript, 'zh', null, false);
+  }
+  return null;
+}
+
+async function fetchAsrChineseIfLyricLike(
+  videoId: string,
+  tracks: CaptionTrack[],
+): Promise<YoutubeCaptionsResult | null> {
+  const zhTrack = pickChineseTrack(tracks, true);
+  if (zhTrack && isAsrTrack(zhTrack)) {
+    const cues = await fetchCuesFromTrack(zhTrack);
+    if (cues?.length && cuesLookLikeLineLyrics(cues)) {
+      return buildChineseResult(videoId, cues, zhTrack.languageCode, null, false);
+    }
+  }
+
+  if (tracks.some((track) => isChineseLang(track.languageCode))) {
+    const viaTranscript = await fetchChineseViaTranscript(videoId);
+    if (viaTranscript?.length && cuesLookLikeLineLyrics(viaTranscript)) {
+      return buildChineseResult(videoId, viaTranscript, 'zh', null, false);
+    }
+  }
+  return null;
+}
+
+async function fetchChineseMachineTranslation(
+  tracks: CaptionTrack[],
+  translationLanguages: string[],
+  videoId: string,
+): Promise<YoutubeCaptionsResult | null> {
+  const sourceTrack = pickTranslationSourceTrack(tracks);
   if (!sourceTrack) return null;
 
   const tlangs = pickChineseTranslationLangs(translationLanguages);
   for (const tlang of tlangs) {
     const cues = await fetchCuesFromTrack(sourceTrack, tlang);
     if (cues?.length) {
-      const result = buildChineseResult(
-        videoId,
-        cues,
-        tlang,
-        sourceTrack.languageCode,
-        true,
-      );
+      const result = buildChineseResult(videoId, cues, tlang, sourceTrack.languageCode, true);
       if (result) return result;
     }
   }
 
-  const englishCues = await fetchCuesFromTrack(sourceTrack);
-  if (englishCues?.length) {
+  const sourceCues = await fetchCuesFromTrack(sourceTrack);
+  if (sourceCues?.length) {
     const machineTranslated = await translateCues(
-      englishCues,
+      sourceCues,
       sourceTrack.languageCode,
       'zh-CN',
       cuesContainChinese,
     );
     if (machineTranslated?.length) {
-      return buildChineseResult(
-        videoId,
-        machineTranslated,
-        'zh-CN',
-        sourceTrack.languageCode,
-        true,
-      );
+      return buildChineseResult(videoId, machineTranslated, 'zh-CN', sourceTrack.languageCode, true);
     }
   }
-
   return null;
 }
 
-async function fetchEnglishTranslationCues(
+async function fetchManualEnglishCues(
   videoId: string,
   tracks: CaptionTrack[],
-  translationLanguages: string[],
 ): Promise<YoutubeCaptionsResult | null> {
-  const viaTranscript = await fetchEnglishViaTranscript(videoId);
-  if (viaTranscript?.length) {
-    const zhTrack = pickChineseTrack(tracks);
-    const result = buildEnglishResult(
-      videoId,
-      viaTranscript,
-      'en',
-      zhTrack?.languageCode ?? null,
-      Boolean(zhTrack),
-    );
-    if (result) return result;
-  }
-
-  const enTrack = pickEnglishTrack(tracks);
-  if (enTrack && isEnglishLang(enTrack.languageCode)) {
+  const enTrack = pickEnglishTrack(tracks, false);
+  if (enTrack) {
     const cues = await fetchCuesFromTrack(enTrack);
     if (cues?.length) {
-      const zhTrack = pickChineseTrack(tracks);
-      return buildEnglishResult(
-        videoId,
-        cues,
-        enTrack.languageCode,
-        zhTrack?.languageCode ?? null,
-        Boolean(zhTrack),
-      );
+      return buildEnglishResult(videoId, cues, enTrack.languageCode, null, false);
     }
   }
 
-  const zhTrack = pickChineseTrack(tracks);
+  if (!hasManualEnglishTrack(tracks)) return null;
+  const viaTranscript = await fetchEnglishViaTranscript(videoId);
+  if (viaTranscript?.length) {
+    return buildEnglishResult(videoId, viaTranscript, 'en', null, false);
+  }
+  return null;
+}
+
+async function fetchAsrEnglishIfLyricLike(
+  videoId: string,
+  tracks: CaptionTrack[],
+): Promise<YoutubeCaptionsResult | null> {
+  const enTrack = pickEnglishTrack(tracks, true);
+  if (enTrack && isAsrTrack(enTrack)) {
+    const cues = await fetchCuesFromTrack(enTrack);
+    if (cues?.length && cuesLookLikeLineLyrics(cues)) {
+      return buildEnglishResult(videoId, cues, enTrack.languageCode, null, false);
+    }
+  }
+
+  if (tracks.some((track) => isEnglishLang(track.languageCode))) {
+    const viaTranscript = await fetchEnglishViaTranscript(videoId);
+    if (viaTranscript?.length && cuesLookLikeLineLyrics(viaTranscript)) {
+      return buildEnglishResult(videoId, viaTranscript, 'en', null, false);
+    }
+  }
+  return null;
+}
+
+async function fetchEnglishMachineTranslation(
+  tracks: CaptionTrack[],
+  translationLanguages: string[],
+  videoId: string,
+): Promise<YoutubeCaptionsResult | null> {
+  const zhTrack = pickChineseTrack(tracks, true);
   if (zhTrack) {
     const tlangs = pickEnglishTranslationLangs(translationLanguages);
     for (const tlang of tlangs) {
       const cues = await fetchCuesFromTrack(zhTrack, tlang);
       if (cues?.length) {
-        const result = buildEnglishResult(
-          videoId,
-          cues,
-          tlang,
-          zhTrack.languageCode,
-          true,
-        );
+        const result = buildEnglishResult(videoId, cues, tlang, zhTrack.languageCode, true);
         if (result) return result;
       }
     }
@@ -673,26 +1077,49 @@ async function fetchEnglishTranslationCues(
         cuesContainEnglish,
       );
       if (machineTranslated?.length) {
-        return buildEnglishResult(
-          videoId,
-          machineTranslated,
-          'en',
-          zhTrack.languageCode,
-          true,
-        );
+        return buildEnglishResult(videoId, machineTranslated, 'en', zhTrack.languageCode, true);
       }
     }
   }
 
-  // 中文歌常见情况：YouTube 仅提供英文字幕轨（如赞美之泉官方歌词版）
+  const enTrack = pickEnglishTrack(tracks, true);
   if (enTrack) {
     const cues = await fetchCuesFromTrack(enTrack);
     if (cues?.length) {
       return buildEnglishResult(videoId, cues, enTrack.languageCode, null, false);
     }
   }
-
   return null;
+}
+
+async function fetchCaptionsForLanguage(
+  videoId: string,
+  subtitleLang: SubtitleLanguage,
+  tracks: CaptionTrack[],
+  translationLanguages: string[],
+  lrclibMatch: Promise<LrclibMatch | null> | null,
+): Promise<YoutubeCaptionsResult | null> {
+  const wantEnglish = subtitleLang === 'en';
+  const manual = wantEnglish
+    ? await fetchManualEnglishCues(videoId, tracks)
+    : await fetchManualChineseCues(videoId, tracks);
+  if (manual?.cues.length) return manual;
+
+  const lrclib = lrclibMatch ? await lrclibMatch : null;
+  const synced = lrclibMatchToResult(videoId, lrclib, false);
+  if (synced) return synced;
+
+  const asr = wantEnglish
+    ? await fetchAsrEnglishIfLyricLike(videoId, tracks)
+    : await fetchAsrChineseIfLyricLike(videoId, tracks);
+  if (asr?.cues.length) return asr;
+
+  const unsynced = lrclibMatchToResult(videoId, lrclib, true);
+  if (unsynced) return unsynced;
+
+  return wantEnglish
+    ? fetchEnglishMachineTranslation(tracks, translationLanguages, videoId)
+    : fetchChineseMachineTranslation(tracks, translationLanguages, videoId);
 }
 
 export async function fetchYoutubeVideoCaptions(
@@ -702,30 +1129,11 @@ export async function fetchYoutubeVideoCaptions(
   if (!VIDEO_ID_RE.test(videoId)) return null;
 
   const subtitleLang = opts.subtitleLang === 'en' ? 'en' : 'zh';
+  const titleHint = opts.title?.trim() || '';
+  const lrclibFromHint = titleHint ? fetchLrclibMatch(titleHint) : null;
   const { tracks, translationLanguages, title } = await fetchCaptionTrackList(videoId);
-  const hintTitle = opts.title?.trim() || title;
+  const hintTitle = titleHint || title;
+  const lrclibMatch = lrclibFromHint ?? (hintTitle ? fetchLrclibMatch(hintTitle) : null);
 
-  if (tracks.length === 0) {
-    if (subtitleLang === 'en') {
-      const viaTranscript = await fetchEnglishViaTranscript(videoId);
-      const english = viaTranscript?.length
-        ? buildEnglishResult(videoId, viaTranscript, 'en', null, false)
-        : null;
-      if (english) return english;
-    } else {
-      const viaTranscript = await fetchChineseViaTranscript(videoId);
-      const chinese = viaTranscript?.length
-        ? buildChineseResult(videoId, viaTranscript, 'zh', null, false)
-        : null;
-      if (chinese) return chinese;
-    }
-    return lyricsFallbackResult(videoId, hintTitle);
-  }
-
-  const fromYoutube =
-    subtitleLang === 'en'
-      ? await fetchEnglishTranslationCues(videoId, tracks, translationLanguages)
-      : await fetchChineseTranslationCues(videoId, tracks, translationLanguages);
-  if (fromYoutube?.cues.length) return fromYoutube;
-  return lyricsFallbackResult(videoId, hintTitle);
+  return fetchCaptionsForLanguage(videoId, subtitleLang, tracks, translationLanguages, lrclibMatch);
 }

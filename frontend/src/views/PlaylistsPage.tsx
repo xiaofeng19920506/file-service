@@ -182,6 +182,13 @@ export default function PlaylistsPage({
     canSeek: false,
   });
   const audioProgressHandleRef = useRef<PlaylistAudioProgressHandle | null>(null);
+  const playingVideoIdRef = useRef<string | undefined>(undefined);
+  const handleAudioProgress = useCallback((progress: PlaylistAudioProgressState) => {
+    if (progress.videoId && playingVideoIdRef.current && progress.videoId !== playingVideoIdRef.current) {
+      return;
+    }
+    setAudioProgress(progress);
+  }, []);
   const blockListSelectRef = useRef(false);
   const blockTrackPlayRef = useRef(false);
   const [homePreview, setHomePreview] = useState<{ videoId: string; title: string } | null>(null);
@@ -959,6 +966,7 @@ export default function PlaylistsPage({
 
   const currentItem = detail?.items[activeIndex];
   const playingVideoId = homePreview?.videoId ?? currentItem?.youtubeVideoId;
+  playingVideoIdRef.current = playingVideoId;
   useEffect(() => {
     setAudioProgress({ currentTime: 0, duration: 0, canSeek: false });
   }, [playingVideoId]);
@@ -1116,7 +1124,7 @@ export default function PlaylistsPage({
         playbackOrderOpen={playbackOrderOpen}
         onToggleQueue={openQueuePanel}
         queueOpen={queueOpen}
-        onProgressUpdate={setAudioProgress}
+        onProgressUpdate={handleAudioProgress}
         progressHandleRef={audioProgressHandleRef}
       />
     );
@@ -1138,7 +1146,7 @@ export default function PlaylistsPage({
         canGoNext
         playlistTitle={t('playlists.previewListening')}
         variant="desktopDock"
-        onProgressUpdate={setAudioProgress}
+        onProgressUpdate={handleAudioProgress}
         progressHandleRef={audioProgressHandleRef}
       />
     );
@@ -1747,7 +1755,7 @@ export default function PlaylistsPage({
               onAddToList={() => setHomePreviewAddOpen(true)}
               playlistTitle={t('playlists.previewListening')}
               variant="mobileRecord"
-              onProgressUpdate={setAudioProgress}
+              onProgressUpdate={handleAudioProgress}
               progressHandleRef={audioProgressHandleRef}
             />
           </div>
@@ -2069,6 +2077,7 @@ export default function PlaylistsPage({
           duration={audioProgress.duration}
           canSeek={audioProgress.canSeek}
           onSeekRatio={(ratio) => audioProgressHandleRef.current?.seekToRatio(ratio)}
+          progressResetKey={homePreview.videoId}
           onPlayToggle={handleMobileDockPlayToggle}
           onPrev={() => {}}
           onNext={() => {
@@ -2092,6 +2101,7 @@ export default function PlaylistsPage({
           duration={audioProgress.duration}
           canSeek={audioProgress.canSeek}
           onSeekRatio={(ratio) => audioProgressHandleRef.current?.seekToRatio(ratio)}
+          progressResetKey={currentItem.youtubeVideoId}
           playbackOrderMode={playbackOrderMode}
           playbackOrderOpen={playbackOrderOpen}
           queueOpen={queueOpen}

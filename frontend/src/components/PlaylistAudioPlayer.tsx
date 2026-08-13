@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { getYoutubeAudioStatus, getYoutubeAudioStreamUrl, requestYoutubeAudioExtract } from '../api/youtube-audio';
 import type { YoutubeAudioStatus } from '../api/youtube-audio';
 import { usePlaylistTrackLyrics, useActiveLyricLine } from '../hooks/usePlaylistTrackLyrics';
@@ -11,6 +11,7 @@ import {
 import { useMediaSession } from '../hooks/useMediaSession';
 import { useSwipeTrackNavigation } from '../hooks/useSwipeTrackNavigation';
 import type { PlaylistPlaybackOrderMode } from '../lib/playlist-playback-order-mode';
+import PlaylistKaraokeLyrics from './PlaylistKaraokeLyrics';
 import PlaylistLyricsScroller from './PlaylistLyricsScroller';
 import { PlaybackOrderModeIcon, PlusIcon, QueueIcon } from './icons';
 import AudioSeekBar from './AudioSeekBar';
@@ -72,6 +73,7 @@ export type PlaylistAudioProgressState = {
   currentTime: number;
   duration: number;
   canSeek: boolean;
+  videoId?: string;
 };
 
 export type PlaylistAudioProgressHandle = {
@@ -91,6 +93,41 @@ function resolveStreamSrc(url: string): string {
   if (url.startsWith('http')) return url;
   const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') ?? '';
   return `${base}${url}`;
+}
+
+function audioSrcMatchesStream(el: HTMLAudioElement, streamUrl: string | null): boolean {
+  if (!streamUrl) return false;
+  const current = el.currentSrc || el.getAttribute('src') || el.src || '';
+  if (!current) return false;
+  if (current === streamUrl) return true;
+  try {
+    const currentUrl = new URL(current, window.location.href);
+    const expectedUrl = new URL(streamUrl, window.location.href);
+    return currentUrl.pathname === expectedUrl.pathname && currentUrl.search === expectedUrl.search;
+  } catch {
+    return current.includes(streamUrl) || streamUrl.includes(current);
+  }
+}
+
+function resetAudioElement(el: HTMLAudioElement | null) {
+  if (!el) return;
+  try {
+    el.pause();
+  } catch {
+    /* ignore */
+  }
+  try {
+    el.currentTime = 0;
+  } catch {
+    /* ignore */
+  }
+  try {
+    el.removeAttribute('src');
+    el.src = '';
+    el.load();
+  } catch {
+    /* ignore */
+  }
 }
 
 function VolumeIcon({ level, muted }: { level: number; muted: boolean }) {
@@ -160,6 +197,10 @@ export default function PlaylistAudioPlayer({
   const skipPauseSyncRef = useRef(false);
   const endedHandledRef = useRef(false);
   const playbackTrackKeyRef = useRef('');
+  const streamUrlRef = useRef<string | null>(null);
+  const currentVideoIdRef = useRef('');
+  const progressNotifyRef = useRef(onProgressUpdate);
+  progressNotifyRef.current = onProgressUpdate;
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [usingPreview, setUsingPreview] = useState(false);
   const usingPreviewRef = useRef(false);
@@ -173,8 +214,24 @@ export default function PlaylistAudioPlayer({
   const volumeBeforeMuteRef = useRef(volume);
   const lyricsPanelRef = useRef<HTMLDivElement>(null);
   const [showLyrics, setShowLyrics] = useState(false);
+  const scrubbingRef = useRef(false);
 
   const current = items[activeIndex];
+  const playbackTrackKey = `${activeIndex}:${current?.youtubeVideoId ?? ''}`;
+  currentVideoIdRef.current = current?.youtubeVideoId ?? '';
+  const [activeTrackKey, setActiveTrackKey] = useState(playbackTrackKey);
+  if (activeTrackKey !== playbackTrackKey) {
+    setActiveTrackKey(playbackTrackKey);
+    streamUrlRef.current = null;
+    scrubbingRef.current = false;
+    setStreamUrl(null);
+    setUsingPreview(false);
+    setCurrentTime(0);
+    setDuration(0);
+    setDurationHint(0);
+    setPlayerError(null);
+    setLoadingStream(true);
+  }
   const {
     captionCues,
     lyricsLoading,
@@ -193,6 +250,19 @@ export default function PlaylistAudioPlayer({
   useEffect(() => {
     setShowLyrics(false);
   }, [current?.youtubeVideoId]);
+
+  useLayoutEffect(() => {
+    skipPauseSyncRef.current = true;
+    resetAudioElement(audioRef.current);
+    streamUrlRef.current = null;
+    scrubbingRef.current = false;
+    progressNotifyRef.current?.({
+      currentTime: 0,
+      duration: 0,
+      canSeek: false,
+      videoId: current?.youtubeVideoId,
+    });
+  }, [playbackTrackKey, current?.youtubeVideoId]);
   const audioStatus = current?.audio;
   const isReady = audioStatus?.status === 'ready';
   const isProcessing =
@@ -209,7 +279,6 @@ export default function PlaylistAudioPlayer({
     return 0;
   }, [duration, durationHint, captionCues]);
   const canSeek = playbackDuration > 0 && Boolean(streamUrl);
-  const scrubbingRef = useRef(false);
   const volumePct = muted ? 0 : volume;
   const activeCaption = useActiveLyricLine(captionCues, currentTime);
 
@@ -260,7 +329,9 @@ export default function PlaylistAudioPlayer({
   }, []);
 
   const applyStreamUrl = useCallback((url: string, preview: boolean) => {
-    setStreamUrl(resolveStreamSrc(url));
+    const resolved = resolveStreamSrc(url);
+    streamUrlRef.current = resolved;
+    setStreamUrl(resolved);
     setUsingPreview(preview);
     usingPreviewRef.current = preview;
     setLoadingStream(false);
@@ -592,9 +663,7 @@ export default function PlaylistAudioPlayer({
     };
   }, [progressHandleRef, seekToRatio]);
 
-  const progressNotifyRef = useRef(onProgressUpdate);
   const lastProgressNotifyAtRef = useRef(0);
-  progressNotifyRef.current = onProgressUpdate;
 
   useEffect(() => {
     if (!progressNotifyRef.current) return;
@@ -606,6 +675,7 @@ export default function PlaylistAudioPlayer({
       currentTime,
       duration: playbackDuration,
       canSeek,
+      videoId: currentVideoIdRef.current || undefined,
     });
   }, [currentTime, playbackDuration, canSeek]);
 
@@ -657,6 +727,7 @@ export default function PlaylistAudioPlayer({
     if (scrubbingRef.current) return;
     const el = audioRef.current;
     if (!el) return;
+    if (!audioSrcMatchesStream(el, streamUrlRef.current)) return;
     setCurrentTime(el.currentTime);
     syncDurationFromAudio(el);
   }, [syncDurationFromAudio]);
@@ -680,20 +751,16 @@ export default function PlaylistAudioPlayer({
     if (!playing || !streamUrl) return;
     const id = window.setInterval(() => {
       if (!scrubbingRef.current) return;
-      const el = audioRef.current;
-      if (!el || el.paused) return;
-      if (Math.abs(el.currentTime - currentTime) > 1.25) {
-        scrubbingRef.current = false;
-        syncProgressFromAudio();
-      }
-    }, 1500);
+      scrubbingRef.current = false;
+      syncProgressFromAudio();
+    }, 2000);
     return () => window.clearInterval(id);
-  }, [playing, streamUrl, currentTime, syncProgressFromAudio]);
+  }, [playing, streamUrl, syncProgressFromAudio]);
 
   const handleTimeUpdate = useCallback(
     (e: React.SyntheticEvent<HTMLAudioElement>) => {
       const el = e.currentTarget;
-      if (!scrubbingRef.current) {
+      if (!scrubbingRef.current && audioSrcMatchesStream(el, streamUrlRef.current)) {
         setCurrentTime(el.currentTime);
         syncDurationFromAudio(el);
       }
@@ -711,6 +778,7 @@ export default function PlaylistAudioPlayer({
   );
 
   const handleEnded = useCallback(() => {
+    if (!streamUrlRef.current) return;
     // 有 onNextTrack（试听电台）时播完切下一首；否则 preview 流重播当前曲
     if (usingPreviewRef.current && !onNextTrack) {
       if (wantPlayRef.current) {
@@ -740,6 +808,7 @@ export default function PlaylistAudioPlayer({
   );
 
   const handleAudioError = useCallback(() => {
+    if (!streamUrlRef.current) return;
     setPlayerError(friendlyError('audio_playback_failed', t));
     onPlayingChange(false);
   }, [onPlayingChange, t]);
@@ -1072,6 +1141,7 @@ export default function PlaylistAudioPlayer({
   const seekBar = (
     <AudioSeekBar
       key={current?.youtubeVideoId ?? 'none'}
+      resetKey={current?.youtubeVideoId ?? 'none'}
       currentTime={currentTime}
       duration={playbackDuration}
       canSeek={canSeek}
@@ -1271,21 +1341,15 @@ export default function PlaylistAudioPlayer({
         </div>
 
         {!showLyrics && (
-          <button
-            type="button"
-            className="playlist-audio-record-now-lyric"
-            onClick={() => setShowLyrics(true)}
-            aria-label={t('playlists.showLyrics')}
-          >
-            {lyricsLoading
-              ? t('playlists.loadingLyrics')
-              : activeCaption ??
-                (captionCues.length > 0
-                  ? '\u00a0'
-                  : lyricsError
-                    ? t('errors.captions_fetch_failed')
-                    : t('playlists.tapCdForLyrics'))}
-          </button>
+          <PlaylistKaraokeLyrics
+            cues={captionCues}
+            currentTime={currentTime}
+            loading={lyricsLoading}
+            loadingMessage={t('playlists.loadingLyrics')}
+            emptyMessage={lyricsError ? t('errors.captions_fetch_failed') : t('playlists.tapCdForLyrics')}
+            onOpen={() => setShowLyrics(true)}
+            openLabel={t('playlists.showLyrics')}
+          />
         )}
 
         {statusMessages}

@@ -11,6 +11,8 @@ type AudioSeekBarProps = {
   onScrubStart?: () => void;
   onScrubEnd?: () => void;
   className?: string;
+  /** 切歌时变化，强制清掉 sticky scrubRatio */
+  resetKey?: string | number;
 };
 
 export default function AudioSeekBar({
@@ -22,10 +24,12 @@ export default function AudioSeekBar({
   onScrubStart,
   onScrubEnd,
   className = '',
+  resetKey,
 }: AudioSeekBarProps) {
   const { t } = useI18n();
   const barRef = useRef<HTMLDivElement>(null);
   const [scrubRatio, setScrubRatio] = useState<number | null>(null);
+  const draggingRef = useRef(false);
 
   const hasDuration = Number.isFinite(duration) && duration > 0;
   const showIndeterminate = usingPreview && !hasDuration && currentTime <= 0;
@@ -38,18 +42,28 @@ export default function AudioSeekBar({
 
   const handleSeekRatio = useCallback(
     (ratio: number) => {
-      // 拖动中才锁住视觉位置；点击 seek 不要留下 sticky scrubRatio，否则切歌后进度条不会归零
+      // 拖动中才锁住视觉位置；点击 seek 不要留下 sticky scrubRatio
       setScrubRatio((prev) => (prev === null ? prev : ratio));
       onSeekRatio(ratio);
     },
     [onSeekRatio],
   );
 
-  useEffect(() => {
+  const clearScrubRatio = useCallback(() => {
     setScrubRatio(null);
-  }, [duration]);
+  }, []);
+
+  useEffect(() => {
+    clearScrubRatio();
+  }, [duration, resetKey, clearScrubRatio]);
+
+  useEffect(() => {
+    if (draggingRef.current) return;
+    if (currentTime < 0.25) clearScrubRatio();
+  }, [currentTime, clearScrubRatio]);
 
   const handleScrubStart = useCallback(() => {
+    draggingRef.current = true;
     if (hasDuration) {
       setScrubRatio(Math.min(1, Math.max(0, currentTime / duration)));
     }
@@ -57,8 +71,30 @@ export default function AudioSeekBar({
   }, [currentTime, duration, hasDuration, onScrubStart]);
 
   const handleScrubEnd = useCallback(() => {
+    draggingRef.current = false;
     setScrubRatio(null);
     onScrubEnd?.();
+  }, [onScrubEnd]);
+
+  useEffect(() => {
+    const endStickyScrub = () => {
+      const wasDragging = draggingRef.current;
+      draggingRef.current = false;
+      setScrubRatio(null);
+      if (wasDragging) onScrubEnd?.();
+    };
+    window.addEventListener('pointerup', endStickyScrub, true);
+    window.addEventListener('pointercancel', endStickyScrub, true);
+    window.addEventListener('touchend', endStickyScrub, true);
+    window.addEventListener('touchcancel', endStickyScrub, true);
+    return () => {
+      window.removeEventListener('pointerup', endStickyScrub, true);
+      window.removeEventListener('pointercancel', endStickyScrub, true);
+      window.removeEventListener('touchend', endStickyScrub, true);
+      window.removeEventListener('touchcancel', endStickyScrub, true);
+      draggingRef.current = false;
+      setScrubRatio(null);
+    };
   }, [onScrubEnd]);
 
   const { handleClick } = useSeekBarDrag({

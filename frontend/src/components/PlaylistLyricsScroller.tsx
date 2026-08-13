@@ -3,6 +3,7 @@ import type { CaptionCue } from '../api/youtube-captions';
 import { findActiveCueIndex } from '../lib/caption-cues';
 
 const TAP_MOVE_THRESHOLD_PX = 10;
+const USER_SCROLL_PAUSE_MS = 3500;
 
 type PlaylistLyricsScrollerProps = {
   cues: CaptionCue[];
@@ -15,6 +16,17 @@ type PlaylistLyricsScrollerProps = {
   /** 轻点歌词区域（非滚动）时回调，用于手机端返回 CD */
   onTap?: () => void;
 };
+
+function scrollLineToCenter(panel: HTMLElement, line: HTMLElement) {
+  const panelRect = panel.getBoundingClientRect();
+  const lineRect = line.getBoundingClientRect();
+  const delta =
+    lineRect.top + lineRect.height / 2 - (panelRect.top + panelRect.height / 2);
+  if (Math.abs(delta) < 4) return;
+  const maxScroll = Math.max(0, panel.scrollHeight - panel.clientHeight);
+  const nextTop = Math.min(maxScroll, Math.max(0, panel.scrollTop + delta));
+  panel.scrollTo({ top: nextTop, behavior: 'smooth' });
+}
 
 function useTapWithoutScroll(onTap?: () => void) {
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -61,24 +73,55 @@ export default function PlaylistLyricsScroller({
   const panelRef = panelRefProp ?? internalRef;
   const tapHandlers = useTapWithoutScroll(onTap);
   const tapClass = onTap ? ' playlist-lyrics-scroller--tappable' : '';
+  const suppressAutoScrollUntilRef = useRef(0);
+  const scrollActiveRef = useRef<() => void>(() => {});
+  const resumeTimerRef = useRef<number>(0);
 
   const activeIndex = useMemo(
     () => findActiveCueIndex(cues, currentTime),
     [cues, currentTime],
   );
 
-  useEffect(() => {
+  scrollActiveRef.current = () => {
     const panel = panelRef.current;
     if (!panel || activeIndex < 0) return;
+    if (Date.now() < suppressAutoScrollUntilRef.current) return;
     const activeLine = panel.querySelector<HTMLElement>('[data-active="true"]');
     if (!activeLine) return;
+    scrollLineToCenter(panel, activeLine);
+  };
 
-    const panelHeight = panel.clientHeight;
-    const lineTop = activeLine.offsetTop;
-    const lineHeight = activeLine.offsetHeight;
-    const targetScroll = lineTop - panelHeight / 2 + lineHeight / 2;
-    panel.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
-  }, [activeIndex, cues.length, panelRef]);
+  useEffect(() => {
+    if (loading || !cues.length) return;
+    scrollActiveRef.current();
+  }, [activeIndex, cues.length, panelRef, loading]);
+
+  useEffect(() => {
+    suppressAutoScrollUntilRef.current = 0;
+  }, [cues.length]);
+
+  useEffect(() => {
+    if (loading || !cues.length) return;
+    const panel = panelRef.current;
+    if (!panel) return;
+
+    const pauseAutoScroll = () => {
+      suppressAutoScrollUntilRef.current = Date.now() + USER_SCROLL_PAUSE_MS;
+      window.clearTimeout(resumeTimerRef.current);
+      resumeTimerRef.current = window.setTimeout(() => {
+        scrollActiveRef.current();
+      }, USER_SCROLL_PAUSE_MS);
+    };
+
+    panel.addEventListener('wheel', pauseAutoScroll, { passive: true });
+    panel.addEventListener('touchmove', pauseAutoScroll, { passive: true });
+
+    return () => {
+      panel.removeEventListener('wheel', pauseAutoScroll);
+      panel.removeEventListener('touchmove', pauseAutoScroll);
+      window.clearTimeout(resumeTimerRef.current);
+    };
+  }, [panelRef, cues.length, loading]);
 
   if (loading) {
     return (
@@ -109,20 +152,21 @@ export default function PlaylistLyricsScroller({
       aria-live="polite"
       {...tapHandlers}
     >
-      <ul className="playlist-np-lyrics-lines">
+      <div className="playlist-np-lyrics-lines" role="list">
         {cues.map((cue, index) => {
           const active = index === activeIndex;
           return (
-            <li
+            <div
               key={`${cue.start}-${index}`}
-              className={active ? 'active' : undefined}
+              role="listitem"
+              className={`playlist-np-lyrics-line${active ? ' active' : ''}`}
               data-active={active || undefined}
             >
               {cue.text}
-            </li>
+            </div>
           );
         })}
-      </ul>
+      </div>
     </div>
   );
 }

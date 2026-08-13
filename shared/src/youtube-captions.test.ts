@@ -2,8 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
   captionXmlToCues,
   cleanYoutubeTitleForLyrics,
+  cuesLookLikeLineLyrics,
+  extractLyricsSearchQueries,
   isBlockedCaptionPayload,
   parseLrcToCues,
+  pickBestLrclibHit,
+  plainLyricsToCues,
   transcriptLinesToCues,
 } from './youtube-captions.js';
 
@@ -54,6 +58,85 @@ describe('captionXmlToCues', () => {
     expect(
       cleanYoutubeTitleForLyrics('買辣椒也用券 - 起風了 (新版)【動態歌詞Lyrics】'),
     ).toBe('買辣椒也用券 - 起風了');
+  });
+
+  it('keeps Chinese song titles inside square brackets', () => {
+    const title = 'Mayday五月天 [我不願讓你一個人]';
+    expect(cleanYoutubeTitleForLyrics(title)).toContain('我不願讓你一個人');
+
+    const queries = extractLyricsSearchQueries(title);
+    expect(queries[0]).toBe('我不願讓你一個人');
+    expect(queries.some((query) => query.includes('五月天') && query.includes('我不願讓你一個人'))).toBe(true);
+    expect(queries.some((query) => /mayday/i.test(query) && query.includes('我不願讓你一個人'))).toBe(true);
+  });
+
+  it('extracts the bracket title even when the video title has extra prefixes', () => {
+    const queries = extractLyricsSearchQueries(
+      'idea - 未目前 Mayday五月天 [我不願讓你一個人]',
+    );
+    expect(queries).toContain('我不願讓你一個人');
+    expect(cleanYoutubeTitleForLyrics('idea - 未目前 Mayday五月天 [我不願讓你一個人]')).toContain(
+      '我不願讓你一個人',
+    );
+  });
+
+  it('picks the lrclib hit whose track name contains the CJK title', () => {
+    const queries = extractLyricsSearchQueries('Mayday五月天 [我不願讓你一個人]');
+    const hit = pickBestLrclibHit(queries, [
+      { trackName: '倔強', artistName: '五月天', syncedLyrics: '[00:01.00] 當' },
+      {
+        trackName: '我不願讓你一個人',
+        artistName: '五月天',
+        syncedLyrics: '[00:12.00] 我不願讓你一個人',
+      },
+    ]);
+    expect(hit?.trackName).toBe('我不願讓你一個人');
+  });
+
+  it('rejects lrclib hits that only share the artist', () => {
+    const queries = extractLyricsSearchQueries('Mayday五月天 [我不願讓你一個人]');
+    expect(
+      pickBestLrclibHit(queries, [
+        { trackName: '倔強', artistName: '五月天', syncedLyrics: '[00:01.00] 當' },
+        {
+          trackName: "I Don't Want You To Be Lonely",
+          artistName: 'Someone',
+          syncedLyrics: "[00:01.00] I don't want you to feel lonely",
+        },
+      ]),
+    ).toBeNull();
+  });
+
+  it('turns unsynced plain lyrics into cues when there is no LRC', () => {
+    expect(
+      plainLyricsToCues('我不願讓你一個人\n你做得到嗎\n即使我知道\n'),
+    ).toEqual([
+      { start: 0, end: 4, text: '我不願讓你一個人' },
+      { start: 4, end: 8, text: '你做得到嗎' },
+      { start: 8, end: 12, text: '即使我知道' },
+    ]);
+  });
+
+  it('treats short timed lines as lyrics and rejects long spoken captions', () => {
+    expect(
+      cuesLookLikeLineLyrics([
+        { start: 0, end: 2, text: '我不願讓你一個人' },
+        { start: 2, end: 4, text: '你走了以後' },
+        { start: 4, end: 6, text: '愛怎麼能完整' },
+        { start: 6, end: 8, text: '我的天空' },
+        { start: 8, end: 10, text: '像下雨的風景' },
+      ]),
+    ).toBe(true);
+
+    expect(
+      cuesLookLikeLineLyrics([
+        { start: 0, end: 8, text: '大家好今天我们来看一下这个视频里面发生了什么事情然后我再跟大家解释一下' },
+        { start: 8, end: 16, text: '其实你知道吗这个部分其实非常复杂所以我必须慢慢说给你听这样你才能明白' },
+        { start: 16, end: 24, text: '接下来我会继续讲很多口语内容因为它本来就不是一句一句的歌词' },
+        { start: 24, end: 32, text: '所以这些自动转写会变成很长的句子而不是短歌词' },
+        { start: 32, end: 40, text: '最后再补充一些说明让整段看起来更像旁白而不是歌曲' },
+      ]),
+    ).toBe(false);
   });
 
   it('detects blocked caption pages', () => {
