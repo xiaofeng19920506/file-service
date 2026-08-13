@@ -958,6 +958,10 @@ export default function PlaylistsPage({
   };
 
   const currentItem = detail?.items[activeIndex];
+  const playingVideoId = homePreview?.videoId ?? currentItem?.youtubeVideoId;
+  useEffect(() => {
+    setAudioProgress({ currentTime: 0, duration: 0, canSeek: false });
+  }, [playingVideoId]);
   useRecordYoutubePlay({
     videoId: homePreview?.videoId ?? currentItem?.youtubeVideoId,
     title: homePreview?.title ?? currentItem?.title,

@@ -63,6 +63,7 @@ export default function PlaylistsMobilePlaybackDock({
       {showProgress && onSeekRatio ? (
         <div className="playlists-playback-dock-progress-wrap">
           <AudioSeekBar
+            key={`${title}:${duration > 0 ? Math.round(duration) : 0}`}
             currentTime={currentTime}
             duration={duration}
             canSeek={canSeek}

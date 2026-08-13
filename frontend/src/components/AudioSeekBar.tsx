@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useI18n } from '../i18n';
 import { useSeekBarDrag } from '../hooks/useSeekBarDrag';
 
@@ -38,11 +38,16 @@ export default function AudioSeekBar({
 
   const handleSeekRatio = useCallback(
     (ratio: number) => {
-      setScrubRatio(ratio);
+      // 拖动中才锁住视觉位置；点击 seek 不要留下 sticky scrubRatio，否则切歌后进度条不会归零
+      setScrubRatio((prev) => (prev === null ? prev : ratio));
       onSeekRatio(ratio);
     },
     [onSeekRatio],
   );
+
+  useEffect(() => {
+    setScrubRatio(null);
+  }, [duration]);
 
   const handleScrubStart = useCallback(() => {
     if (hasDuration) {

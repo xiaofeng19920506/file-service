@@ -316,6 +316,8 @@ export default function PlaylistAudioPlayer({
     setUsingPreview(false);
     setCurrentTime(0);
     setDuration(0);
+    scrubbingRef.current = false;
+    endedHandledRef.current = false;
     const hintedDuration =
       typeof audioStatus?.durationSeconds === 'number' &&
       Number.isFinite(audioStatus.durationSeconds) &&
@@ -597,7 +599,8 @@ export default function PlaylistAudioPlayer({
   useEffect(() => {
     if (!progressNotifyRef.current) return;
     const now = performance.now();
-    if (now - lastProgressNotifyAtRef.current < 250) return;
+    const isTrackReset = currentTime < 0.05;
+    if (!isTrackReset && now - lastProgressNotifyAtRef.current < 250) return;
     lastProgressNotifyAtRef.current = now;
     progressNotifyRef.current({
       currentTime,
@@ -1068,6 +1071,7 @@ export default function PlaylistAudioPlayer({
 
   const seekBar = (
     <AudioSeekBar
+      key={current?.youtubeVideoId ?? 'none'}
       currentTime={currentTime}
       duration={playbackDuration}
       canSeek={canSeek}
