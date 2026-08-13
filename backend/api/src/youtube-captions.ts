@@ -31,8 +31,23 @@ export function registerYoutubeCaptionRoutes(app: FastifyInstance) {
         }
         return result;
       } catch (e) {
-        request.log.error(e, 'youtube captions fetch failed');
-        return reply.code(502).send({ error: 'captions_fetch_failed' });
+        request.log.warn(e, 'youtube captions fetch failed, retrying');
+        try {
+          const retry = await fetchYoutubeVideoCaptions(videoId, { subtitleLang });
+          if (!retry?.cues.length) {
+            return {
+              videoId,
+              language: subtitleLang,
+              sourceLanguage: null,
+              translated: false,
+              cues: [],
+            };
+          }
+          return retry;
+        } catch (retryErr) {
+          request.log.error(retryErr, 'youtube captions fetch failed');
+          return reply.code(502).send({ error: 'captions_fetch_failed' });
+        }
       }
     },
   );

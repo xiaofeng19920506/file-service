@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CaptionCue } from '../api/youtube-captions';
 import { findActiveCaption } from '../api/youtube-captions';
 import {
@@ -20,87 +20,92 @@ export function usePlaylistTrackLyrics({ videoId, locale }: UsePlaylistTrackLyri
   const defaultSubtitleLang = readDefaultSubtitleLanguage(locale);
   const [subtitleLang, setSubtitleLang] = useState<SubtitleLanguage>(defaultSubtitleLang);
   const [captionCues, setCaptionCues] = useState<CaptionCue[]>([]);
-  const [lyricsLoading, setLyricsLoading] = useState(false);
   const [loadedVideoId, setLoadedVideoId] = useState<string | null>(null);
+  const [lyricsError, setLyricsError] = useState(false);
+  const videoIdRef = useRef(videoId);
+  const requestSeqRef = useRef(0);
+  videoIdRef.current = videoId;
+
+  const applyIfCurrent = useCallback((seq: number, requestId: string, update: () => void) => {
+    if (seq !== requestSeqRef.current) return;
+    if (videoIdRef.current !== requestId) return;
+    update();
+  }, []);
 
   useEffect(() => {
     if (!videoId) {
+      requestSeqRef.current += 1;
       setCaptionCues([]);
-      setLyricsLoading(false);
       setLoadedVideoId(null);
+      setLyricsError(false);
       return;
     }
 
-    setSubtitleLang(readStoredSubtitleLanguage(videoId, defaultSubtitleLang));
-    setCaptionCues([]);
-    setLyricsLoading(true);
-    setLoadedVideoId(null);
-
-    let cancelled = false;
     const requestId = videoId;
+    const seq = ++requestSeqRef.current;
+    setSubtitleLang(readStoredSubtitleLanguage(requestId, defaultSubtitleLang));
+    setCaptionCues([]);
+    setLoadedVideoId(null);
+    setLyricsError(false);
 
     void (async () => {
       try {
         const lang = readStoredSubtitleLanguage(requestId, defaultSubtitleLang);
         const { cues, language } = await loadTrackLyrics(requestId, lang);
-        if (cancelled) return;
-        setSubtitleLang(language);
-        setCaptionCues(cues);
-        setLoadedVideoId(requestId);
-      } catch {
-        if (!cancelled) {
-          setCaptionCues([]);
-          setLoadedVideoId(requestId);
-        }
-      } finally {
-        if (!cancelled) {
-          setLyricsLoading(false);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [videoId, defaultSubtitleLang]);
-
-  const changeSubtitleLang = useCallback(
-    (lang: SubtitleLanguage) => {
-      if (!videoId) return;
-      setSubtitleLang(lang);
-      writeSubtitleLanguageForVideo(videoId, lang);
-      setCaptionCues([]);
-      setLyricsLoading(true);
-      setLoadedVideoId(null);
-
-      const requestId = videoId;
-      void (async () => {
-        try {
-          const { cues, language } = await loadTrackLyrics(requestId, lang);
-          if (videoId !== requestId) return;
+        applyIfCurrent(seq, requestId, () => {
           setSubtitleLang(language);
           setCaptionCues(cues);
           setLoadedVideoId(requestId);
+          setLyricsError(false);
+        });
+      } catch {
+        applyIfCurrent(seq, requestId, () => {
+          setCaptionCues([]);
+          setLoadedVideoId(requestId);
+          setLyricsError(true);
+        });
+      }
+    })();
+  }, [videoId, defaultSubtitleLang, applyIfCurrent]);
+
+  const changeSubtitleLang = useCallback(
+    (lang: SubtitleLanguage) => {
+      const requestId = videoIdRef.current;
+      if (!requestId) return;
+      const seq = ++requestSeqRef.current;
+      setSubtitleLang(lang);
+      writeSubtitleLanguageForVideo(requestId, lang);
+      setCaptionCues([]);
+      setLoadedVideoId(null);
+      setLyricsError(false);
+
+      void (async () => {
+        try {
+          const { cues, language } = await loadTrackLyrics(requestId, lang);
+          applyIfCurrent(seq, requestId, () => {
+            setSubtitleLang(language);
+            setCaptionCues(cues);
+            setLoadedVideoId(requestId);
+            setLyricsError(false);
+          });
         } catch {
-          if (videoId === requestId) {
+          applyIfCurrent(seq, requestId, () => {
             setCaptionCues([]);
             setLoadedVideoId(requestId);
-          }
-        } finally {
-          if (videoId === requestId) {
-            setLyricsLoading(false);
-          }
+            setLyricsError(true);
+          });
         }
       })();
     },
-    [videoId],
+    [applyIfCurrent],
   );
 
   const lyricsReadyForCurrentTrack = loadedVideoId != null && loadedVideoId === videoId;
 
   return {
     captionCues: lyricsReadyForCurrentTrack ? captionCues : [],
-    lyricsLoading: Boolean(videoId) && (!lyricsReadyForCurrentTrack || lyricsLoading),
+    lyricsLoading: Boolean(videoId) && !lyricsReadyForCurrentTrack,
+    lyricsError: lyricsReadyForCurrentTrack && lyricsError,
     subtitleLang,
     changeSubtitleLang,
     lyricsReadyForCurrentTrack,

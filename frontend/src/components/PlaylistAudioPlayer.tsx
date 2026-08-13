@@ -178,12 +178,16 @@ export default function PlaylistAudioPlayer({
   const {
     captionCues,
     lyricsLoading,
+    lyricsError,
     subtitleLang,
     changeSubtitleLang,
   } = usePlaylistTrackLyrics({
     videoId: current?.youtubeVideoId,
     locale,
   });
+  const lyricsEmptyMessage = lyricsError
+    ? t('errors.captions_fetch_failed')
+    : t('playlists.noLyricsYet');
 
   useEffect(() => {
     setShowLyrics(false);
@@ -1239,7 +1243,7 @@ export default function PlaylistAudioPlayer({
                 currentTime={currentTime}
                 loading={lyricsLoading}
                 loadingMessage={t('playlists.loadingLyrics')}
-                emptyMessage={t('playlists.noLyricsYet')}
+                emptyMessage={lyricsEmptyMessage}
                 className="playlist-audio-record-lyrics-scroller"
                 panelRef={lyricsPanelRef}
                 onTap={() => setShowLyrics(false)}
@@ -1283,7 +1287,11 @@ export default function PlaylistAudioPlayer({
             {lyricsLoading
               ? t('playlists.loadingLyrics')
               : activeCaption ??
-                (captionCues.length > 0 ? '\u00a0' : t('playlists.tapCdForLyrics'))}
+                (captionCues.length > 0
+                  ? '\u00a0'
+                  : lyricsError
+                    ? t('errors.captions_fetch_failed')
+                    : t('playlists.tapCdForLyrics'))}
           </button>
         )}
 
@@ -1318,10 +1326,14 @@ export default function PlaylistAudioPlayer({
 
         {!isNowPlaying && (
           <div className="playlist-audio-lyrics-panel mobile-only" aria-live="polite">
-            {activeCaption ? (
+            {lyricsLoading ? (
+              <p className="playlist-audio-lyrics-empty">{t('playlists.loadingLyrics')}</p>
+            ) : activeCaption ? (
               <p className="playlist-audio-lyrics-text">{activeCaption}</p>
             ) : (
-              <p className="playlist-audio-lyrics-empty">{t('playlists.noLyricsYet')}</p>
+              <p className="playlist-audio-lyrics-empty">
+                {captionCues.length > 0 ? '\u00a0' : lyricsEmptyMessage}
+              </p>
             )}
           </div>
         )}
@@ -1388,7 +1400,7 @@ export default function PlaylistAudioPlayer({
             currentTime={currentTime}
             loading={lyricsLoading}
             loadingMessage={t('playlists.loadingLyrics')}
-            emptyMessage={t('playlists.noLyricsYet')}
+            emptyMessage={lyricsEmptyMessage}
             className="playlist-np-lyrics-desktop desktop-only"
             panelRef={lyricsPanelRef}
           />

@@ -41,7 +41,7 @@ type CaptionTrackList = {
   translationLanguages: string[];
 };
 
-type TranscriptLine = {
+export type TranscriptLine = {
   text: string;
   duration: number;
   offset: number;
@@ -90,17 +90,31 @@ function decodeEntities(text: string): string {
     .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)));
 }
 
+export function isBlockedCaptionPayload(xml: string): boolean {
+  return xml.includes('Sorry...') || xml.includes('class="g-recaptcha"');
+}
+
+function attrNumber(attrs: string, name: string): number | null {
+  const match = new RegExp(`\\b${name}="(\\d+(?:\\.\\d+)?)"`).exec(attrs);
+  if (!match) return null;
+  const value = parseFloat(match[1]!);
+  return Number.isFinite(value) ? value : null;
+}
+
 function parseTranscriptXml(xml: string): TranscriptLine[] {
-  if (xml.includes('Sorry...') || xml.includes('class="g-recaptcha"')) return [];
+  if (isBlockedCaptionPayload(xml)) {
+    throw new Error('caption_blocked');
+  }
 
   const results: TranscriptLine[] = [];
 
-  const pRegex = /<p\s+t="(\d+)"\s+d="(\d+)"[^>]*>([\s\S]*?)<\/p>/g;
+  const pRegex = /<p\b([^>]*)>([\s\S]*?)<\/p>/gi;
   let match: RegExpExecArray | null;
   while ((match = pRegex.exec(xml))) {
-    const startMs = parseInt(match[1]!, 10);
-    const durMs = parseInt(match[2]!, 10);
-    const inner = match[3] ?? '';
+    const startMs = attrNumber(match[1] ?? '', 't');
+    if (startMs == null) continue;
+    const durMs = attrNumber(match[1] ?? '', 'd') ?? 0;
+    const inner = match[2] ?? '';
     let text = '';
     const sRegex = /<s[^>]*>([^<]*)<\/s>/g;
     let sMatch: RegExpExecArray | null;
@@ -127,15 +141,31 @@ function parseTranscriptXml(xml: string): TranscriptLine[] {
   return results;
 }
 
+export function transcriptLinesToCues(lines: TranscriptLine[]): CaptionCue[] {
+  const prepared = lines
+    .map((line) => ({
+      start: line.offset / 1000,
+      duration: line.duration / 1000,
+      text: line.text,
+    }))
+    .filter((row) => row.text.length > 0);
+
+  return prepared.map((row, index) => {
+    const nextStart = prepared[index + 1]?.start;
+    let end = row.duration > 0 ? row.start + row.duration : row.start + 2;
+    if (nextStart != null && nextStart > row.start && (row.duration <= 0 || end > nextStart)) {
+      end = nextStart;
+    }
+    return { start: row.start, end, text: row.text };
+  });
+}
+
 function linesToCues(lines: TranscriptLine[]): CaptionCue[] {
-  return lines
-    .map((line) => {
-      const start = line.offset / 1000;
-      const duration = line.duration / 1000;
-      const end = duration > 0 ? start + duration : start + 2;
-      return { start, end, text: line.text };
-    })
-    .filter((cue) => cue.text.length > 0);
+  return transcriptLinesToCues(lines);
+}
+
+export function captionXmlToCues(xml: string): CaptionCue[] {
+  return linesToCues(parseTranscriptXml(xml));
 }
 
 function parseInlineJson(html: string, globalName: string): unknown | null {
@@ -278,9 +308,10 @@ async function fetchCuesFromTrack(
 ): Promise<CaptionCue[] | null> {
   try {
     const xml = await fetchCaptionXmlFromTrack(track, tlang);
-    const cues = linesToCues(parseTranscriptXml(xml));
+    const cues = captionXmlToCues(xml);
     return cues.length > 0 ? cues : null;
-  } catch {
+  } catch (e) {
+    if (e instanceof Error && e.message === 'caption_blocked') throw e;
     return null;
   }
 }
@@ -302,6 +333,11 @@ async function fetchChineseViaTranscript(videoId: string): Promise<CaptionCue[] 
     const lines = await fetchTranscriptCues(videoId, lang);
     if (lines?.length) return linesToCues(lines);
   }
+  const auto = await fetchTranscriptCues(videoId);
+  if (auto?.length) {
+    const cues = linesToCues(auto);
+    if (cuesContainChinese(cues)) return cues;
+  }
   return null;
 }
 
@@ -309,6 +345,11 @@ async function fetchEnglishViaTranscript(videoId: string): Promise<CaptionCue[] 
   for (const lang of EN_LANG_CODES) {
     const lines = await fetchTranscriptCues(videoId, lang);
     if (lines?.length) return linesToCues(lines);
+  }
+  const auto = await fetchTranscriptCues(videoId);
+  if (auto?.length) {
+    const cues = linesToCues(auto);
+    if (cuesContainEnglish(cues)) return cues;
   }
   return null;
 }
