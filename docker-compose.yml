@@ -1,0 +1,144 @@
+# 飞牛 NAS 生产栈：Postgres / Redis / 音频文件都写到「软件存储」下的 ./data
+# 外网：Cloudflare Tunnel → https://frontend.youtvs.com
+#
+# 飞牛：Docker → Compose → 用本仓库目录创建项目（该目录即软件存储）
+# 把 docker/env.example 复制为 .env，填入 CLOUDFLARE_TUNNEL_TOKEN 后启动
+
+name: file-service
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fileservice
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fileservice}
+      POSTGRES_DB: fileservice
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - ${NAS_DATA_DIR:-./data}/postgres:/var/lib/postgresql/data
+      - ./shared/docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U fileservice -d fileservice']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    expose:
+      - '5432'
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - ${NAS_DATA_DIR:-./data}/redis:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    expose:
+      - '6379'
+
+  api:
+    image: file-service-api:local
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      STORAGE_BACKEND: fs
+      LOCAL_STORAGE_DIR: /data/storage
+      DATABASE_URL: postgresql://fileservice:${POSTGRES_PASSWORD:-fileservice}@postgres:5432/fileservice
+      REDIS_URL: redis://redis:6379
+      PORT: '3000'
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://frontend.youtvs.com}
+      WEB_APP_URL: ${WEB_APP_URL:-https://frontend.youtvs.com}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://frontend.youtvs.com}
+      DOWNLOAD_HMAC_SECRET: ${DOWNLOAD_HMAC_SECRET:-replace-with-at-least-16-chars}
+      EXPORT_RETENTION_DAYS: ${EXPORT_RETENTION_DAYS:-7}
+    volumes:
+      - ${NAS_DATA_DIR:-./data}/storage:/data/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    expose:
+      - '3000'
+
+  worker:
+    image: file-service-worker:local
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      STORAGE_BACKEND: fs
+      LOCAL_STORAGE_DIR: /data/storage
+      DATABASE_URL: postgresql://fileservice:${POSTGRES_PASSWORD:-fileservice}@postgres:5432/fileservice
+      REDIS_URL: redis://redis:6379
+      YT_DLP_PATH: yt-dlp
+      EXPORT_RETENTION_DAYS: ${EXPORT_RETENTION_DAYS:-7}
+    volumes:
+      - ${NAS_DATA_DIR:-./data}/storage:/data/storage
+    depends_on:
+      api:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    image: file-service-web:local
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: '4000'
+      BACKEND_URL: http://api:3000
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:4000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    ports:
+      - '${WEB_PORT:-4000}:4000'
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      web:
+        condition: service_healthy
+    profiles:
+      - tunnel

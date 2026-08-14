@@ -5,6 +5,7 @@ import type { NextConfig } from 'next';
 const backendUrl = process.env.BACKEND_URL ?? 'http://localhost:3000';
 
 const nextConfig: NextConfig = {
+  ...(process.env.DOCKER_BUILD === '1' ? { output: 'standalone' as const } : {}),
   // 开发与生产分开输出目录，避免 `next build` 与 `next dev` 抢同一 .next → Internal Server Error
   distDir: process.env.NODE_ENV === 'production' ? '.next' : '.next-dev',
   // 隧道域名 / 127.0.0.1 访问本机 next-dev 时允许加载 /_next/*

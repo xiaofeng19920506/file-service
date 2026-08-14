@@ -54,7 +54,15 @@ cp .env.example .env   # 按需修改
 npm run dev
 ```
 
-## 生产部署
+## 飞牛 NAS（Docker）
+
+Postgres / Redis / MP3 文件都落在 Compose 项目目录的 `data/`（飞牛「软件存储」），外网域名 `https://frontend.youtvs.com`。步骤见 [docker/README.md](docker/README.md)。
+
+```bash
+cp docker/env.example .env
+docker compose up -d postgres redis api worker web
+docker compose --profile tunnel up -d tunnel   # 填好 CLOUDFLARE_TUNNEL_TOKEN 后
+```
 
 ### 前端（Vercel）
 

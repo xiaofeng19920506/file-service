@@ -1,0 +1,17 @@
+.git
+.cursor
+**/.DS_Store
+**/node_modules
+**/dist
+**/*.tsbuildinfo
+frontend/.next
+frontend/.next-dev
+data
+.env
+.env.*
+!.env.example
+coverage
+scripts/tmp
+agent-transcripts
+**/*.md
+!README.md

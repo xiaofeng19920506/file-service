@@ -58,6 +58,9 @@
     "prod:start": "bash scripts/prod-stack.sh start",
     "prod:start:build": "bash scripts/prod-stack.sh start --build",
     "prod:status": "bash scripts/prod-stack.sh status",
+    "nas:up": "docker compose up -d postgres redis api worker web",
+    "nas:tunnel": "docker compose --profile tunnel up -d tunnel",
+    "nas:down": "docker compose --profile tunnel down",
     "seed:app-store-review": "tsx scripts/seed-app-store-review.ts"
   },
   "devDependencies": {
