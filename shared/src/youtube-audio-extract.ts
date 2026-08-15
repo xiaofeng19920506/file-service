@@ -1,6 +1,6 @@
 import { execFile, spawn, type ChildProcess } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { readdir } from 'node:fs/promises';
+import { readdir, readFile, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import {
@@ -138,17 +138,23 @@ function runYtdlpSpawn(
   });
 }
 
+export type YoutubeVideoExtractResult = {
+  filePath: string;
+  title: string | null;
+};
+
 export async function extractYoutubeVideoMp4(
   videoId: string,
   workDir: string,
   ytdlpPath = 'yt-dlp',
   onProgress?: (progress: YtdlpProgress) => void,
-): Promise<string> {
+): Promise<YoutubeVideoExtractResult> {
   if (!isValidYoutubeVideoId(videoId)) {
     throw new Error('invalid_video_id');
   }
 
   const outputTemplate = join(workDir, 'video.%(ext)s');
+  const titleFile = join(workDir, 'title.txt');
   const url = `https://www.youtube.com/watch?v=${videoId}`;
   const formatAttempts = ['bv*[height<=1080]+ba/b[height<=1080]/bv*+ba/b', 'b/best'];
 
@@ -156,6 +162,7 @@ export async function extractYoutubeVideoMp4(
     let lastError: unknown;
     for (const format of formatAttempts) {
       try {
+        await unlink(titleFile).catch(() => undefined);
         onProgress?.({ percent: 1, stage: 'starting' });
         await runYtdlpSpawn(
           ytdlpPath,
@@ -168,6 +175,9 @@ export async function extractYoutubeVideoMp4(
             'mp4',
             '--progress',
             '--newline',
+            '--print-to-file',
+            '%(title)s',
+            titleFile,
             '-o',
             outputTemplate,
             ...ytdlpSharedArgs(playerClient),
@@ -188,7 +198,14 @@ export async function extractYoutubeVideoMp4(
   const mp4 =
     files.find((name) => name.endsWith('.mp4')) ?? files.find((name) => name.startsWith('video.'));
   if (!mp4) throw new Error('video_extract_failed');
-  return join(workDir, mp4);
+  let title: string | null = null;
+  try {
+    const raw = await readFile(titleFile, 'utf8');
+    title = raw.trim() || null;
+  } catch {
+    title = null;
+  }
+  return { filePath: join(workDir, mp4), title };
 }
 
 /** 将 YouTube 音频流式输出到 stdout，供即时播放（不等待完整 MP3 缓存） */

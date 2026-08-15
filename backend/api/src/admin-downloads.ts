@@ -12,6 +12,7 @@ import {
   extractYoutubeVideoMp4,
   isValidYoutubeVideoId,
   parseAdminMediaFolderId,
+  seriesFolderFromTitle,
   youtubeAudioCache,
   type AdminMediaFolderId,
   type ApiEnv,
@@ -32,6 +33,7 @@ export type AdminDownloadJob = {
   title?: string;
   folder?: AdminMediaFolderId;
   folderLabel?: string;
+  seriesName?: string;
   status: AdminDownloadJobStatus;
   percent: number;
   stage: string;
@@ -172,7 +174,7 @@ function createJobRunner(deps: {
     job.percent = 1;
     const tmpDir = await mkdtemp(join(tmpdir(), 'yt-video-'));
     try {
-      const mp4Path = await extractYoutubeVideoMp4(
+      const extracted = await extractYoutubeVideoMp4(
         job.videoId,
         tmpDir,
         env.YT_DLP_PATH,
@@ -184,12 +186,14 @@ function createJobRunner(deps: {
       );
       job.percent = 96;
       job.stage = 'saving';
-      const filename = `${safeBasename(job.title, job.videoId)}.${job.videoId}.mp4`;
-      const dir = join(mediaRoot, folder.dirName);
+      const youtubeTitle = extracted.title || job.title;
+      const seriesFolder = seriesFolderFromTitle(job.seriesName, youtubeTitle, job.videoId);
+      const filename = `${safeBasename(youtubeTitle, job.videoId)}.${job.videoId}.mp4`;
+      const dir = join(mediaRoot, folder.dirName, seriesFolder);
       await mkdir(dir, { recursive: true });
-      await copyFile(mp4Path, join(dir, filename));
+      await copyFile(extracted.filePath, join(dir, filename));
       job.filename = filename;
-      job.nasPath = `${folder.nasLabel}/${filename}`;
+      job.nasPath = `${folder.nasLabel}/${seriesFolder}/${filename}`;
       job.percent = 100;
       job.stage = 'done';
       job.status = 'done';
@@ -235,6 +239,7 @@ function createJobRunner(deps: {
     title?: string;
     folder?: AdminMediaFolderId;
     folderLabel?: string;
+    seriesName?: string;
   }): AdminDownloadJob => {
     prune();
     const job: AdminDownloadJob = {
@@ -244,6 +249,7 @@ function createJobRunner(deps: {
       title: input.title,
       folder: input.folder,
       folderLabel: input.folderLabel,
+      seriesName: input.seriesName,
       status: 'queued',
       percent: 0,
       stage: 'queued',
@@ -299,7 +305,7 @@ export function registerAdminDownloadRoutes(
     },
   );
 
-  app.post<{ Params: { videoId: string }; Body: { title?: string; folder?: string } }>(
+  app.post<{ Params: { videoId: string }; Body: { title?: string; folder?: string; series?: string } }>(
     '/v1/admin/youtube/videos/:videoId/video/download',
     async (request, reply) => {
       const videoId = request.params.videoId;
@@ -317,6 +323,7 @@ export function registerAdminDownloadRoutes(
         title: request.body?.title?.trim() || videoId,
         folder: folderId,
         folderLabel: folder.dirName,
+        seriesName: request.body?.series?.trim() || undefined,
       });
       return reply.code(202).send(job);
     },

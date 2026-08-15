@@ -13,6 +13,7 @@ import { useI18n } from '../i18n';
 const MEDIA_FOLDERS: { id: AdminMediaFolderId; labelKey: string }[] = [
   { id: 'movies', labelKey: 'admin.downloadFolderMovies' },
   { id: 'tv', labelKey: 'admin.downloadFolderTv' },
+  { id: 'shortdrama', labelKey: 'admin.downloadFolderShortdrama' },
   { id: 'videos', labelKey: 'admin.downloadFolderVideos' },
   { id: 'anime', labelKey: 'admin.downloadFolderAnime' },
   { id: 'variety', labelKey: 'admin.downloadFolderVariety' },
@@ -41,6 +42,7 @@ export default function AdminDownloadSection() {
   const { t } = useI18n();
   const [input, setInput] = useState('');
   const [folder, setFolder] = useState<AdminMediaFolderId>('videos');
+  const [series, setSeries] = useState('');
   const [jobs, setJobs] = useState<AdminDownloadJob[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState<'mp3' | 'mp4' | null>(null);
@@ -80,7 +82,7 @@ export default function AdminDownloadSection() {
       const job =
         kind === 'mp3'
           ? await startAdminAudioJob(videoId, videoId)
-          : await startAdminVideoJob(videoId, videoId, folder);
+          : await startAdminVideoJob(videoId, videoId, folder, series);
       setJobs((prev) => [job, ...prev.filter((row) => row.jobId !== job.jobId)]);
     } catch (err) {
       setError(friendlyError(err instanceof Error ? err.message : 'download_failed', t));
@@ -103,6 +105,18 @@ export default function AdminDownloadSection() {
           placeholder={t('admin.downloadUrlPlaceholder')}
           disabled={starting !== null}
           onChange={(e) => setInput(e.target.value)}
+        />
+      </label>
+      <label className="admin-download-field">
+        <span>{t('admin.downloadSeriesLabel')}</span>
+        <input
+          type="text"
+          value={series}
+          autoComplete="off"
+          spellCheck={false}
+          placeholder={t('admin.downloadSeriesPlaceholder')}
+          disabled={starting !== null}
+          onChange={(e) => setSeries(e.target.value)}
         />
       </label>
       <fieldset className="admin-download-folders" disabled={starting !== null}>

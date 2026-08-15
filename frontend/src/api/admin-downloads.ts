@@ -1,6 +1,6 @@
 import { apiFetch, parseJson } from './http';
 
-export type AdminMediaFolderId = 'movies' | 'tv' | 'videos' | 'anime' | 'variety';
+export type AdminMediaFolderId = 'movies' | 'tv' | 'shortdrama' | 'videos' | 'anime' | 'variety';
 
 export type AdminDownloadJobStatus = 'queued' | 'running' | 'done' | 'failed';
 
@@ -11,6 +11,7 @@ export type AdminDownloadJob = {
   title?: string;
   folder?: AdminMediaFolderId;
   folderLabel?: string;
+  seriesName?: string;
   status: AdminDownloadJobStatus;
   percent: number;
   stage: string;
@@ -50,11 +51,12 @@ export async function startAdminVideoJob(
   videoId: string,
   title: string,
   folder: AdminMediaFolderId,
+  series?: string,
 ): Promise<AdminDownloadJob> {
   const res = await apiFetch(`/v1/admin/youtube/videos/${encodeURIComponent(videoId)}/video/download`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, folder }),
+    body: JSON.stringify({ title, folder, series: series?.trim() || undefined }),
   });
   if (!res.ok && res.status !== 202) throw new Error(await readError(res));
   return parseJson<AdminDownloadJob>(res);

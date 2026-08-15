@@ -1,4 +1,4 @@
-export const ADMIN_MEDIA_FOLDER_IDS = ['movies', 'tv', 'videos', 'anime', 'variety'] as const;
+export const ADMIN_MEDIA_FOLDER_IDS = ['movies', 'tv', 'shortdrama', 'videos', 'anime', 'variety'] as const;
 
 export type AdminMediaFolderId = (typeof ADMIN_MEDIA_FOLDER_IDS)[number];
 
@@ -14,27 +14,32 @@ export const ADMIN_MEDIA_FOLDERS: AdminMediaFolder[] = [
   {
     id: 'movies',
     dirName: '电影',
-    nasLabel: '存储空间 1/admin 的文件/影视/电影',
+    nasLabel: '存储空间 1/影视/电影',
   },
   {
     id: 'tv',
     dirName: '电视剧',
-    nasLabel: '存储空间 1/admin 的文件/影视/电视剧',
+    nasLabel: '存储空间 1/影视/电视剧',
+  },
+  {
+    id: 'shortdrama',
+    dirName: '短剧',
+    nasLabel: '存储空间 1/影视/短剧',
   },
   {
     id: 'videos',
     dirName: '视频',
-    nasLabel: '存储空间 1/admin 的文件/影视/视频',
+    nasLabel: '存储空间 1/影视/视频',
   },
   {
     id: 'anime',
     dirName: '动漫',
-    nasLabel: '存储空间 1/admin 的文件/影视/动漫',
+    nasLabel: '存储空间 1/影视/动漫',
   },
   {
     id: 'variety',
     dirName: '综艺',
-    nasLabel: '存储空间 1/admin 的文件/影视/综艺',
+    nasLabel: '存储空间 1/影视/综艺',
   },
 ];
 
@@ -47,4 +52,32 @@ export function adminMediaFolderById(id: AdminMediaFolderId): AdminMediaFolder {
   const found = ADMIN_MEDIA_FOLDERS.find((item) => item.id === id);
   if (!found) throw new Error('invalid_download_folder');
   return found;
+}
+
+export function sanitizeNasFolderName(name: string): string {
+  const cleaned = name
+    .replace(/[\r\n]/g, ' ')
+    .replace(/[\\/:*?"<>|]/g, '_')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80);
+  return cleaned || '未命名';
+}
+
+/** 用户填写的剧名优先；否则从 YouTube 标题去掉「第x集」等，用作文件夹名 */
+export function seriesFolderFromTitle(
+  explicit: string | undefined,
+  youtubeTitle: string | undefined,
+  fallback: string,
+): string {
+  if (explicit?.trim()) return sanitizeNasFolderName(explicit);
+  let t = (youtubeTitle ?? '').trim();
+  t = t.replace(/【[^】]*】/g, ' ');
+  t = t.replace(/\[[^\]]*\]/g, ' ');
+  t = t.replace(/第\s*\d+\s*[集话期部季]/g, ' ');
+  t = t.replace(/\b(?:EP|E)\s*\d+\b/gi, ' ');
+  t = t.replace(/[（(]\s*\d+\s*[)）]/g, ' ');
+  t = t.replace(/\s+(?:4K|1080[Pp]|720[Pp]|高清|超清|蓝光|完整版|正片|预告|中字|生肉)\s*$/g, '');
+  const cut = (t.split(/[:：|_|—–]/)[0] ?? t).trim();
+  return sanitizeNasFolderName(cut || youtubeTitle || fallback);
 }
