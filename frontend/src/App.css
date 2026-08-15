@@ -2761,6 +2761,7 @@
   .playlists-main--search {
     min-height: 0;
     overflow: hidden;
+    height: 100%;
   }
 
   .playlists-youtube-search--desktop-home {
@@ -2779,6 +2780,7 @@
   .playlists-youtube-search--desktop-home .youtube-trending {
     flex: 1;
     min-height: 0;
+    max-height: none;
     overflow: auto;
   }
 

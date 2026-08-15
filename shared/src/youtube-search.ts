@@ -4,8 +4,12 @@ import { isValidYoutubeVideoId, resolveYtdlpPath } from './youtube-audio-extract
 
 const execFileAsync = promisify(execFile);
 
+/** YouTube Data API search.list 单页上限 */
 export const YOUTUBE_SEARCH_MAX_PAGE_SIZE = 50;
-export const YOUTUBE_SEARCH_DEFAULT_PAGE_SIZE = 15;
+export const YOUTUBE_SEARCH_DEFAULT_PAGE_SIZE = 50;
+/** yt-dlp 走网站搜索页，可一次拉更多，更接近 YouTube 网页结果 */
+export const YTDLP_SEARCH_DEFAULT_PAGE_SIZE = 200;
+export const YTDLP_SEARCH_MAX_PAGE_SIZE = 300;
 
 export type YoutubeSearchResult = {
   videoId: string;
@@ -24,9 +28,6 @@ export type YoutubeSearchPage = {
 };
 
 const SKIPPED_TITLES = new Set(['Private video', 'Deleted video', '已设为私享', '私人视频', '已删除的视频']);
-
-const BLOCKED_TITLE_RE =
-  /(full album|continuous mix|10 hours|8 hours|1 hour loop|nightcore|karaoke version only)/i;
 
 function youtubeVideoUrl(videoId: string): string {
   return `https://www.youtube.com/watch?v=${videoId}`;
@@ -57,12 +58,9 @@ export function scoreYoutubeTitleMatch(query: string, title: string): number {
   return Math.round((matched / qTokens.length) * 72);
 }
 
-function shouldSkipSearchResult(title: string, liveBroadcastContent?: string | null): boolean {
+function shouldSkipSearchResult(title: string, _liveBroadcastContent?: string | null): boolean {
   const trimmed = title.trim();
-  if (!trimmed || SKIPPED_TITLES.has(trimmed)) return true;
-  if (BLOCKED_TITLE_RE.test(trimmed)) return true;
-  if (liveBroadcastContent && liveBroadcastContent !== 'none') return true;
-  return false;
+  return !trimmed || SKIPPED_TITLES.has(trimmed);
 }
 
 type SearchApiItem = {
@@ -75,8 +73,8 @@ type SearchApiItem = {
   };
 };
 
-function clampPageSize(maxResults: number | undefined): number {
-  return Math.min(Math.max(maxResults ?? YOUTUBE_SEARCH_DEFAULT_PAGE_SIZE, 1), YOUTUBE_SEARCH_MAX_PAGE_SIZE);
+function clampPageSize(maxResults: number | undefined, max = YOUTUBE_SEARCH_MAX_PAGE_SIZE, fallback = YOUTUBE_SEARCH_DEFAULT_PAGE_SIZE): number {
+  return Math.min(Math.max(maxResults ?? fallback, 1), max);
 }
 
 function rankSearchResults(query: string, items: SearchApiItem[]): YoutubeSearchResult[] {
@@ -165,8 +163,8 @@ function parseYtdlpSearchLine(line: string): { videoId: string; title: string; c
   };
 }
 
-function ytdlpSearchUrl(query: string): string {
-  return `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&sp=EgIQAQ%253D%253D`;
+function ytdlpSearchQuery(query: string, resultCount: number): string {
+  return `ytsearch${Math.max(resultCount, 1)}:${query}`;
 }
 
 export async function searchYoutubeVideosViaYtdlp(
@@ -180,7 +178,11 @@ export async function searchYoutubeVideosViaYtdlp(
   }
 
   const offset = Math.max(options?.offset ?? 0, 0);
-  const maxResults = clampPageSize(options?.maxResults);
+  const maxResults = clampPageSize(
+    options?.maxResults,
+    YTDLP_SEARCH_MAX_PAGE_SIZE,
+    YTDLP_SEARCH_DEFAULT_PAGE_SIZE,
+  );
 
   const bin = resolveYtdlpPath(ytdlpPath);
   const start = offset + 1;
@@ -191,16 +193,15 @@ export async function searchYoutubeVideosViaYtdlp(
     const result = await execFileAsync(
       bin,
       [
-        ytdlpSearchUrl(q),
+        ytdlpSearchQuery(q, end),
         '--flat-playlist',
         '--playlist-items',
         `${start}-${end}`,
         '--print',
         '%(id)s|||%(title)s|||%(channel)s',
         '--no-warnings',
-        '--no-playlist',
       ],
-      { timeout: 45_000, maxBuffer: 2 * 1024 * 1024 },
+      { timeout: 90_000, maxBuffer: 8 * 1024 * 1024 },
     );
     stdout = result.stdout;
   } catch (e) {

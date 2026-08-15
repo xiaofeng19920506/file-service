@@ -5,6 +5,8 @@ import {
   fetchYoutubeSearchSuggestionsRemote,
   YOUTUBE_SEARCH_DEFAULT_PAGE_SIZE,
   YOUTUBE_SEARCH_MAX_PAGE_SIZE,
+  YTDLP_SEARCH_DEFAULT_PAGE_SIZE,
+  YTDLP_SEARCH_MAX_PAGE_SIZE,
   type ApiEnv,
   type Db,
 } from '@file-service/shared';
@@ -46,8 +48,11 @@ export function registerYoutubeSearchRoutes(
       if (!q) return reply.code(400).send({ error: 'query_required' });
       if (q.length > 200) return reply.code(400).send({ error: 'query_too_long' });
 
-      const limitRaw = Number.parseInt(request.query.limit ?? String(YOUTUBE_SEARCH_DEFAULT_PAGE_SIZE), 10);
-      const maxResults = Number.isFinite(limitRaw)
+      const limitRaw = Number.parseInt(request.query.limit ?? String(YTDLP_SEARCH_DEFAULT_PAGE_SIZE), 10);
+      const ytdlpMaxResults = Number.isFinite(limitRaw)
+        ? Math.min(Math.max(limitRaw, 1), YTDLP_SEARCH_MAX_PAGE_SIZE)
+        : YTDLP_SEARCH_DEFAULT_PAGE_SIZE;
+      const apiMaxResults = Number.isFinite(limitRaw)
         ? Math.min(Math.max(limitRaw, 1), YOUTUBE_SEARCH_MAX_PAGE_SIZE)
         : YOUTUBE_SEARCH_DEFAULT_PAGE_SIZE;
 
@@ -56,10 +61,24 @@ export function registerYoutubeSearchRoutes(
       const offset = Number.isFinite(offsetRaw) ? Math.max(offsetRaw, 0) : 0;
 
       try {
+        const searchPage = async () => {
+          try {
+            return await searchYoutubeVideosViaYtdlp(q, env.YT_DLP_PATH, {
+              maxResults: ytdlpMaxResults,
+              offset,
+            });
+          } catch (e) {
+            if (!env.YOUTUBE_API_KEY) throw e;
+            request.log.warn(e, 'yt-dlp search failed, falling back to YouTube Data API');
+            return searchYoutubeVideos(q, env.YOUTUBE_API_KEY, {
+              maxResults: apiMaxResults,
+              pageToken,
+            });
+          }
+        };
+
         const [page, libraryIds] = await Promise.all([
-          env.YOUTUBE_API_KEY
-            ? searchYoutubeVideos(q, env.YOUTUBE_API_KEY, { maxResults, pageToken })
-            : searchYoutubeVideosViaYtdlp(q, env.YT_DLP_PATH, { maxResults, offset }),
+          searchPage(),
           getUserLibraryVideoIdSet(db, user.id),
         ]);
 

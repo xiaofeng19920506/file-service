@@ -195,15 +195,19 @@ function AppShellInner({
             )}
           </div>
 
-          <div className="nav-center nav-center-desktop">
-            <PageNavTabs
-              page={page}
-              navigate={navigate}
-              canAccessPlaylists={permissions.canAccessPlaylists}
-              canEdit={permissions.canEdit}
-              variant="header"
-            />
-          </div>
+          {permissions.canEdit ? (
+            <div className="nav-center nav-center-desktop">
+              <PageNavTabs
+                page={page}
+                navigate={navigate}
+                canAccessPlaylists={permissions.canAccessPlaylists}
+                canEdit={permissions.canEdit}
+                variant="header"
+              />
+            </div>
+          ) : (
+            <div className="nav-center nav-center-desktop" />
+          )}
 
           <div className="nav-actions nav-actions-desktop">
             {accountActions}

@@ -126,6 +126,10 @@ export function useDebouncedYoutubeSearch(options: UseDebouncedYoutubeSearchOpti
   const loadMore = useCallback(async () => {
     const trimmed = activeQueryRef.current.trim();
     if (!trimmed || !hasMore || searchLoading || loadMoreLoading) return;
+    if (searchResults.length >= 500) {
+      setHasMore(false);
+      return;
+    }
 
     const id = requestIdRef.current;
     setLoadMoreLoading(true);
@@ -138,17 +142,27 @@ export function useDebouncedYoutubeSearch(options: UseDebouncedYoutubeSearchOpti
       });
       if (id !== requestIdRef.current) return;
 
-      setSearchResults((prev) => mergeSearchResults(prev, data.results));
+      setSearchResults((prev) => {
+        const merged = mergeSearchResults(prev, data.results);
+        setHasMore(data.hasMore && data.results.length > 0 && merged.length < 500);
+        return merged;
+      });
       setNextPageToken(data.nextPageToken);
       setNextOffset(data.nextOffset);
-      setHasMore(data.hasMore && data.results.length > 0);
     } catch (e) {
       if (id !== requestIdRef.current) return;
       setSearchError(friendlyError(e instanceof Error ? e.message : 'youtube_search_failed', t));
     } finally {
       if (id === requestIdRef.current) setLoadMoreLoading(false);
     }
-  }, [hasMore, loadMoreLoading, nextOffset, nextPageToken, searchLoading, t]);
+  }, [hasMore, loadMoreLoading, nextOffset, nextPageToken, searchLoading, searchResults.length, t]);
+
+  useEffect(() => {
+    if (searchError) return;
+    if (!hasMore || searchLoading || loadMoreLoading || searchResults.length === 0) return;
+    if (searchResults.length >= 500) return;
+    void loadMore();
+  }, [hasMore, loadMoreLoading, loadMore, searchError, searchLoading, searchResults.length]);
 
   const searchNow = useCallback(() => {
     if (debounceRef.current) {

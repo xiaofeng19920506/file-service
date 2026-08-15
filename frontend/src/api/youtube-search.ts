@@ -21,7 +21,7 @@ export type YoutubeSearchPageResponse = {
   nextOffset: number;
 };
 
-export const YOUTUBE_SEARCH_PAGE_SIZE = 15;
+export const YOUTUBE_SEARCH_PAGE_SIZE = 200;
 
 export async function searchYoutubeVideos(
   query: string,

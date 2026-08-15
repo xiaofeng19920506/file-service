@@ -19,15 +19,12 @@ const NAV_ITEMS: {
   requiresPlaylists?: boolean;
   requiresEdit?: boolean;
   bottomOnly?: boolean;
-  /** 桌面顶栏不展示（首页由左侧应用名标识即可） */
-  headerHidden?: boolean;
 }[] = [
   {
     id: 'playlists',
     icon: HomeNavIcon,
     labelKey: 'nav.playlistsShort',
     requiresPlaylists: true,
-    headerHidden: true,
   },
   {
     id: 'playlist-lists',
@@ -56,7 +53,6 @@ export default function PageNavTabs({
 
   const items = NAV_ITEMS.filter((item) => {
     if (item.bottomOnly && !isBottom) return false;
-    if (item.headerHidden && !isBottom) return false;
     if (item.requiresPlaylists && !canAccessPlaylists) return false;
     if (item.requiresEdit && !canEdit) return false;
     return true;
