@@ -56,7 +56,7 @@ export function registerAdminDownloadRoutes(
     const [blob] = await db.select().from(blobs).where(eq(blobs.id, cache.blobId));
     if (!blob) throw new Error('not_found');
 
-    const filename = `${safeBasename(titleHint || cache.title || blob.originalFilename, videoId)}.${videoId}.mp3`;
+    const filename = `${safeBasename(titleHint || cache.title || blob.originalFilename || undefined, videoId)}.${videoId}.mp3`;
     const dir = join(audioRoot, 'Music');
     await mkdir(dir, { recursive: true });
     const dest = join(dir, filename);
