@@ -55,9 +55,9 @@ services:
       DATABASE_URL: postgresql://fileservice:${POSTGRES_PASSWORD:-fileservice}@postgres:5432/fileservice
       REDIS_URL: redis://redis:6379
       PORT: '3000'
-      CORS_ORIGIN: ${CORS_ORIGIN:-https://frontend.youtvs.com}
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://frontend.youtvs.com,https://file-service-frontend-xi.vercel.app}
       WEB_APP_URL: ${WEB_APP_URL:-https://frontend.youtvs.com}
-      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://frontend.youtvs.com}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://api.youtvs.com}
       DOWNLOAD_HMAC_SECRET: ${DOWNLOAD_HMAC_SECRET:-replace-with-at-least-16-chars}
       EXPORT_RETENTION_DAYS: ${EXPORT_RETENTION_DAYS:-7}
     volumes:

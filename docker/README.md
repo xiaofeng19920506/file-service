@@ -37,11 +37,9 @@ docker compose up -d postgres redis api worker web
 1. Cloudflare Zero Trust → **连接网络** → **通过 Tunnel 连接** / **隧道**
 2. **创建隧道** → **Cloudflared**，名称填 `file-service`
 3. 安装方式选 Docker，复制 `--token` 到 NAS 上 `.env` 的 `CLOUDFLARE_TUNNEL_TOKEN`
-4. **添加公共主机名**：
-   - 子域：`frontend`
-   - 域：`youtvs.com`
-   - 类型：**HTTP**
-   - URL：`http://web:4000`
+4. **添加公共主机名**（两条）：
+   - `frontend` + `youtvs.com` → HTTP → `http://web:4000`
+   - `api` + `youtvs.com` → HTTP → `http://api:3000`
 5. 启动隧道容器：
 
 ```bash
