@@ -1,12 +1,10 @@
-import { createReadStream } from 'node:fs';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { eq } from 'drizzle-orm';
 import type { Queue } from 'bullmq';
 import {
   blobs,
-  contentDisposition,
   ensureYoutubeAudioJobs,
   extractYoutubeVideoMp4,
   isValidYoutubeVideoId,
@@ -20,10 +18,20 @@ import type { ObjectStorage } from '@file-service/shared';
 
 const VIDEO_DOWNLOAD_TIMEOUT_MS = 650_000;
 
-function attachmentFilename(title: string | undefined, videoId: string, ext: 'mp3' | 'mp4'): string {
-  const raw = (title?.trim() || videoId).replace(/[\r\n"/\\:*?<>|]+/g, '_').slice(0, 180);
-  const base = raw.replace(/\.(mp3|mp4)$/i, '') || videoId;
-  return `${base}.${ext}`;
+function safeBasename(title: string | undefined, videoId: string): string {
+  const raw = (title?.trim() || videoId).replace(/[\r\n"/\\:*?<>|]+/g, '_').slice(0, 120);
+  return raw.replace(/\.(mp3|mp4)$/i, '') || videoId;
+}
+
+function adminDownloadRoot(env: ApiEnv): string {
+  const configured = env.ADMIN_DOWNLOAD_DIR?.trim();
+  if (configured) return configured;
+  if (env.STORAGE_BACKEND === 'fs') return join(env.LOCAL_STORAGE_DIR, 'downloads');
+  return join(tmpdir(), 'file-service-downloads');
+}
+
+function nasDisplayPath(kind: 'Videos' | 'Music', filename: string): string {
+  return `data/downloads/${kind}/${filename}`;
 }
 
 export function registerAdminDownloadRoutes(
@@ -31,6 +39,32 @@ export function registerAdminDownloadRoutes(
   deps: { db: Db; env: ApiEnv; storage: ObjectStorage; audioQueue: Queue },
 ): void {
   const { db, env, storage, audioQueue } = deps;
+  const root = adminDownloadRoot(env);
+
+  const saveAudioToNas = async (videoId: string, titleHint?: string) => {
+    const [cache] = await db
+      .select()
+      .from(youtubeAudioCache)
+      .where(eq(youtubeAudioCache.youtubeVideoId, videoId));
+    if (!cache || cache.status !== 'ready' || !cache.blobId) {
+      return null;
+    }
+
+    const [blob] = await db.select().from(blobs).where(eq(blobs.id, cache.blobId));
+    if (!blob) throw new Error('not_found');
+
+    const filename = `${safeBasename(titleHint || cache.title || blob.originalFilename, videoId)}.${videoId}.mp3`;
+    const dir = join(root, 'Music');
+    await mkdir(dir, { recursive: true });
+    const dest = join(dir, filename);
+    await storage.copyToFile(blob.storageKey, dest);
+    return {
+      saved: true as const,
+      kind: 'mp3' as const,
+      filename,
+      nasPath: nasDisplayPath('Music', filename),
+    };
+  };
 
   app.post<{ Params: { videoId: string }; Body: { title?: string } }>(
     '/v1/admin/youtube/videos/:videoId/audio/download',
@@ -40,14 +74,8 @@ export function registerAdminDownloadRoutes(
         return reply.code(400).send({ error: 'invalid_video_id' });
       }
 
-      const [row] = await db
-        .select()
-        .from(youtubeAudioCache)
-        .where(eq(youtubeAudioCache.youtubeVideoId, videoId));
-
-      if (row?.status === 'ready' && row.blobId) {
-        return { ready: true, status: serializeAudioCache(row) };
-      }
+      const saved = await saveAudioToNas(videoId, request.body?.title);
+      if (saved) return saved;
 
       await ensureYoutubeAudioJobs(db, audioQueue, [
         { videoId, title: request.body?.title?.trim() || undefined },
@@ -67,41 +95,7 @@ export function registerAdminDownloadRoutes(
     },
   );
 
-  app.get<{ Params: { videoId: string }; Querystring: { title?: string } }>(
-    '/v1/admin/youtube/videos/:videoId/audio/download',
-    async (request, reply) => {
-      const videoId = request.params.videoId;
-      if (!isValidYoutubeVideoId(videoId)) {
-        return reply.code(400).send({ error: 'invalid_video_id' });
-      }
-
-      const [cache] = await db
-        .select()
-        .from(youtubeAudioCache)
-        .where(eq(youtubeAudioCache.youtubeVideoId, videoId));
-      if (!cache || cache.status !== 'ready' || !cache.blobId) {
-        return reply.code(404).send({ error: 'audio_not_ready' });
-      }
-
-      const [blob] = await db.select().from(blobs).where(eq(blobs.id, cache.blobId));
-      if (!blob) return reply.code(404).send({ error: 'not_found' });
-
-      const filename = attachmentFilename(
-        request.query.title || blob.originalFilename || cache.title || undefined,
-        videoId,
-        'mp3',
-      );
-      const stream = await storage.createReadStream(blob.storageKey);
-      return reply
-        .header('Content-Type', blob.mimeType ?? 'audio/mpeg')
-        .header('Content-Length', String(blob.sizeBytes))
-        .header('Content-Disposition', contentDisposition('attachment', filename, `${videoId}.mp3`))
-        .header('Cache-Control', 'private, no-store')
-        .send(stream);
-    },
-  );
-
-  app.get<{ Params: { videoId: string }; Querystring: { title?: string } }>(
+  app.post<{ Params: { videoId: string }; Body: { title?: string } }>(
     '/v1/admin/youtube/videos/:videoId/video/download',
     async (request, reply) => {
       const videoId = request.params.videoId;
@@ -116,23 +110,19 @@ export function registerAdminDownloadRoutes(
       try {
         tmpDir = await mkdtemp(join(tmpdir(), 'yt-video-'));
         const mp4Path = await extractYoutubeVideoMp4(videoId, tmpDir, env.YT_DLP_PATH);
-        const filename = attachmentFilename(request.query.title, videoId, 'mp4');
-        const stream = createReadStream(mp4Path);
-        const dirToClean = tmpDir;
-        const cleanup = () => {
-          void rm(dirToClean, { recursive: true, force: true });
-        };
-        stream.on('close', cleanup);
-        stream.on('error', cleanup);
-        request.raw.on('close', () => {
-          stream.destroy();
-        });
+        const filename = `${safeBasename(request.body?.title, videoId)}.${videoId}.mp4`;
+        const dir = join(root, 'Videos');
+        await mkdir(dir, { recursive: true });
+        const dest = join(dir, filename);
+        await copyFile(mp4Path, dest);
+        await rm(tmpDir, { recursive: true, force: true });
         tmpDir = undefined;
-        return reply
-          .header('Content-Type', 'video/mp4')
-          .header('Content-Disposition', contentDisposition('attachment', filename, `${videoId}.mp4`))
-          .header('Cache-Control', 'private, no-store')
-          .send(stream);
+        return {
+          saved: true,
+          kind: 'mp4',
+          filename,
+          nasPath: nasDisplayPath('Videos', filename),
+        };
       } catch (err) {
         if (tmpDir) {
           await rm(tmpDir, { recursive: true, force: true }).catch(() => undefined);
@@ -141,7 +131,7 @@ export function registerAdminDownloadRoutes(
         if (message === 'invalid_video_id') {
           return reply.code(400).send({ error: 'invalid_video_id' });
         }
-        request.log.error({ err, videoId }, 'admin video download failed');
+        request.log.error({ err, videoId }, 'admin video save to NAS failed');
         return reply.code(502).send({ error: 'video_extract_failed' });
       }
     },

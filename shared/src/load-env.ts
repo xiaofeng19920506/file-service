@@ -4,8 +4,13 @@ import { dirname, isAbsolute, resolve } from 'node:path';
 
 function resolveRelativeStorageDir(envDir: string): void {
   const storageDir = process.env.LOCAL_STORAGE_DIR?.trim();
-  if (!storageDir || isAbsolute(storageDir)) return;
-  process.env.LOCAL_STORAGE_DIR = resolve(envDir, storageDir);
+  if (storageDir && !isAbsolute(storageDir)) {
+    process.env.LOCAL_STORAGE_DIR = resolve(envDir, storageDir);
+  }
+  const downloadDir = process.env.ADMIN_DOWNLOAD_DIR?.trim();
+  if (downloadDir && !isAbsolute(downloadDir)) {
+    process.env.ADMIN_DOWNLOAD_DIR = resolve(envDir, downloadDir);
+  }
 }
 
 /** 从 cwd 向上查找 .env 并加载（不覆盖已有环境变量） */

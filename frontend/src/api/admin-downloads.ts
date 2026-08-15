@@ -4,21 +4,12 @@ import { apiFetch, parseJson } from './http';
 const AUDIO_POLL_MS = 1_500;
 const AUDIO_POLL_TIMEOUT_MS = 10 * 60_000;
 
-function safeFilename(name: string, ext: 'mp3' | 'mp4'): string {
-  const base = name.replace(/[\\/:*?"<>|]+/g, '_').replace(/\.(mp3|mp4)$/i, '').trim() || 'download';
-  return `${base}.${ext}`;
-}
-
-function triggerBrowserDownload(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
+export type AdminNasSaveResult = {
+  saved: true;
+  kind: 'mp3' | 'mp4';
+  filename: string;
+  nasPath: string;
+};
 
 async function readError(res: Response): Promise<string> {
   const data = await res.json().catch(() => ({}));
@@ -41,36 +32,39 @@ async function waitUntilAudioReady(videoId: string): Promise<void> {
   throw new Error('download_timeout');
 }
 
-export async function downloadAdminAudio(videoId: string, filename: string): Promise<void> {
-  const prepare = await apiFetch(
-    `/v1/admin/youtube/videos/${encodeURIComponent(videoId)}/audio/download`,
+export async function saveAdminAudioToNas(
+  videoId: string,
+  title: string,
+): Promise<AdminNasSaveResult> {
+  const post = async () =>
+    apiFetch(`/v1/admin/youtube/videos/${encodeURIComponent(videoId)}/audio/download`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title }),
+    });
+
+  let res = await post();
+  if (res.status === 202) {
+    await parseJson(res);
+    await waitUntilAudioReady(videoId);
+    res = await post();
+  }
+  if (!res.ok) throw new Error(await readError(res));
+  return parseJson<AdminNasSaveResult>(res);
+}
+
+export async function saveAdminVideoToNas(
+  videoId: string,
+  title: string,
+): Promise<AdminNasSaveResult> {
+  const res = await apiFetch(
+    `/v1/admin/youtube/videos/${encodeURIComponent(videoId)}/video/download`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: filename }),
+      body: JSON.stringify({ title }),
     },
   );
-
-  if (prepare.status === 202) {
-    await parseJson(prepare);
-    await waitUntilAudioReady(videoId);
-  } else if (!prepare.ok) {
-    throw new Error(await readError(prepare));
-  }
-
-  const params = new URLSearchParams({ title: filename });
-  const res = await apiFetch(
-    `/v1/admin/youtube/videos/${encodeURIComponent(videoId)}/audio/download?${params}`,
-  );
   if (!res.ok) throw new Error(await readError(res));
-  triggerBrowserDownload(await res.blob(), safeFilename(filename, 'mp3'));
-}
-
-export async function downloadAdminVideo(videoId: string, filename: string): Promise<void> {
-  const params = new URLSearchParams({ title: filename });
-  const res = await apiFetch(
-    `/v1/admin/youtube/videos/${encodeURIComponent(videoId)}/video/download?${params}`,
-  );
-  if (!res.ok) throw new Error(await readError(res));
-  triggerBrowserDownload(await res.blob(), safeFilename(filename, 'mp4'));
+  return parseJson<AdminNasSaveResult>(res);
 }

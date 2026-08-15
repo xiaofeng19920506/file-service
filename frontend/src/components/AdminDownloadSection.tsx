@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { downloadAdminAudio, downloadAdminVideo } from '../api/admin-downloads';
+import { saveAdminAudioToNas, saveAdminVideoToNas } from '../api/admin-downloads';
 import { friendlyError } from '../lib/error-messages';
 import { normalizeYoutubeVideoId } from '../lib/youtube-video-id';
 import { useI18n } from '../i18n';
@@ -25,12 +25,11 @@ export default function AdminDownloadSection() {
     setError(null);
     setStatus(kind === 'mp3' ? t('admin.downloadPreparing') : t('admin.downloadPreparingVideo'));
     try {
-      if (kind === 'mp3') {
-        await downloadAdminAudio(videoId, videoId);
-      } else {
-        await downloadAdminVideo(videoId, videoId);
-      }
-      setStatus(t('admin.downloadReady'));
+      const saved =
+        kind === 'mp3'
+          ? await saveAdminAudioToNas(videoId, videoId)
+          : await saveAdminVideoToNas(videoId, videoId);
+      setStatus(t('admin.downloadSavedToNas', { path: saved.nasPath }));
     } catch (err) {
       setStatus(null);
       setError(friendlyError(err instanceof Error ? err.message : 'download_failed', t));
