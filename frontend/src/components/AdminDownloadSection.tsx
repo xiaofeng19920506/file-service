@@ -41,7 +41,7 @@ function jobStatusText(
 export default function AdminDownloadSection() {
   const { t } = useI18n();
   const [input, setInput] = useState('');
-  const [folder, setFolder] = useState<AdminMediaFolderId>('videos');
+  const [folder, setFolder] = useState<AdminMediaFolderId>('shortdrama');
   const [series, setSeries] = useState('');
   const [jobs, setJobs] = useState<AdminDownloadJob[]>([]);
   const [error, setError] = useState<string | null>(null);

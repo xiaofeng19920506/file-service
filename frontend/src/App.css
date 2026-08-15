@@ -1017,20 +1017,23 @@
 }
 
 .admin-download-folder-list {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.45rem;
 }
 
 .admin-download-folder-option {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.35rem;
-  padding: 0.4rem 0.7rem;
-  border-radius: 999px;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 10px;
   border: 1px solid var(--border-light);
   background: var(--surface-secondary, transparent);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
+  font-weight: 600;
   cursor: pointer;
 }
 
