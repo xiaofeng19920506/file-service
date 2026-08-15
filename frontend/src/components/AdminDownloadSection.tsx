@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   listAdminDownloadJobs,
+  retryAdminDownloadJob,
   startAdminAudioJob,
   startAdminVideoJob,
   type AdminDownloadJob,
@@ -46,7 +47,12 @@ export default function AdminDownloadSection() {
   const [jobs, setJobs] = useState<AdminDownloadJob[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState<'mp3' | 'mp4' | null>(null);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [jobTab, setJobTab] = useState<'active' | 'done'>('active');
 
+  const activeJobs = jobs.filter((job) => job.status !== 'done');
+  const doneJobs = jobs.filter((job) => job.status === 'done');
+  const visibleJobs = jobTab === 'active' ? activeJobs : doneJobs;
   const activeCount = jobs.filter((job) => job.status === 'queued' || job.status === 'running').length;
 
   useEffect(() => {
@@ -84,10 +90,25 @@ export default function AdminDownloadSection() {
           ? await startAdminAudioJob(videoId, videoId)
           : await startAdminVideoJob(videoId, videoId, folder, series);
       setJobs((prev) => [job, ...prev.filter((row) => row.jobId !== job.jobId)]);
+      setJobTab('active');
     } catch (err) {
       setError(friendlyError(err instanceof Error ? err.message : 'download_failed', t));
     } finally {
       setStarting(null);
+    }
+  };
+
+  const retryJob = async (job: AdminDownloadJob) => {
+    setRetryingId(job.jobId);
+    setError(null);
+    try {
+      const next = await retryAdminDownloadJob(job.jobId);
+      setJobs((prev) => [next, ...prev.filter((row) => row.jobId !== next.jobId)]);
+      setJobTab('active');
+    } catch (err) {
+      setError(friendlyError(err instanceof Error ? err.message : 'download_failed', t));
+    } finally {
+      setRetryingId(null);
     }
   };
 
@@ -156,32 +177,70 @@ export default function AdminDownloadSection() {
       </div>
       <p className="admin-download-hint">{t('admin.downloadParallelHint')}</p>
       {error && <p className="error-msg">{error}</p>}
-      {jobs.length > 0 && (
+      <div className="admin-download-jobs-panel">
+        <div className="admin-download-job-tabs page-tabs" role="tablist" aria-label={t('admin.downloadTitle')}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={jobTab === 'active'}
+            className={`page-tab${jobTab === 'active' ? ' active' : ''}`}
+            onClick={() => setJobTab('active')}
+          >
+            {t('admin.downloadJobsActive', { count: activeJobs.length })}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={jobTab === 'done'}
+            className={`page-tab${jobTab === 'done' ? ' active' : ''}`}
+            onClick={() => setJobTab('done')}
+          >
+            {t('admin.downloadJobsDone', { count: doneJobs.length })}
+          </button>
+        </div>
         <ul className="admin-download-jobs">
-          {jobs.map((job) => (
-            <li key={job.jobId} className={`admin-download-job is-${job.status}`}>
-              <div className="admin-download-job-head">
-                <strong>
-                  {job.kind === 'mp3' ? t('admin.downloadMp3') : t('admin.downloadMp4')}
-                  {job.folderLabel ? ` · ${job.folderLabel}` : ''}
-                </strong>
-                <span>{job.videoId}</span>
-              </div>
-              <div className="admin-download-progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(job.percent)}>
-                <div
-                  className="admin-download-progress-bar"
-                  style={{ width: `${job.status === 'queued' ? 0 : Math.max(2, job.percent)}%` }}
-                />
-              </div>
-              <p className="admin-download-job-status">
-                {job.status === 'failed'
-                  ? friendlyError(job.error || 'download_failed', t)
-                  : jobStatusText(job, t)}
-              </p>
+          {visibleJobs.length === 0 ? (
+            <li className="admin-download-jobs-empty">
+              {jobTab === 'active' ? t('admin.downloadJobsEmptyActive') : t('admin.downloadJobsEmptyDone')}
             </li>
-          ))}
+          ) : (
+            visibleJobs.map((job) => (
+              <li key={job.jobId} className={`admin-download-job is-${job.status}`}>
+                <div className="admin-download-job-head">
+                  <strong>
+                    {job.kind === 'mp3' ? t('admin.downloadMp3') : t('admin.downloadMp4')}
+                    {job.folderLabel ? ` · ${job.folderLabel}` : ''}
+                  </strong>
+                  <span>{job.videoId}</span>
+                </div>
+                <div className="admin-download-progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(job.percent)}>
+                  <div
+                    className="admin-download-progress-bar"
+                    style={{ width: `${job.status === 'queued' ? 0 : Math.max(2, job.percent)}%` }}
+                  />
+                </div>
+                <div className="admin-download-job-foot">
+                  <p className="admin-download-job-status">
+                    {job.status === 'failed'
+                      ? friendlyError(job.error || 'download_failed', t)
+                      : jobStatusText(job, t)}
+                  </p>
+                  {job.status === 'failed' && (
+                    <button
+                      type="button"
+                      className="btn-sm admin-download-retry"
+                      disabled={retryingId === job.jobId}
+                      onClick={() => void retryJob(job)}
+                    >
+                      {retryingId === job.jobId ? t('admin.downloadRetrying') : t('admin.downloadRetry')}
+                    </button>
+                  )}
+                </div>
+              </li>
+            ))
+          )}
         </ul>
-      )}
+      </div>
     </section>
   );
 }

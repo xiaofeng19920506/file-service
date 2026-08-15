@@ -47,6 +47,14 @@ export async function startAdminAudioJob(videoId: string, title: string): Promis
   return parseJson<AdminDownloadJob>(res);
 }
 
+export async function retryAdminDownloadJob(jobId: string): Promise<AdminDownloadJob> {
+  const res = await apiFetch(`/v1/admin/downloads/jobs/${encodeURIComponent(jobId)}/retry`, {
+    method: 'POST',
+  });
+  if (!res.ok && res.status !== 202) throw new Error(await readError(res));
+  return parseJson<AdminDownloadJob>(res);
+}
+
 export async function startAdminVideoJob(
   videoId: string,
   title: string,

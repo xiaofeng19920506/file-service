@@ -1058,13 +1058,39 @@
   color: var(--text-tertiary);
 }
 
+.admin-download-jobs-panel {
+  margin-top: 0.9rem;
+}
+
+.admin-download-job-tabs {
+  width: fit-content;
+  max-width: 100%;
+}
+
 .admin-download-jobs {
   list-style: none;
-  margin: 0.9rem 0 0;
-  padding: 0;
+  margin: 0.55rem 0 0;
+  padding: 0.15rem 0.2rem 0.2rem 0;
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
+  height: 18rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-download-jobs-empty {
+  margin: 0;
+  padding: 1.25rem 0.75rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+  list-style: none;
+}
+
+.admin-download-jobs:has(.admin-download-jobs-empty) {
+  justify-content: center;
 }
 
 .admin-download-job {
@@ -1102,14 +1128,28 @@
   background: #dc2626;
 }
 
+.admin-download-job-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  margin-top: 0.4rem;
+}
+
 .admin-download-job-status {
-  margin: 0.4rem 0 0;
+  margin: 0;
   font-size: 0.8rem;
   color: var(--text-secondary);
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-download-retry {
+  flex-shrink: 0;
 }
 
 .admin-users-section {
-  margin-top: 0.5rem;
+  margin-top: 0;
 }
 
 .admin-user-list {

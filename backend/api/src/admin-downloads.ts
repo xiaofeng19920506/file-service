@@ -262,8 +262,27 @@ function createJobRunner(deps: {
     return publicJob(job);
   };
 
+  const retry = (jobId: string): { job?: AdminDownloadJob; error?: string } => {
+    prune();
+    const job = jobs.get(jobId);
+    if (!job) return { error: 'not_found' };
+    if (job.status === 'queued' || job.status === 'running') return { job: publicJob(job) };
+    if (job.status !== 'failed') return { error: 'retry_not_allowed' };
+    job.status = 'queued';
+    job.percent = 0;
+    job.stage = 'queued';
+    job.error = undefined;
+    job.nasPath = undefined;
+    job.filename = undefined;
+    job.createdAt = Date.now();
+    waitQueue.push(job.jobId);
+    pump();
+    return { job: publicJob(job) };
+  };
+
   return {
     enqueue,
+    retry,
     listJobs,
     getJob: (jobId: string) => {
       const job = jobs.get(jobId);
@@ -287,6 +306,13 @@ export function registerAdminDownloadRoutes(
     const job = runner.getJob(request.params.jobId);
     if (!job) return reply.code(404).send({ error: 'not_found' });
     return job;
+  });
+
+  app.post<{ Params: { jobId: string } }>('/v1/admin/downloads/jobs/:jobId/retry', async (request, reply) => {
+    const result = runner.retry(request.params.jobId);
+    if (result.error === 'not_found') return reply.code(404).send({ error: 'not_found' });
+    if (result.error) return reply.code(400).send({ error: result.error });
+    return reply.code(202).send(result.job);
   });
 
   app.post<{ Params: { videoId: string }; Body: { title?: string } }>(
