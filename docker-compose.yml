@@ -17,8 +17,6 @@ services:
       timeout: 5s
       retries: 30
       start_period: 40s
-    ports:
-      - '127.0.0.1:5432:5432'
 
   redis:
     image: redis:7-alpine
@@ -58,8 +56,6 @@ services:
     depends_on:
       - postgres
       - redis
-    ports:
-      - '127.0.0.1:3000:3000'
 
   worker:
     image: file-service-worker:local
