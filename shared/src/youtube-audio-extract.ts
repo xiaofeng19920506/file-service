@@ -156,13 +156,23 @@ export async function extractYoutubeVideoMp4(
   const outputTemplate = join(workDir, 'video.%(ext)s');
   const titleFile = join(workDir, 'title.txt');
   const url = `https://www.youtube.com/watch?v=${videoId}`;
-  const formatAttempts = ['bv*[height<=1080]+ba/b[height<=1080]/bv*+ba/b', 'b/best'];
+  const formatAttempts = [
+    'bv*[height<=1080]+ba/b[height<=1080]/bv*+ba/b',
+    'b/best',
+    '18/22/best[height<=720]/best',
+  ];
 
   await withYtdlpPlayerClientFallback(async (playerClient) => {
     let lastError: unknown;
     for (const format of formatAttempts) {
       try {
         await unlink(titleFile).catch(() => undefined);
+        const leftover = await readdir(workDir).catch(() => [] as string[]);
+        await Promise.all(
+          leftover
+            .filter((name) => name.startsWith('video.'))
+            .map((name) => unlink(join(workDir, name)).catch(() => undefined)),
+        );
         onProgress?.({ percent: 1, stage: 'starting' });
         await runYtdlpSpawn(
           ytdlpPath,

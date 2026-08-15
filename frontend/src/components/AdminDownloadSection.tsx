@@ -220,11 +220,16 @@ export default function AdminDownloadSection() {
                   />
                 </div>
                 <div className="admin-download-job-foot">
-                  <p className="admin-download-job-status">
-                    {job.status === 'failed'
-                      ? friendlyError(job.error || 'download_failed', t)
-                      : jobStatusText(job, t)}
-                  </p>
+                  <div className="admin-download-job-status-wrap">
+                    <p className="admin-download-job-status">
+                      {job.status === 'failed'
+                        ? friendlyError(job.error || 'download_failed', t)
+                        : jobStatusText(job, t)}
+                    </p>
+                    {job.status === 'failed' && job.errorDetail ? (
+                      <p className="admin-download-job-detail">{job.errorDetail}</p>
+                    ) : null}
+                  </div>
                   {job.status === 'failed' && (
                     <button
                       type="button"

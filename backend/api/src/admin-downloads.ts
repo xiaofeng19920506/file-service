@@ -41,6 +41,7 @@ export type AdminDownloadJob = {
   nasPath?: string;
   filename?: string;
   error?: string;
+  errorDetail?: string;
   createdAt: number;
 };
 
@@ -172,7 +173,9 @@ function createJobRunner(deps: {
     const folder = adminMediaFolderById(folderId);
     job.stage = 'starting';
     job.percent = 1;
-    const tmpDir = await mkdtemp(join(tmpdir(), 'yt-video-'));
+    const tmpRoot = join(adminDownloadRoot(env), 'tmp');
+    await mkdir(tmpRoot, { recursive: true });
+    const tmpDir = await mkdtemp(join(tmpRoot, 'yt-video-'));
     try {
       const extracted = await extractYoutubeVideoMp4(
         job.videoId,
@@ -225,6 +228,7 @@ function createJobRunner(deps: {
             message,
             job.kind === 'mp3' ? 'audio_extract_failed' : 'video_extract_failed',
           );
+          job.errorDetail = message.replace(/\s+/g, ' ').trim().slice(-280);
         } finally {
           running -= 1;
           pump();
@@ -272,6 +276,7 @@ function createJobRunner(deps: {
     job.percent = 0;
     job.stage = 'queued';
     job.error = undefined;
+    job.errorDetail = undefined;
     job.nasPath = undefined;
     job.filename = undefined;
     job.createdAt = Date.now();

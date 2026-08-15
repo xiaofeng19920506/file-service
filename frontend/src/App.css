@@ -1140,8 +1140,19 @@
   margin: 0;
   font-size: 0.8rem;
   color: var(--text-secondary);
+}
+
+.admin-download-job-status-wrap {
   flex: 1;
   min-width: 0;
+}
+
+.admin-download-job-detail {
+  margin: 0.2rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--text-tertiary);
+  word-break: break-word;
 }
 
 .admin-download-retry {

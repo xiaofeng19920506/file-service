@@ -19,6 +19,7 @@ export type AdminDownloadJob = {
   nasPath?: string;
   filename?: string;
   error?: string;
+  errorDetail?: string;
   createdAt: number;
 };
 

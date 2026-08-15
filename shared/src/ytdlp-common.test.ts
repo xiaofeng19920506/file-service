@@ -10,6 +10,10 @@ describe('isRetryableYtdlpError', () => {
     expect(isRetryableYtdlpError('HTTP Error 403: Forbidden')).toBe(true);
   });
 
+  it('retries when the requested format is missing', () => {
+    expect(isRetryableYtdlpError('Requested format is not available')).toBe(true);
+  });
+
   it('ignores generic failures', () => {
     expect(isRetryableYtdlpError('video_extract_failed')).toBe(false);
   });
@@ -27,5 +31,6 @@ describe('ytdlpSharedArgs', () => {
   it('includes retry flags', () => {
     expect(ytdlpSharedArgs('android,web')).toContain('--retries');
     expect(ytdlpSharedArgs('android,web').join(' ')).toContain('player_client=android,web');
+    expect(ytdlpSharedArgs('android,web')).toContain('--js-runtimes');
   });
 });

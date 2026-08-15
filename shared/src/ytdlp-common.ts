@@ -14,7 +14,7 @@ export function ytdlpProcessEnv(): NodeJS.ProcessEnv {
 }
 
 export function isRetryableYtdlpError(message: string): boolean {
-  return /403|429|forbidden|too many requests|sign in to confirm|video unavailable/i.test(
+  return /403|429|forbidden|too many requests|sign in to confirm|video unavailable|requested format is not available|nsig|sabr|signature extraction|no video formats|http error 400|unable to download webpage|this video is not available|only images are available/i.test(
     message,
   );
 }
@@ -41,6 +41,9 @@ export function ytdlpReliabilityArgs(): string[] {
     '30',
     '--sleep-requests',
     sleepSec,
+    '--js-runtimes',
+    'node',
+    '--force-overwrites',
   ];
 }
 
@@ -97,6 +100,11 @@ export function classifyYtdlpError(
 ): string {
   if (/403|forbidden/i.test(message)) return 'youtube_download_forbidden';
   if (/429|too many requests/i.test(message)) return 'youtube_rate_limited';
+  if (/ENOSPC|no space left/i.test(message)) return 'download_disk_full';
+  if (/nsig|signature extraction/i.test(message)) return 'youtube_signature_failed';
+  if (/requested format is not available|no video formats|only images are available/i.test(message)) {
+    return 'youtube_format_unavailable';
+  }
   if (message === 'invalid_video_id') return 'invalid_video_id';
   if (message === 'video_extract_timeout') return 'video_extract_timeout';
   if (message.includes('ffmpeg') || message.includes('ffprobe')) return 'ffmpeg_not_installed';
