@@ -32,6 +32,14 @@ const apiFs = z.object({
     .positive()
     .default(USER_SESSION_TTL_60_YEARS_SECONDS),
   ADMIN_EMAILS: z.string().optional(),
+  BOOTSTRAP_ADMIN_EMAIL: z.preprocess(
+    (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    z.string().email().optional(),
+  ),
+  BOOTSTRAP_ADMIN_PASSWORD: z.preprocess(
+    (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    z.string().min(8).optional(),
+  ),
   YOUTUBE_API_KEY: z.string().min(10).optional(),
   GOOGLE_OAUTH_CLIENT_ID: z.string().min(10).optional(),
   GOOGLE_OAUTH_CLIENT_SECRET: z.string().min(10).optional(),
@@ -79,6 +87,14 @@ const apiS3 = z.object({
     .positive()
     .default(USER_SESSION_TTL_60_YEARS_SECONDS),
   ADMIN_EMAILS: z.string().optional(),
+  BOOTSTRAP_ADMIN_EMAIL: z.preprocess(
+    (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    z.string().email().optional(),
+  ),
+  BOOTSTRAP_ADMIN_PASSWORD: z.preprocess(
+    (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    z.string().min(8).optional(),
+  ),
   YOUTUBE_API_KEY: z.string().min(10).optional(),
   GOOGLE_OAUTH_CLIENT_ID: z.string().min(10).optional(),
   GOOGLE_OAUTH_CLIENT_SECRET: z.string().min(10).optional(),

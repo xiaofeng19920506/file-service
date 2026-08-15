@@ -19,12 +19,6 @@ export async function registerUser(input: {
   firstName: string;
   lastName: string;
   phone: string;
-  addressLine1: string;
-  addressLine2?: string;
-  city: string;
-  stateProvince: string;
-  postalCode: string;
-  country?: string;
 }): Promise<AuthSession> {
   const res = await apiFetch('/v1/auth/register', {
     method: 'POST',

@@ -54,10 +54,6 @@ export function isValidPostalCode(code: string): boolean {
 export function validateUserContact(input: UserContactInput): string | null {
   const contact = normalizeUserContact(input);
   if (!isValidPhone(contact.phone)) return 'invalid_phone';
-  if (!isValidAddressLine(contact.addressLine1)) return 'invalid_address';
-  if (!isValidCity(contact.city)) return 'invalid_city';
-  if (!isValidStateProvince(contact.stateProvince)) return 'invalid_state_province';
-  if (!isValidPostalCode(contact.postalCode)) return 'invalid_postal_code';
   return null;
 }
 

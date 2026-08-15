@@ -12,8 +12,11 @@ COPY backend/api backend/api
 RUN npm run build -w @file-service/shared && npm run build -w @file-service/api
 
 FROM node:22-bookworm-slim
+COPY docker/install-media.sh /tmp/install-media.sh
+RUN sed -i 's/\r$//' /tmp/install-media.sh && chmod +x /tmp/install-media.sh && /tmp/install-media.sh
 WORKDIR /app
 ENV NODE_ENV=production
+ENV YT_DLP_PATH=/usr/local/bin/yt-dlp
 COPY package.json package-lock.json ./
 COPY shared/package.json shared/
 COPY backend/api/package.json backend/api/

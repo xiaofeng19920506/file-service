@@ -51,6 +51,9 @@ services:
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://api.youtvs.com}
       DOWNLOAD_HMAC_SECRET: ${DOWNLOAD_HMAC_SECRET:-replace-with-at-least-16-chars}
       EXPORT_RETENTION_DAYS: ${EXPORT_RETENTION_DAYS:-7}
+      YT_DLP_PATH: /usr/local/bin/yt-dlp
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
     volumes:
       - ${NAS_DATA_DIR:-./data}/storage:/data/storage
     depends_on:
@@ -71,7 +74,7 @@ services:
       LOCAL_STORAGE_DIR: /data/storage
       DATABASE_URL: postgresql://fileservice:${POSTGRES_PASSWORD:-fileservice}@postgres:5432/fileservice
       REDIS_URL: redis://redis:6379
-      YT_DLP_PATH: yt-dlp
+      YT_DLP_PATH: /usr/local/bin/yt-dlp
       EXPORT_RETENTION_DAYS: ${EXPORT_RETENTION_DAYS:-7}
     volumes:
       - ${NAS_DATA_DIR:-./data}/storage:/data/storage

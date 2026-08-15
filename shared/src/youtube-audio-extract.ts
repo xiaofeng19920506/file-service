@@ -12,14 +12,20 @@ import {
 const execFileAsync = promisify(execFile);
 
 export function resolveYtdlpPath(configured = 'yt-dlp'): string {
-  for (const candidate of [
+  const candidates = [
     configured,
-    '/opt/homebrew/bin/yt-dlp',
     '/usr/local/bin/yt-dlp',
-  ]) {
-    if (candidate.includes('/') && existsSync(candidate)) return candidate;
+    '/usr/bin/yt-dlp',
+    '/opt/homebrew/bin/yt-dlp',
+  ];
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    if (candidate.includes('/') || candidate.startsWith('.')) {
+      if (existsSync(candidate)) return candidate;
+      continue;
+    }
   }
-  return configured;
+  return 'yt-dlp';
 }
 
 const YOUTUBE_VIDEO_ID_RE = /^[a-zA-Z0-9_-]{11}$/;

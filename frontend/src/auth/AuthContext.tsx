@@ -25,12 +25,6 @@ type AuthContextValue = {
     firstName: string;
     lastName: string;
     phone: string;
-    addressLine1: string;
-    addressLine2?: string;
-    city: string;
-    stateProvince: string;
-    postalCode: string;
-    country?: string;
   }) => Promise<void>;
   logout: () => void;
   refreshSession: () => Promise<void>;
@@ -109,12 +103,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       firstName: string;
       lastName: string;
       phone: string;
-      addressLine1: string;
-      addressLine2?: string;
-      city: string;
-      stateProvince: string;
-      postalCode: string;
-      country?: string;
     }) => {
       const session = await registerUser(input);
       setUser(session.user);

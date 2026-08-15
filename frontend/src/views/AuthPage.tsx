@@ -9,20 +9,8 @@ function isRegisterNameValid(firstName: string, lastName: string): boolean {
   return firstName.trim().length >= 1 && lastName.trim().length >= 1;
 }
 
-function isRegisterContactValid(input: {
-  phone: string;
-  addressLine1: string;
-  city: string;
-  stateProvince: string;
-  postalCode: string;
-}): boolean {
-  return (
-    input.phone.replace(/\D/g, '').length >= 7 &&
-    input.addressLine1.trim().length >= 3 &&
-    input.city.trim().length >= 2 &&
-    input.stateProvince.trim().length >= 2 &&
-    input.postalCode.trim().length >= 3
-  );
+function isRegisterContactValid(phone: string): boolean {
+  return phone.replace(/\D/g, '').length >= 7;
 }
 
 export default function AuthPage() {
@@ -34,12 +22,6 @@ export default function AuthPage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
-  const [addressLine1, setAddressLine1] = useState('');
-  const [addressLine2, setAddressLine2] = useState('');
-  const [city, setCity] = useState('');
-  const [stateProvince, setStateProvince] = useState('');
-  const [postalCode, setPostalCode] = useState('');
-  const [country, setCountry] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -57,12 +39,6 @@ export default function AuthPage() {
           firstName: firstName.trim(),
           lastName: lastName.trim(),
           phone: phone.trim(),
-          addressLine1: addressLine1.trim(),
-          addressLine2: addressLine2.trim(),
-          city: city.trim(),
-          stateProvince: stateProvince.trim(),
-          postalCode: postalCode.trim(),
-          country: country.trim(),
         });
       }
     } catch (err) {
@@ -73,8 +49,7 @@ export default function AuthPage() {
   };
 
   const registerValid =
-    isRegisterNameValid(firstName, lastName) &&
-    isRegisterContactValid({ phone, addressLine1, city, stateProvince, postalCode });
+    isRegisterNameValid(firstName, lastName) && isRegisterContactValid(phone);
 
   return (
     <div className="auth-page">
@@ -150,74 +125,6 @@ export default function AuthPage() {
                   required
                 />
               </label>
-              <label className="metadata-field">
-                <span>{t('auth.addressLine1')}</span>
-                <input
-                  type="text"
-                  value={addressLine1}
-                  onChange={(e) => setAddressLine1(e.target.value)}
-                  autoComplete="address-line1"
-                  placeholder={t('auth.addressLine1Placeholder')}
-                  required
-                />
-              </label>
-              <label className="metadata-field">
-                <span>{t('auth.addressLine2')}</span>
-                <input
-                  type="text"
-                  value={addressLine2}
-                  onChange={(e) => setAddressLine2(e.target.value)}
-                  autoComplete="address-line2"
-                  placeholder={t('auth.addressLine2Placeholder')}
-                />
-              </label>
-              <div className="auth-name-row">
-                <label className="metadata-field">
-                  <span>{t('auth.city')}</span>
-                  <input
-                    type="text"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    autoComplete="address-level2"
-                    placeholder={t('auth.cityPlaceholder')}
-                    required
-                  />
-                </label>
-                <label className="metadata-field">
-                  <span>{t('auth.stateProvince')}</span>
-                  <input
-                    type="text"
-                    value={stateProvince}
-                    onChange={(e) => setStateProvince(e.target.value)}
-                    autoComplete="address-level1"
-                    placeholder={t('auth.stateProvincePlaceholder')}
-                    required
-                  />
-                </label>
-              </div>
-              <div className="auth-name-row">
-                <label className="metadata-field">
-                  <span>{t('auth.postalCode')}</span>
-                  <input
-                    type="text"
-                    value={postalCode}
-                    onChange={(e) => setPostalCode(e.target.value)}
-                    autoComplete="postal-code"
-                    placeholder={t('auth.postalCodePlaceholder')}
-                    required
-                  />
-                </label>
-                <label className="metadata-field">
-                  <span>{t('auth.country')}</span>
-                  <input
-                    type="text"
-                    value={country}
-                    onChange={(e) => setCountry(e.target.value)}
-                    autoComplete="country-name"
-                    placeholder={t('auth.countryPlaceholder')}
-                  />
-                </label>
-              </div>
             </>
           )}
           <label className="metadata-field">

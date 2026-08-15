@@ -20,6 +20,7 @@ import { registerRateLimiting } from './rate-limit.js';
 import { registerHealthRoutes } from './health.js';
 import { registerOpenApi } from './openapi.js';
 import { registerAuthRoutes } from './auth.js';
+import { ensureBootstrapAdmin } from './bootstrap-admin.js';
 import { registerAdminUserRoutes } from './admin-users.js';
 import { registerPlaylistRoutes } from './playlists.js';
 import { registerYoutubeCaptionRoutes } from './youtube-captions.js';
@@ -36,6 +37,7 @@ async function buildApp() {
   }
 
   const db = createDb(env.DATABASE_URL);
+  await ensureBootstrapAdmin(db, env);
   const storage = createObjectStorage(env);
   await storage.ensureReady();
 
