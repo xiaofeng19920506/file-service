@@ -33,6 +33,7 @@ services:
 
   api:
     image: file-service-api:yt-dlp1
+    pull_policy: never
     build:
       context: .
       dockerfile: docker/Dockerfile.api
@@ -62,6 +63,7 @@ services:
 
   worker:
     image: file-service-worker:yt-dlp1
+    pull_policy: never
     build:
       context: .
       dockerfile: docker/Dockerfile.worker
@@ -85,6 +87,7 @@ services:
 
   web:
     image: file-service-web:reg1
+    pull_policy: never
     build:
       context: .
       dockerfile: docker/Dockerfile.web
