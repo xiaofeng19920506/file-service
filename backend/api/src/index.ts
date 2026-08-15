@@ -22,6 +22,7 @@ import { registerOpenApi } from './openapi.js';
 import { registerAuthRoutes } from './auth.js';
 import { ensureBootstrapAdmin } from './bootstrap-admin.js';
 import { registerAdminUserRoutes } from './admin-users.js';
+import { registerAdminDownloadRoutes } from './admin-downloads.js';
 import { registerPlaylistRoutes } from './playlists.js';
 import { registerYoutubeCaptionRoutes } from './youtube-captions.js';
 import { registerYoutubeAudioRoutes } from './youtube-audio.js';
@@ -74,6 +75,7 @@ async function buildApp() {
   const apiKeyConfig = loadApiKeyConfig(env.API_KEY);
   registerAuthRoutes(app, { db, env, apiKeyConfig });
   registerAdminUserRoutes(app, { db });
+  registerAdminDownloadRoutes(app, { db, env, storage, audioQueue });
   registerPlaylistRoutes(app, { db, env, audioQueue });
   registerYoutubeCaptionRoutes(app, { db, lyricsQueue });
   registerYoutubeAudioRoutes(app, { db, env, storage, audioQueue });

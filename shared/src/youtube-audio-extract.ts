@@ -72,6 +72,43 @@ export async function extractYoutubeAudioMp3(
   return join(workDir, mp3);
 }
 
+export async function extractYoutubeVideoMp4(
+  videoId: string,
+  workDir: string,
+  ytdlpPath = 'yt-dlp',
+): Promise<string> {
+  if (!isValidYoutubeVideoId(videoId)) {
+    throw new Error('invalid_video_id');
+  }
+
+  const outputTemplate = join(workDir, 'video.%(ext)s');
+  await withYtdlpPlayerClientFallback((playerClient) =>
+    execFileAsync(
+      resolveYtdlpPath(ytdlpPath),
+      [
+        '-f',
+        'bv*+ba/b',
+        '--merge-output-format',
+        'mp4',
+        '-o',
+        outputTemplate,
+        ...ytdlpSharedArgs(playerClient),
+        `https://www.youtube.com/watch?v=${videoId}`,
+      ],
+      {
+        timeout: 600_000,
+        maxBuffer: 4 * 1024 * 1024,
+        env: ytdlpProcessEnv(),
+      },
+    ),
+  );
+
+  const files = await readdir(workDir);
+  const mp4 = files.find((name) => name.endsWith('.mp4'));
+  if (!mp4) throw new Error('video_extract_failed');
+  return join(workDir, mp4);
+}
+
 /** 将 YouTube 音频流式输出到 stdout，供即时播放（不等待完整 MP3 缓存） */
 export function spawnYoutubeAudioPreviewStream(
   videoId: string,

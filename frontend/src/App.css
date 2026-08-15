@@ -972,6 +972,44 @@
   margin-bottom: 1.25rem;
 }
 
+.admin-download-section {
+  margin: 0 0 1.5rem;
+  padding: 1rem 1.1rem 1.15rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+  background: var(--surface);
+}
+
+.admin-download-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+}
+
+.admin-download-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.85rem;
+}
+
+.admin-download-field input {
+  width: 100%;
+}
+
+.admin-download-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.admin-download-status {
+  margin: 0.75rem 0 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
 .admin-users-section {
   margin-top: 0.5rem;
 }

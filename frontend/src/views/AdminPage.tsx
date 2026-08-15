@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useAppPage } from '../hooks/useAppPage';
+import AdminDownloadSection from '../components/AdminDownloadSection';
 import AdminUserSection from '../components/AdminUserSection';
 import { useAuth } from '../auth/AuthContext';
 import { homePageForPermissions } from '../lib/permissions';
@@ -21,6 +22,7 @@ export default function AdminPage() {
       <div className="admin-toolbar">
         <h1>{t('admin.title')}</h1>
       </div>
+      <AdminDownloadSection />
       <AdminUserSection />
     </main>
   );

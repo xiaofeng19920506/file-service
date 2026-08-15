@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   accessDeniedErrorCode,
   canAccessPlaylists,
+  canDownload,
   canEdit,
   isUnauthenticatedAccessAllowed,
   normalizeUserRole,
@@ -39,6 +40,21 @@ describe('resolvePathAccessLevel', () => {
     expect(resolvePathAccessLevel('GET', '/v1/admin/users')).toBe('admin');
   });
 
+  it('marks admin youtube downloads as admin', () => {
+    expect(
+      resolvePathAccessLevel('POST', '/v1/admin/youtube/videos/dQw4w9WgXcQ/audio/download'),
+    ).toBe('admin');
+    expect(
+      resolvePathAccessLevel('GET', '/v1/admin/youtube/videos/dQw4w9WgXcQ/audio/download'),
+    ).toBe('admin');
+    expect(
+      resolvePathAccessLevel('POST', '/v1/admin/youtube/videos/dQw4w9WgXcQ/video/download'),
+    ).toBe('admin');
+    expect(
+      resolvePathAccessLevel('GET', '/v1/admin/youtube/videos/dQw4w9WgXcQ/video/download'),
+    ).toBe('admin');
+  });
+
   it('defaults unknown /v1 to user', () => {
     expect(resolvePathAccessLevel('GET', '/v1/unknown')).toBe('user');
   });
@@ -67,6 +83,12 @@ describe('capability helpers', () => {
   it('edit only for admin', () => {
     expect(canEdit('admin')).toBe(true);
     expect(canEdit('user')).toBe(false);
+  });
+
+  it('download only for admin', () => {
+    expect(canDownload('admin')).toBe(true);
+    expect(canDownload('user')).toBe(false);
+    expect(canDownload(null)).toBe(false);
   });
 });
 

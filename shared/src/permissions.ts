@@ -45,9 +45,8 @@ export function canSearch(_role: UserRole | null): boolean {
   return false;
 }
 
-/** @deprecated */
-export function canDownload(_role: UserRole | null): boolean {
-  return false;
+export function canDownload(role: UserRole | null): boolean {
+  return role === 'admin';
 }
 
 /** @deprecated */
@@ -115,8 +114,16 @@ export function isAdminUserManagePath(method: string, path: string): boolean {
   return false;
 }
 
+export function isAdminYoutubeDownloadPath(method: string, path: string): boolean {
+  if (method !== 'GET' && method !== 'POST') return false;
+  return (
+    /^\/v1\/admin\/youtube\/videos\/[^/]+\/audio\/download$/.test(path)
+    || /^\/v1\/admin\/youtube\/videos\/[^/]+\/video\/download$/.test(path)
+  );
+}
+
 export function isAdminOnlyPath(method: string, path: string): boolean {
-  return isAdminUserManagePath(method, path);
+  return isAdminUserManagePath(method, path) || isAdminYoutubeDownloadPath(method, path);
 }
 
 export function isYoutubeOAuthCallbackPath(method: string, path: string): boolean {

@@ -43,9 +43,8 @@ export function canSearch(_role: UserRole | null): boolean {
   return false;
 }
 
-/** @deprecated */
-export function canDownload(_role: UserRole | null): boolean {
-  return false;
+export function canDownload(role: UserRole | null): boolean {
+  return role === 'admin';
 }
 
 /** @deprecated */

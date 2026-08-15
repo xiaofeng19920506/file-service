@@ -65,10 +65,6 @@ const en: MessageTree = {
       admin: 'Admin',
     },
   },
-  
-  
-  
-  
   admin: {
     title: 'Admin',
     tabs: 'Admin sections',
@@ -104,6 +100,17 @@ const en: MessageTree = {
     deleteConfirm: 'Delete "{title}" from the library? This cannot be undone.',
     deleteSection: 'Delete entry',
     deleteHint: 'Permanently removes this song and its file from the library.',
+    downloadTitle: 'Download YouTube audio / video',
+    downloadIntro:
+      'Paste a YouTube URL or 11-character video ID. Songs use the cached MP3 when ready; videos are fetched as MP4 then downloaded.',
+    downloadUrlLabel: 'YouTube URL or video ID',
+    downloadUrlPlaceholder: 'https://www.youtube.com/watch?v=… or 11-character ID',
+    downloadMp3: 'Download song',
+    downloadMp4: 'Download video',
+    downloadPreparing: 'Preparing MP3…',
+    downloadPreparingVideo: 'Fetching video — this may take a few minutes…',
+    downloadReady: 'Download started',
+    downloadFailed: 'Download failed — try again later',
     usersIntro: 'Manage registered users — update names and role permissions.',
     usersLoading: 'Loading users…',
     usersEmpty: 'No registered users yet',
@@ -431,7 +438,7 @@ const en: MessageTree = {
     user_not_found: 'User not found',
     invalid_role: 'Invalid role',
     video_not_ready: 'Video is not cached yet — please wait',
-    video_extract_failed: 'Video caching failed — try again later',
+    video_extract_failed: 'Video extraction failed — try again later',
     video_playback_failed: 'Video playback failed — refresh and try again',
     youtube_download_forbidden: 'YouTube blocked the download (403). Set YT_DLP_COOKIES_FROM_BROWSER on the server and retry.',
     youtube_rate_limited: 'YouTube rate limit — try again later',
@@ -469,6 +476,8 @@ const en: MessageTree = {
     audio_not_ready: 'MP3 is not ready yet — please wait',
     audio_playback_failed: 'Cannot play in MP3 mode. Wait for caching or switch to Video mode.',
     audio_extract_failed: 'Failed to extract audio — try again later',
+    download_failed: 'Download failed — try again later',
+    download_timeout: 'Timed out waiting for the download — try again later',
     ytdlp_not_installed: 'yt-dlp is not installed on the server',
     ffmpeg_not_installed: 'ffmpeg is not installed on the server — cannot convert to MP3',
     email_not_configured: 'Email is not configured — ask an admin to set up SMTP',
