@@ -1,8 +1,5 @@
-# 飞牛 NAS：把整个项目目录拷到软件存储后，Compose 一键启动即可
-# 数据在 ./data（Postgres / Redis / MP3）
-# 外网：tunnel 容器 → frontend.youtvs.com、api.youtvs.com
-
-name: file-service
+# 飞牛 NAS：数据在 ./data（Postgres / Redis / MP3）
+# 外网：tunnel → frontend.youtvs.com、api.youtvs.com
 
 services:
   postgres:
@@ -12,17 +9,16 @@ services:
       POSTGRES_USER: fileservice
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fileservice}
       POSTGRES_DB: fileservice
-      PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - ${NAS_DATA_DIR:-./data}/postgres:/var/lib/postgresql/data
-      - ./shared/docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U fileservice -d fileservice']
+      test: ['CMD-SHELL', 'pg_isready -U fileservice']
       interval: 5s
       timeout: 5s
-      retries: 20
-    expose:
-      - '5432'
+      retries: 30
+      start_period: 40s
+    ports:
+      - '127.0.0.1:5432:5432'
 
   redis:
     image: redis:7-alpine
@@ -35,8 +31,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
-    expose:
-      - '6379'
+      start_period: 10s
 
   api:
     image: file-service-api:local
@@ -61,23 +56,10 @@ services:
     volumes:
       - ${NAS_DATA_DIR:-./data}/storage:/data/storage
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test:
-        [
-          'CMD',
-          'node',
-          '-e',
-          "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-    expose:
-      - '3000'
+      - postgres
+      - redis
+    ports:
+      - '127.0.0.1:3000:3000'
 
   worker:
     image: file-service-worker:local
@@ -98,10 +80,9 @@ services:
     volumes:
       - ${NAS_DATA_DIR:-./data}/storage:/data/storage
     depends_on:
-      api:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - postgres
+      - redis
+      - api
 
   web:
     image: file-service-web:local
@@ -115,19 +96,7 @@ services:
       PORT: '4000'
       BACKEND_URL: http://api:3000
     depends_on:
-      api:
-        condition: service_healthy
-    healthcheck:
-      test:
-        [
-          'CMD',
-          'node',
-          '-e',
-          "fetch('http://127.0.0.1:4000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 12
+      - api
     ports:
       - '${WEB_PORT:-4000}:4000'
 
@@ -136,5 +105,4 @@ services:
     restart: unless-stopped
     command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
     depends_on:
-      web:
-        condition: service_healthy
+      - web
