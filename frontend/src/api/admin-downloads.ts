@@ -4,11 +4,14 @@ import { apiFetch, parseJson } from './http';
 const AUDIO_POLL_MS = 1_500;
 const AUDIO_POLL_TIMEOUT_MS = 10 * 60_000;
 
+export type AdminMediaFolderId = 'movies' | 'tv' | 'videos' | 'anime' | 'variety';
+
 export type AdminNasSaveResult = {
   saved: true;
   kind: 'mp3' | 'mp4';
   filename: string;
   nasPath: string;
+  folder?: AdminMediaFolderId;
 };
 
 async function readError(res: Response): Promise<string> {
@@ -56,13 +59,14 @@ export async function saveAdminAudioToNas(
 export async function saveAdminVideoToNas(
   videoId: string,
   title: string,
+  folder: AdminMediaFolderId,
 ): Promise<AdminNasSaveResult> {
   const res = await apiFetch(
     `/v1/admin/youtube/videos/${encodeURIComponent(videoId)}/video/download`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title }),
+      body: JSON.stringify({ title, folder }),
     },
   );
   if (!res.ok) throw new Error(await readError(res));

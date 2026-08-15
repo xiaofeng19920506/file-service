@@ -11,6 +11,10 @@ function resolveRelativeStorageDir(envDir: string): void {
   if (downloadDir && !isAbsolute(downloadDir)) {
     process.env.ADMIN_DOWNLOAD_DIR = resolve(envDir, downloadDir);
   }
+  const mediaDir = process.env.ADMIN_NAS_MEDIA_DIR?.trim();
+  if (mediaDir && !isAbsolute(mediaDir)) {
+    process.env.ADMIN_NAS_MEDIA_DIR = resolve(envDir, mediaDir);
+  }
 }
 
 /** 从 cwd 向上查找 .env 并加载（不覆盖已有环境变量） */

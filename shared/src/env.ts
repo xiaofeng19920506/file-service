@@ -14,6 +14,10 @@ const apiFs = z.object({
     (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
     z.string().min(1).optional(),
   ),
+  ADMIN_NAS_MEDIA_DIR: z.preprocess(
+    (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    z.string().min(1).optional(),
+  ),
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().min(1),
   EXPORT_RETENTION_DAYS: retention,
@@ -70,6 +74,10 @@ const apiS3 = z.object({
   S3_SECRET_KEY: z.string().min(1),
   S3_BUCKET: z.string().min(1),
   ADMIN_DOWNLOAD_DIR: z.preprocess(
+    (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    z.string().min(1).optional(),
+  ),
+  ADMIN_NAS_MEDIA_DIR: z.preprocess(
     (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
     z.string().min(1).optional(),
   ),

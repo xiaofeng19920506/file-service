@@ -32,7 +32,7 @@ services:
       start_period: 10s
 
   api:
-    image: file-service-api:nasdl1
+    image: file-service-api:nasdl2
     pull_policy: never
     build:
       context: .
@@ -54,11 +54,13 @@ services:
       EXPORT_RETENTION_DAYS: ${EXPORT_RETENTION_DAYS:-7}
       YT_DLP_PATH: /usr/local/bin/yt-dlp
       ADMIN_DOWNLOAD_DIR: /data/downloads
+      ADMIN_NAS_MEDIA_DIR: /data/media
       BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
     volumes:
       - ${NAS_DATA_DIR:-./data}/storage:/data/storage
       - ${NAS_DATA_DIR:-./data}/downloads:/data/downloads
+      - ${ADMIN_NAS_MEDIA_HOST:-./data/downloads}:/data/media
     depends_on:
       - postgres
       - redis
@@ -88,7 +90,7 @@ services:
       - api
 
   web:
-    image: file-service-web:nasdl1
+    image: file-service-web:nasdl2
     pull_policy: never
     build:
       context: .

@@ -4,10 +4,12 @@ import { join } from 'node:path';
 import { eq } from 'drizzle-orm';
 import type { Queue } from 'bullmq';
 import {
+  adminMediaFolderById,
   blobs,
   ensureYoutubeAudioJobs,
   extractYoutubeVideoMp4,
   isValidYoutubeVideoId,
+  parseAdminMediaFolderId,
   serializeAudioCache,
   youtubeAudioCache,
   type ApiEnv,
@@ -30,8 +32,8 @@ function adminDownloadRoot(env: ApiEnv): string {
   return join(tmpdir(), 'file-service-downloads');
 }
 
-function nasDisplayPath(kind: 'Videos' | 'Music', filename: string): string {
-  return `data/downloads/${kind}/${filename}`;
+function adminMediaRoot(env: ApiEnv): string {
+  return env.ADMIN_NAS_MEDIA_DIR?.trim() || join(adminDownloadRoot(env), '影视');
 }
 
 export function registerAdminDownloadRoutes(
@@ -39,7 +41,8 @@ export function registerAdminDownloadRoutes(
   deps: { db: Db; env: ApiEnv; storage: ObjectStorage; audioQueue: Queue },
 ): void {
   const { db, env, storage, audioQueue } = deps;
-  const root = adminDownloadRoot(env);
+  const audioRoot = adminDownloadRoot(env);
+  const mediaRoot = adminMediaRoot(env);
 
   const saveAudioToNas = async (videoId: string, titleHint?: string) => {
     const [cache] = await db
@@ -54,7 +57,7 @@ export function registerAdminDownloadRoutes(
     if (!blob) throw new Error('not_found');
 
     const filename = `${safeBasename(titleHint || cache.title || blob.originalFilename, videoId)}.${videoId}.mp3`;
-    const dir = join(root, 'Music');
+    const dir = join(audioRoot, 'Music');
     await mkdir(dir, { recursive: true });
     const dest = join(dir, filename);
     await storage.copyToFile(blob.storageKey, dest);
@@ -62,7 +65,7 @@ export function registerAdminDownloadRoutes(
       saved: true as const,
       kind: 'mp3' as const,
       filename,
-      nasPath: nasDisplayPath('Music', filename),
+      nasPath: `data/downloads/Music/${filename}`,
     };
   };
 
@@ -95,13 +98,19 @@ export function registerAdminDownloadRoutes(
     },
   );
 
-  app.post<{ Params: { videoId: string }; Body: { title?: string } }>(
+  app.post<{ Params: { videoId: string }; Body: { title?: string; folder?: string } }>(
     '/v1/admin/youtube/videos/:videoId/video/download',
     async (request, reply) => {
       const videoId = request.params.videoId;
       if (!isValidYoutubeVideoId(videoId)) {
         return reply.code(400).send({ error: 'invalid_video_id' });
       }
+
+      const folderId = parseAdminMediaFolderId(request.body?.folder);
+      if (!folderId) {
+        return reply.code(400).send({ error: 'invalid_download_folder' });
+      }
+      const folder = adminMediaFolderById(folderId);
 
       request.raw.setTimeout(VIDEO_DOWNLOAD_TIMEOUT_MS);
       reply.raw.setTimeout(VIDEO_DOWNLOAD_TIMEOUT_MS);
@@ -111,7 +120,7 @@ export function registerAdminDownloadRoutes(
         tmpDir = await mkdtemp(join(tmpdir(), 'yt-video-'));
         const mp4Path = await extractYoutubeVideoMp4(videoId, tmpDir, env.YT_DLP_PATH);
         const filename = `${safeBasename(request.body?.title, videoId)}.${videoId}.mp4`;
-        const dir = join(root, 'Videos');
+        const dir = join(mediaRoot, folder.dirName);
         await mkdir(dir, { recursive: true });
         const dest = join(dir, filename);
         await copyFile(mp4Path, dest);
@@ -120,8 +129,9 @@ export function registerAdminDownloadRoutes(
         return {
           saved: true,
           kind: 'mp4',
+          folder: folder.id,
           filename,
-          nasPath: nasDisplayPath('Videos', filename),
+          nasPath: `${folder.nasLabel}/${filename}`,
         };
       } catch (err) {
         if (tmpDir) {
@@ -131,7 +141,7 @@ export function registerAdminDownloadRoutes(
         if (message === 'invalid_video_id') {
           return reply.code(400).send({ error: 'invalid_video_id' });
         }
-        request.log.error({ err, videoId }, 'admin video save to NAS failed');
+        request.log.error({ err, videoId, folder: folderId }, 'admin video save to NAS failed');
         return reply.code(502).send({ error: 'video_extract_failed' });
       }
     },

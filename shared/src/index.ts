@@ -9,6 +9,7 @@ export * from './playlist-video-ids.js';
 export * from './playlist-share-token.js';
 export * from './user-token.js';
 export * from './permissions.js';
+export * from './admin-media-folders.js';
 export * from './storage/index.js';
 export * from './user-name.js';
 export * from './user-contact.js';

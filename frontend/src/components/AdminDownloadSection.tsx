@@ -1,14 +1,27 @@
 import { useState } from 'react';
-import { saveAdminAudioToNas, saveAdminVideoToNas } from '../api/admin-downloads';
+import {
+  saveAdminAudioToNas,
+  saveAdminVideoToNas,
+  type AdminMediaFolderId,
+} from '../api/admin-downloads';
 import { friendlyError } from '../lib/error-messages';
 import { normalizeYoutubeVideoId } from '../lib/youtube-video-id';
 import { useI18n } from '../i18n';
 
 type BusyKind = 'mp3' | 'mp4' | null;
 
+const MEDIA_FOLDERS: { id: AdminMediaFolderId; labelKey: string }[] = [
+  { id: 'movies', labelKey: 'admin.downloadFolderMovies' },
+  { id: 'tv', labelKey: 'admin.downloadFolderTv' },
+  { id: 'videos', labelKey: 'admin.downloadFolderVideos' },
+  { id: 'anime', labelKey: 'admin.downloadFolderAnime' },
+  { id: 'variety', labelKey: 'admin.downloadFolderVariety' },
+];
+
 export default function AdminDownloadSection() {
   const { t } = useI18n();
   const [input, setInput] = useState('');
+  const [folder, setFolder] = useState<AdminMediaFolderId>('videos');
   const [busy, setBusy] = useState<BusyKind>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +41,7 @@ export default function AdminDownloadSection() {
       const saved =
         kind === 'mp3'
           ? await saveAdminAudioToNas(videoId, videoId)
-          : await saveAdminVideoToNas(videoId, videoId);
+          : await saveAdminVideoToNas(videoId, videoId, folder);
       setStatus(t('admin.downloadSavedToNas', { path: saved.nasPath }));
     } catch (err) {
       setStatus(null);
@@ -54,6 +67,23 @@ export default function AdminDownloadSection() {
           onChange={(e) => setInput(e.target.value)}
         />
       </label>
+      <fieldset className="admin-download-folders" disabled={busy !== null}>
+        <legend>{t('admin.downloadFolderLabel')}</legend>
+        <div className="admin-download-folder-list">
+          {MEDIA_FOLDERS.map((item) => (
+            <label key={item.id} className="admin-download-folder-option">
+              <input
+                type="radio"
+                name="admin-download-folder"
+                value={item.id}
+                checked={folder === item.id}
+                onChange={() => setFolder(item.id)}
+              />
+              <span>{t(item.labelKey)}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
       <div className="admin-download-actions">
         <button
           type="button"

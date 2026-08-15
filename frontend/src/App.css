@@ -1003,6 +1003,46 @@
   width: 100%;
 }
 
+.admin-download-folders {
+  margin: 0 0 0.85rem;
+  padding: 0;
+  border: none;
+}
+
+.admin-download-folders legend {
+  padding: 0;
+  margin-bottom: 0.4rem;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.admin-download-folder-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.admin-download-folder-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-light);
+  background: var(--surface-secondary, transparent);
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.admin-download-folder-option:has(input:checked) {
+  border-color: var(--accent, #3b82f6);
+  background: color-mix(in srgb, var(--accent, #3b82f6) 12%, transparent);
+}
+
+.admin-download-folder-option input {
+  margin: 0;
+}
+
 .admin-download-actions {
   display: flex;
   flex-wrap: wrap;
