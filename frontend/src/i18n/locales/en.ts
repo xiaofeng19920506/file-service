@@ -102,7 +102,7 @@ const en: MessageTree = {
     deleteHint: 'Permanently removes this song and its file from the library.',
     downloadTitle: 'Save YouTube audio / video to the NAS',
     downloadIntro:
-      'Paste a YouTube URL. Choose a Feiniu Movies folder (Movies / TV / Videos / Anime / Variety) before saving video. Files are written to that NAS folder, not this computer. Songs still go to data/downloads/Music.',
+      'Paste a YouTube URL. Choose a Feiniu Movies folder before saving video. Videos go to that folder; songs go to Audio. Nothing is downloaded to this computer.',
     downloadUrlLabel: 'YouTube URL or video ID',
     downloadUrlPlaceholder: 'https://www.youtube.com/watch?v=… or 11-character ID',
     downloadFolderLabel: 'Save video to folder',

@@ -104,7 +104,7 @@ export default {
     deleteHint: '从诗库中永久移除此歌曲及其文件，无法恢复。',
     downloadTitle: '保存 YouTube 音频 / 视频到 NAS',
     downloadIntro:
-      '粘贴 YouTube 链接。保存视频前请选择飞牛影视目录（电影 / 电视剧 / 视频 / 动漫 / 综艺）。文件会写入对应 NAS 文件夹，不会下载到当前电脑。歌曲仍保存到 data/downloads/Music。',
+      '粘贴 YouTube 链接。保存视频前请选择飞牛影视目录（电影 / 电视剧 / 视频 / 动漫 / 综艺）。视频写入对应影视文件夹，歌曲写入「音频」。不会下载到当前电脑。',
     downloadUrlLabel: 'YouTube 链接或视频 ID',
     downloadUrlPlaceholder: 'https://www.youtube.com/watch?v=… 或 11 位 ID',
     downloadFolderLabel: '保存到哪个影视文件夹',

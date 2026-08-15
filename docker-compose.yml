@@ -32,7 +32,7 @@ services:
       start_period: 10s
 
   api:
-    image: file-service-api:nasdl3
+    image: file-service-api:nasdl4
     pull_policy: never
     build:
       context: .
@@ -55,12 +55,14 @@ services:
       YT_DLP_PATH: /usr/local/bin/yt-dlp
       ADMIN_DOWNLOAD_DIR: /data/downloads
       ADMIN_NAS_MEDIA_DIR: /data/media
+      ADMIN_NAS_AUDIO_DIR: /data/audio
       BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
     volumes:
       - ${NAS_DATA_DIR:-./data}/storage:/data/storage
       - ${NAS_DATA_DIR:-./data}/downloads:/data/downloads
       - ${ADMIN_NAS_MEDIA_HOST:-./data/downloads}:/data/media
+      - ${ADMIN_NAS_AUDIO_HOST:-./data/downloads}:/data/audio
     depends_on:
       - postgres
       - redis
@@ -90,7 +92,7 @@ services:
       - api
 
   web:
-    image: file-service-web:nasdl2
+    image: file-service-web:nasdl4
     pull_policy: never
     build:
       context: .

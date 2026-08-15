@@ -32,6 +32,12 @@ function adminDownloadRoot(env: ApiEnv): string {
   return join(tmpdir(), 'file-service-downloads');
 }
 
+function adminAudioRoot(env: ApiEnv): string {
+  const configured = env.ADMIN_NAS_AUDIO_DIR?.trim();
+  if (configured) return configured;
+  return join(adminDownloadRoot(env), '音频');
+}
+
 function adminMediaRoot(env: ApiEnv): string {
   return env.ADMIN_NAS_MEDIA_DIR?.trim() || join(adminDownloadRoot(env), '影视');
 }
@@ -41,7 +47,7 @@ export function registerAdminDownloadRoutes(
   deps: { db: Db; env: ApiEnv; storage: ObjectStorage; audioQueue: Queue },
 ): void {
   const { db, env, storage, audioQueue } = deps;
-  const audioRoot = adminDownloadRoot(env);
+  const audioRoot = adminAudioRoot(env);
   const mediaRoot = adminMediaRoot(env);
 
   const saveAudioToNas = async (videoId: string, titleHint?: string) => {
@@ -57,15 +63,14 @@ export function registerAdminDownloadRoutes(
     if (!blob) throw new Error('not_found');
 
     const filename = `${safeBasename(titleHint || cache.title || blob.originalFilename || undefined, videoId)}.${videoId}.mp3`;
-    const dir = join(audioRoot, 'Music');
-    await mkdir(dir, { recursive: true });
-    const dest = join(dir, filename);
+    await mkdir(audioRoot, { recursive: true });
+    const dest = join(audioRoot, filename);
     await storage.copyToFile(blob.storageKey, dest);
     return {
       saved: true as const,
       kind: 'mp3' as const,
       filename,
-      nasPath: `data/downloads/Music/${filename}`,
+      nasPath: `存储空间 1/音频/${filename}`,
     };
   };
 
