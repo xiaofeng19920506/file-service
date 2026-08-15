@@ -98,6 +98,7 @@ export function classifyYtdlpError(
   if (/403|forbidden/i.test(message)) return 'youtube_download_forbidden';
   if (/429|too many requests/i.test(message)) return 'youtube_rate_limited';
   if (message === 'invalid_video_id') return 'invalid_video_id';
+  if (message === 'video_extract_timeout') return 'video_extract_timeout';
   if (message.includes('ffmpeg') || message.includes('ffprobe')) return 'ffmpeg_not_installed';
   if (message.includes('ENOENT') || message.includes('not found')) return 'ytdlp_not_installed';
   return fallback;

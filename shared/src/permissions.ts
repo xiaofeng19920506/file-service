@@ -115,6 +115,7 @@ export function isAdminUserManagePath(method: string, path: string): boolean {
 }
 
 export function isAdminYoutubeDownloadPath(method: string, path: string): boolean {
+  if (method === 'GET' && /^\/v1\/admin\/downloads\/jobs(?:\/[^/]+)?$/.test(path)) return true;
   if (method !== 'GET' && method !== 'POST') return false;
   return (
     /^\/v1\/admin\/youtube\/videos\/[^/]+\/audio\/download$/.test(path)

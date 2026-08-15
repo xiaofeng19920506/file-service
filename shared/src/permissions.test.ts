@@ -51,7 +51,10 @@ describe('resolvePathAccessLevel', () => {
       resolvePathAccessLevel('POST', '/v1/admin/youtube/videos/dQw4w9WgXcQ/video/download'),
     ).toBe('admin');
     expect(
-      resolvePathAccessLevel('GET', '/v1/admin/youtube/videos/dQw4w9WgXcQ/video/download'),
+      resolvePathAccessLevel('GET', '/v1/admin/downloads/jobs'),
+    ).toBe('admin');
+    expect(
+      resolvePathAccessLevel('GET', '/v1/admin/downloads/jobs/abc'),
     ).toBe('admin');
   });
 

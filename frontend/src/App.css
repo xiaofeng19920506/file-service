@@ -1049,9 +1049,59 @@
   gap: 0.5rem;
 }
 
-.admin-download-status {
-  margin: 0.75rem 0 0;
-  font-size: 0.875rem;
+.admin-download-hint {
+  margin: 0.55rem 0 0;
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+}
+
+.admin-download-jobs {
+  list-style: none;
+  margin: 0.9rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.admin-download-job {
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-light);
+}
+
+.admin-download-job-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  margin-bottom: 0.4rem;
+}
+
+.admin-download-progress {
+  height: 0.45rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+  overflow: hidden;
+}
+
+.admin-download-progress-bar {
+  height: 100%;
+  background: var(--accent, #3b82f6);
+  transition: width 0.25s ease;
+}
+
+.admin-download-job.is-done .admin-download-progress-bar {
+  background: #16a34a;
+}
+
+.admin-download-job.is-failed .admin-download-progress-bar {
+  background: #dc2626;
+}
+
+.admin-download-job-status {
+  margin: 0.4rem 0 0;
+  font-size: 0.8rem;
   color: var(--text-secondary);
 }
 

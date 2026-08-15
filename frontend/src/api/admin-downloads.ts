@@ -1,17 +1,24 @@
-import { getYoutubeAudioStatus } from './youtube-audio';
 import { apiFetch, parseJson } from './http';
-
-const AUDIO_POLL_MS = 1_500;
-const AUDIO_POLL_TIMEOUT_MS = 10 * 60_000;
 
 export type AdminMediaFolderId = 'movies' | 'tv' | 'videos' | 'anime' | 'variety';
 
-export type AdminNasSaveResult = {
-  saved: true;
+export type AdminDownloadJobStatus = 'queued' | 'running' | 'done' | 'failed';
+
+export type AdminDownloadJob = {
+  jobId: string;
   kind: 'mp3' | 'mp4';
-  filename: string;
-  nasPath: string;
+  videoId: string;
+  title?: string;
   folder?: AdminMediaFolderId;
+  folderLabel?: string;
+  status: AdminDownloadJobStatus;
+  percent: number;
+  stage: string;
+  queuePosition: number;
+  nasPath?: string;
+  filename?: string;
+  error?: string;
+  createdAt: number;
 };
 
 async function readError(res: Response): Promise<string> {
@@ -22,53 +29,33 @@ async function readError(res: Response): Promise<string> {
   return res.statusText || 'download_failed';
 }
 
-async function waitUntilAudioReady(videoId: string): Promise<void> {
-  const deadline = Date.now() + AUDIO_POLL_TIMEOUT_MS;
-  while (Date.now() < deadline) {
-    const status = await getYoutubeAudioStatus(videoId);
-    if (status.status === 'ready') return;
-    if (status.status === 'failed') {
-      throw new Error(status.errorCode || 'audio_extract_failed');
-    }
-    await new Promise((resolve) => setTimeout(resolve, AUDIO_POLL_MS));
-  }
-  throw new Error('download_timeout');
-}
-
-export async function saveAdminAudioToNas(
-  videoId: string,
-  title: string,
-): Promise<AdminNasSaveResult> {
-  const post = async () =>
-    apiFetch(`/v1/admin/youtube/videos/${encodeURIComponent(videoId)}/audio/download`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title }),
-    });
-
-  let res = await post();
-  if (res.status === 202) {
-    await parseJson(res);
-    await waitUntilAudioReady(videoId);
-    res = await post();
-  }
+export async function listAdminDownloadJobs(): Promise<AdminDownloadJob[]> {
+  const res = await apiFetch('/v1/admin/downloads/jobs');
   if (!res.ok) throw new Error(await readError(res));
-  return parseJson<AdminNasSaveResult>(res);
+  const data = await parseJson<{ jobs: AdminDownloadJob[] }>(res);
+  return data.jobs ?? [];
 }
 
-export async function saveAdminVideoToNas(
+export async function startAdminAudioJob(videoId: string, title: string): Promise<AdminDownloadJob> {
+  const res = await apiFetch(`/v1/admin/youtube/videos/${encodeURIComponent(videoId)}/audio/download`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title }),
+  });
+  if (!res.ok && res.status !== 202) throw new Error(await readError(res));
+  return parseJson<AdminDownloadJob>(res);
+}
+
+export async function startAdminVideoJob(
   videoId: string,
   title: string,
   folder: AdminMediaFolderId,
-): Promise<AdminNasSaveResult> {
-  const res = await apiFetch(
-    `/v1/admin/youtube/videos/${encodeURIComponent(videoId)}/video/download`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, folder }),
-    },
-  );
-  if (!res.ok) throw new Error(await readError(res));
-  return parseJson<AdminNasSaveResult>(res);
+): Promise<AdminDownloadJob> {
+  const res = await apiFetch(`/v1/admin/youtube/videos/${encodeURIComponent(videoId)}/video/download`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, folder }),
+  });
+  if (!res.ok && res.status !== 202) throw new Error(await readError(res));
+  return parseJson<AdminDownloadJob>(res);
 }

@@ -1,14 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  saveAdminAudioToNas,
-  saveAdminVideoToNas,
+  listAdminDownloadJobs,
+  startAdminAudioJob,
+  startAdminVideoJob,
+  type AdminDownloadJob,
   type AdminMediaFolderId,
 } from '../api/admin-downloads';
 import { friendlyError } from '../lib/error-messages';
 import { normalizeYoutubeVideoId } from '../lib/youtube-video-id';
 import { useI18n } from '../i18n';
-
-type BusyKind = 'mp3' | 'mp4' | null;
 
 const MEDIA_FOLDERS: { id: AdminMediaFolderId; labelKey: string }[] = [
   { id: 'movies', labelKey: 'admin.downloadFolderMovies' },
@@ -18,36 +18,74 @@ const MEDIA_FOLDERS: { id: AdminMediaFolderId; labelKey: string }[] = [
   { id: 'variety', labelKey: 'admin.downloadFolderVariety' },
 ];
 
+function jobStatusText(
+  job: AdminDownloadJob,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): string {
+  if (job.status === 'queued') {
+    return t('admin.downloadQueued', { position: job.queuePosition || 1 });
+  }
+  if (job.status === 'done' && job.nasPath) {
+    return t('admin.downloadSavedToNas', { path: job.nasPath });
+  }
+  if (job.status === 'failed') {
+    return t(`errors.${job.error || 'download_failed'}`);
+  }
+  if (job.stage === 'merging') return t('admin.downloadMerging');
+  if (job.stage === 'saving') return t('admin.downloadSaving');
+  if (job.stage === 'extracting') return t('admin.downloadExtracting');
+  return t('admin.downloadProgress', { percent: Math.round(job.percent) });
+}
+
 export default function AdminDownloadSection() {
   const { t } = useI18n();
   const [input, setInput] = useState('');
   const [folder, setFolder] = useState<AdminMediaFolderId>('videos');
-  const [busy, setBusy] = useState<BusyKind>(null);
-  const [status, setStatus] = useState<string | null>(null);
+  const [jobs, setJobs] = useState<AdminDownloadJob[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [starting, setStarting] = useState<'mp3' | 'mp4' | null>(null);
 
-  const runDownload = async (kind: 'mp3' | 'mp4') => {
+  const activeCount = jobs.filter((job) => job.status === 'queued' || job.status === 'running').length;
+
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = async () => {
+      try {
+        const next = await listAdminDownloadJobs();
+        if (!cancelled) setJobs(next);
+      } catch {
+        // keep last snapshot
+      }
+    };
+    void refresh();
+    if (activeCount === 0) return () => {
+      cancelled = true;
+    };
+    const timer = window.setInterval(() => void refresh(), 1000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [activeCount]);
+
+  const enqueue = async (kind: 'mp3' | 'mp4') => {
     const videoId = normalizeYoutubeVideoId(input);
     if (!videoId) {
       setError(t('errors.invalid_youtube_url'));
-      setStatus(null);
       return;
     }
-
-    setBusy(kind);
+    setStarting(kind);
     setError(null);
-    setStatus(kind === 'mp3' ? t('admin.downloadPreparing') : t('admin.downloadPreparingVideo'));
     try {
-      const saved =
+      const job =
         kind === 'mp3'
-          ? await saveAdminAudioToNas(videoId, videoId)
-          : await saveAdminVideoToNas(videoId, videoId, folder);
-      setStatus(t('admin.downloadSavedToNas', { path: saved.nasPath }));
+          ? await startAdminAudioJob(videoId, videoId)
+          : await startAdminVideoJob(videoId, videoId, folder);
+      setJobs((prev) => [job, ...prev.filter((row) => row.jobId !== job.jobId)]);
     } catch (err) {
-      setStatus(null);
       setError(friendlyError(err instanceof Error ? err.message : 'download_failed', t));
     } finally {
-      setBusy(null);
+      setStarting(null);
     }
   };
 
@@ -63,11 +101,11 @@ export default function AdminDownloadSection() {
           autoComplete="off"
           spellCheck={false}
           placeholder={t('admin.downloadUrlPlaceholder')}
-          disabled={busy !== null}
+          disabled={starting !== null}
           onChange={(e) => setInput(e.target.value)}
         />
       </label>
-      <fieldset className="admin-download-folders" disabled={busy !== null}>
+      <fieldset className="admin-download-folders" disabled={starting !== null}>
         <legend>{t('admin.downloadFolderLabel')}</legend>
         <div className="admin-download-folder-list">
           {MEDIA_FOLDERS.map((item) => (
@@ -88,22 +126,48 @@ export default function AdminDownloadSection() {
         <button
           type="button"
           className="btn-primary"
-          disabled={busy !== null}
-          onClick={() => void runDownload('mp3')}
+          disabled={starting !== null}
+          onClick={() => void enqueue('mp3')}
         >
-          {busy === 'mp3' ? t('admin.downloadPreparing') : t('admin.downloadMp3')}
+          {t('admin.downloadMp3')}
         </button>
         <button
           type="button"
           className="btn-secondary"
-          disabled={busy !== null}
-          onClick={() => void runDownload('mp4')}
+          disabled={starting !== null}
+          onClick={() => void enqueue('mp4')}
         >
-          {busy === 'mp4' ? t('admin.downloadPreparingVideo') : t('admin.downloadMp4')}
+          {t('admin.downloadMp4')}
         </button>
       </div>
-      {status && <p className="admin-download-status">{status}</p>}
+      <p className="admin-download-hint">{t('admin.downloadParallelHint')}</p>
       {error && <p className="error-msg">{error}</p>}
+      {jobs.length > 0 && (
+        <ul className="admin-download-jobs">
+          {jobs.map((job) => (
+            <li key={job.jobId} className={`admin-download-job is-${job.status}`}>
+              <div className="admin-download-job-head">
+                <strong>
+                  {job.kind === 'mp3' ? t('admin.downloadMp3') : t('admin.downloadMp4')}
+                  {job.folderLabel ? ` · ${job.folderLabel}` : ''}
+                </strong>
+                <span>{job.videoId}</span>
+              </div>
+              <div className="admin-download-progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(job.percent)}>
+                <div
+                  className="admin-download-progress-bar"
+                  style={{ width: `${job.status === 'queued' ? 0 : Math.max(2, job.percent)}%` }}
+                />
+              </div>
+              <p className="admin-download-job-status">
+                {job.status === 'failed'
+                  ? friendlyError(job.error || 'download_failed', t)
+                  : jobStatusText(job, t)}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
