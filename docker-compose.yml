@@ -32,7 +32,7 @@ services:
       start_period: 10s
 
   api:
-    image: file-service-api:yt-dlp1
+    image: file-service-api:search2
     pull_policy: never
     build:
       context: .
@@ -86,7 +86,7 @@ services:
       - api
 
   web:
-    image: file-service-web:reg1
+    image: file-service-web:nav2
     pull_policy: never
     build:
       context: .
