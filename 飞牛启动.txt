@@ -1,0 +1,13 @@
+把「file-service-nas」整个文件夹拷到飞牛，用这个文件夹创建 Docker Compose 项目。
+
+不要拷电脑上原来的 node_modules / .next / data。
+
+启动后第一次会构建镜像，要等十几分钟。
+
+局域网：http://192.168.68.60:4000
+
+Cloudflare 里这条 file-service-api 隧道，公共主机名改成：
+  frontend.youtvs.com  →  HTTP  →  http://web:4000
+  api.youtvs.com       →  HTTP  →  http://api:3000
+
+不要再用 http://127.0.0.1:3000 或 :4000（那是电脑本机，不是 NAS 容器）。
