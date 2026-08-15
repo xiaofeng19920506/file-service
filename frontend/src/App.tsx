@@ -196,7 +196,7 @@ function AppShellInner({
           </div>
 
           {permissions.canEdit ? (
-            <div className="nav-center nav-center-desktop">
+            <div className="nav-center nav-center-tabs">
               <PageNavTabs
                 page={page}
                 navigate={navigate}
@@ -205,9 +205,7 @@ function AppShellInner({
                 variant="header"
               />
             </div>
-          ) : (
-            <div className="nav-center nav-center-desktop" />
-          )}
+          ) : null}
 
           <div className="nav-actions nav-actions-desktop">
             {accountActions}
@@ -259,6 +257,20 @@ function AppShellInner({
         </div>
 
         <div className="nav-mobile-menu nav-mobile-drawer-body">
+          {permissions.canEdit && (
+            <div className="nav-mobile-menu-section nav-mobile-menu-nav">
+              <PageNavTabs
+                page={page}
+                navigate={(next) => {
+                  navigate(next);
+                  setMobileMenuOpen(false);
+                }}
+                canAccessPlaylists={permissions.canAccessPlaylists}
+                canEdit={permissions.canEdit}
+                variant="header"
+              />
+            </div>
+          )}
           {page === 'playlists' && (
             <div
               id={PLAYLISTS_MOBILE_MENU_MOUNT_ID}

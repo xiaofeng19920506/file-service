@@ -82,7 +82,14 @@ export default function PageNavTabs({
             className={`page-tab page-tab-${variant}${active ? ' active' : ''}`}
             onClick={() => navigate(item.id)}
           >
-            {isBottom ? <Icon /> : <span className="page-tab-label">{label}</span>}
+            {isBottom ? (
+              <>
+                <Icon />
+                <span className="page-tab-label">{label}</span>
+              </>
+            ) : (
+              <span className="page-tab-label">{label}</span>
+            )}
           </button>
         );
       })}

@@ -86,7 +86,7 @@ services:
       - api
 
   web:
-    image: file-service-web:nav2
+    image: file-service-web:nav3
     pull_policy: never
     build:
       context: .

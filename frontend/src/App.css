@@ -94,6 +94,11 @@
   min-width: 0;
 }
 
+.nav-center-tabs {
+  flex: 0 0 auto;
+  justify-content: flex-start;
+}
+
 .page-tabs {
   display: flex;
   gap: 0.25rem;
@@ -257,7 +262,7 @@
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 0;
+  gap: 0.25rem;
   padding: 0.45rem 0;
   border-radius: 0;
   font-size: 0.625rem;

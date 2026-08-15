@@ -293,6 +293,13 @@
     display: none;
   }
 
+  .nav-center-tabs {
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: center;
+  }
+
   .nav-actions-compact {
     display: flex;
   }
