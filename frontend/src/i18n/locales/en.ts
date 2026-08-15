@@ -463,6 +463,7 @@ const en: MessageTree = {
     video_not_ready: 'Video is not cached yet — please wait',
     video_extract_failed: 'Video extraction failed — try again later',
     video_extract_timeout: 'Video download timed out — try again later',
+    download_path_too_long: 'The series or file name was too long. Retry to save with a shorter name.',
     download_disk_full: 'Temporary disk is full. Short dramas are large — retry after rebuilding the API image.',
     youtube_signature_failed: 'YouTube signature check failed. Retry; if it still fails, rebuild with a newer yt-dlp.',
     youtube_format_unavailable: 'No matching video format. Retry download to try fallback formats.',

@@ -32,7 +32,7 @@ services:
       start_period: 10s
 
   api:
-    image: file-service-api:nasdl9
+    image: file-service-api:nasdl10
     pull_policy: never
     build:
       context: .
@@ -92,7 +92,7 @@ services:
       - api
 
   web:
-    image: file-service-web:nasdl9
+    image: file-service-web:nasdl10
     pull_policy: never
     build:
       context: .

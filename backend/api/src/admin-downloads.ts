@@ -12,6 +12,7 @@ import {
   extractYoutubeVideoMp4,
   isValidYoutubeVideoId,
   parseAdminMediaFolderId,
+  sanitizeNasFileStem,
   seriesFolderFromTitle,
   youtubeAudioCache,
   type AdminMediaFolderId,
@@ -46,8 +47,7 @@ export type AdminDownloadJob = {
 };
 
 function safeBasename(title: string | undefined, videoId: string): string {
-  const raw = (title?.trim() || videoId).replace(/[\r\n"/\\:*?<>|]+/g, '_').slice(0, 120);
-  return raw.replace(/\.(mp3|mp4)$/i, '') || videoId;
+  return sanitizeNasFileStem(title?.trim() || videoId, videoId);
 }
 
 function adminDownloadRoot(env: ApiEnv): string {

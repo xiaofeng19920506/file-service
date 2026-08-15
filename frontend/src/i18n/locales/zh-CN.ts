@@ -462,6 +462,7 @@ export default {
     video_not_ready: '视频尚未缓存完成，请稍候',
     video_extract_failed: '视频提取失败，请稍后重试',
     video_extract_timeout: '视频下载超时，请稍后重试',
+    download_path_too_long: '剧名/文件名过长，已自动缩短。请点重新下载',
     download_disk_full: '临时磁盘空间不足。短剧文件较大，请重建 api 后重试（已改为写到 NAS 临时目录）',
     youtube_signature_failed: 'YouTube 签名校验失败，请点重新下载；若仍失败需更新 yt-dlp 镜像',
     youtube_format_unavailable: '该视频没有可用清晰度，已自动换格式重试；请再点重新下载',

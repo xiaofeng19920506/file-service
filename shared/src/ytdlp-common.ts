@@ -100,6 +100,7 @@ export function classifyYtdlpError(
 ): string {
   if (/403|forbidden/i.test(message)) return 'youtube_download_forbidden';
   if (/429|too many requests/i.test(message)) return 'youtube_rate_limited';
+  if (/ENAMETOOLONG|name too long|file name too long/i.test(message)) return 'download_path_too_long';
   if (/ENOSPC|no space left/i.test(message)) return 'download_disk_full';
   if (/nsig|signature extraction/i.test(message)) return 'youtube_signature_failed';
   if (/requested format is not available|no video formats|only images are available/i.test(message)) {

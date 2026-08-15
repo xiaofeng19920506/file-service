@@ -54,30 +54,56 @@ export function adminMediaFolderById(id: AdminMediaFolderId): AdminMediaFolder {
   return found;
 }
 
+export function truncateUtf8Bytes(value: string, maxBytes: number): string {
+  const buf = Buffer.from(value, 'utf8');
+  if (buf.length <= maxBytes) return value.trim();
+  let end = maxBytes;
+  while (end > 0 && (buf[end] & 0xc0) === 0x80) end -= 1;
+  return buf.subarray(0, end).toString('utf8').replace(/[.\s_-]+$/g, '').trim();
+}
+
+export function stripYoutubeTitleNoise(title: string): string {
+  return title
+    .replace(/【[^】]*】/g, ' ')
+    .replace(/\[[^\]]*\]/g, ' ')
+    .replace(/#[^\s#]+/g, ' ')
+    .replace(/#/g, ' ')
+    .replace(/\bshortstory\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function sanitizeNasFolderName(name: string): string {
   const cleaned = name
     .replace(/[\r\n]/g, ' ')
-    .replace(/[\\/:*?"<>|]/g, '_')
+    .replace(/[\\/:*?"<>|#]/g, '_')
     .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 80);
-  return cleaned || '未命名';
+    .trim();
+  return truncateUtf8Bytes(cleaned, 72) || '未命名';
 }
 
-/** 用户填写的剧名优先；否则从 YouTube 标题去掉「第x集」等，用作文件夹名 */
+export function sanitizeNasFileStem(name: string, fallback: string): string {
+  const cleaned = stripYoutubeTitleNoise(name)
+    .replace(/[\r\n"/\\:*?<>|#]+/g, '_')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\.(mp3|mp4)$/i, '');
+  return truncateUtf8Bytes(cleaned, 80) || fallback;
+}
+
+/** 用户填写的剧名优先；否则从 YouTube 标题去掉标签和「第x集」等，用作文件夹名 */
 export function seriesFolderFromTitle(
   explicit: string | undefined,
   youtubeTitle: string | undefined,
   fallback: string,
 ): string {
   if (explicit?.trim()) return sanitizeNasFolderName(explicit);
-  let t = (youtubeTitle ?? '').trim();
-  t = t.replace(/【[^】]*】/g, ' ');
-  t = t.replace(/\[[^\]]*\]/g, ' ');
+  let t = stripYoutubeTitleNoise(youtubeTitle ?? '');
   t = t.replace(/第\s*\d+\s*[集话期部季]/g, ' ');
   t = t.replace(/\b(?:EP|E)\s*\d+\b/gi, ' ');
   t = t.replace(/[（(]\s*\d+\s*[)）]/g, ' ');
   t = t.replace(/\s+(?:4K|1080[Pp]|720[Pp]|高清|超清|蓝光|完整版|正片|预告|中字|生肉)\s*$/g, '');
-  const cut = (t.split(/[:：|_|—–]/)[0] ?? t).trim();
+  const sentence = (t.split(/[。！？!?]/)[0] ?? t).trim();
+  const cut = (sentence.split(/[:：|_|—–]/)[0] ?? sentence).trim();
   return sanitizeNasFolderName(cut || youtubeTitle || fallback);
 }
