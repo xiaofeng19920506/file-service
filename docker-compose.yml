@@ -32,7 +32,7 @@ services:
       start_period: 10s
 
   api:
-    image: file-service-api:local
+    image: file-service-api:yt-dlp1
     build:
       context: .
       dockerfile: docker/Dockerfile.api
@@ -61,7 +61,7 @@ services:
       - redis
 
   worker:
-    image: file-service-worker:local
+    image: file-service-worker:yt-dlp1
     build:
       context: .
       dockerfile: docker/Dockerfile.worker
@@ -84,7 +84,7 @@ services:
       - api
 
   web:
-    image: file-service-web:local
+    image: file-service-web:reg1
     build:
       context: .
       dockerfile: docker/Dockerfile.web
