@@ -106,7 +106,8 @@ export default function PlaylistYoutubeSearchPanel({
     if (searchQuery.trim()) searchNow();
   };
 
-  const showClearSearch = searchQuery.trim().length > 0;
+  const showClearSearch =
+    searchQuery.trim().length > 0 || hasSearched || searchResults.length > 0;
 
   const handleClearSearch = () => {
     resetSearch();
@@ -184,7 +185,11 @@ export default function PlaylistYoutubeSearchPanel({
             }
           }}
           onBlur={() => {
-            if (!searchOnSubmit && isMobileViewport) submitSearch();
+            if (searchOnSubmit || !isMobileViewport) return;
+            const trimmed = searchQuery.trim();
+            if (!trimmed) return;
+            if (hasSearched) return;
+            submitSearch();
           }}
           placeholder={t('playlists.searchPlaceholder')}
           enterKeyHint="search"
@@ -193,7 +198,7 @@ export default function PlaylistYoutubeSearchPanel({
           aria-busy={isSearchBusy}
           aria-label={t('playlists.searchPlaceholder')}
         />
-        {showClearSearch && !isSearchBusy && (
+        {showClearSearch && (
           <button
             type="button"
             className="search-clear-btn"

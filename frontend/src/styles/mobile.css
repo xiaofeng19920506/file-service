@@ -791,11 +791,19 @@
 
   .search-box--submit-only .search-input-wrap {
     width: 100%;
+    padding-right: 0.35rem;
+  }
+
+  .playlists-sidebar[hidden] {
+    display: none !important;
   }
 
   .search-clear-btn {
     width: var(--touch-target);
     height: var(--touch-target);
+    margin-left: auto;
+    background: var(--surface-secondary);
+    color: var(--text-secondary);
   }
 
   .playlists-youtube-search--mobile-list .youtube-search-loading-state--mobile-home {

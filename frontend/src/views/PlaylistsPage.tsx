@@ -1947,37 +1947,33 @@ export default function PlaylistsPage({
             </>
           ) : (
             <>
-          {!homePreviewMobile && (
+          <aside
+            className="playlists-sidebar playlists-sidebar--search-only"
+            hidden={mobileHome !== 'search' || Boolean(selectedId) || homePreviewMobile}
+            aria-hidden={mobileHome !== 'search' || Boolean(selectedId) || homePreviewMobile}
+            aria-label={t('playlists.searchSection')}
+          >
+            <PlaylistYoutubeSearchPanel
+              className="playlists-youtube-search--mobile-list"
+              mobileListOnly
+              pickPlaylistOnAdd
+              playlists={playlists}
+              loadingPlaylists={loadingList}
+              libraryVideoIds={libraryVideoIds}
+              onCreatePlaylist={createPlaylistForSearch}
+              onAdded={(data, meta) => void handleItemsAdded(data, meta)}
+              onPreviewTrack={homeSearchPreviewEnabled ? startHomePreview : undefined}
+              previewingVideoId={homePreview?.videoId}
+            />
+          </aside>
+          {!homePreviewMobile && mobileHomeView !== 'search' && (
           <aside
             className={`playlists-sidebar${
-              mobileHomeView === 'search'
-                ? ' playlists-sidebar--search-only'
-                : mobileHomeView === 'lists'
-                  ? ' playlists-sidebar--lists-only'
-                  : ''
+              mobileHomeView === 'lists' ? ' playlists-sidebar--lists-only' : ''
             }`}
-            aria-label={
-              mobileHomeView === 'search'
-                ? t('playlists.searchSection')
-                : t('playlists.savedTitle')
-            }
+            aria-label={t('playlists.savedTitle')}
           >
-            {mobileHomeView === 'search' ? (
-              <PlaylistYoutubeSearchPanel
-                className="playlists-youtube-search--mobile-list"
-                mobileListOnly
-                pickPlaylistOnAdd
-                playlists={playlists}
-                loadingPlaylists={loadingList}
-                libraryVideoIds={libraryVideoIds}
-                onCreatePlaylist={createPlaylistForSearch}
-                onAdded={(data, meta) => void handleItemsAdded(data, meta)}
-                onPreviewTrack={homeSearchPreviewEnabled ? startHomePreview : undefined}
-                previewingVideoId={homePreview?.videoId}
-              />
-            ) : (
-              renderPlaylistLibrary()
-            )}
+            {renderPlaylistLibrary()}
           </aside>
           )}
 
