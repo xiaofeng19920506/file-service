@@ -1628,7 +1628,7 @@ export default function PlaylistsPage({
   }, [mobileHome]);
 
   const mobileHomeView =
-    isMobileViewport && !selectedId && !homePreview ? mobileHome : undefined;
+    isMobileViewport && !selectedId && !homePreviewMobile ? mobileHome : undefined;
 
   const renderTracksOrderedList = () => (
     <ol
