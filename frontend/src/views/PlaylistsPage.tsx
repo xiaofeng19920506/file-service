@@ -104,8 +104,6 @@ export default function PlaylistsPage({
   const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
   const [libraryVideoIds, setLibraryVideoIds] = useState<Set<string>>(() => new Set());
   const [detail, setDetail] = useState<PlaylistDetail | null>(null);
-  const detailRef = useRef<PlaylistDetail | null>(null);
-  detailRef.current = detail;
   const [newListTitle, setNewListTitle] = useState('');
   const [showCreateListModal, setShowCreateListModal] = useState(false);
   const [loadingList, setLoadingList] = useState(true);
@@ -126,11 +124,6 @@ export default function PlaylistsPage({
   activeIndexRef.current = activeIndex;
   const [playing, setPlaying] = useState(false);
   const [playerEngaged, setPlayerEngaged] = useState(false);
-  const playerEngagedRef = useRef(false);
-  playerEngagedRef.current = playerEngaged;
-  const [mobileNowPlaying, setMobileNowPlaying] = useState(false);
-  const mobileNowPlayingRef = useRef(false);
-  mobileNowPlayingRef.current = mobileNowPlaying;
   const [playbackOrderMode, setPlaybackOrderMode] = useState(readPlaylistPlaybackOrderMode);
   const { repeatMode, shuffleEnabled } = useMemo(
     () => playbackOrderToRepeatShuffle(playbackOrderMode),
@@ -336,23 +329,13 @@ export default function PlaylistsPage({
   useEffect(() => {
     if (selectedId) {
       writeLastPlaylistId(selectedId);
-      if (detailRef.current?.playlist.id !== selectedId) {
-        setShuffleOrder([]);
-        setShuffleCursor(0);
-        shuffleOrderRef.current = [];
-        prevShuffleItemCountRef.current = 0;
-        void loadDetail(selectedId);
-      }
-      return;
+      void loadDetail(selectedId);
+    } else {
+      setDetail(null);
+      setPlaying(false);
+      setPlayerEngaged(false);
+      setActiveIndex(0);
     }
-    if (playerEngagedRef.current) {
-      setMobileNowPlaying(false);
-      return;
-    }
-    setDetail(null);
-    setPlaying(false);
-    setPlayerEngaged(false);
-    setActiveIndex(0);
     setShuffleOrder([]);
     setShuffleCursor(0);
     shuffleOrderRef.current = [];
@@ -362,22 +345,6 @@ export default function PlaylistsPage({
   const backToList = useCallback(() => {
     onSelectId(undefined);
   }, [onSelectId]);
-
-  const handleMobileBack = useCallback(() => {
-    if (playbackOrderOpen) {
-      setPlaybackOrderOpen(false);
-      return;
-    }
-    if (queueOpen) {
-      setQueueOpen(false);
-      return;
-    }
-    if (playerEngagedRef.current && mobileNowPlayingRef.current) {
-      setMobileNowPlaying(false);
-      return;
-    }
-    onSelectId(undefined);
-  }, [onSelectId, playbackOrderOpen, queueOpen]);
 
   const closeHomePreview = useCallback(() => {
     setHomePreview(null);
@@ -502,23 +469,11 @@ export default function PlaylistsPage({
 
     setMobileHeader({
       title,
-      onBack: handleMobileBack,
-      backAriaLabel: mobileNowPlaying ? t('playlists.minimizePlayer') : t('playlists.backToList'),
+      onBack: backToList,
     });
 
     return () => setMobileHeader(null);
-  }, [
-    isMobileViewport,
-    selectedId,
-    detail,
-    playlists,
-    handleMobileBack,
-    setMobileHeader,
-    homePreview,
-    closeHomePreview,
-    mobileNowPlaying,
-    t,
-  ]);
+  }, [isMobileViewport, selectedId, detail, playlists, backToList, setMobileHeader, homePreview, closeHomePreview]);
 
   const performCreateList = useCallback(
     async (title: string) => {
@@ -852,7 +807,6 @@ export default function PlaylistsPage({
     setActiveIndex(index);
     setPlaying(shouldPlay);
     setPlayerEngaged(true);
-    if (isMobileViewport) setMobileNowPlaying(true);
   };
 
   const engageAndPlay = (index: number) => engageAtIndex(index, true);
@@ -865,7 +819,6 @@ export default function PlaylistsPage({
       setActiveIndex(order[0]!);
       setPlaying(true);
       setPlayerEngaged(true);
-      if (isMobileViewport) setMobileNowPlaying(true);
       return;
     }
     engageAndPlay(0);
@@ -1032,9 +985,10 @@ export default function PlaylistsPage({
   const homePreviewMobile = Boolean(homePreview && isMobileViewport && !selectedId);
   const audioWatchActive = showPlayer || homePreviewDesktop;
   const audioWatchDesktop = audioWatchActive && !isMobileViewport;
-  const audioWatchMobile = (showPlayer && mobileNowPlaying || homePreviewMobile) && isMobileViewport;
+  const audioWatchMobile = (showPlayer || homePreviewMobile) && isMobileViewport;
   const showMobileAudioDock =
-    isMobileViewport && showPlayer && !mobileNowPlaying && !homePreview;
+    isMobileViewport &&
+    (homePreview || (showPlayer && Boolean(selectedId && detail?.items.length)));
   const homeSearchPreviewEnabled =
     isMobileViewport && !selectedId && mobileHome === 'search';
   const mobileDockCanGoPrev = playerEngaged ? canGoPrev : activeIndex > 0;
@@ -1148,6 +1102,7 @@ export default function PlaylistsPage({
   const renderAudioPlayer = (placement: 'inline' | 'dock') => {
     if (!showPlayer || homePreview) return null;
     if (placement === 'dock' && !audioWatchDesktop) return null;
+    if (placement === 'inline' && !audioWatchMobile) return null;
 
     return (
       <PlaylistAudioPlayer
@@ -1162,11 +1117,10 @@ export default function PlaylistsPage({
         canGoNext={canGoNext}
         canGoPrev={canGoPrev}
         playlistTitle={detail?.playlist.title}
-        variant={isMobileViewport ? 'mobileRecord' : 'desktopDock'}
+        variant={audioWatchMobile ? 'mobileRecord' : 'desktopDock'}
         repeatMode={repeatMode}
         playbackOrderMode={playbackOrderMode}
         onOpenPlaybackOrder={openPlaybackOrderPanel}
-        onSelectPlaybackOrder={applyPlaybackOrderMode}
         playbackOrderOpen={playbackOrderOpen}
         onToggleQueue={openQueuePanel}
         queueOpen={queueOpen}
@@ -1950,10 +1904,8 @@ export default function PlaylistsPage({
                     data-audio-mobile-record={audioWatchMobile ? 'true' : 'false'}
                     data-tracks-edit={tracksEditMode ? 'true' : 'false'}
                   >
-                    <div
-                      className={`playlists-player-col${isMobileViewport && showPlayer && !mobileNowPlaying ? ' playlists-player-col--keep-alive' : ''}`}
-                    >
-                      {showPlayer && !(isMobileViewport && !selectedId) && renderAudioPlayer('inline')}
+                    <div className="playlists-player-col">
+                      {showPlayer && renderAudioPlayer('inline')}
                     </div>
 
                     <aside
@@ -2113,7 +2065,28 @@ export default function PlaylistsPage({
         />
       )}
 
-      {showMobileAudioDock && currentItem && detail && (
+      {showMobileAudioDock && homePreview && (
+        <PlaylistsMobilePlaybackDock
+          title={homePreview.title}
+          trackLabel={t('playlists.previewListening')}
+          playing={homePreviewPlaying}
+          canGoPrev={false}
+          canGoNext
+          showProgress
+          currentTime={audioProgress.currentTime}
+          duration={audioProgress.duration}
+          canSeek={audioProgress.canSeek}
+          onSeekRatio={(ratio) => audioProgressHandleRef.current?.seekToRatio(ratio)}
+          progressResetKey={homePreview.videoId}
+          onPlayToggle={handleMobileDockPlayToggle}
+          onPrev={() => {}}
+          onNext={() => {
+            void playNextHomePreviewRadio();
+          }}
+        />
+      )}
+
+      {showMobileAudioDock && !homePreview && currentItem && detail && (
         <PlaylistsMobilePlaybackDock
           title={currentItem.title}
           trackLabel={t('playlists.trackCounter', {
@@ -2132,23 +2105,12 @@ export default function PlaylistsPage({
           playbackOrderMode={playbackOrderMode}
           playbackOrderOpen={playbackOrderOpen}
           queueOpen={queueOpen}
-          onSelectPlaybackOrder={applyPlaybackOrderMode}
+          onOpenPlaybackOrder={openPlaybackOrderPanel}
           onToggleQueue={openQueuePanel}
-          onExpand={() => {
-            const playlistId = detail.playlist.id;
-            if (selectedId !== playlistId) onSelectId(playlistId);
-            setMobileNowPlaying(true);
-          }}
           onPlayToggle={handleMobileDockPlayToggle}
           onPrev={handleMobileDockPrev}
           onNext={handleMobileDockNext}
         />
-      )}
-
-      {showPlayer && isMobileViewport && !selectedId && (
-        <div className="playlists-mobile-player-keep-alive" aria-hidden>
-          {renderAudioPlayer('inline')}
-        </div>
       )}
 
     </div>

@@ -67,7 +67,7 @@
     padding: 0;
     width: 100%;
     /* 试听 dock 无播放顺序/队列行，矮于通用 11.5rem；给封面垂直居中留出真实空隙 */
-    --playlists-preview-dock-reserve: 0px;
+    --playlists-preview-dock-reserve: 9.5rem;
   }
 
   .playlists-page[data-mobile-home-preview='true'] .playlists-header {
@@ -97,7 +97,8 @@
     padding: 0 !important;
     display: flex !important;
     flex-direction: column !important;
-    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    /* 按试听 dock 实高留白，让 flex 居中落在可见空隙，而不是沉到 overlay 下面 */
+    padding-bottom: calc(var(--playlists-preview-dock-reserve) + env(safe-area-inset-bottom, 0px)) !important;
     box-sizing: border-box !important;
   }
 
@@ -201,10 +202,6 @@
     padding: 0.1rem 1rem 0.25rem !important;
   }
 
-  body.playlists-mobile-audio-active:has(.playlists-page[data-audio-mobile-record='true']:not([data-mobile-audio-dock='true'])) {
-    --bottom-nav-height: 0px;
-  }
-
   body.playlists-mobile-audio-active:has(.playlists-page[data-mobile-home-preview='true']) {
     --bottom-nav-height: 0px;
   }
@@ -217,21 +214,9 @@
   body.playlists-mobile-audio-active
     .playlists-page[data-mobile-home-preview='true']
     .playlists-main-inner--mobile-audio {
-    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    padding-bottom: calc(var(--playlists-preview-dock-reserve) + env(safe-area-inset-bottom, 0px)) !important;
   }
 
-  body.playlists-mobile-audio-active:has(
-      .playlists-page[data-audio-mobile-record='true']:not([data-mobile-audio-dock='true'])
-    )
-    .nav-bottom,
-  body.playlists-mobile-audio-active:has(
-      .playlists-page[data-audio-mobile-record='true']:not([data-mobile-audio-dock='true'])
-    )
-    .page-tabs-bottom,
-  body.playlists-mobile-audio-active:has(
-      .playlists-page[data-audio-mobile-record='true']:not([data-mobile-audio-dock='true'])
-    )
-    .page-tab-bottom,
   body.playlists-mobile-audio-active:has(.playlists-page[data-mobile-home-preview='true']) .nav-bottom,
   body.playlists-mobile-audio-active:has(.playlists-page[data-mobile-home-preview='true']) .page-tabs-bottom,
   body.playlists-mobile-audio-active:has(.playlists-page[data-mobile-home-preview='true']) .page-tab-bottom {
@@ -1047,17 +1032,6 @@
     overflow: hidden;
   }
 
-  .playlists-playback-dock-meta--expand {
-    width: 100%;
-    border: none;
-    background: transparent;
-    font: inherit;
-    color: inherit;
-    text-align: left;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-  }
-
   .playlists-playback-dock-title {
     flex: 1;
     min-width: 0;
@@ -1436,7 +1410,7 @@
   }
 
   .playlists-player-stage[data-player-engaged='true']:not([data-audio-mobile-record='true'])
-    .playlist-audio-player:not(.playlist-audio-player--mobile-record)
+    .playlist-audio-player
     .audio-transport {
     display: none;
   }

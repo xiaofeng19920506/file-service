@@ -1,4 +1,4 @@
-# 飞牛必须 Building web：file-service-web:nasdl14
+# 飞牛必须 Building web：file-service-web:nasdl15
 
 services:
   postgres:
@@ -31,7 +31,7 @@ services:
       start_period: 10s
 
   api:
-    image: file-service-api:nasdl14
+    image: file-service-api:nasdl15
     pull_policy: never
     build:
       context: .
@@ -91,7 +91,7 @@ services:
       - api
 
   web:
-    image: file-service-web:nasdl14
+    image: file-service-web:nasdl15
     pull_policy: never
     build:
       context: .

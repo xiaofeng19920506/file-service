@@ -183,14 +183,11 @@ body {
     background: var(--surface);
   }
 
-  body.playlists-mobile-audio-active
-    .playlists-page[data-mobile-audio-dock='true']
-    .playlists-main-inner--mobile-audio {
+  body.playlists-mobile-audio-active .playlists-main-inner--mobile-audio {
     padding-bottom: calc(var(--playlists-mobile-dock-height) + 0.65rem) !important;
   }
 
   body.playlists-mobile-audio-active
-    .playlists-page[data-mobile-audio-dock='true']
     .playlists-workspace[data-player-active='true']
     .playlists-main-inner--mobile-audio {
     padding-bottom: calc(var(--playlists-mobile-dock-height-active) + 0.65rem) !important;

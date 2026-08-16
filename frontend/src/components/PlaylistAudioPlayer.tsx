@@ -13,7 +13,6 @@ import { useSwipeTrackNavigation } from '../hooks/useSwipeTrackNavigation';
 import type { PlaylistPlaybackOrderMode } from '../lib/playlist-playback-order-mode';
 import PlaylistKaraokeLyrics from './PlaylistKaraokeLyrics';
 import PlaylistLyricsScroller from './PlaylistLyricsScroller';
-import PlaylistPlaybackModeStrip from './PlaylistPlaybackModeStrip';
 import { PlaybackOrderModeIcon, PlusIcon, QueueIcon } from './icons';
 import AudioSeekBar from './AudioSeekBar';
 import ScrollingTitle from './ScrollingTitle';
@@ -46,7 +45,6 @@ type PlaylistAudioPlayerProps = {
   playbackOrderMode?: PlaylistPlaybackOrderMode;
   onOpenPlaybackOrder?: () => void;
   playbackOrderOpen?: boolean;
-  onSelectPlaybackOrder?: (mode: PlaylistPlaybackOrderMode) => void;
   onToggleQueue?: () => void;
   queueOpen?: boolean;
   /** 试听：CD 右上角「添加到列表」icon */
@@ -183,7 +181,6 @@ export default function PlaylistAudioPlayer({
   playbackOrderMode = 'sequential',
   onOpenPlaybackOrder,
   playbackOrderOpen = false,
-  onSelectPlaybackOrder,
   onToggleQueue,
   queueOpen = false,
   onAddToList,
@@ -1360,17 +1357,6 @@ export default function PlaylistAudioPlayer({
         )}
 
         {statusMessages}
-        <div className="playlist-audio-record-chrome">
-          {progressBlock}
-          <div className="playlist-audio-record-transport">{transportControls}</div>
-          {onSelectPlaybackOrder ? (
-            <PlaylistPlaybackModeStrip
-              compact
-              mode={playbackOrderMode}
-              onSelectMode={onSelectPlaybackOrder}
-            />
-          ) : null}
-        </div>
         {audioElement}
       </section>
     );
