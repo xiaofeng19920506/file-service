@@ -922,8 +922,32 @@
 
   .playlists-player-stage[data-audio-mobile-record='true']
     .playlist-audio-player--mobile-record
-    .audio-transport {
+    .audio-transport,
+  .playlist-audio-player--mobile-record .audio-transport,
+  .playlist-audio-player--mobile-record .playlist-audio-record-transport {
     display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .playlists-page[data-audio-mobile-record='true']:not([data-mobile-audio-dock='true'])
+    .playlist-audio-player--mobile-record {
+    padding-bottom: 12.75rem;
+  }
+
+  .playlists-page[data-audio-mobile-record='true']:not([data-mobile-audio-dock='true'])
+    .playlist-audio-record-chrome {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: calc(var(--z-bottom-nav, 20) + 8);
+    gap: 0.15rem;
+    padding: 0.45rem var(--page-gutter) max(0.55rem, env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--border-light);
+    box-shadow: 0 -8px 24px color-mix(in srgb, var(--shadow-sm) 55%, transparent);
   }
 
   .playlist-audio-record-times {

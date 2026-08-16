@@ -1436,7 +1436,7 @@
   }
 
   .playlists-player-stage[data-player-engaged='true']:not([data-audio-mobile-record='true'])
-    .playlist-audio-player
+    .playlist-audio-player:not(.playlist-audio-player--mobile-record)
     .audio-transport {
     display: none;
   }

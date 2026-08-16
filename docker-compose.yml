@@ -1,5 +1,5 @@
-# 飞牛 NAS：数据在 ./data（Postgres / Redis / MP3）
-# 外网：tunnel → frontend.youtvs.com、api.youtvs.com
+# 飞牛必须 Building web：file-service-web:nasdl13（播控固定在屏幕底部）
+# 只重启容器不会更新页面
 
 services:
   postgres:
@@ -32,7 +32,7 @@ services:
       start_period: 10s
 
   api:
-    image: file-service-api:nasdl12
+    image: file-service-api:nasdl13
     pull_policy: never
     build:
       context: .
@@ -92,7 +92,7 @@ services:
       - api
 
   web:
-    image: file-service-web:nasdl12
+    image: file-service-web:nasdl13
     pull_policy: never
     build:
       context: .
