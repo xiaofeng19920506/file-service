@@ -20,6 +20,7 @@ import PlaylistAudioPlayer, {
   type PlaylistAudioProgressHandle,
   type PlaylistAudioProgressState,
 } from '../components/PlaylistAudioPlayer';
+import PlaylistsMiniBar from '../components/PlaylistsMiniBar';
 import PlaylistsMobilePlaybackDock from '../components/PlaylistsMobilePlaybackDock';
 import PlaylistQueuePanel from '../components/PlaylistQueuePanel';
 import PlaylistPlaybackOrderPanel from '../components/PlaylistPlaybackOrderPanel';
@@ -124,6 +125,8 @@ export default function PlaylistsPage({
   activeIndexRef.current = activeIndex;
   const [playing, setPlaying] = useState(false);
   const [playerEngaged, setPlayerEngaged] = useState(false);
+  const [mobilePlayerExpanded, setMobilePlayerExpanded] = useState(false);
+  const [playbackPlaylistId, setPlaybackPlaylistId] = useState<string | undefined>();
   const [playbackOrderMode, setPlaybackOrderMode] = useState(readPlaylistPlaybackOrderMode);
   const { repeatMode, shuffleEnabled } = useMemo(
     () => playbackOrderToRepeatShuffle(playbackOrderMode),
@@ -303,15 +306,19 @@ export default function PlaylistsPage({
   }, [isMobileViewport, selectedId, mobileHome, refreshLibraryVideoIds]);
 
   const loadDetail = useCallback(
-    async (id: string) => {
+    async (id: string, options?: { preservePlayback?: boolean }) => {
       setLoadingDetail(true);
       setError(null);
       try {
         const data = await getPlaylist(id);
         setDetail(data);
-        setActiveIndex(0);
-        setPlaying(false);
-        setPlayerEngaged(false);
+        if (!options?.preservePlayback) {
+          setActiveIndex(0);
+          setPlaying(false);
+          setPlayerEngaged(false);
+          setMobilePlayerExpanded(false);
+          setPlaybackPlaylistId(undefined);
+        }
       } catch (e) {
         setError(friendlyError(e instanceof Error ? e.message : 'load_playlist_failed', t));
         setDetail(null);
@@ -329,22 +336,80 @@ export default function PlaylistsPage({
   useEffect(() => {
     if (selectedId) {
       writeLastPlaylistId(selectedId);
+      const preservePlayback =
+        Boolean(playbackPlaylistId) &&
+        playbackPlaylistId === selectedId &&
+        detail?.playlist.id === selectedId &&
+        playerEngaged;
+      if (preservePlayback) {
+        return;
+      }
+      setShuffleOrder([]);
+      setShuffleCursor(0);
+      shuffleOrderRef.current = [];
+      prevShuffleItemCountRef.current = 0;
       void loadDetail(selectedId);
-    } else {
-      setDetail(null);
-      setPlaying(false);
-      setPlayerEngaged(false);
-      setActiveIndex(0);
+      return;
     }
+
+    if (playerEngaged && playbackPlaylistId) {
+      return;
+    }
+
+    setDetail(null);
+    setPlaying(false);
+    setPlayerEngaged(false);
+    setActiveIndex(0);
+    setMobilePlayerExpanded(false);
+    setPlaybackPlaylistId(undefined);
     setShuffleOrder([]);
     setShuffleCursor(0);
     shuffleOrderRef.current = [];
     prevShuffleItemCountRef.current = 0;
-  }, [selectedId, loadDetail]);
+  }, [
+    selectedId,
+    loadDetail,
+    playbackPlaylistId,
+    detail?.playlist.id,
+    playerEngaged,
+  ]);
 
   const backToList = useCallback(() => {
     onSelectId(undefined);
   }, [onSelectId]);
+
+  const handleMobileBack = useCallback(() => {
+    if (isMobileViewport && playerEngaged && playbackPlaylistId && mobilePlayerExpanded) {
+      setMobilePlayerExpanded(false);
+      onSelectId(undefined);
+      return;
+    }
+    backToList();
+  }, [
+    isMobileViewport,
+    playerEngaged,
+    playbackPlaylistId,
+    mobilePlayerExpanded,
+    onSelectId,
+    backToList,
+  ]);
+
+  const handleExpandMiniPlayer = useCallback(() => {
+    if (!playbackPlaylistId) return;
+    setMobilePlayerExpanded(true);
+    onSelectId(playbackPlaylistId);
+  }, [playbackPlaylistId, onSelectId]);
+
+  const handleCloseMiniPlayer = useCallback(() => {
+    setPlaying(false);
+    setPlayerEngaged(false);
+    setMobilePlayerExpanded(false);
+    setPlaybackPlaylistId(undefined);
+    if (!selectedId) {
+      setDetail(null);
+      setActiveIndex(0);
+    }
+  }, [selectedId]);
 
   const closeHomePreview = useCallback(() => {
     setHomePreview(null);
@@ -469,11 +534,20 @@ export default function PlaylistsPage({
 
     setMobileHeader({
       title,
-      onBack: backToList,
+      onBack: handleMobileBack,
     });
 
     return () => setMobileHeader(null);
-  }, [isMobileViewport, selectedId, detail, playlists, backToList, setMobileHeader, homePreview, closeHomePreview]);
+  }, [
+    isMobileViewport,
+    selectedId,
+    detail,
+    playlists,
+    handleMobileBack,
+    setMobileHeader,
+    homePreview,
+    closeHomePreview,
+  ]);
 
   const performCreateList = useCallback(
     async (title: string) => {
@@ -517,7 +591,13 @@ export default function PlaylistsPage({
     setError(null);
     try {
       await deletePlaylist(id);
-      if (selectedId === id) onSelectId(undefined);
+      if (selectedId === id) {
+        setPlaybackPlaylistId(undefined);
+        setPlayerEngaged(false);
+        setPlaying(false);
+        setMobilePlayerExpanded(false);
+        onSelectId(undefined);
+      }
       await loadList();
     } catch (e) {
       setError(friendlyError(e instanceof Error ? e.message : 'delete_failed', t));
@@ -807,6 +887,10 @@ export default function PlaylistsPage({
     setActiveIndex(index);
     setPlaying(shouldPlay);
     setPlayerEngaged(true);
+    setMobilePlayerExpanded(true);
+    if (selectedId) {
+      setPlaybackPlaylistId(selectedId);
+    }
   };
 
   const engageAndPlay = (index: number) => engageAtIndex(index, true);
@@ -819,6 +903,10 @@ export default function PlaylistsPage({
       setActiveIndex(order[0]!);
       setPlaying(true);
       setPlayerEngaged(true);
+      setMobilePlayerExpanded(true);
+      if (selectedId) {
+        setPlaybackPlaylistId(selectedId);
+      }
       return;
     }
     engageAndPlay(0);
@@ -983,12 +1071,19 @@ export default function PlaylistsPage({
   const showPlayer = playerEngaged && playerItems.length > 0;
   const homePreviewDesktop = Boolean(homePreview && !isMobileViewport);
   const homePreviewMobile = Boolean(homePreview && isMobileViewport && !selectedId);
-  const audioWatchActive = showPlayer || homePreviewDesktop;
+  const audioWatchMobileExpanded =
+    showPlayer && isMobileViewport && mobilePlayerExpanded && !homePreview;
+  const showMobileMiniBar =
+    showPlayer && isMobileViewport && !mobilePlayerExpanded && !homePreview;
+  const audioWatchActive =
+    homePreviewDesktop ||
+    (showPlayer && (!isMobileViewport || audioWatchMobileExpanded));
   const audioWatchDesktop = audioWatchActive && !isMobileViewport;
-  const audioWatchMobile = (showPlayer || homePreviewMobile) && isMobileViewport;
+  const audioWatchMobile = audioWatchMobileExpanded || homePreviewMobile;
   const showMobileAudioDock =
     isMobileViewport &&
-    (homePreview || (showPlayer && Boolean(selectedId && detail?.items.length)));
+    mobilePlayerExpanded &&
+    (homePreview || (showPlayer && Boolean(detail?.items.length)));
   const homeSearchPreviewEnabled =
     isMobileViewport && !selectedId && mobileHome === 'search';
   const mobileDockCanGoPrev = playerEngaged ? canGoPrev : activeIndex > 0;
@@ -1041,12 +1136,19 @@ export default function PlaylistsPage({
   }, [audioWatchDesktop]);
 
   useEffect(() => {
-    if (!audioWatchMobile && !homePreviewMobile) return;
+    if (!audioWatchMobile && !homePreviewMobile && !showMobileMiniBar) return;
     document.body.classList.add('playlists-mobile-audio-active');
+    if (showMobileMiniBar) {
+      document.body.classList.add('playlists-mobile-mini-bar-active');
+    }
     return () => {
-      document.body.classList.remove('playlists-mobile-video-active', 'playlists-mobile-audio-active');
+      document.body.classList.remove(
+        'playlists-mobile-video-active',
+        'playlists-mobile-audio-active',
+        'playlists-mobile-mini-bar-active',
+      );
     };
-  }, [audioWatchMobile, homePreviewMobile]);
+  }, [audioWatchMobile, homePreviewMobile, showMobileMiniBar]);
 
   const startRename = (id: string, title: string, modalTitle?: string) => {
     blockListSelectRef.current = true;
@@ -1099,10 +1201,10 @@ export default function PlaylistsPage({
     </div>
   );
 
-  const renderAudioPlayer = (placement: 'inline' | 'dock') => {
+  const renderAudioPlayer = (placement: 'inline' | 'dock' | 'mobileKeepAlive') => {
     if (!showPlayer || homePreview) return null;
     if (placement === 'dock' && !audioWatchDesktop) return null;
-    if (placement === 'inline' && !audioWatchMobile) return null;
+    if (placement === 'inline') return null;
 
     return (
       <PlaylistAudioPlayer
@@ -1117,7 +1219,7 @@ export default function PlaylistsPage({
         canGoNext={canGoNext}
         canGoPrev={canGoPrev}
         playlistTitle={detail?.playlist.title}
-        variant={audioWatchMobile ? 'mobileRecord' : 'desktopDock'}
+        variant={placement === 'mobileKeepAlive' || audioWatchMobileExpanded ? 'mobileRecord' : 'desktopDock'}
         repeatMode={repeatMode}
         playbackOrderMode={playbackOrderMode}
         onOpenPlaybackOrder={openPlaybackOrderPanel}
@@ -1225,6 +1327,8 @@ export default function PlaylistsPage({
     closeMenu();
     setPlayerEngaged(false);
     setPlaying(false);
+    setMobilePlayerExpanded(false);
+    setPlaybackPlaylistId(undefined);
     onSelectId(undefined);
     window.requestAnimationFrame(() => {
       const input = document.getElementById('playlist-import-url');
@@ -1773,8 +1877,10 @@ export default function PlaylistsPage({
         data-playback-mode="audio"
         data-audio-now-playing={audioWatchActive ? 'true' : 'false'}
         data-audio-desktop-dock={audioWatchDesktop ? 'true' : 'false'}
-        data-audio-mobile-record={audioWatchMobile ? 'true' : 'false'}
+        data-audio-mobile-record={audioWatchMobileExpanded || homePreviewMobile ? 'true' : 'false'}
         data-mobile-audio-dock={showMobileAudioDock ? 'true' : 'false'}
+        data-mobile-mini-bar={showMobileMiniBar ? 'true' : 'false'}
+        data-mobile-player-expanded={mobilePlayerExpanded ? 'true' : 'false'}
         data-mobile-home={mobileHomeView}
         data-mobile-detail={isMobileViewport && selectedId ? 'true' : undefined}
         data-home-preview={homePreview ? 'true' : undefined}
@@ -1814,8 +1920,10 @@ export default function PlaylistsPage({
           data-playback-mode="audio"
           data-audio-now-playing={audioWatchActive ? 'true' : 'false'}
           data-audio-desktop-dock={audioWatchDesktop ? 'true' : 'false'}
-          data-audio-mobile-record={audioWatchMobile ? 'true' : 'false'}
+          data-audio-mobile-record={audioWatchMobileExpanded || homePreviewMobile ? 'true' : 'false'}
           data-mobile-audio-dock={showMobileAudioDock ? 'true' : 'false'}
+          data-mobile-mini-bar={showMobileMiniBar ? 'true' : 'false'}
+          data-mobile-player-expanded={mobilePlayerExpanded ? 'true' : 'false'}
         >
           {!isMobileViewport ? (
             <>
@@ -1881,7 +1989,7 @@ export default function PlaylistsPage({
               </div>
             ) : detail ? (
               <div
-                className={`playlists-main-inner${audioWatchMobile ? ' playlists-main-inner--mobile-audio' : ''}`}
+                className={`playlists-main-inner${audioWatchMobileExpanded ? ' playlists-main-inner--mobile-audio' : ''}`}
               >
                 {renderMainToolbar(detail.playlist, detail.items.length > 0)}
 
@@ -1901,15 +2009,13 @@ export default function PlaylistsPage({
                     className="playlists-player-stage"
                     data-playback-mode="audio"
                     data-player-engaged={showPlayer ? 'true' : 'false'}
-                    data-audio-mobile-record={audioWatchMobile ? 'true' : 'false'}
+                    data-audio-mobile-record={audioWatchMobileExpanded ? 'true' : 'false'}
                     data-tracks-edit={tracksEditMode ? 'true' : 'false'}
                   >
-                    <div className="playlists-player-col">
-                      {showPlayer && renderAudioPlayer('inline')}
-                    </div>
+                    <div className="playlists-player-col" aria-hidden="true" />
 
                     <aside
-                      className={`playlists-tracks-col${audioWatchMobile ? ' playlists-tracks-col--hidden-audio-watch' : ''}`}
+                      className={`playlists-tracks-col${audioWatchMobileExpanded ? ' playlists-tracks-col--hidden-audio-watch' : ''}`}
                       aria-label={t('playlists.tracksTitle')}
                     >
                       <div className="playlists-tracks-head">
@@ -2063,6 +2169,29 @@ export default function PlaylistsPage({
           onSelectMode={applyPlaybackOrderMode}
           variant={audioWatchDesktop ? 'desktopDock' : 'mobile'}
         />
+      )}
+
+      {showMobileMiniBar && currentItem && (
+        <PlaylistsMiniBar
+          title={currentItem.title}
+          playing={playing}
+          currentTime={audioProgress.currentTime}
+          duration={audioProgress.duration}
+          onExpand={handleExpandMiniPlayer}
+          onPlayToggle={() => setPlaying((wasPlaying) => !wasPlaying)}
+          onClose={handleCloseMiniPlayer}
+        />
+      )}
+
+      {isMobileViewport && showPlayer && !homePreview && (
+        <div
+          className={`playlists-audio-keep-alive${
+            mobilePlayerExpanded ? ' playlists-audio-keep-alive--expanded' : ' playlists-audio-keep-alive--clipped'
+          }`}
+          aria-hidden={!mobilePlayerExpanded}
+        >
+          {renderAudioPlayer('mobileKeepAlive')}
+        </div>
       )}
 
       {showMobileAudioDock && homePreview && (

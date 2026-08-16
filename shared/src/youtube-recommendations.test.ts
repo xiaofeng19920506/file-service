@@ -53,6 +53,44 @@ describe('recommendation scoring', () => {
     expect(worshipMatch).toBeGreaterThan(unrelated);
   });
 
+  it('boosts same artist and similar titles from the catalog', () => {
+    const profile = buildRecommendationProfile({
+      plays: [
+        {
+          videoId: 'played-mayday',
+          title: 'MAYDAY五月天 [ 笑忘歌 ]',
+          channelTitle: '相信音樂BinMusic',
+          weight: 5,
+        },
+      ],
+      searches: [],
+      libraryTitles: [],
+    });
+
+    const sameArtist = scoreRecommendationCandidate(
+      {
+        videoId: 'other-mayday',
+        title: 'MAYDAY五月天 [ 温柔 ] Official Music Video',
+        channelTitle: '相信音樂BinMusic',
+        playCount: 4,
+        inLibrary: false,
+      },
+      profile,
+    );
+    const unrelated = scoreRecommendationCandidate(
+      {
+        videoId: 'cooking',
+        title: '十分钟学会红烧肉',
+        channelTitle: '美食频道',
+        playCount: 80,
+        inLibrary: false,
+      },
+      profile,
+    );
+
+    expect(sameArtist).toBeGreaterThan(unrelated);
+  });
+
   it('excludes very recent plays and falls back to popularity', () => {
     const profile = buildRecommendationProfile({
       plays: [

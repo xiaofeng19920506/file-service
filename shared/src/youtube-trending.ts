@@ -12,7 +12,7 @@ export type TrendingSong = {
   inLibrary: boolean;
 };
 
-export type TrendingScope = 'today' | 'all_time' | 'popular';
+export type TrendingScope = 'today' | 'all_time' | 'popular' | 'personalized';
 
 export type TrendingSongsResult = {
   scope: TrendingScope;

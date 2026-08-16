@@ -1129,6 +1129,134 @@
     box-shadow: none;
   }
 
+  /* ── 迷你播放条（网易云风格，收起全屏唱片机后显示） ── */
+  .playlists-mini-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: var(--bottom-nav-height);
+    z-index: calc(var(--z-dock, 15) + 1);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-sizing: border-box;
+    height: var(--playlists-mini-bar-height);
+    min-height: var(--playlists-mini-bar-height);
+    padding: 0 0.65rem 0 0.85rem;
+    background: color-mix(in srgb, var(--surface) 96%, transparent);
+    backdrop-filter: saturate(180%) blur(16px);
+    -webkit-backdrop-filter: saturate(180%) blur(16px);
+    border-top: 1px solid var(--border-light);
+    box-shadow: 0 -4px 16px color-mix(in srgb, var(--shadow-sm) 45%, transparent);
+    pointer-events: auto;
+  }
+
+  .playlists-mini-bar-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .playlists-mini-bar-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--text);
+  }
+
+  .playlists-mini-bar-time {
+    flex-shrink: 0;
+    font-size: 0.6875rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-tertiary);
+    white-space: nowrap;
+  }
+
+  .playlists-mini-bar-btn {
+    flex-shrink: 0;
+    display: inline-grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .playlists-mini-bar-btn svg {
+    width: 1.125rem;
+    height: 1.125rem;
+    display: block;
+  }
+
+  .playlists-mini-bar-btn--close svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .playlists-mini-bar-btn:active {
+    background: var(--surface-secondary);
+  }
+
+  body.playlists-mobile-mini-bar-active .app {
+    padding-bottom: calc(var(--bottom-nav-height) + var(--playlists-mini-bar-height));
+  }
+
+  body.playlists-mobile-mini-bar-active .playlists-sidebar-list,
+  body.playlists-mobile-mini-bar-active .playlists-youtube-search--mobile-list .playlist-youtube-results,
+  body.playlists-mobile-mini-bar-active .playlists-placeholder {
+    padding-bottom: calc(var(--playlists-mini-bar-height) + 0.35rem);
+  }
+
+  .playlists-audio-keep-alive--expanded {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: calc(var(--nav-height) + env(safe-area-inset-top, 0px));
+    bottom: calc(var(--bottom-nav-height) + var(--playlists-mobile-dock-height-active));
+    z-index: calc(var(--z-dock, 15) - 1);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--surface);
+    pointer-events: auto;
+    overflow: hidden;
+  }
+
+  .playlists-audio-keep-alive--expanded .playlist-audio-player--mobile-record {
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+  }
+
+  .playlists-audio-keep-alive--clipped {
+    position: fixed;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+    pointer-events: none;
+  }
+
   /* 播放条底部留白见 responsive.css（data-player-active） */
 
   .playlists-mobile-transport-btn {

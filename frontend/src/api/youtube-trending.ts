@@ -10,7 +10,7 @@ export type TrendingSong = {
   video?: { status: YoutubeVideoCacheStatus };
 };
 
-export type TrendingScope = 'today' | 'all_time' | 'popular';
+export type TrendingScope = 'today' | 'all_time' | 'popular' | 'personalized';
 
 export type TrendingSongsResponse = {
   scope: TrendingScope;

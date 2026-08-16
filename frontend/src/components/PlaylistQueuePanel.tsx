@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from 'react';
 import { DragHandleIcon } from './icons';
 import { useI18n } from '../i18n';
 import type { PlaylistItem } from '../api/playlists';
@@ -48,6 +49,22 @@ export default function PlaylistQueuePanel({
 }: PlaylistQueuePanelProps) {
   const { t } = useI18n();
   const isDesktopDock = variant === 'desktopDock';
+  const activeItemRef = useRef<HTMLLIElement>(null);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+
+    const scrollActiveIntoView = () => {
+      activeItemRef.current?.scrollIntoView({
+        block: 'center',
+        inline: 'nearest',
+        behavior: 'auto',
+      });
+    };
+
+    const frame = requestAnimationFrame(scrollActiveIntoView);
+    return () => cancelAnimationFrame(frame);
+  }, [open, activeIndex]);
 
   if (!open) return null;
 
@@ -83,6 +100,7 @@ export default function PlaylistQueuePanel({
             return (
               <li
                 key={item.id}
+                ref={isActive ? activeItemRef : undefined}
                 className={`playlist-queue-item${isActive ? ' active' : ''}${isPlaying ? ' playing' : ''}${isDragging ? ' dragging' : ''}${isDragOverBefore ? ' drag-over-before' : ''}${isDragOverAfter ? ' drag-over-after' : ''}`}
                 onDragOver={(e) => {
                   if (trackDragIndex === null || savingOrder || !onDragOver) return;

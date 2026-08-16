@@ -4,6 +4,7 @@ import {
   type PlaylistDetail,
   type PlaylistSummary,
 } from '../api/playlists';
+import { fetchYoutubeRecommendations } from '../api/youtube-recommendations';
 import {
   fetchTrendingYoutubeSongs,
   type TrendingScope,
@@ -59,16 +60,33 @@ export default function YoutubeTrendingSongs({
     let cancelled = false;
     setLoading(true);
     setError(null);
-    void fetchTrendingYoutubeSongs(10)
+    void fetchYoutubeRecommendations(12)
       .then((data) => {
         if (cancelled) return;
-        setSongs(data.songs);
-        setScope(data.scope);
+        if (data.songs.length > 0) {
+          setSongs(data.songs);
+          setScope(data.scope);
+          return;
+        }
+        return fetchTrendingYoutubeSongs(10).then((fallback) => {
+          if (cancelled) return;
+          setSongs(fallback.songs);
+          setScope(fallback.scope);
+        });
       })
       .catch((e) => {
         if (cancelled) return;
-        setSongs([]);
-        setError(friendlyError(e instanceof Error ? e.message : 'load_trending_failed', t));
+        return fetchTrendingYoutubeSongs(10)
+          .then((fallback) => {
+            if (cancelled) return;
+            setSongs(fallback.songs);
+            setScope(fallback.scope);
+          })
+          .catch(() => {
+            if (cancelled) return;
+            setSongs([]);
+            setError(friendlyError(e instanceof Error ? e.message : 'load_recommendations_failed', t));
+          });
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -114,11 +132,13 @@ export default function YoutubeTrendingSongs({
   };
 
   const scopeLabel =
-    scope === 'today'
-      ? t('playlists.trendingToday')
-      : scope === 'all_time'
-        ? t('playlists.trendingAllTime')
-        : t('playlists.trendingPopular');
+    scope === 'personalized'
+      ? t('playlists.trendingPersonalized')
+      : scope === 'today'
+        ? t('playlists.trendingToday')
+        : scope === 'all_time'
+          ? t('playlists.trendingAllTime')
+          : t('playlists.trendingPopular');
 
   if (loading) {
     return (
