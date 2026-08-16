@@ -517,10 +517,9 @@ export default function PlaylistsPage({
 
   useEffect(() => {
     if (!isMobileViewport) return;
-    if (selectedId || mobileHome !== 'search') {
-      closeHomePreview();
-    }
-  }, [isMobileViewport, selectedId, mobileHome, closeHomePreview]);
+    setHomePreviewExpanded(false);
+    setMobilePlayerExpanded(false);
+  }, [mobileHome]);
 
   useEffect(() => {
     if (!isMobileViewport) {
@@ -564,7 +563,6 @@ export default function PlaylistsPage({
     homePreview,
     homePreviewExpanded,
     handleHomePreviewBack,
-    closeHomePreview,
   ]);
 
   const performCreateList = useCallback(
@@ -1096,7 +1094,7 @@ export default function PlaylistsPage({
   const showMobileMiniBar =
     isMobileViewport &&
     ((showPlayer && !mobilePlayerExpanded && !homePreview) ||
-      Boolean(homePreview && !homePreviewExpanded && !selectedId));
+      Boolean(homePreview && !homePreviewExpanded));
   const audioWatchActive =
     homePreviewDesktop ||
     (showPlayer && (!isMobileViewport || audioWatchMobileExpanded));
@@ -2188,7 +2186,12 @@ export default function PlaylistsPage({
           currentTime={audioProgress.currentTime}
           duration={audioProgress.duration}
           onExpand={
-            homePreview ? () => setHomePreviewExpanded(true) : handleExpandMiniPlayer
+            homePreview
+              ? () => {
+                  if (selectedId) onSelectId(undefined);
+                  setHomePreviewExpanded(true);
+                }
+              : handleExpandMiniPlayer
           }
           onPlayToggle={
             homePreview

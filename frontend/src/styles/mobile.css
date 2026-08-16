@@ -1218,7 +1218,8 @@
 
   body.playlists-mobile-mini-bar-active .playlists-sidebar-list,
   body.playlists-mobile-mini-bar-active .playlists-youtube-search--mobile-list .playlist-youtube-results,
-  body.playlists-mobile-mini-bar-active .playlists-placeholder {
+  body.playlists-mobile-mini-bar-active .playlists-placeholder,
+  body.playlists-mobile-mini-bar-active .playlists-tracks {
     padding-bottom: calc(var(--playlists-mini-bar-height) + 0.35rem);
   }
 
