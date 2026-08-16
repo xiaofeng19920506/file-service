@@ -1034,8 +1034,7 @@ export default function PlaylistsPage({
   const audioWatchDesktop = audioWatchActive && !isMobileViewport;
   const audioWatchMobile = (showPlayer && mobileNowPlaying || homePreviewMobile) && isMobileViewport;
   const showMobileAudioDock =
-    isMobileViewport &&
-    (homePreview || (showPlayer && !mobileNowPlaying));
+    isMobileViewport && showPlayer && !mobileNowPlaying && !homePreview;
   const homeSearchPreviewEnabled =
     isMobileViewport && !selectedId && mobileHome === 'search';
   const mobileDockCanGoPrev = playerEngaged ? canGoPrev : activeIndex > 0;

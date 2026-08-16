@@ -414,8 +414,9 @@
   .playlists-main-inner--mobile-audio
     .playlists-player-stage[data-audio-mobile-record='true']
     .playlist-audio-record-stage {
-    min-height: min(38vh, 300px);
-    padding-bottom: 0.75rem;
+    flex: 1 1 0;
+    min-height: 0;
+    padding-bottom: 0.35rem;
   }
 
   .playlist-audio-player--mobile-record {
@@ -443,15 +444,15 @@
   }
 
   .playlist-audio-record-stage {
-    flex: 1 1 auto;
+    flex: 1 1 0;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-end;
-    min-height: min(42vh, 320px);
+    justify-content: center;
+    min-height: 0;
     max-height: none;
-    padding: 0.5rem 0 0.65rem;
-    overflow: visible;
+    padding: 0.35rem 0 0.25rem;
+    overflow: hidden;
   }
 
   /* 试听封面：本文件在 mobile.css 之后加载，盖过 flex-end / 38vh，避免 CD 贴底 */
@@ -472,8 +473,9 @@
 
   .playlist-audio-record-disc-wrap {
     position: relative;
-    flex-shrink: 0;
-    width: min(72vw, 17.5rem);
+    flex: 0 1 auto;
+    width: min(56vw, 14.5rem);
+    max-height: 42vh;
     aspect-ratio: 1;
     overflow: visible;
   }
@@ -933,28 +935,30 @@
     font-variant-numeric: tabular-nums;
   }
 
-  .playlists-page[data-mobile-audio-dock='true'] .playlist-audio-record-transport {
-    display: none !important;
-  }
-
   .playlist-audio-record-chrome {
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
-    padding: 0 0.15rem 0.35rem;
+    padding: 0 0.15rem max(0.35rem, env(safe-area-inset-bottom, 0px));
+    background: var(--surface);
+    z-index: 2;
   }
 
   .playlist-audio-record-chrome .playlist-audio-record-transport {
-    display: flex;
+    display: flex !important;
     padding: 0.1rem 0 0.15rem;
+  }
+
+  .playlist-audio-record-chrome .audio-transport {
+    display: flex !important;
   }
 
   .playlist-audio-record-transport {
     flex-shrink: 0;
-    display: flex;
+    display: flex !important;
     justify-content: center;
-    padding: 0.25rem 0 1rem;
+    padding: 0.1rem 0 0.25rem;
   }
 
   .playlist-audio-record-transport .audio-transport {
