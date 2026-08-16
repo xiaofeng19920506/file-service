@@ -153,6 +153,71 @@
   gap: 0.35rem;
 }
 
+.playlist-play-order-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  padding: 0.75rem var(--page-gutter) calc(0.85rem + var(--safe-bottom, 0px));
+}
+
+.playlist-play-order-grid--compact {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.25rem;
+  padding: 0.15rem 0 0.2rem;
+}
+
+.playlist-play-order-grid-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-height: 4.25rem;
+  padding: 0.45rem 0.25rem;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.playlist-play-order-grid--compact .playlist-play-order-grid-btn {
+  min-height: 2.75rem;
+  gap: 0.12rem;
+  padding: 0.25rem 0.1rem;
+  border-radius: 10px;
+}
+
+.playlist-play-order-grid-btn.active {
+  border-color: color-mix(in srgb, var(--blue) 45%, var(--border-light));
+  background: var(--blue-muted);
+  color: var(--blue);
+}
+
+.playlist-play-order-grid-icon {
+  display: inline-flex;
+  width: 1.25rem;
+  height: 1.25rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.playlist-play-order-grid-icon svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.playlist-play-order-grid-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.playlist-play-order-grid--compact .playlist-play-order-grid-label {
+  font-size: 0.625rem;
+}
+
 .playlist-play-order-item {
   width: 100%;
   display: flex;
@@ -1480,6 +1545,11 @@
     max-height: min(72dvh, calc(100dvh - var(--safe-top) - 2rem));
     border-radius: 16px 16px 0 0;
     padding-bottom: max(0, var(--safe-bottom));
+  }
+
+  .playlist-play-order-panel {
+    z-index: calc(var(--z-modal) + 8);
+    max-height: none;
   }
 
   .playlists-mini-player {

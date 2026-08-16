@@ -1,14 +1,11 @@
 import { useEffect } from 'react';
+import PlaylistPlaybackModeStrip, {
+  playbackOrderFullLabel,
+  PLAYBACK_ORDER_MODES,
+} from './PlaylistPlaybackModeStrip';
 import { ListPlayIcon, PlaybackOrderModeIcon } from './icons';
 import { useI18n } from '../i18n';
 import type { PlaylistPlaybackOrderMode } from '../lib/playlist-playback-order-mode';
-
-const MODES: PlaylistPlaybackOrderMode[] = [
-  'sequential',
-  'loop_all',
-  'loop_one',
-  'shuffle',
-];
 
 type PlaylistPlaybackOrderPanelProps = {
   open: boolean;
@@ -38,19 +35,6 @@ export default function PlaylistPlaybackOrderPanel({
   }, [open, onClose]);
 
   if (!open) return null;
-
-  const labelForMode = (value: PlaylistPlaybackOrderMode) => {
-    switch (value) {
-      case 'loop_one':
-        return t('playlists.repeatOne');
-      case 'loop_all':
-        return t('playlists.repeatAll');
-      case 'shuffle':
-        return t('playlists.shuffle');
-      default:
-        return t('playlists.playOrderSequential');
-    }
-  };
 
   const hintForMode = (value: PlaylistPlaybackOrderMode) => {
     switch (value) {
@@ -85,42 +69,52 @@ export default function PlaylistPlaybackOrderPanel({
             {t('common.cancel')}
           </button>
         </header>
-        <ul className="playlist-play-order-list" role="radiogroup" aria-label={t('playlists.playOrderTitle')}>
-          {MODES.map((value) => {
-            const selected = mode === value;
-            return (
-              <li key={value}>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  className={`playlist-play-order-item${selected ? ' active' : ''}`}
-                  onClick={() => {
-                    onSelectMode(value);
-                    onClose();
-                  }}
-                >
-                  <span className="playlist-play-order-item-icon" aria-hidden>
-                    {value === 'sequential' ? (
-                      <ListPlayIcon />
-                    ) : (
-                      <PlaybackOrderModeIcon mode={value} />
-                    )}
-                  </span>
-                  <span className="playlist-play-order-item-text">
-                    <span className="playlist-play-order-item-title">{labelForMode(value)}</span>
-                    <span className="playlist-play-order-item-hint">{hintForMode(value)}</span>
-                  </span>
-                  {selected ? (
-                    <span className="playlist-play-order-item-check" aria-hidden>
-                      ✓
+        {isDesktopDock ? (
+          <ul className="playlist-play-order-list" role="radiogroup" aria-label={t('playlists.playOrderTitle')}>
+            {PLAYBACK_ORDER_MODES.map((value) => {
+              const selected = mode === value;
+              return (
+                <li key={value}>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    className={`playlist-play-order-item${selected ? ' active' : ''}`}
+                    onClick={() => {
+                      onSelectMode(value);
+                      onClose();
+                    }}
+                  >
+                    <span className="playlist-play-order-item-icon" aria-hidden>
+                      {value === 'sequential' ? (
+                        <ListPlayIcon />
+                      ) : (
+                        <PlaybackOrderModeIcon mode={value} />
+                      )}
                     </span>
-                  ) : null}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+                    <span className="playlist-play-order-item-text">
+                      <span className="playlist-play-order-item-title">{playbackOrderFullLabel(value, t)}</span>
+                      <span className="playlist-play-order-item-hint">{hintForMode(value)}</span>
+                    </span>
+                    {selected ? (
+                      <span className="playlist-play-order-item-check" aria-hidden>
+                        ✓
+                      </span>
+                    ) : null}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <PlaylistPlaybackModeStrip
+            mode={mode}
+            onSelectMode={(next) => {
+              onSelectMode(next);
+              onClose();
+            }}
+          />
+        )}
       </aside>
     </>
   );

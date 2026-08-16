@@ -1032,6 +1032,17 @@
     overflow: hidden;
   }
 
+  .playlists-playback-dock-meta--expand {
+    width: 100%;
+    border: none;
+    background: transparent;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
   .playlists-playback-dock-title {
     flex: 1;
     min-width: 0;
