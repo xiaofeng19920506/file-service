@@ -10,10 +10,25 @@ import { useI18n } from '../i18n';
 
 export const YOUTUBE_SEARCH_DEBOUNCE_MS = 450;
 
+type YoutubeSearchSnapshot = {
+  query: string;
+  results: YoutubeSearchResult[];
+  hasSearched: boolean;
+  hasMore: boolean;
+  nextPageToken: string | null;
+  nextOffset: number;
+  error: string | null;
+};
+
+const searchSnapshots = new Map<string, YoutubeSearchSnapshot>();
+
 type UseDebouncedYoutubeSearchOptions = {
   debounceMs?: number;
   debounceEnabled?: boolean;
+  persistKey?: string;
 };
+
+export type DebouncedYoutubeSearch = ReturnType<typeof useDebouncedYoutubeSearch>;
 
 function mergeSearchResults(
   prev: YoutubeSearchResult[],
@@ -30,21 +45,30 @@ function mergeSearchResults(
 }
 
 export function useDebouncedYoutubeSearch(options: UseDebouncedYoutubeSearchOptions = {}) {
-  const { debounceMs = YOUTUBE_SEARCH_DEBOUNCE_MS, debounceEnabled = true } = options;
+  const {
+    debounceMs = YOUTUBE_SEARCH_DEBOUNCE_MS,
+    debounceEnabled = true,
+    persistKey,
+  } = options;
   const { t } = useI18n();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<YoutubeSearchResult[]>([]);
+  const snapshot = persistKey ? searchSnapshots.get(persistKey) : undefined;
+  const [searchQuery, setSearchQuery] = useState(snapshot?.query ?? '');
+  const [searchResults, setSearchResults] = useState<YoutubeSearchResult[]>(
+    () => snapshot?.results ?? [],
+  );
   const [searchPending, setSearchPending] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
   const [loadMoreLoading, setLoadMoreLoading] = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
-  const [hasSearched, setHasSearched] = useState(false);
-  const [hasMore, setHasMore] = useState(false);
-  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
-  const [nextOffset, setNextOffset] = useState(0);
+  const [searchError, setSearchError] = useState<string | null>(snapshot?.error ?? null);
+  const [hasSearched, setHasSearched] = useState(snapshot?.hasSearched ?? false);
+  const [hasMore, setHasMore] = useState(snapshot?.hasMore ?? false);
+  const [nextPageToken, setNextPageToken] = useState<string | null>(
+    snapshot?.nextPageToken ?? null,
+  );
+  const [nextOffset, setNextOffset] = useState(snapshot?.nextOffset ?? 0);
   const requestIdRef = useRef(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const activeQueryRef = useRef('');
+  const activeQueryRef = useRef(snapshot?.query.trim() ?? '');
 
   const isSearchBusy = searchPending || searchLoading;
 
@@ -95,14 +119,17 @@ export function useDebouncedYoutubeSearch(options: UseDebouncedYoutubeSearchOpti
         return;
       }
 
+      const sameQuery = activeQueryRef.current === trimmed;
       const id = ++requestIdRef.current;
       activeQueryRef.current = trimmed;
       setSearchPending(false);
       setSearchError(null);
       setSearchLoading(true);
       setLoadMoreLoading(false);
-      setSearchResults([]);
-      resetPagination();
+      if (!sameQuery) {
+        setSearchResults([]);
+        resetPagination();
+      }
       void recordYoutubeSearch(trimmed).catch(() => undefined);
       try {
         const data = await searchYoutubeVideos(trimmed, {
@@ -176,7 +203,6 @@ export function useDebouncedYoutubeSearch(options: UseDebouncedYoutubeSearchOpti
   useEffect(() => {
     if (!debounceEnabled) {
       setSearchPending(false);
-      if (!searchQuery.trim()) clearSearchState();
       return;
     }
 
@@ -184,7 +210,7 @@ export function useDebouncedYoutubeSearch(options: UseDebouncedYoutubeSearchOpti
 
     const trimmed = searchQuery.trim();
     if (!trimmed) {
-      clearSearchState();
+      setSearchPending(false);
       return;
     }
 
@@ -196,7 +222,29 @@ export function useDebouncedYoutubeSearch(options: UseDebouncedYoutubeSearchOpti
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [searchQuery, runSearch, debounceMs, debounceEnabled, clearSearchState]);
+  }, [searchQuery, runSearch, debounceMs, debounceEnabled]);
+
+  useEffect(() => {
+    if (!persistKey) return;
+    searchSnapshots.set(persistKey, {
+      query: searchQuery,
+      results: searchResults,
+      hasSearched,
+      hasMore,
+      nextPageToken,
+      nextOffset,
+      error: searchError,
+    });
+  }, [
+    persistKey,
+    searchQuery,
+    searchResults,
+    hasSearched,
+    hasMore,
+    nextPageToken,
+    nextOffset,
+    searchError,
+  ]);
 
   const resetSearch = useCallback(() => {
     if (debounceRef.current) {
@@ -206,7 +254,8 @@ export function useDebouncedYoutubeSearch(options: UseDebouncedYoutubeSearchOpti
     requestIdRef.current += 1;
     setSearchQuery('');
     clearSearchState();
-  }, [clearSearchState]);
+    if (persistKey) searchSnapshots.delete(persistKey);
+  }, [clearSearchState, persistKey]);
 
   return {
     searchQuery,

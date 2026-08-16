@@ -6,7 +6,7 @@ import {
   type PlaylistSummary,
 } from '../api/playlists';
 import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
-import { useDebouncedYoutubeSearch } from '../hooks/useDebouncedYoutubeSearch';
+import { useDebouncedYoutubeSearch, type DebouncedYoutubeSearch } from '../hooks/useDebouncedYoutubeSearch';
 import { friendlyError } from '../lib/error-messages';
 import { resolveYoutubeThumbnailUrl } from '../lib/youtube-thumbnail';
 import PickPlaylistForAddModal from './PickPlaylistForAddModal';
@@ -37,6 +37,8 @@ type PlaylistYoutubeSearchPanelProps = {
   resultLayout?: YoutubeSearchResultLayout;
   /** 当前试听中的 videoId，用于高亮结果行 */
   previewingVideoId?: string | null;
+  /** 由父级托管的搜索状态，试听/切页时不会丢 */
+  search?: DebouncedYoutubeSearch;
 };
 export default function PlaylistYoutubeSearchPanel({
   playlistId,
@@ -54,6 +56,7 @@ export default function PlaylistYoutubeSearchPanel({
   searchHeaderEl = null,
   resultLayout = 'list',
   previewingVideoId = null,
+  search: searchFromParent,
 }: PlaylistYoutubeSearchPanelProps) {
   const { t } = useI18n();
   const isMobileViewport = useMediaQuery(MOBILE_MEDIA_QUERY);
@@ -63,6 +66,9 @@ export default function PlaylistYoutubeSearchPanel({
   const [pendingAdd, setPendingAdd] = useState<PendingAdd | null>(null);
   const searchOnSubmit = resultLayout === 'video';
 
+  const localSearch = useDebouncedYoutubeSearch({
+    debounceEnabled: searchFromParent ? false : searchOnSubmit ? false : !isMobileViewport,
+  });
   const {
     searchQuery,
     setSearchQuery,
@@ -77,9 +83,8 @@ export default function PlaylistYoutubeSearchPanel({
     searchNow,
     loadMore,
     resetSearch,
-  } = useDebouncedYoutubeSearch({
-    debounceEnabled: searchOnSubmit ? false : !isMobileViewport,
-  });
+  } = searchFromParent ?? localSearch;
+  const allowEmptyQueryRef = useRef(false);
 
   const resultsListRef = useRef<HTMLUListElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -110,6 +115,7 @@ export default function PlaylistYoutubeSearchPanel({
     searchQuery.trim().length > 0 || hasSearched || searchResults.length > 0;
 
   const handleClearSearch = () => {
+    allowEmptyQueryRef.current = true;
     resetSearch();
     setAddError(null);
     searchInputRef.current?.blur();
@@ -173,10 +179,21 @@ export default function PlaylistYoutubeSearchPanel({
         )}
         <input
           ref={searchInputRef}
-          type="search"
+          type="text"
           className="search-input"
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value;
+            if (
+              !value.trim() &&
+              (hasSearched || searchResults.length > 0) &&
+              !allowEmptyQueryRef.current
+            ) {
+              return;
+            }
+            allowEmptyQueryRef.current = false;
+            setSearchQuery(value);
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();

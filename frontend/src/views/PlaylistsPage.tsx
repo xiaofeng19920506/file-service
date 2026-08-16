@@ -61,6 +61,7 @@ import { writeLastPlaylistId } from '../lib/playlist-last-open';
 import { prefetchTrackLyrics, readDefaultSubtitleLanguage } from '../lib/playlist-lyrics';
 import { toYoutubePlayerItems } from '../lib/playlist-play-clips';
 import { useRecordYoutubePlay } from '../hooks/useRecordYoutubePlay';
+import { useDebouncedYoutubeSearch } from '../hooks/useDebouncedYoutubeSearch';
 
 type PlaylistsPageProps = {
   mobileHome?: 'search' | 'lists';
@@ -134,6 +135,10 @@ export default function PlaylistsPage({
   );
   const [tracksEditMode, setTracksEditMode] = useState(false);
   const isMobileViewport = useMediaQuery(MOBILE_MEDIA_QUERY);
+  const homeYoutubeSearch = useDebouncedYoutubeSearch({
+    debounceEnabled: !isMobileViewport,
+    persistKey: 'playlists-home-search',
+  });
   const [headerSearchEl, setHeaderSearchEl] = useState<HTMLDivElement | null>(null);
   const { closeMenu, setMobileHeader } = usePlaylistsMobileMenu();
 
@@ -1850,6 +1855,7 @@ export default function PlaylistsPage({
         previewingVideoId={homePreview?.videoId}
         searchHeaderEl={headerSearchEl}
         resultLayout="list"
+        search={homeYoutubeSearch}
       />
       {homePreviewDesktop ? renderDesktopPreviewDock() : audioWatchDesktop && renderAudioPlayer('dock')}
     </section>
@@ -1948,8 +1954,9 @@ export default function PlaylistsPage({
           ) : (
             <>
           <aside
-            className="playlists-sidebar playlists-sidebar--search-only"
-            hidden={mobileHome !== 'search' || Boolean(selectedId) || homePreviewMobile}
+            className={`playlists-sidebar playlists-sidebar--search-only${
+              mobileHome !== 'search' || selectedId ? ' playlists-sidebar--parked' : ''
+            }`}
             aria-hidden={mobileHome !== 'search' || Boolean(selectedId) || homePreviewMobile}
             aria-label={t('playlists.searchSection')}
           >
@@ -1964,6 +1971,7 @@ export default function PlaylistsPage({
               onAdded={(data, meta) => void handleItemsAdded(data, meta)}
               onPreviewTrack={homeSearchPreviewEnabled ? startHomePreview : undefined}
               previewingVideoId={homePreview?.videoId}
+              search={homeYoutubeSearch}
             />
           </aside>
           {!homePreviewMobile && mobileHomeView !== 'search' && (

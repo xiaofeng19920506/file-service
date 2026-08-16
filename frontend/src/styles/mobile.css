@@ -794,8 +794,14 @@
     padding-right: 0.35rem;
   }
 
-  .playlists-sidebar[hidden] {
-    display: none !important;
+  .playlists-sidebar--parked {
+    visibility: hidden;
+    pointer-events: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
   }
 
   .search-clear-btn {
