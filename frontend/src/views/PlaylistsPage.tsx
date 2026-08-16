@@ -195,6 +195,7 @@ export default function PlaylistsPage({
   const blockListSelectRef = useRef(false);
   const blockTrackPlayRef = useRef(false);
   const [homePreview, setHomePreview] = useState<{ videoId: string; title: string } | null>(null);
+  const [homePreviewExpanded, setHomePreviewExpanded] = useState(false);
   const [homePreviewPlaying, setHomePreviewPlaying] = useState(false);
   const [homePreviewAudio, setHomePreviewAudio] = useState<YoutubeAudioStatus | undefined>();
   const [homePreviewAddOpen, setHomePreviewAddOpen] = useState(false);
@@ -413,6 +414,7 @@ export default function PlaylistsPage({
 
   const closeHomePreview = useCallback(() => {
     setHomePreview(null);
+    setHomePreviewExpanded(false);
     setHomePreviewPlaying(false);
     setHomePreviewAudio(undefined);
     setHomePreviewAddOpen(false);
@@ -420,6 +422,14 @@ export default function PlaylistsPage({
     homePreviewQueueRef.current = [];
     homePreviewAdvancingRef.current = false;
   }, []);
+
+  const handleHomePreviewBack = useCallback(() => {
+    if (homePreviewExpanded) {
+      setHomePreviewExpanded(false);
+      return;
+    }
+    closeHomePreview();
+  }, [homePreviewExpanded, closeHomePreview]);
 
   const fillHomePreviewQueue = useCallback(async () => {
     if (homePreviewQueueRef.current.length >= 5) return;
@@ -483,12 +493,18 @@ export default function PlaylistsPage({
       setPlaying(false);
       setPlayerEngaged(false);
       if (homePreview?.videoId === track.videoId) {
+        if (!homePreviewExpanded) {
+          setHomePreviewExpanded(true);
+          setHomePreviewPlaying(true);
+          return;
+        }
         setHomePreviewPlaying((wasPlaying) => !wasPlaying);
         return;
       }
       homePreviewPlayedRef.current = new Set([track.videoId]);
       homePreviewQueueRef.current = [];
       setHomePreview(track);
+      setHomePreviewExpanded(true);
       setHomePreviewAudio(undefined);
       setHomePreviewPlaying(true);
       void prioritizeYoutubeAudioCache([track.videoId], [
@@ -496,7 +512,7 @@ export default function PlaylistsPage({
       ]);
       void fillHomePreviewQueue();
     },
-    [fillHomePreviewQueue, homePreview?.videoId],
+    [fillHomePreviewQueue, homePreview?.videoId, homePreviewExpanded],
   );
 
   useEffect(() => {
@@ -512,10 +528,10 @@ export default function PlaylistsPage({
       return;
     }
 
-    if (homePreview && !selectedId) {
+    if (homePreview && !selectedId && homePreviewExpanded) {
       setMobileHeader({
         title: homePreview.title,
-        onBack: closeHomePreview,
+        onBack: handleHomePreviewBack,
       });
       return;
     }
@@ -546,6 +562,8 @@ export default function PlaylistsPage({
     handleMobileBack,
     setMobileHeader,
     homePreview,
+    homePreviewExpanded,
+    handleHomePreviewBack,
     closeHomePreview,
   ]);
 
@@ -1070,11 +1088,15 @@ export default function PlaylistsPage({
   );
   const showPlayer = playerEngaged && playerItems.length > 0;
   const homePreviewDesktop = Boolean(homePreview && !isMobileViewport);
-  const homePreviewMobile = Boolean(homePreview && isMobileViewport && !selectedId);
+  const homePreviewMobile = Boolean(
+    homePreview && isMobileViewport && !selectedId && homePreviewExpanded,
+  );
   const audioWatchMobileExpanded =
     showPlayer && isMobileViewport && mobilePlayerExpanded && !homePreview;
   const showMobileMiniBar =
-    showPlayer && isMobileViewport && !mobilePlayerExpanded && !homePreview;
+    isMobileViewport &&
+    ((showPlayer && !mobilePlayerExpanded && !homePreview) ||
+      Boolean(homePreview && !homePreviewExpanded && !selectedId));
   const audioWatchActive =
     homePreviewDesktop ||
     (showPlayer && (!isMobileViewport || audioWatchMobileExpanded));
@@ -1082,8 +1104,8 @@ export default function PlaylistsPage({
   const audioWatchMobile = audioWatchMobileExpanded || homePreviewMobile;
   const showMobileAudioDock =
     isMobileViewport &&
-    mobilePlayerExpanded &&
-    (homePreview || (showPlayer && Boolean(detail?.items.length)));
+    ((homePreview && homePreviewExpanded) ||
+      (showPlayer && mobilePlayerExpanded && Boolean(detail?.items.length)));
   const homeSearchPreviewEnabled =
     isMobileViewport && !selectedId && mobileHome === 'search';
   const mobileDockCanGoPrev = playerEngaged ? canGoPrev : activeIndex > 0;
@@ -1340,7 +1362,7 @@ export default function PlaylistsPage({
   const renderPlaylistsMobileMenu = () => {
     if (!isMobileViewport) return null;
 
-    if (homePreview && !selectedId) {
+    if (homePreview && homePreviewExpanded && !selectedId) {
       return (
         <div className="nav-mobile-menu-playlists-inner">
           <p className="nav-mobile-menu-playlists-title">{t('playlists.mobileMenuTitle')}</p>
@@ -1835,38 +1857,28 @@ export default function PlaylistsPage({
     </section>
   );
 
-  const renderHomePreviewMain = () => (
-    <section className="playlists-main playlists-home-preview-main" aria-live="polite">
-      <div className="playlists-main-inner playlists-main-inner--mobile-audio">
-        <div
-          className="playlists-player-stage"
-          data-playback-mode="audio"
-          data-player-engaged="true"
-          data-audio-mobile-record="true"
-        >
-          <div className="playlists-player-col">
-            <PlaylistAudioPlayer
-              items={homePreviewPlayerItems}
-              activeIndex={0}
-              onActiveIndexChange={() => {}}
-              playing={homePreviewPlaying}
-              onPlayingChange={setHomePreviewPlaying}
-              onAudioStatusChange={handleHomePreviewAudioStatusChange}
-              onNextTrack={() => {
-                void playNextHomePreviewRadio();
-              }}
-              canGoNext
-              onAddToList={() => setHomePreviewAddOpen(true)}
-              playlistTitle={t('playlists.previewListening')}
-              variant="mobileRecord"
-              onProgressUpdate={handleAudioProgress}
-              progressHandleRef={audioProgressHandleRef}
-            />
-          </div>
-        </div>
-      </div>
-    </section>
-  );
+  const renderHomePreviewPlayer = () => {
+    if (!homePreview || homePreviewPlayerItems.length === 0) return null;
+    return (
+      <PlaylistAudioPlayer
+        items={homePreviewPlayerItems}
+        activeIndex={0}
+        onActiveIndexChange={() => {}}
+        playing={homePreviewPlaying}
+        onPlayingChange={setHomePreviewPlaying}
+        onAudioStatusChange={handleHomePreviewAudioStatusChange}
+        onNextTrack={() => {
+          void playNextHomePreviewRadio();
+        }}
+        canGoNext
+        onAddToList={() => setHomePreviewAddOpen(true)}
+        playlistTitle={t('playlists.previewListening')}
+        variant="mobileRecord"
+        onProgressUpdate={handleAudioProgress}
+        progressHandleRef={audioProgressHandleRef}
+      />
+    );
+  };
 
   return (
     <>
@@ -1971,9 +1983,7 @@ export default function PlaylistsPage({
           </aside>
           )}
 
-          {homePreviewMobile ? (
-            renderHomePreviewMain()
-          ) : (
+          {homePreviewMobile ? null : (
           <section className="playlists-main" aria-live="polite">
             {!selectedId ? (
               <div className="playlists-placeholder">
@@ -2171,16 +2181,35 @@ export default function PlaylistsPage({
         />
       )}
 
-      {showMobileMiniBar && currentItem && (
+      {showMobileMiniBar && (homePreview || currentItem) && (
         <PlaylistsMiniBar
-          title={currentItem.title}
-          playing={playing}
+          title={(homePreview ?? currentItem)!.title}
+          playing={homePreview ? homePreviewPlaying : playing}
           currentTime={audioProgress.currentTime}
           duration={audioProgress.duration}
-          onExpand={handleExpandMiniPlayer}
-          onPlayToggle={() => setPlaying((wasPlaying) => !wasPlaying)}
-          onClose={handleCloseMiniPlayer}
+          onExpand={
+            homePreview ? () => setHomePreviewExpanded(true) : handleExpandMiniPlayer
+          }
+          onPlayToggle={
+            homePreview
+              ? () => setHomePreviewPlaying((wasPlaying) => !wasPlaying)
+              : () => setPlaying((wasPlaying) => !wasPlaying)
+          }
+          onClose={homePreview ? closeHomePreview : handleCloseMiniPlayer}
         />
+      )}
+
+      {isMobileViewport && homePreview && (
+        <div
+          className={`playlists-audio-keep-alive${
+            homePreviewExpanded
+              ? ' playlists-audio-keep-alive--expanded playlists-audio-keep-alive--preview'
+              : ' playlists-audio-keep-alive--clipped'
+          }`}
+          aria-hidden={!homePreviewExpanded}
+        >
+          {renderHomePreviewPlayer()}
+        </div>
       )}
 
       {isMobileViewport && showPlayer && !homePreview && (
@@ -2194,7 +2223,7 @@ export default function PlaylistsPage({
         </div>
       )}
 
-      {showMobileAudioDock && homePreview && (
+      {showMobileAudioDock && homePreview && homePreviewExpanded && (
         <PlaylistsMobilePlaybackDock
           title={homePreview.title}
           trackLabel={t('playlists.previewListening')}

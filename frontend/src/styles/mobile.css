@@ -1243,6 +1243,10 @@
     height: 100%;
   }
 
+  .playlists-audio-keep-alive--expanded.playlists-audio-keep-alive--preview {
+    z-index: calc(var(--z-dock, 15) - 1);
+  }
+
   .playlists-audio-keep-alive--clipped {
     position: fixed;
     width: 1px;
