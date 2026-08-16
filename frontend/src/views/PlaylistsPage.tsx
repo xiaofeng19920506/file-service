@@ -2113,28 +2113,7 @@ export default function PlaylistsPage({
         />
       )}
 
-      {showMobileAudioDock && homePreview && (
-        <PlaylistsMobilePlaybackDock
-          title={homePreview.title}
-          trackLabel={t('playlists.previewListening')}
-          playing={homePreviewPlaying}
-          canGoPrev={false}
-          canGoNext
-          showProgress
-          currentTime={audioProgress.currentTime}
-          duration={audioProgress.duration}
-          canSeek={audioProgress.canSeek}
-          onSeekRatio={(ratio) => audioProgressHandleRef.current?.seekToRatio(ratio)}
-          progressResetKey={homePreview.videoId}
-          onPlayToggle={handleMobileDockPlayToggle}
-          onPrev={() => {}}
-          onNext={() => {
-            void playNextHomePreviewRadio();
-          }}
-        />
-      )}
-
-      {showMobileAudioDock && !homePreview && currentItem && detail && (
+      {showMobileAudioDock && currentItem && detail && (
         <PlaylistsMobilePlaybackDock
           title={currentItem.title}
           trackLabel={t('playlists.trackCounter', {

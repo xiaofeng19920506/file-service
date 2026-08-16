@@ -1,5 +1,4 @@
-# 飞牛必须 Building web：file-service-web:nasdl13（播控固定在屏幕底部）
-# 只重启容器不会更新页面
+# 飞牛必须 Building web：file-service-web:nasdl14
 
 services:
   postgres:
@@ -32,7 +31,7 @@ services:
       start_period: 10s
 
   api:
-    image: file-service-api:nasdl13
+    image: file-service-api:nasdl14
     pull_policy: never
     build:
       context: .
@@ -92,7 +91,7 @@ services:
       - api
 
   web:
-    image: file-service-web:nasdl13
+    image: file-service-web:nasdl14
     pull_policy: never
     build:
       context: .
