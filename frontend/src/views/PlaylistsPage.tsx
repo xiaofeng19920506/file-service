@@ -982,16 +982,45 @@ export default function PlaylistsPage({
     });
   }, [detail?.items]);
 
+  /** 真实下一曲（含 shuffle），供播放器后台预取流地址 */
+  const upcomingPlayerItem = useMemo(() => {
+    if (!playerItems.length) return null;
+    if (repeatMode === 'one') return playerItems[activeIndex] ?? null;
+    if (shuffleEnabled && shuffleReady) {
+      const cursor = resolveShuffleCursor(shuffleOrder, activeIndex, shuffleCursor);
+      if (cursor >= 0 && cursor < itemCount - 1) {
+        return playerItems[shuffleOrder[cursor + 1]!] ?? null;
+      }
+      // repeat-all 会 reshuffle，下一首 videoId 尚不确定
+      return null;
+    }
+    if (activeIndex < playerItems.length - 1) return playerItems[activeIndex + 1] ?? null;
+    if (repeatMode === 'all') return playerItems[0] ?? null;
+    return null;
+  }, [
+    playerItems,
+    activeIndex,
+    repeatMode,
+    shuffleEnabled,
+    shuffleReady,
+    shuffleOrder,
+    shuffleCursor,
+    itemCount,
+  ]);
+
   useEffect(() => {
     if (!detail?.items.length) return;
     const lang = readDefaultSubtitleLanguage(locale);
     const current = detail.items[activeIndex];
-    const next = detail.items[activeIndex + 1];
+    const next =
+      upcomingPlayerItem != null
+        ? detail.items.find((item) => item.youtubeVideoId === upcomingPlayerItem.youtubeVideoId)
+        : detail.items[activeIndex + 1];
     const prev = detail.items[activeIndex - 1];
     if (current) prefetchTrackLyrics(current.youtubeVideoId, lang, current.title);
     if (next) prefetchTrackLyrics(next.youtubeVideoId, lang, next.title);
     if (prev) prefetchTrackLyrics(prev.youtubeVideoId, lang, prev.title);
-  }, [detail?.items, activeIndex, locale]);
+  }, [detail?.items, activeIndex, locale, upcomingPlayerItem]);
 
   const audioCachePriorityIds = useMemo(() => {
     if (!detail?.items.length) return [] as string[];
@@ -1243,6 +1272,7 @@ export default function PlaylistsPage({
         onPrevTrack={goToPrevTrack}
         canGoNext={canGoNext}
         canGoPrev={canGoPrev}
+        nextItem={upcomingPlayerItem}
         playlistTitle={detail?.playlist.title}
         variant={placement === 'mobileKeepAlive' || audioWatchMobileExpanded ? 'mobileRecord' : 'desktopDock'}
         repeatMode={repeatMode}

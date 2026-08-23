@@ -49,6 +49,17 @@ type PlaylistAudioPlayerProps = {
   queueOpen?: boolean;
   /** 试听：CD 右上角「添加到列表」icon */
   onAddToList?: () => void;
+  /**
+   * 真实下一曲（含 shuffle / 列表循环）。用于后台预加载流地址，
+   * 以便 iOS 在 ended 回调内同步切 src+play（异步拉流在后台会被挂起）。
+   */
+  nextItem?: PlaylistAudioItem | null;
+};
+
+type PrefetchedStream = {
+  videoId: string;
+  url: string;
+  preview: boolean;
 };
 
 function youtubeThumb(videoId: string): string {
@@ -184,6 +195,7 @@ export default function PlaylistAudioPlayer({
   onToggleQueue,
   queueOpen = false,
   onAddToList,
+  nextItem = null,
 }: PlaylistAudioPlayerProps) {
   const { t, locale } = useI18n();
   const isNowPlaying = variant === 'nowPlaying';
@@ -199,6 +211,10 @@ export default function PlaylistAudioPlayer({
   const playbackTrackKeyRef = useRef('');
   const streamUrlRef = useRef<string | null>(null);
   const currentVideoIdRef = useRef('');
+  const nextStreamRef = useRef<PrefetchedStream | null>(null);
+  const seamlessHandoffRef = useRef<PrefetchedStream | null>(null);
+  const skipStreamFetchVideoIdRef = useRef<string | null>(null);
+  const preloadAudioRef = useRef<HTMLAudioElement | null>(null);
   const progressNotifyRef = useRef(onProgressUpdate);
   progressNotifyRef.current = onProgressUpdate;
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
@@ -217,20 +233,40 @@ export default function PlaylistAudioPlayer({
   const scrubbingRef = useRef(false);
 
   const current = items[activeIndex];
+  const resolvedNextItem = useMemo(() => {
+    if (nextItem) return nextItem;
+    if (onNextTrack) return null;
+    if (repeatMode === 'one') return current ?? null;
+    if (activeIndex < items.length - 1) return items[activeIndex + 1] ?? null;
+    if (repeatMode === 'all' && items.length > 0) return items[0] ?? null;
+    return null;
+  }, [nextItem, onNextTrack, repeatMode, current, activeIndex, items]);
   const playbackTrackKey = `${activeIndex}:${current?.youtubeVideoId ?? ''}`;
   currentVideoIdRef.current = current?.youtubeVideoId ?? '';
   const [activeTrackKey, setActiveTrackKey] = useState(playbackTrackKey);
   if (activeTrackKey !== playbackTrackKey) {
     setActiveTrackKey(playbackTrackKey);
-    streamUrlRef.current = null;
     scrubbingRef.current = false;
-    setStreamUrl(null);
-    setUsingPreview(false);
     setCurrentTime(0);
     setDuration(0);
     setDurationHint(0);
     setPlayerError(null);
-    setLoadingStream(true);
+    const handoff = seamlessHandoffRef.current;
+    if (handoff && handoff.videoId === current?.youtubeVideoId) {
+      streamUrlRef.current = handoff.url;
+      setStreamUrl(handoff.url);
+      setUsingPreview(handoff.preview);
+      usingPreviewRef.current = handoff.preview;
+      setLoadingStream(false);
+      skipStreamFetchVideoIdRef.current = handoff.videoId;
+    } else {
+      seamlessHandoffRef.current = null;
+      streamUrlRef.current = null;
+      setStreamUrl(null);
+      setUsingPreview(false);
+      usingPreviewRef.current = false;
+      setLoadingStream(true);
+    }
   }
   const {
     captionCues,
@@ -256,6 +292,29 @@ export default function PlaylistAudioPlayer({
   }, [current?.youtubeVideoId]);
 
   useLayoutEffect(() => {
+    const handoff = seamlessHandoffRef.current;
+    if (handoff && handoff.videoId === current?.youtubeVideoId) {
+      skipPauseSyncRef.current = true;
+      const el = audioRef.current;
+      if (el) {
+        if (!audioSrcMatchesStream(el, handoff.url)) {
+          el.src = handoff.url;
+          el.load();
+        }
+        if (wantPlayRef.current) {
+          void el.play().catch(() => undefined);
+        }
+      }
+      seamlessHandoffRef.current = null;
+      progressNotifyRef.current?.({
+        currentTime: 0,
+        duration: 0,
+        canSeek: false,
+        videoId: current?.youtubeVideoId,
+      });
+      return;
+    }
+
     skipPauseSyncRef.current = true;
     resetAudioElement(audioRef.current);
     streamUrlRef.current = null;
@@ -381,6 +440,15 @@ export default function PlaylistAudioPlayer({
     if (!videoId) {
       setStreamUrl(null);
       setUsingPreview(false);
+      return;
+    }
+
+    if (skipStreamFetchVideoIdRef.current === videoId && streamUrlRef.current) {
+      skipStreamFetchVideoIdRef.current = null;
+      endedHandledRef.current = false;
+      setStreamUrl(streamUrlRef.current);
+      setLoadingStream(false);
+      setPlayerError(null);
       return;
     }
 
@@ -588,7 +656,10 @@ export default function PlaylistAudioPlayer({
     if (isNewTrack) {
       playbackTrackKeyRef.current = trackKey;
       skipPauseSyncRef.current = true;
-      el.load();
+      // 无缝续播时 src 已在 ended 回调里切好并 play，再 load() 会打断 iOS 后台播放
+      if (!audioSrcMatchesStream(el, streamUrl) || el.paused) {
+        el.load();
+      }
     } else {
       skipPauseSyncRef.current = true;
     }
@@ -598,6 +669,60 @@ export default function PlaylistAudioPlayer({
   useEffect(() => {
     endedHandledRef.current = false;
   }, [activeIndex, current?.youtubeVideoId]);
+
+  // 预取下一曲流：iOS 后台 ended 时只能同步切 src+play，不能再 await 拉流
+  useEffect(() => {
+    const upcoming = resolvedNextItem;
+    const videoId = upcoming?.youtubeVideoId;
+    if (!upcoming || !videoId || videoId === current?.youtubeVideoId) {
+      nextStreamRef.current = null;
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const cached = upcoming.audio;
+        const status =
+          (cached &&
+          (cached.status === 'ready' || cached.previewStreamUrl)
+            ? cached
+            : null) ?? (await getYoutubeAudioStatus(videoId));
+        if (cancelled) return;
+        const picked = await pickStreamFromStatus(videoId, status);
+        if (!picked || cancelled) return;
+        const resolved = resolveStreamSrc(picked.url);
+        nextStreamRef.current = {
+          videoId,
+          url: resolved,
+          preview: picked.preview,
+        };
+        try {
+          if (!preloadAudioRef.current) {
+            preloadAudioRef.current = new Audio();
+            preloadAudioRef.current.preload = 'auto';
+          }
+          const pre = preloadAudioRef.current;
+          if (pre.src !== resolved && !pre.src.endsWith(resolved)) {
+            pre.src = resolved;
+          }
+        } catch {
+          /* 预加载失败不影响正式播放 */
+        }
+      } catch {
+        if (!cancelled) nextStreamRef.current = null;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    resolvedNextItem,
+    current?.youtubeVideoId,
+    pickStreamFromStatus,
+  ]);
 
   useEffect(() => {
     const el = audioRef.current;
@@ -683,6 +808,36 @@ export default function PlaylistAudioPlayer({
     });
   }, [currentTime, playbackDuration, canSeek]);
 
+  const beginSeamlessHandoffIfReady = useCallback(() => {
+    const nextVideoId = resolvedNextItem?.youtubeVideoId;
+    const prefetched =
+      nextVideoId && nextStreamRef.current?.videoId === nextVideoId
+        ? nextStreamRef.current
+        : null;
+    const el = audioRef.current;
+    if (!prefetched || !el) return false;
+
+    // iOS Safari/PWA：必须在用户手势 / ended 同步栈内切 src 并 play
+    seamlessHandoffRef.current = prefetched;
+    skipStreamFetchVideoIdRef.current = prefetched.videoId;
+    skipPauseSyncRef.current = true;
+    wantPlayRef.current = true;
+    streamUrlRef.current = prefetched.url;
+    setStreamUrl(prefetched.url);
+    setUsingPreview(prefetched.preview);
+    usingPreviewRef.current = prefetched.preview;
+    setLoadingStream(false);
+    try {
+      el.src = prefetched.url;
+      el.load();
+      void el.play().catch(() => undefined);
+    } catch {
+      /* 交给后续 React 路径重试 */
+    }
+    nextStreamRef.current = null;
+    return true;
+  }, [resolvedNextItem?.youtubeVideoId]);
+
   const advanceToNextTrack = useCallback(() => {
     if (endedHandledRef.current) return;
     endedHandledRef.current = true;
@@ -698,17 +853,58 @@ export default function PlaylistAudioPlayer({
       return;
     }
 
+    beginSeamlessHandoffIfReady();
+
     skipPauseSyncRef.current = true;
     if (onNextTrack) {
       onNextTrack();
     } else if (activeIndex < items.length - 1) {
       onActiveIndexChange(activeIndex + 1);
       onPlayingChange(true);
+    } else if (repeatMode === 'all' && items.length > 0) {
+      onActiveIndexChange(0);
+      onPlayingChange(true);
     } else {
       skipPauseSyncRef.current = false;
+      seamlessHandoffRef.current = null;
       onPlayingChange(false);
     }
-  }, [activeIndex, items.length, onActiveIndexChange, onPlayingChange, onNextTrack, repeatMode]);
+  }, [
+    activeIndex,
+    beginSeamlessHandoffIfReady,
+    items.length,
+    onActiveIndexChange,
+    onPlayingChange,
+    onNextTrack,
+    repeatMode,
+  ]);
+
+  // 回到前台时补切歌 / 续播（后台若 ended 未触发或 handoff 失败）
+  useEffect(() => {
+    const resumeIfNeeded = () => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      const el = audioRef.current;
+      if (!el || !wantPlayRef.current) return;
+
+      if (el.ended || (el.paused && el.currentTime > 0 && Number.isFinite(el.duration) && el.currentTime >= el.duration - 0.5)) {
+        endedHandledRef.current = false;
+        advanceToNextTrack();
+        return;
+      }
+
+      if (el.paused && streamUrlRef.current) {
+        skipPauseSyncRef.current = true;
+        void el.play().catch(() => undefined);
+      }
+    };
+
+    document.addEventListener('visibilitychange', resumeIfNeeded);
+    window.addEventListener('pageshow', resumeIfNeeded);
+    return () => {
+      document.removeEventListener('visibilitychange', resumeIfNeeded);
+      window.removeEventListener('pageshow', resumeIfNeeded);
+    };
+  }, [advanceToNextTrack]);
 
   const syncDurationFromAudio = useCallback((el: HTMLAudioElement) => {
     const trackDuration = el.duration;
@@ -818,17 +1014,30 @@ export default function PlaylistAudioPlayer({
   }, [onPlayingChange, t]);
 
   const goNext = useCallback(() => {
+    beginSeamlessHandoffIfReady();
     skipPauseSyncRef.current = true;
     if (onNextTrack) {
       onNextTrack();
     } else if (activeIndex < items.length - 1) {
       onActiveIndexChange(activeIndex + 1);
       onPlayingChange(true);
+    } else if (repeatMode === 'all' && items.length > 0) {
+      onActiveIndexChange(0);
+      onPlayingChange(true);
     } else {
       skipPauseSyncRef.current = false;
+      seamlessHandoffRef.current = null;
       onPlayingChange(false);
     }
-  }, [activeIndex, items.length, onActiveIndexChange, onPlayingChange, onNextTrack]);
+  }, [
+    activeIndex,
+    beginSeamlessHandoffIfReady,
+    items.length,
+    onActiveIndexChange,
+    onPlayingChange,
+    onNextTrack,
+    repeatMode,
+  ]);
 
   const goPrev = useCallback(() => {
     skipPauseSyncRef.current = true;
