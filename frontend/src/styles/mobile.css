@@ -9,6 +9,7 @@
     --page-gutter: 1rem;
     --nav-height: 3.25rem;
     --nav-padding-block: 0.5rem;
+    --bottom-nav-height: calc(2.75rem + constant(safe-area-inset-bottom));
     --bottom-nav-height: calc(2.75rem + env(safe-area-inset-bottom, 0px));
     --touch-target: 2.75rem;
   }
@@ -304,8 +305,42 @@
     display: flex;
   }
 
+  /* 底栏贴视口底边，背景沉入 Home Indicator；内容区用 padding 抬高 */
   .nav-bottom {
     display: block;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding-bottom: constant(safe-area-inset-bottom);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* 提高 specificity，避免 apple-design .page-tabs / .page-tab 盖掉底栏重置 */
+  .nav-bottom .page-tabs-bottom {
+    display: flex;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    gap: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .nav-bottom .page-tab-bottom {
+    flex: 1;
+    min-width: 0;
+    min-height: 2.75rem;
+    padding: 0.45rem 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  .nav-bottom .page-tab-bottom.active {
+    background: transparent;
+    box-shadow: none;
   }
 
   .app {

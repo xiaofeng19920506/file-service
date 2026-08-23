@@ -5,6 +5,11 @@
   body.playlists-immersive-active .nav-bottom {
     display: none;
   }
+
+  /* 底栏已隐藏：高度变量归零，全屏播控 / 面板才能贴真底 + 自带 safe-area */
+  body.playlists-immersive-active {
+    --bottom-nav-height: 0px;
+  }
 }
 
 .playlist-now-playing {
@@ -99,7 +104,7 @@
   gap: 0.75rem;
   padding:
     0.55rem var(--page-gutter)
-    max(0.65rem, var(--safe-bottom));
+    max(0.65rem, env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--border-light);
   background: color-mix(in srgb, var(--surface) 94%, transparent);
   backdrop-filter: saturate(180%) blur(16px);
@@ -584,7 +589,7 @@
     margin-top: 0;
     padding:
       0.65rem var(--page-gutter)
-      max(0.5rem, var(--safe-bottom));
+      max(0.5rem, env(safe-area-inset-bottom, 0px));
     background-color: color-mix(in srgb, var(--surface) 82%, transparent);
     backdrop-filter: saturate(180%) blur(24px);
     -webkit-backdrop-filter: saturate(180%) blur(24px);
@@ -1479,19 +1484,21 @@
     bottom: 0;
     max-height: min(72dvh, calc(100dvh - var(--safe-top) - 2rem));
     border-radius: 16px 16px 0 0;
-    padding-bottom: max(0, var(--safe-bottom));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   .playlist-play-order-panel {
     z-index: calc(var(--z-modal) + 8);
     max-height: none;
+    /* 面板贴底；只在外层加一次 safe-area，避免与 list 重复叠高被裁切 */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   .playlist-play-order-panel .playlist-play-order-list {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0.5rem;
-    padding: 0.75rem var(--page-gutter) calc(0.85rem + env(safe-area-inset-bottom, 0px));
+    padding: 0.75rem var(--page-gutter) 0.85rem;
   }
 
   .playlist-play-order-panel .playlist-play-order-item {
@@ -1512,13 +1519,15 @@
     font-size: 0.8125rem;
   }
 
+  /* --bottom-nav-height 已含 safe-area，勿再叠加 */
   .playlists-mini-player {
-    bottom: calc(var(--bottom-nav-height) + var(--safe-bottom));
-    padding-bottom: max(0.55rem, var(--safe-bottom));
+    bottom: var(--bottom-nav-height);
+    padding-bottom: 0.55rem;
   }
 
   body.playlists-immersive-active .playlists-mini-player {
-    bottom: max(0.65rem, var(--safe-bottom));
+    bottom: 0;
+    padding-bottom: max(0.55rem, env(safe-area-inset-bottom, 0px));
   }
 }
 

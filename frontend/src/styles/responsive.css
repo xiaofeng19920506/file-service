@@ -6,11 +6,6 @@
  */
 
 :root {
-  --safe-top: env(safe-area-inset-top, 0px);
-  --safe-right: env(safe-area-inset-right, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
-  --safe-left: env(safe-area-inset-left, 0px);
-
   --z-nav: 10;
   --z-dock: 15;
   --z-bottom-nav: 20;
@@ -25,7 +20,12 @@
   --touch-target: 2.75rem;
 }
 
+/* safe-area 挂在 html 上，避免部分 iOS 上 :root 变量里 env() 算成 0 */
 html {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   overflow-x: hidden;
@@ -55,6 +55,9 @@ body {
 
 .nav-bottom {
   z-index: var(--z-bottom-nav);
+  bottom: 0;
+  padding-bottom: constant(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .metadata-modal-overlay,
