@@ -63,6 +63,8 @@ type PlaylistAudioPlayerProps = {
    * 以便 iOS 在 ended 回调内同步切 src+play（异步拉流在后台会被挂起）。
    */
   nextItem?: PlaylistAudioItem | null;
+  /** 后续多首（含下一曲），优先于仅 nextItem 的单曲预取，支持后台连续连播 */
+  upcomingItems?: PlaylistAudioItem[];
 };
 
 type PrefetchedStream = {
@@ -207,6 +209,7 @@ export default function PlaylistAudioPlayer({
   queueOpen = false,
   onAddToList,
   nextItem = null,
+  upcomingItems,
 }: PlaylistAudioPlayerProps) {
   const { t, locale } = useI18n();
   const isNowPlaying = variant === 'nowPlaying';
@@ -229,6 +232,9 @@ export default function PlaylistAudioPlayer({
   const seamlessHandoffRef = useRef<PrefetchedStream | null>(null);
   const skipStreamFetchVideoIdRef = useRef<string | null>(null);
   const preloadAudioRef = useRef<HTMLAudioElement | null>(null);
+  /** 多首预缓冲缓存，支持后台连续切歌而不只再播一首 */
+  const preloadCacheRef = useRef(new Map<string, PrefetchedStream>());
+  const upcomingItemsRef = useRef<PlaylistAudioItem[]>([]);
   const usingPreviewRef = useRef(false);
   const progressNotifyRef = useRef(onProgressUpdate);
   progressNotifyRef.current = onProgressUpdate;
@@ -286,14 +292,27 @@ export default function PlaylistAudioPlayer({
   const scrubbingRef = useRef(false);
 
   const current = items[activeIndex];
-  const resolvedNextItem = useMemo(() => {
-    if (nextItem) return nextItem;
-    if (onNextTrack) return null;
-    if (repeatMode === 'one') return current ?? null;
-    if (activeIndex < items.length - 1) return items[activeIndex + 1] ?? null;
-    if (repeatMode === 'all' && items.length > 0) return items[0] ?? null;
-    return null;
-  }, [nextItem, onNextTrack, repeatMode, current, activeIndex, items]);
+  const resolvedUpcomingItems = useMemo(() => {
+    if (upcomingItems && upcomingItems.length > 0) return upcomingItems;
+    if (nextItem) return [nextItem];
+    if (onNextTrack) return [] as PlaylistAudioItem[];
+    if (repeatMode === 'one') return current ? [current] : [];
+    const list: PlaylistAudioItem[] = [];
+    if (activeIndex < items.length - 1) {
+      for (let i = activeIndex + 1; i < items.length && list.length < 5; i++) {
+        list.push(items[i]!);
+      }
+    }
+    if (repeatMode === 'all' && list.length < 5) {
+      for (let i = 0; i < activeIndex && list.length < 5; i++) {
+        list.push(items[i]!);
+      }
+    }
+    return list;
+  }, [upcomingItems, nextItem, onNextTrack, repeatMode, current, activeIndex, items]);
+
+  const resolvedNextItem = resolvedUpcomingItems[0] ?? null;
+  upcomingItemsRef.current = resolvedUpcomingItems;
   const playbackTrackKey = `${activeIndex}:${current?.youtubeVideoId ?? ''}`;
   currentVideoIdRef.current = current?.youtubeVideoId ?? '';
   const [activeTrackKey, setActiveTrackKey] = useState(playbackTrackKey);
@@ -787,28 +806,33 @@ export default function PlaylistAudioPlayer({
     return () => window.removeEventListener(HEARD_AUDIO_CACHE_PREF_EVENT, onPref);
   }, []);
 
-  // 预取下一曲流：iOS 后台 ended 时只能同步切 src+play，不能再 await 拉流
+  // 预取后续多曲流：iOS 后台 ended 时只能同步切 src+play，不能再 await 拉流；
+  // 多首缓存后可连续连播，而不是只再切一首就停。
   useEffect(() => {
-    const upcoming = resolvedNextItem;
-    const videoId = upcoming?.youtubeVideoId;
-    if (!upcoming || !videoId || videoId === current?.youtubeVideoId) {
+    const upcoming = resolvedUpcomingItems;
+    if (upcoming.length === 0) {
       nextStreamRef.current = null;
       return;
     }
 
     let cancelled = false;
 
-    void (async () => {
+    const warmItem = async (item: PlaylistAudioItem) => {
+      const videoId = item.youtubeVideoId;
+      if (!videoId || videoId === current?.youtubeVideoId) return null;
+      const existing = preloadCacheRef.current.get(videoId);
+      if (existing) return existing;
+
       try {
-        const cached = upcoming.audio;
+        const cached = item.audio;
         const status =
           (cached &&
           (cached.status === 'ready' || cached.previewStreamUrl)
             ? cached
             : null) ?? (await getYoutubeAudioStatus(videoId));
-        if (cancelled) return;
+        if (cancelled) return null;
         const picked = await pickStreamFromStatus(videoId, status);
-        if (!picked || cancelled) return;
+        if (!picked || cancelled) return null;
         const resolved = resolveStreamSrc(picked.url);
         let playback = resolved;
         if (!picked.preview && readHeardAudioCacheEnabled()) {
@@ -821,49 +845,66 @@ export default function PlaylistAudioPlayer({
                 /* ignore */
               }
             }
-            return;
+            return null;
           }
           if (local) playback = local;
         }
-        nextStreamRef.current = {
+        const entry: PrefetchedStream = {
           videoId,
           url: playback,
           preview: picked.preview,
           networkUrl: picked.preview ? null : resolved,
         };
-        try {
-          if (!preloadAudioRef.current) {
-            preloadAudioRef.current = new Audio();
-            preloadAudioRef.current.preload = 'auto';
+        preloadCacheRef.current.set(videoId, entry);
+        return entry;
+      } catch {
+        return null;
+      }
+    };
+
+    void (async () => {
+      await Promise.all(upcoming.map((item) => warmItem(item)));
+      if (cancelled) return;
+
+      const keep = new Set(upcoming.map((item) => item.youtubeVideoId));
+      if (current?.youtubeVideoId) keep.add(current.youtubeVideoId);
+      for (const key of [...preloadCacheRef.current.keys()]) {
+        if (!keep.has(key)) {
+          const stale = preloadCacheRef.current.get(key);
+          if (stale?.url.startsWith('blob:')) {
+            try {
+              URL.revokeObjectURL(stale.url);
+            } catch {
+              /* ignore */
+            }
           }
-          const pre = preloadAudioRef.current;
-          if (pre.src !== playback && !pre.src.endsWith(playback)) {
-            pre.src = playback;
-          }
-        } catch {
-          /* 预加载失败不影响正式播放 */
+          preloadCacheRef.current.delete(key);
+        }
+      }
+
+      const nextId = upcoming[0]?.youtubeVideoId;
+      const nextEntry = nextId ? preloadCacheRef.current.get(nextId) ?? null : null;
+      nextStreamRef.current = nextEntry;
+
+      try {
+        if (!preloadAudioRef.current) {
+          preloadAudioRef.current = new Audio();
+          preloadAudioRef.current.preload = 'auto';
+        }
+        const pre = preloadAudioRef.current;
+        if (nextEntry && pre.src !== nextEntry.url && !pre.src.endsWith(nextEntry.url)) {
+          pre.src = nextEntry.url;
         }
       } catch {
-        if (!cancelled) nextStreamRef.current = null;
+        /* 预加载失败不影响正式播放 */
       }
     })();
 
     return () => {
       cancelled = true;
-      const pending = nextStreamRef.current;
-      if (pending?.url.startsWith('blob:') && pending.videoId === videoId) {
-        try {
-          URL.revokeObjectURL(pending.url);
-        } catch {
-          /* ignore */
-        }
-        if (nextStreamRef.current === pending) {
-          nextStreamRef.current = null;
-        }
-      }
     };
   }, [
-    resolvedNextItem,
+    resolvedUpcomingItems,
     current?.youtubeVideoId,
     pickStreamFromStatus,
   ]);
@@ -955,9 +996,10 @@ export default function PlaylistAudioPlayer({
   const beginSeamlessHandoffIfReady = useCallback(() => {
     const nextVideoId = resolvedNextItem?.youtubeVideoId;
     const prefetched =
-      nextVideoId && nextStreamRef.current?.videoId === nextVideoId
+      (nextVideoId && preloadCacheRef.current.get(nextVideoId)) ||
+      (nextVideoId && nextStreamRef.current?.videoId === nextVideoId
         ? nextStreamRef.current
-        : null;
+        : null);
     const el = audioRef.current;
     if (!prefetched || !el) return false;
 
@@ -986,7 +1028,20 @@ export default function PlaylistAudioPlayer({
     } catch {
       /* 交给后续 React 路径重试 */
     }
-    nextStreamRef.current = null;
+    // 立刻把「再下一首」备进 nextStreamRef / 隐藏 audio，供下一轮 ended 使用
+    const afterNextId = upcomingItemsRef.current[1]?.youtubeVideoId;
+    const afterNext = afterNextId ? preloadCacheRef.current.get(afterNextId) ?? null : null;
+    nextStreamRef.current = afterNext;
+    if (afterNext && preloadAudioRef.current) {
+      try {
+        const pre = preloadAudioRef.current;
+        if (pre.src !== afterNext.url && !pre.src.endsWith(afterNext.url)) {
+          pre.src = afterNext.url;
+        }
+      } catch {
+        /* ignore */
+      }
+    }
     return true;
   }, [resolvedNextItem?.youtubeVideoId, revokePlaybackBlobUrl]);
 
@@ -1163,6 +1218,14 @@ export default function PlaylistAudioPlayer({
           return;
         }
         advanceToNextTrack();
+        return;
+      }
+      // 后台连播换 src 时浏览器常会误发 pause；若仍想继续播则忽略并重试
+      if (wantPlayRef.current && typeof document !== 'undefined' && document.hidden) {
+        skipPauseSyncRef.current = true;
+        void e.currentTarget.play().catch(() => {
+          skipPauseSyncRef.current = false;
+        });
         return;
       }
       onPlayingChange(false);

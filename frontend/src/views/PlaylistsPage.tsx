@@ -17,6 +17,7 @@ import { ChevronLeftIcon, DragHandleIcon, PlusIcon } from '../components/icons';
 import { MOBILE_MEDIA_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 import { useSortableVerticalList } from '../hooks/useSortableVerticalList';
 import PlaylistAudioPlayer, {
+  type PlaylistAudioItem,
   type PlaylistAudioProgressHandle,
   type PlaylistAudioProgressState,
 } from '../components/PlaylistAudioPlayer';
@@ -982,21 +983,32 @@ export default function PlaylistsPage({
     });
   }, [detail?.items]);
 
-  /** 真实下一曲（含 shuffle），供播放器后台预取流地址 */
-  const upcomingPlayerItem = useMemo(() => {
-    if (!playerItems.length) return null;
-    if (repeatMode === 'one') return playerItems[activeIndex] ?? null;
+  /** 真实下一曲及后续若干首（含 shuffle），供播放器多首预缓冲以支持后台连续连播 */
+  const upcomingPlayerItems = useMemo(() => {
+    if (!playerItems.length) return [] as PlaylistAudioItem[];
+    if (repeatMode === 'one') {
+      const cur = playerItems[activeIndex];
+      return cur ? [cur] : [];
+    }
+    const limit = 5;
+    const upcoming: PlaylistAudioItem[] = [];
     if (shuffleEnabled && shuffleReady) {
       const cursor = resolveShuffleCursor(shuffleOrder, activeIndex, shuffleCursor);
-      if (cursor >= 0 && cursor < itemCount - 1) {
-        return playerItems[shuffleOrder[cursor + 1]!] ?? null;
+      for (let i = cursor + 1; i < shuffleOrder.length && upcoming.length < limit; i++) {
+        const item = playerItems[shuffleOrder[i]!];
+        if (item) upcoming.push(item);
       }
-      // repeat-all 会 reshuffle，下一首 videoId 尚不确定
-      return null;
+      return upcoming;
     }
-    if (activeIndex < playerItems.length - 1) return playerItems[activeIndex + 1] ?? null;
-    if (repeatMode === 'all') return playerItems[0] ?? null;
-    return null;
+    for (let i = activeIndex + 1; i < playerItems.length && upcoming.length < limit; i++) {
+      upcoming.push(playerItems[i]!);
+    }
+    if (repeatMode === 'all') {
+      for (let i = 0; i < activeIndex && upcoming.length < limit; i++) {
+        upcoming.push(playerItems[i]!);
+      }
+    }
+    return upcoming;
   }, [
     playerItems,
     activeIndex,
@@ -1005,8 +1017,9 @@ export default function PlaylistsPage({
     shuffleReady,
     shuffleOrder,
     shuffleCursor,
-    itemCount,
   ]);
+
+  const upcomingPlayerItem = upcomingPlayerItems[0] ?? null;
 
   useEffect(() => {
     if (!detail?.items.length) return;
@@ -1273,6 +1286,7 @@ export default function PlaylistsPage({
         canGoNext={canGoNext}
         canGoPrev={canGoPrev}
         nextItem={upcomingPlayerItem}
+        upcomingItems={upcomingPlayerItems}
         playlistTitle={detail?.playlist.title}
         variant={placement === 'mobileKeepAlive' || audioWatchMobileExpanded ? 'mobileRecord' : 'desktopDock'}
         repeatMode={repeatMode}
