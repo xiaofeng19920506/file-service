@@ -16,6 +16,8 @@ import {
   PLAYLISTS_MOBILE_MENU_MOUNT_ID,
   usePlaylistsMobileMenu,
 } from './contexts/PlaylistsMobileMenuContext';
+import { registerHeardAudioServiceWorker } from './lib/heard-audio-sw-register';
+import { readHeardAudioCacheEnabled } from './lib/heard-audio-cache-preference';
 
 function AppShellInner({
   mobileMenuOpen,
@@ -397,6 +399,11 @@ export default function App() {
   const { user, loading } = useAuth();
   const { page } = useAppPage();
   const { t } = useI18n();
+
+  useEffect(() => {
+    if (!readHeardAudioCacheEnabled()) return;
+    void registerHeardAudioServiceWorker();
+  }, []);
 
   if (loading) {
     return (

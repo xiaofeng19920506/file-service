@@ -174,8 +174,10 @@ export default {
   },
   settings: {
     title: '设置',
-    heardAudioCache: '缓存听过的歌曲',
-    heardAudioCacheHint: '默认开启：听过的歌会保存在本机，下次可离线更快播放。关闭后会清除本机音频缓存。',
+    heardAudioCache: '把听过的歌存到手机',
+    heardAudioCacheHint:
+      '默认开启：听过的歌写入本机磁盘，下次播放尽量不耗流量。适合流量少又想听歌的场景；关闭会清除本机已存音频。',
+    heardAudioCacheStats: '已存 {count} 首（约 {size}）',
   },
   pages: {
     playlistsTitle: '主页 — Music Playlist Player',

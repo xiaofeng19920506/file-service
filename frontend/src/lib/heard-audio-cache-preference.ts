@@ -1,7 +1,7 @@
 export const HEARD_AUDIO_CACHE_PREF_KEY = 'heard-audio-cache-enabled';
 export const HEARD_AUDIO_CACHE_PREF_EVENT = 'heard-audio-cache-pref-change';
 
-/** 默认开启：听过的歌曲缓存在本机设备 */
+/** 默认开启：听过的歌曲缓存在本机设备磁盘 */
 export function readHeardAudioCacheEnabled(): boolean {
   try {
     const raw = localStorage.getItem(HEARD_AUDIO_CACHE_PREF_KEY);

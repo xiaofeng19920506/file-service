@@ -174,9 +174,10 @@ const en: MessageTree = {
   },
   settings: {
     title: 'Settings',
-    heardAudioCache: 'Cache songs you’ve heard',
+    heardAudioCache: 'Save heard songs on this device',
     heardAudioCacheHint:
-      'On by default: heard tracks are saved on this device for faster playback. Turning off clears the local audio cache.',
+      'On by default: heard tracks are saved to this phone/computer’s disk so later plays use little or no mobile data. Turning off clears saved audio.',
+    heardAudioCacheStats: '{count} saved (about {size})',
   },
   pages: {
     playlistsTitle: 'Home — Music Playlist Player',
