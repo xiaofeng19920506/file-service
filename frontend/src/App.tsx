@@ -4,6 +4,7 @@ import AdminPage from './views/AdminPage';
 import AuthPage from './views/AuthPage';
 import PlaylistsPage from './views/PlaylistsPage';
 import PageNavTabs from './components/PageNavTabs';
+import HeardAudioCacheSetting from './components/HeardAudioCacheSetting';
 import { CloseIcon, ChevronLeftIcon, MenuIcon, MoonIcon, SunIcon } from './components/icons';
 import { useAppPage } from './hooks/useAppPage';
 import { hasStoredSession } from './lib/auth-session';
@@ -36,7 +37,9 @@ function AppShellInner({
   const [theme, setTheme] = useState<'light' | 'dark'>(() =>
     document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light',
   );
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const drawerRef = useRef<HTMLElement>(null);
+  const settingsPanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (loading) return;
@@ -93,6 +96,26 @@ function AppShellInner({
             : t('pages.playlistsTitle');
   }, [page, t]);
 
+  useEffect(() => {
+    if (!settingsOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSettingsOpen(false);
+    };
+    const onPointerDown = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (settingsPanelRef.current?.contains(target)) return;
+      if ((target as Element).closest?.('[data-settings-toggle]')) return;
+      setSettingsOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('mousedown', onPointerDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('mousedown', onPointerDown);
+    };
+  }, [settingsOpen]);
+
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
     setTheme(next);
@@ -133,6 +156,48 @@ function AppShellInner({
       {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
     </button>
   );
+
+  const settingsToggle = (
+    <button
+      type="button"
+      className="settings-toggle"
+      data-settings-toggle=""
+      aria-expanded={settingsOpen}
+      aria-controls="app-settings-panel"
+      aria-label={t('nav.settings')}
+      onClick={() => setSettingsOpen((open) => !open)}
+    >
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden>
+        <path
+          fill="currentColor"
+          d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.03 7.03 0 0 0-1.63-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.59.24-1.13.55-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.14.24.43.34.68.24l2.39-.96c.5.39 1.04.7 1.63.94l.36 2.54c.05.24.26.42.5.42h3.84c.24 0 .45-.18.5-.42l.36-2.54c.59-.24 1.13-.55 1.63-.94l2.39.96c.25.1.54 0 .68-.24l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5z"
+        />
+      </svg>
+    </button>
+  );
+
+  const settingsPanel = settingsOpen ? (
+    <div
+      ref={settingsPanelRef}
+      id="app-settings-panel"
+      className="app-settings-panel"
+      role="dialog"
+      aria-label={t('settings.title')}
+    >
+      <div className="app-settings-panel-head">
+        <span>{t('settings.title')}</span>
+        <button
+          type="button"
+          className="app-settings-panel-close"
+          aria-label={t('common.close')}
+          onClick={() => setSettingsOpen(false)}
+        >
+          <CloseIcon />
+        </button>
+      </div>
+      <HeardAudioCacheSetting />
+    </div>
+  ) : null;
 
   const { mobileHeader } = usePlaylistsMobileMenu();
 
@@ -210,10 +275,12 @@ function AppShellInner({
           <div className="nav-actions nav-actions-desktop">
             {accountActions}
             {langToggle}
+            {settingsToggle}
             {themeToggle}
           </div>
 
           <div className="nav-actions nav-actions-compact">
+            {settingsToggle}
             {themeToggle}
             <button
               type="button"
@@ -227,6 +294,7 @@ function AppShellInner({
             </button>
           </div>
         </div>
+        {settingsPanel}
       </header>
 
       <div
@@ -278,6 +346,10 @@ function AppShellInner({
             />
           )}
           <div className="nav-mobile-menu-section nav-mobile-menu-account">{accountActions}</div>
+          <div className="nav-mobile-menu-section nav-mobile-menu-settings">
+            <p className="nav-mobile-menu-section-title">{t('settings.title')}</p>
+            <HeardAudioCacheSetting />
+          </div>
           <div className="nav-mobile-menu-section nav-mobile-menu-tools">
             {langToggle}
           </div>

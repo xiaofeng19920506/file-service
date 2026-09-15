@@ -339,6 +339,133 @@
   color: var(--text);
 }
 
+.settings-toggle {
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-secondary);
+  transition: background 0.2s, color 0.2s;
+}
+
+.settings-toggle:hover,
+.settings-toggle[aria-expanded='true'] {
+  background: var(--blue-muted);
+  color: var(--text);
+}
+
+.app-settings-panel {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0.75rem;
+  z-index: 40;
+  width: min(22rem, calc(100vw - 1.5rem));
+  padding: 0.85rem 1rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+  background: var(--bg-elevated, var(--bg));
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+}
+
+.app-settings-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.app-settings-panel-close {
+  width: 1.75rem;
+  height: 1.75rem;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.app-settings-panel-close:hover {
+  background: var(--blue-muted);
+  color: var(--text);
+}
+
+.app-setting-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.85rem;
+}
+
+.app-setting-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.app-setting-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.app-setting-hint {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--text-secondary);
+}
+
+.app-setting-switch {
+  flex: 0 0 auto;
+  width: 2.75rem;
+  height: 1.55rem;
+  margin-top: 0.1rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--border-light);
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.app-setting-switch.is-on {
+  background: var(--blue);
+}
+
+.app-setting-switch-thumb {
+  position: absolute;
+  top: 0.15rem;
+  left: 0.15rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s;
+}
+
+.app-setting-switch.is-on .app-setting-switch-thumb {
+  transform: translateX(1.2rem);
+}
+
+.nav-mobile-menu-section-title {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
 /* ── Layout ── */
 .page-body {
   flex: 1;

@@ -164,12 +164,19 @@ const en: MessageTree = {
     lang: 'Language',
     pages: 'Pages',
     menu: 'Menu',
+    settings: 'Settings',
     playlists: 'Home',
     admin: 'Admin',
     playlistsShort: 'Home',
     playlistLists: 'My lists',
     playlistListsShort: 'Lists',
     adminShort: 'Admin',
+  },
+  settings: {
+    title: 'Settings',
+    heardAudioCache: 'Cache songs you’ve heard',
+    heardAudioCacheHint:
+      'On by default: heard tracks are saved on this device for faster playback. Turning off clears the local audio cache.',
   },
   pages: {
     playlistsTitle: 'Home — Music Playlist Player',

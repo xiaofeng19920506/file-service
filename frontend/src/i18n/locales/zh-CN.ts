@@ -164,12 +164,18 @@ export default {
     lang: '语言',
     pages: '页面',
     menu: '菜单',
+    settings: '设置',
     playlists: '主页',
     admin: '管理',
     playlistsShort: '主页',
     playlistLists: '我的列表',
     playlistListsShort: '列表',
     adminShort: '管理',
+  },
+  settings: {
+    title: '设置',
+    heardAudioCache: '缓存听过的歌曲',
+    heardAudioCacheHint: '默认开启：听过的歌会保存在本机，下次可离线更快播放。关闭后会清除本机音频缓存。',
   },
   pages: {
     playlistsTitle: '主页 — Music Playlist Player',

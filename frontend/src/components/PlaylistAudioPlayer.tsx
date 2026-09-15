@@ -8,6 +8,15 @@ import {
   readStoredPlayerVolume,
   writeStoredPlayerVolume,
 } from '../lib/player-volume';
+import {
+  cacheHeardAudio,
+  getHeardAudioCachedObjectUrl,
+  shouldCacheHeardProgress,
+} from '../lib/heard-audio-cache';
+import {
+  HEARD_AUDIO_CACHE_PREF_EVENT,
+  readHeardAudioCacheEnabled,
+} from '../lib/heard-audio-cache-preference';
 import { useMediaSession } from '../hooks/useMediaSession';
 import { useSwipeTrackNavigation } from '../hooks/useSwipeTrackNavigation';
 import type { PlaylistPlaybackOrderMode } from '../lib/playlist-playback-order-mode';
@@ -60,6 +69,8 @@ type PrefetchedStream = {
   videoId: string;
   url: string;
   preview: boolean;
+  /** ready 流的网络地址（blob 播放时仍用它后台写入本机缓存） */
+  networkUrl?: string | null;
 };
 
 function youtubeThumb(videoId: string): string {
@@ -210,16 +221,58 @@ export default function PlaylistAudioPlayer({
   const endedHandledRef = useRef(false);
   const playbackTrackKeyRef = useRef('');
   const streamUrlRef = useRef<string | null>(null);
+  const networkStreamUrlRef = useRef<string | null>(null);
+  const blobUrlRef = useRef<string | null>(null);
+  const heardCacheArmedRef = useRef<string | null>(null);
   const currentVideoIdRef = useRef('');
   const nextStreamRef = useRef<PrefetchedStream | null>(null);
   const seamlessHandoffRef = useRef<PrefetchedStream | null>(null);
   const skipStreamFetchVideoIdRef = useRef<string | null>(null);
   const preloadAudioRef = useRef<HTMLAudioElement | null>(null);
+  const usingPreviewRef = useRef(false);
   const progressNotifyRef = useRef(onProgressUpdate);
   progressNotifyRef.current = onProgressUpdate;
+
+  const revokePlaybackBlobUrl = useCallback(() => {
+    if (!blobUrlRef.current) return;
+    try {
+      URL.revokeObjectURL(blobUrlRef.current);
+    } catch {
+      /* ignore */
+    }
+    blobUrlRef.current = null;
+  }, []);
+
+  const resolvePlaybackSrc = useCallback(
+    async (videoId: string, networkUrl: string, preview: boolean): Promise<string> => {
+      if (preview || !readHeardAudioCacheEnabled()) return networkUrl;
+      const cached = await getHeardAudioCachedObjectUrl(videoId);
+      if (!cached) return networkUrl;
+      if (currentVideoIdRef.current !== videoId) {
+        try {
+          URL.revokeObjectURL(cached);
+        } catch {
+          /* ignore */
+        }
+        return networkUrl;
+      }
+      return cached;
+    },
+    [],
+  );
+
+  const armHeardAudioCache = useCallback((videoId: string | null | undefined) => {
+    if (!videoId || usingPreviewRef.current) return;
+    if (!readHeardAudioCacheEnabled()) return;
+    const networkUrl = networkStreamUrlRef.current;
+    if (!networkUrl || networkUrl.startsWith('blob:')) return;
+    if (heardCacheArmedRef.current === videoId) return;
+    heardCacheArmedRef.current = videoId;
+    void cacheHeardAudio(videoId, networkUrl);
+  }, []);
+
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [usingPreview, setUsingPreview] = useState(false);
-  const usingPreviewRef = useRef(false);
   const [loadingStream, setLoadingStream] = useState(false);
   const [playerError, setPlayerError] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
@@ -253,6 +306,13 @@ export default function PlaylistAudioPlayer({
     setPlayerError(null);
     const handoff = seamlessHandoffRef.current;
     if (handoff && handoff.videoId === current?.youtubeVideoId) {
+      revokePlaybackBlobUrl();
+      if (handoff.url.startsWith('blob:')) {
+        blobUrlRef.current = handoff.url;
+      }
+      networkStreamUrlRef.current =
+        handoff.preview ? null : (handoff.networkUrl ?? (handoff.url.startsWith('blob:') ? null : handoff.url));
+      heardCacheArmedRef.current = null;
       streamUrlRef.current = handoff.url;
       setStreamUrl(handoff.url);
       setUsingPreview(handoff.preview);
@@ -261,6 +321,9 @@ export default function PlaylistAudioPlayer({
       skipStreamFetchVideoIdRef.current = handoff.videoId;
     } else {
       seamlessHandoffRef.current = null;
+      revokePlaybackBlobUrl();
+      networkStreamUrlRef.current = null;
+      heardCacheArmedRef.current = null;
       streamUrlRef.current = null;
       setStreamUrl(null);
       setUsingPreview(false);
@@ -391,15 +454,50 @@ export default function PlaylistAudioPlayer({
     return null;
   }, []);
 
-  const applyStreamUrl = useCallback((url: string, preview: boolean) => {
-    const resolved = resolveStreamSrc(url);
-    streamUrlRef.current = resolved;
-    setStreamUrl(resolved);
-    setUsingPreview(preview);
-    usingPreviewRef.current = preview;
-    setLoadingStream(false);
-    setPlayerError(null);
-  }, []);
+  const applyStreamUrl = useCallback(
+    (url: string, preview: boolean, videoId?: string) => {
+      const resolved = resolveStreamSrc(url);
+      const trackId = videoId ?? currentVideoIdRef.current;
+      networkStreamUrlRef.current = preview ? null : resolved;
+      heardCacheArmedRef.current = null;
+
+      if (preview || !trackId || !readHeardAudioCacheEnabled()) {
+        revokePlaybackBlobUrl();
+        streamUrlRef.current = resolved;
+        setStreamUrl(resolved);
+        setUsingPreview(preview);
+        usingPreviewRef.current = preview;
+        setLoadingStream(false);
+        setPlayerError(null);
+        return;
+      }
+
+      void (async () => {
+        const playback = await resolvePlaybackSrc(trackId, resolved, false);
+        if (currentVideoIdRef.current !== trackId) {
+          if (playback.startsWith('blob:') && playback !== resolved) {
+            try {
+              URL.revokeObjectURL(playback);
+            } catch {
+              /* ignore */
+            }
+          }
+          return;
+        }
+        revokePlaybackBlobUrl();
+        if (playback.startsWith('blob:')) {
+          blobUrlRef.current = playback;
+        }
+        streamUrlRef.current = playback;
+        setStreamUrl(playback);
+        setUsingPreview(false);
+        usingPreviewRef.current = false;
+        setLoadingStream(false);
+        setPlayerError(null);
+      })();
+    },
+    [resolvePlaybackSrc, revokePlaybackBlobUrl],
+  );
 
   const replayCurrentTrackStream = useCallback(async () => {
     const videoId = current?.youtubeVideoId;
@@ -414,7 +512,7 @@ export default function PlaylistAudioPlayer({
       if (!status) return;
       const picked = await pickStreamFromStatus(videoId, status);
       if (!picked) return;
-      applyStreamUrl(picked.url, picked.preview);
+      applyStreamUrl(picked.url, picked.preview, videoId);
     } catch {
       /* 保持当前流，用户可手动重试 */
     }
@@ -438,6 +536,9 @@ export default function PlaylistAudioPlayer({
   useEffect(() => {
     const videoId = current?.youtubeVideoId;
     if (!videoId) {
+      revokePlaybackBlobUrl();
+      networkStreamUrlRef.current = null;
+      heardCacheArmedRef.current = null;
       setStreamUrl(null);
       setUsingPreview(false);
       return;
@@ -499,7 +600,7 @@ export default function PlaylistAudioPlayer({
           return;
         }
 
-        if (!cancelled) applyStreamUrl(picked.url, picked.preview);
+        if (!cancelled) applyStreamUrl(picked.url, picked.preview, videoId);
       } catch (e) {
         if (!cancelled) {
           setPlayerError(
@@ -540,7 +641,7 @@ export default function PlaylistAudioPlayer({
           if (!cancelled) setLoadingStream(false);
           return;
         }
-        if (!cancelled) applyStreamUrl(picked.url, picked.preview);
+        if (!cancelled) applyStreamUrl(picked.url, picked.preview, videoId);
       } catch (e) {
         if (!cancelled) {
           setPlayerError(
@@ -586,7 +687,7 @@ export default function PlaylistAudioPlayer({
         const savedTime = el?.currentTime ?? 0;
         const wasPlaying = wantPlayRef.current;
 
-        if (!cancelled) applyStreamUrl(picked.url, false);
+        if (!cancelled) applyStreamUrl(picked.url, false, videoId);
 
         if (el) {
           skipPauseSyncRef.current = true;
@@ -670,6 +771,22 @@ export default function PlaylistAudioPlayer({
     endedHandledRef.current = false;
   }, [activeIndex, current?.youtubeVideoId]);
 
+  useEffect(() => {
+    return () => {
+      revokePlaybackBlobUrl();
+    };
+  }, [revokePlaybackBlobUrl]);
+
+  useEffect(() => {
+    const onPref = () => {
+      if (!readHeardAudioCacheEnabled()) {
+        heardCacheArmedRef.current = null;
+      }
+    };
+    window.addEventListener(HEARD_AUDIO_CACHE_PREF_EVENT, onPref);
+    return () => window.removeEventListener(HEARD_AUDIO_CACHE_PREF_EVENT, onPref);
+  }, []);
+
   // 预取下一曲流：iOS 后台 ended 时只能同步切 src+play，不能再 await 拉流
   useEffect(() => {
     const upcoming = resolvedNextItem;
@@ -693,10 +810,26 @@ export default function PlaylistAudioPlayer({
         const picked = await pickStreamFromStatus(videoId, status);
         if (!picked || cancelled) return;
         const resolved = resolveStreamSrc(picked.url);
+        let playback = resolved;
+        if (!picked.preview && readHeardAudioCacheEnabled()) {
+          const local = await getHeardAudioCachedObjectUrl(videoId);
+          if (cancelled) {
+            if (local) {
+              try {
+                URL.revokeObjectURL(local);
+              } catch {
+                /* ignore */
+              }
+            }
+            return;
+          }
+          if (local) playback = local;
+        }
         nextStreamRef.current = {
           videoId,
-          url: resolved,
+          url: playback,
           preview: picked.preview,
+          networkUrl: picked.preview ? null : resolved,
         };
         try {
           if (!preloadAudioRef.current) {
@@ -704,8 +837,8 @@ export default function PlaylistAudioPlayer({
             preloadAudioRef.current.preload = 'auto';
           }
           const pre = preloadAudioRef.current;
-          if (pre.src !== resolved && !pre.src.endsWith(resolved)) {
-            pre.src = resolved;
+          if (pre.src !== playback && !pre.src.endsWith(playback)) {
+            pre.src = playback;
           }
         } catch {
           /* 预加载失败不影响正式播放 */
@@ -717,6 +850,17 @@ export default function PlaylistAudioPlayer({
 
     return () => {
       cancelled = true;
+      const pending = nextStreamRef.current;
+      if (pending?.url.startsWith('blob:') && pending.videoId === videoId) {
+        try {
+          URL.revokeObjectURL(pending.url);
+        } catch {
+          /* ignore */
+        }
+        if (nextStreamRef.current === pending) {
+          nextStreamRef.current = null;
+        }
+      }
     };
   }, [
     resolvedNextItem,
@@ -822,6 +966,14 @@ export default function PlaylistAudioPlayer({
     skipStreamFetchVideoIdRef.current = prefetched.videoId;
     skipPauseSyncRef.current = true;
     wantPlayRef.current = true;
+    revokePlaybackBlobUrl();
+    if (prefetched.url.startsWith('blob:')) {
+      blobUrlRef.current = prefetched.url;
+    }
+    networkStreamUrlRef.current = prefetched.preview
+      ? null
+      : (prefetched.networkUrl ?? (prefetched.url.startsWith('blob:') ? null : prefetched.url));
+    heardCacheArmedRef.current = null;
     streamUrlRef.current = prefetched.url;
     setStreamUrl(prefetched.url);
     setUsingPreview(prefetched.preview);
@@ -836,7 +988,7 @@ export default function PlaylistAudioPlayer({
     }
     nextStreamRef.current = null;
     return true;
-  }, [resolvedNextItem?.youtubeVideoId]);
+  }, [resolvedNextItem?.youtubeVideoId, revokePlaybackBlobUrl]);
 
   const advanceToNextTrack = useCallback(() => {
     if (endedHandledRef.current) return;
@@ -845,6 +997,7 @@ export default function PlaylistAudioPlayer({
     if (repeatMode === 'one') {
       const el = audioRef.current;
       endedHandledRef.current = false;
+      armHeardAudioCache(currentVideoIdRef.current);
       if (el) {
         el.currentTime = 0;
         void el.play().catch(() => undefined);
@@ -853,6 +1006,7 @@ export default function PlaylistAudioPlayer({
       return;
     }
 
+    armHeardAudioCache(currentVideoIdRef.current);
     beginSeamlessHandoffIfReady();
 
     skipPauseSyncRef.current = true;
@@ -871,6 +1025,7 @@ export default function PlaylistAudioPlayer({
     }
   }, [
     activeIndex,
+    armHeardAudioCache,
     beginSeamlessHandoffIfReady,
     items.length,
     onActiveIndexChange,
@@ -965,6 +1120,13 @@ export default function PlaylistAudioPlayer({
         syncDurationFromAudio(el);
       }
 
+      if (
+        !usingPreviewRef.current &&
+        shouldCacheHeardProgress(el.currentTime, el.duration)
+      ) {
+        armHeardAudioCache(currentVideoIdRef.current);
+      }
+
       if ((usingPreview && !onNextTrack) || endedHandledRef.current) return;
 
       const trackDuration = el.duration;
@@ -974,11 +1136,12 @@ export default function PlaylistAudioPlayer({
 
       advanceToNextTrack();
     },
-    [advanceToNextTrack, onNextTrack, syncDurationFromAudio, usingPreview],
+    [advanceToNextTrack, armHeardAudioCache, onNextTrack, syncDurationFromAudio, usingPreview],
   );
 
   const handleEnded = useCallback(() => {
     if (!streamUrlRef.current) return;
+    armHeardAudioCache(currentVideoIdRef.current);
     // 有 onNextTrack（试听电台）时播完切下一首；否则 preview 流重播当前曲
     if (usingPreviewRef.current && !onNextTrack) {
       if (wantPlayRef.current) {
@@ -989,7 +1152,7 @@ export default function PlaylistAudioPlayer({
       return;
     }
     advanceToNextTrack();
-  }, [advanceToNextTrack, onNextTrack, replayCurrentTrackStream, onPlayingChange]);
+  }, [advanceToNextTrack, armHeardAudioCache, onNextTrack, replayCurrentTrackStream, onPlayingChange]);
 
   const handlePause = useCallback(
     (e: React.SyntheticEvent<HTMLAudioElement>) => {

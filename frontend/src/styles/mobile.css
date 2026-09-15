@@ -16,6 +16,7 @@
 
   /* ── 全局触控与按钮 ── */
   .theme-toggle,
+  .settings-toggle,
   .nav-menu-btn {
     width: var(--touch-target);
     height: var(--touch-target);
