@@ -1,4 +1,4 @@
-/* 播放时只完整拉一次 MP3，写入本机 Cache，再按需返回 Range — 省流量 */
+/* 已缓存的完整 MP3：拦截 Range 从本机切片；未命中：透传网络，不阻塞首播/切歌 */
 const SW_CACHE = 'heard-audio-sw-v1';
 
 self.addEventListener('install', (event) => {
@@ -19,7 +19,6 @@ function parseRange(rangeHeader, size) {
   let start = m[1] === '' ? NaN : Number(m[1]);
   let end = m[2] === '' ? NaN : Number(m[2]);
   if (Number.isNaN(start)) {
-    // suffix: bytes=-N
     if (Number.isNaN(end)) return null;
     start = Math.max(0, size - end);
     end = size - 1;
@@ -32,41 +31,29 @@ function parseRange(rangeHeader, size) {
   return { start, end };
 }
 
-async function getOrFetchFull(videoId, request) {
-  const cache = await caches.open(SW_CACHE);
-  const hit = await cache.match(cacheKeyFor(videoId));
-  if (hit && hit.ok) return hit;
-
-  const fullReq = new Request(request.url, {
-    method: 'GET',
-    credentials: request.credentials,
-    headers: {
-      Accept: request.headers.get('Accept') || '*/*',
-    },
-  });
-  const fullRes = await fetch(fullReq);
-  if (!fullRes.ok) return fullRes;
-
-  const contentType = fullRes.headers.get('content-type') || 'audio/mpeg';
-  const buf = await fullRes.arrayBuffer();
-  if (buf.byteLength < 1024) {
-    return new Response(buf, {
-      status: fullRes.status,
-      headers: { 'Content-Type': contentType },
+async function respondFromCachedFull(full, rangeHeader) {
+  if (!rangeHeader) return full.clone();
+  const buf = await full.clone().arrayBuffer();
+  const size = buf.byteLength;
+  const range = parseRange(rangeHeader, size);
+  if (!range) {
+    return new Response(null, {
+      status: 416,
+      headers: { 'Content-Range': `bytes */${size}` },
     });
   }
-
-  const stored = new Response(buf, {
-    status: 200,
+  const slice = buf.slice(range.start, range.end + 1);
+  const contentType = full.headers.get('content-type') || 'audio/mpeg';
+  return new Response(slice, {
+    status: 206,
     headers: {
       'Content-Type': contentType,
-      'Content-Length': String(buf.byteLength),
+      'Content-Length': String(slice.byteLength),
+      'Content-Range': `bytes ${range.start}-${range.end}/${size}`,
       'Accept-Ranges': 'bytes',
       'Cache-Control': 'private, max-age=31536000',
     },
   });
-  await cache.put(cacheKeyFor(videoId), stored.clone());
-  return stored;
 }
 
 self.addEventListener('fetch', (event) => {
@@ -84,39 +71,22 @@ self.addEventListener('fetch', (event) => {
   if (!match) return;
 
   const videoId = decodeURIComponent(match[1]);
+  const rangeHeader = request.headers.get('range');
 
   event.respondWith(
     (async () => {
-      const full = await getOrFetchFull(videoId, request);
-      if (!full.ok) return full;
-
-      const rangeHeader = request.headers.get('range');
-      if (!rangeHeader) {
-        return full.clone();
+      try {
+        const cache = await caches.open(SW_CACHE);
+        const hit = await cache.match(cacheKeyFor(videoId));
+        if (hit && hit.ok) {
+          return respondFromCachedFull(hit, rangeHeader);
+        }
+      } catch {
+        /* fall through to network */
       }
 
-      const buf = await full.clone().arrayBuffer();
-      const size = buf.byteLength;
-      const range = parseRange(rangeHeader, size);
-      if (!range) {
-        return new Response(null, {
-          status: 416,
-          headers: { 'Content-Range': `bytes */${size}` },
-        });
-      }
-
-      const slice = buf.slice(range.start, range.end + 1);
-      const contentType = full.headers.get('content-type') || 'audio/mpeg';
-      return new Response(slice, {
-        status: 206,
-        headers: {
-          'Content-Type': contentType,
-          'Content-Length': String(slice.byteLength),
-          'Content-Range': `bytes ${range.start}-${range.end}/${size}`,
-          'Accept-Ranges': 'bytes',
-          'Cache-Control': 'private, max-age=31536000',
-        },
-      });
+      // 未命中：直接透传（含 Range），避免等整首下完才开始播/切歌
+      return fetch(request);
     })(),
   );
 });

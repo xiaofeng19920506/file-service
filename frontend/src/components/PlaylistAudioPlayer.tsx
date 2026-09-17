@@ -235,14 +235,22 @@ export default function PlaylistAudioPlayer({
   /** 多首预缓冲缓存，支持后台连续切歌而不只再播一首 */
   const preloadCacheRef = useRef(new Map<string, PrefetchedStream>());
   const upcomingItemsRef = useRef<PlaylistAudioItem[]>([]);
+  const handoffGraceUntilRef = useRef(0);
   const usingPreviewRef = useRef(false);
   const progressNotifyRef = useRef(onProgressUpdate);
   progressNotifyRef.current = onProgressUpdate;
 
-  const revokePlaybackBlobUrl = useCallback(() => {
-    if (!blobUrlRef.current) return;
+  const revokePlaybackBlobUrl = useCallback((keepUrl?: string | null) => {
+    const current = blobUrlRef.current;
+    if (!current) return;
+    if (keepUrl && current === keepUrl) return;
+    for (const [key, entry] of preloadCacheRef.current) {
+      if (entry.url === current) {
+        preloadCacheRef.current.delete(key);
+      }
+    }
     try {
-      URL.revokeObjectURL(blobUrlRef.current);
+      URL.revokeObjectURL(current);
     } catch {
       /* ignore */
     }
@@ -325,7 +333,8 @@ export default function PlaylistAudioPlayer({
     setPlayerError(null);
     const handoff = seamlessHandoffRef.current;
     if (handoff && handoff.videoId === current?.youtubeVideoId) {
-      revokePlaybackBlobUrl();
+      // 勿 revoke 正在 handoff 的 blob，否则下一首会秒停
+      revokePlaybackBlobUrl(handoff.url);
       if (handoff.url.startsWith('blob:')) {
         blobUrlRef.current = handoff.url;
       }
@@ -338,6 +347,8 @@ export default function PlaylistAudioPlayer({
       usingPreviewRef.current = handoff.preview;
       setLoadingStream(false);
       skipStreamFetchVideoIdRef.current = handoff.videoId;
+      skipPauseSyncRef.current = true;
+      handoffGraceUntilRef.current = Date.now() + 2500;
     } else {
       seamlessHandoffRef.current = null;
       revokePlaybackBlobUrl();
@@ -776,8 +787,9 @@ export default function PlaylistAudioPlayer({
     if (isNewTrack) {
       playbackTrackKeyRef.current = trackKey;
       skipPauseSyncRef.current = true;
-      // 无缝续播时 src 已在 ended 回调里切好并 play，再 load() 会打断 iOS 后台播放
-      if (!audioSrcMatchesStream(el, streamUrl) || el.paused) {
+      // 无缝续播时 src 已在 ended/手势里切好并 play；仅 src 不一致时再 load
+      // 若因 paused 就 load，会打断刚发起的 play，表现为「切到下一首却停住」
+      if (!audioSrcMatchesStream(el, streamUrl)) {
         el.load();
       }
     } else {
@@ -1007,8 +1019,10 @@ export default function PlaylistAudioPlayer({
     seamlessHandoffRef.current = prefetched;
     skipStreamFetchVideoIdRef.current = prefetched.videoId;
     skipPauseSyncRef.current = true;
+    handoffGraceUntilRef.current = Date.now() + 2500;
     wantPlayRef.current = true;
-    revokePlaybackBlobUrl();
+    // 只丢掉上一首 blob；保留即将播放的预取 blob
+    revokePlaybackBlobUrl(prefetched.url);
     if (prefetched.url.startsWith('blob:')) {
       blobUrlRef.current = prefetched.url;
     }
@@ -1220,8 +1234,12 @@ export default function PlaylistAudioPlayer({
         advanceToNextTrack();
         return;
       }
-      // 后台连播换 src 时浏览器常会误发 pause；若仍想继续播则忽略并重试
-      if (wantPlayRef.current && typeof document !== 'undefined' && document.hidden) {
+      // 切歌 / 换 src 时浏览器常误发 pause；仍想播则重试，避免停在下一首
+      const inHandoffGrace = Date.now() < handoffGraceUntilRef.current;
+      if (
+        wantPlayRef.current &&
+        (inHandoffGrace || (typeof document !== 'undefined' && document.hidden))
+      ) {
         skipPauseSyncRef.current = true;
         void e.currentTarget.play().catch(() => {
           skipPauseSyncRef.current = false;
@@ -1232,6 +1250,14 @@ export default function PlaylistAudioPlayer({
     },
     [advanceToNextTrack, onNextTrack, replayCurrentTrackStream, onPlayingChange],
   );
+
+  const handlePlay = useCallback(() => {
+    // handoff 宽限期内保持 skip，避免紧随其后的误 pause 把 playing 打成 false
+    if (Date.now() >= handoffGraceUntilRef.current) {
+      skipPauseSyncRef.current = false;
+    }
+    onPlayingChange(true);
+  }, [onPlayingChange]);
 
   const handleAudioError = useCallback(() => {
     if (!streamUrlRef.current) return;
@@ -1555,10 +1581,7 @@ export default function PlaylistAudioPlayer({
           onCanPlay={handleAudioReady}
           onCanPlayThrough={handleAudioReady}
           onEnded={handleEnded}
-          onPlay={() => {
-            skipPauseSyncRef.current = false;
-            onPlayingChange(true);
-          }}
+          onPlay={handlePlay}
           onPause={handlePause}
           onError={handleAudioError}
         />
@@ -1638,10 +1661,7 @@ export default function PlaylistAudioPlayer({
       onCanPlay={handleAudioReady}
       onCanPlayThrough={handleAudioReady}
       onEnded={handleEnded}
-      onPlay={() => {
-        skipPauseSyncRef.current = false;
-        onPlayingChange(true);
-      }}
+      onPlay={handlePlay}
       onPause={handlePause}
       onError={handleAudioError}
     />
@@ -1848,10 +1868,7 @@ export default function PlaylistAudioPlayer({
         onCanPlay={handleAudioReady}
         onCanPlayThrough={handleAudioReady}
         onEnded={handleEnded}
-        onPlay={() => {
-          skipPauseSyncRef.current = false;
-          onPlayingChange(true);
-        }}
+        onPlay={handlePlay}
         onPause={handlePause}
         onError={handleAudioError}
       />
